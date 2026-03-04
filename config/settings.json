@@ -1,0 +1,47 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project __MAIT_CODE_PROJECT__ mait-code-session-start",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project __MAIT_CODE_PROJECT__ mait-code-observe --trigger precompact",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project __MAIT_CODE_PROJECT__ mait-code-observe --trigger session-end",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "mait-memory": {
+      "command": "uv",
+      "args": ["run", "--project", "__MAIT_CODE_PROJECT__", "mait-code-memory-server"]
+    },
+    "mait-reminders": {
+      "command": "uv",
+      "args": ["run", "--project", "__MAIT_CODE_PROJECT__", "mait-code-reminders-server"]
+    }
+  }
+}
