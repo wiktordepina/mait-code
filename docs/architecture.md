@@ -33,8 +33,11 @@
               │    observe         reminders      │
               │                                   │
               │  memory/         tools/           │
-              │    storage        reflect         │
-              │    retrieval      rebuild_db      │
+              │    db             reflect         │
+              │    migrate        rebuild_db      │
+              │    writer                         │
+              │    search                         │
+              │    scoring                        │
               └───────────────┬───────────────────┘
                               │
               ┌───────────────▼───────────────────┐
@@ -44,7 +47,8 @@
               │  user_context.md                  │
               │  memory/                          │
               │    MEMORY.md        (curated)     │
-              │    observations/    (raw)         │
+              │    memory.db        (SQLite)      │
+              │    observations/    (raw JSONL)   │
               │    reflections/     (synthesised) │
               │    graph/           (relations)   │
               └───────────────────────────────────┘
@@ -52,30 +56,130 @@
 
 ## Memory Architecture
 
-Three tiers of memory, from raw to curated:
+### Overview
+
+The memory system combines three tiers of storage with a SQLite database for structured search. Raw observations flow in from hooks, get indexed in the database, and the highest-confidence facts are promoted to MEMORY.md for always-on context.
+
+### Database Schema
+
+The memory database (`memory.db`) uses SQLite with two extensions:
+
+**Core table: `memory_entries`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `content` | TEXT | The memory content |
+| `entry_type` | TEXT | fact, preference, event, insight, task, relationship |
+| `importance` | INTEGER | 1-10 scale (default 5) |
+| `memory_class` | TEXT | episodic or semantic (controls decay rate) |
+| `created_at` | DATETIME | Timestamp of creation |
+
+**Entry type to memory class mapping:**
+- **Episodic** (fast decay, 3-day half-life): `event`, `task`
+- **Semantic** (slow decay, 90-day half-life): `fact`, `preference`, `insight`, `relationship`
+
+**FTS5 virtual table: `memory_entries_fts`**
+- Full-text search with BM25 ranking
+- Kept in sync via triggers on insert/update/delete
+
+**Vec0 virtual table: `memory_vec`**
+- 1536-dimension cosine distance vectors via `sqlite-vec`
+- Schema present, populated in Phase 2 (semantic search)
+
+**Indexes:**
+- `idx_memory_entries_created_at` — temporal queries
+- `idx_memory_entries_type` — type filtering
+- `idx_memory_entries_importance` — importance ranking
+- `idx_memory_entries_class` — class filtering
+
+### Composite Scoring
+
+Memory retrieval results are ranked by a composite score:
+
+```
+score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+```
+
+**Recency** uses exponential decay:
+- `recency = exp(-ln(2) × age_days / half_life)`
+- Episodic half-life: 3 days (events decay fast)
+- Semantic half-life: 90 days (facts persist)
+- Default half-life: 7 days (unknown class)
+
+**Importance** is normalized from 1-10 to 0.0-1.0:
+- `importance_norm = (importance - 1) / 9`
+
+**Relevance** is provided by the search method (FTS BM25 or semantic similarity).
+
+### Deduplication
+
+Before storing a new memory, the writer checks for near-duplicates:
+
+1. Extract first 8 significant words (length > 2) from new content
+2. Query FTS5 for candidate matches (up to 20)
+3. Compare each candidate using `SequenceMatcher`
+4. If similarity >= 0.90: update existing entry's timestamp and keep max importance
+5. If no match: insert as new entry
+
+### Data Flow
+
+```
+store_memory() ──► find_duplicate() ──► FTS5 candidates
+                        │                    │
+                        ▼                    ▼
+                   SequenceMatcher     memory_entries
+                   similarity >= 0.90?
+                        │
+                   ┌────┴────┐
+                   │ Yes     │ No
+                   ▼         ▼
+              UPDATE      INSERT
+              timestamp   new entry
+```
+
+```
+search_memory() ──► FTS5 BM25 search
+                        │
+                        ▼
+                   composite_score()
+                   (recency + importance + relevance)
+                        │
+                        ▼
+                   Sort by score, return top N
+```
 
 ### Tier 1: Observations (raw)
 - Extracted automatically by the `observe` hook at PreCompact and SessionEnd
-- Stored as timestamped markdown files in `memory/observations/`
+- Stored as JSONL files in `memory/observations/YYYY-MM-DD.jsonl`
 - Contains facts, decisions, code patterns, and user preferences observed during sessions
-- High volume, low curation
+- Indexed into `memory.db` for structured search
 
 ### Tier 2: Reflections (synthesised)
 - Generated by the `reflect` tool, which aggregates recent observations
 - Stored in `memory/reflections/`
 - Identifies patterns, recurring themes, and evolving preferences
-- Medium volume, medium curation
 
 ### Tier 3: MEMORY.md (curated)
 - The highest-confidence facts, loaded into every session via CLAUDE.md
 - Manually edited or updated by the reflection system
 - Kept under ~150 lines for context budget
-- Low volume, high curation
 
-### Vector Search
-- SQLite database with `sqlite-vec` for semantic search
-- Indexes observations and reflections for mid-session retrieval via MCP
-- Rebuilt from markdown sources by `rebuild-db` tool
+## MCP Servers
+
+### mait-memory
+
+| Tool | Args | Description |
+|------|------|-------------|
+| `search_memory` | query, limit?, entry_type? | FTS5 keyword search with composite score re-ranking |
+| `store_memory` | content, entry_type?, importance? | Store with deduplication and validation |
+| `list_recent_memories` | limit?, entry_type? | List recent entries, optionally filtered |
+| `delete_memory` | entry_id | Delete by ID |
+| `memory_stats` | — | Counts by entry type and memory class |
+
+### mait-reminders
+- `set_reminder(when, what)` — Schedule a reminder
+- `list_reminders()` — Show active and overdue reminders
 
 ## Hooks
 
@@ -84,16 +188,6 @@ Three tiers of memory, from raw to curated:
 | `SessionStart` | Session begins | Inject companion context (recent memories, reminders) |
 | `PreCompact` | Before context compaction | Extract observations before conversation is compressed |
 | `SessionEnd` | Session ends | Final observation extraction, update statistics |
-
-## MCP Servers
-
-### mait-memory
-- `search_memory(query)` — Semantic search across observations and reflections
-- `store_memory(content, category)` — Store a new observation mid-session
-
-### mait-reminders
-- `set_reminder(when, what)` — Schedule a reminder
-- `list_reminders()` — Show active and overdue reminders
 
 ## Identity System
 
@@ -105,19 +199,30 @@ Three files compose the companion's identity:
 
 All three are referenced via `@` imports in `config/CLAUDE.md` and loaded into every Claude Code session.
 
+## Migration System
+
+Schema changes are managed via forward-only migrations in `src/mait_code/memory/migrate.py`. Each migration has a version number, description, and body (SQL list or callable). The `schema_version` table tracks which migrations have been applied.
+
+Adding a new migration:
+1. Append a tuple to `MIGRATIONS` with the next version number
+2. Include SQL statements or a callable that receives `conn`
+3. `ensure_schema()` runs automatically on every connection open
+
 ## Data Directory
 
 ```
 ~/.claude/mait-code-data/
 ├── soul_document.md          # Companion identity
 ├── user_context.md           # User profile
-└── memory/
-    ├── MEMORY.md             # Curated facts (loaded every session)
-    ├── observations/         # Raw session extractions
-    │   └── 2024-01-15T10-30-00.md
-    ├── reflections/          # Synthesised insights
-    │   └── 2024-01-15-weekly.md
-    └── graph/                # Entity relationships
+├── memory/
+│   ├── MEMORY.md             # Curated facts (loaded every session)
+│   ├── memory.db             # SQLite FTS5 + vec0 database
+│   ├── observations/         # Raw JSONL session extractions
+│   │   └── 2026-03-04.jsonl
+│   ├── reflections/          # Synthesised insights
+│   │   └── 2026-03.md
+│   └── graph/                # Entity relationships
+└── reminders.db              # Reminder database (future)
 ```
 
 ## Key Technical Decisions
@@ -125,8 +230,10 @@ All three are referenced via `@` imports in `config/CLAUDE.md` and loaded into e
 | Decision | Rationale |
 |----------|-----------|
 | uv over pip/poetry | Fastest resolver, built-in project management, `uv run` eliminates venv activation |
-| SQLite + sqlite-vec over dedicated vector DB | Zero infrastructure, single file, portable, sufficient for personal-scale data |
-| Markdown over database for observations | Human-readable, git-syncable, editable, grep-friendly |
+| SQLite + FTS5 + sqlite-vec | Zero infrastructure, single file, portable, keyword + vector search in one DB |
+| JSONL for observations | Append-only, merge-friendly for git sync, one object per line |
 | Hooks over background services | No daemons to manage, reactive model fits Claude Code's architecture |
 | MCP over custom protocols | Native Claude Code integration, standardised tool interface |
 | Symlinks over file copying | Updates propagate automatically via `git pull`, no re-install needed |
+| Exponential decay scoring | Recent memories surface naturally, old ones fade unless high importance |
+| Dedup via FTS5 + SequenceMatcher | Fast candidate narrowing, precise similarity comparison, no duplicates |

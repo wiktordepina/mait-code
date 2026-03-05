@@ -67,8 +67,17 @@ ls ~/.claude/mait-code-data/
 cat ~/.claude/settings.json | python3 -m json.tool
 # Should contain mait-code hooks and MCP servers
 
+# Verify the memory MCP server starts
+uv run --project /path/to/mait-code mait-code-memory-server
+# Should start without errors (Ctrl+C to stop)
+
+# Check skills are symlinked
+ls -la ~/.claude/skills/recall/
+# Should point to → /path/to/mait-code/skills/recall
+
 # Start Claude Code — companion context should load
 claude
+# Try: /recall test  (should return "No memories found" on fresh install)
 ```
 
 ## Updating
