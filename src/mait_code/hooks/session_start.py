@@ -6,7 +6,7 @@ import sys
 
 def main():
     """Read session start event from stdin and output companion context."""
-    event = json.loads(sys.stdin.read())
+    _event = json.loads(sys.stdin.read())
 
     # Placeholder: will inject soul document, user context, and recent memories
     context = (

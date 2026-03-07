@@ -69,7 +69,9 @@ def cmd_store(args):
     try:
         result = _store_memory(conn, content.strip(), args.type, args.importance)
         if result["action"] == "deduplicated":
-            print(f"Memory deduplicated (updated entry #{result['id']}): {content[:80]}")
+            print(
+                f"Memory deduplicated (updated entry #{result['id']}): {content[:80]}"
+            )
         else:
             print(
                 f"Memory stored (#{result['id']}): "
@@ -152,9 +154,7 @@ def main():
     # store
     p_store = sub.add_parser("store", help="Store a memory")
     p_store.add_argument("content", nargs="+", help="Memory content")
-    p_store.add_argument(
-        "--type", choices=sorted(VALID_ENTRY_TYPES), default="fact"
-    )
+    p_store.add_argument("--type", choices=sorted(VALID_ENTRY_TYPES), default="fact")
     p_store.add_argument("--importance", type=int, default=5, choices=range(1, 11))
     p_store.set_defaults(func=cmd_store)
 
