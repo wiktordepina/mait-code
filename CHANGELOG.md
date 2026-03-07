@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.1 — Replace reminders MCP server with CLI tool (2026-03-07)
+
+Replaced the last MCP server (`mait-reminders`) with a sync CLI tool and skills, eliminating the `mcp` dependency entirely.
+
+- **`mc-tool-reminders` CLI tool:** Subcommands `set`, `list`, `dismiss`, `check` with SQLite storage, dateparser for flexible time input, UTC normalization
+- **`/remind` skill:** Set reminders via slash command (e.g. `/remind in 2 hours check deploy`)
+- **`/reminders` skill:** List active and overdue reminders with preprocessing
+- **Session start hook:** Now surfaces overdue reminders at the beginning of each session
+- **SQLite storage:** Dedicated `reminders.db` with connection factory and migration system matching the memory tool patterns
+- **Removed** `mait-reminders` MCP server, `src/mait_code/mcp/` directory, and `mcp[cli]` dependency
+- **Restructured tests:** Mirror `src/mait_code/` directory structure (`tests/tools/memory/`, `tests/tools/reminders/`) with per-tool conftest fixtures
+
 ## v0.3.0 — Replace memory MCP server with CLI tools + skills (2026-03-06)
 
 Replaced the `mait-memory` MCP server with a sync CLI tool (`mc-tool-memory`) and three skills, eliminating process overhead and simplifying the architecture.

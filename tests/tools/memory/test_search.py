@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from mait_code.memory.search import delete_entry, list_entries, search_entries
+from mait_code.tools.memory.search import delete_entry, list_entries, search_entries
 
 
 class TestSearchEntries:

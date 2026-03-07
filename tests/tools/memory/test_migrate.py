@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from mait_code.memory.migrate import ensure_schema
+from mait_code.tools.memory.migrate import ensure_schema
 
 
 def test_ensure_schema_creates_tables(memory_db: sqlite3.Connection):

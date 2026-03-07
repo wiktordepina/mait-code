@@ -51,7 +51,11 @@ if [ -d "$PROJECT_DIR/agents" ]; then
     done
 fi
 
-# --- 4. Remove mait-code hooks and MCP servers from settings.json ---
+# --- 4. Uninstall CLI tools ---
+echo "Uninstalling CLI tools..."
+uv tool uninstall mait-code 2>/dev/null && echo "  Removed CLI tools" || echo "  CLI tools not installed, skipping"
+
+# --- 5. Remove mait-code hooks and MCP servers from settings.json ---
 SETTINGS_DST="$CLAUDE_DIR/settings.json"
 if [ -f "$SETTINGS_DST" ]; then
     echo "Cleaning settings.json..."
@@ -61,15 +65,14 @@ import json
 with open('$SETTINGS_DST') as f:
     settings = json.load(f)
 
-# Remove mait-code hooks
+# Remove mait-code hooks (identified by mc-hook- prefix in commands)
 hooks = settings.get('hooks', {})
 for hook_name in ['SessionStart', 'PreCompact', 'SessionEnd']:
     if hook_name in hooks:
-        # Remove entries that reference mait-code
         hooks[hook_name] = [
             entry for entry in hooks[hook_name]
             if not any(
-                'mait-code' in h.get('command', '')
+                'mc-hook-' in h.get('command', '')
                 for h in entry.get('hooks', [])
             )
         ]
@@ -95,7 +98,7 @@ print('  Removed mait-code entries from settings.json')
 "
 fi
 
-# --- 5. Optionally remove data directory ---
+# --- 6. Optionally remove data directory ---
 if [ -d "$DATA_DIR" ]; then
     echo ""
     read -rp "Remove data directory ($DATA_DIR)? This deletes your memories and personalised files. [y/N] " response

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import sqlite_vec
 
-from mait_code.memory.migrate import ensure_schema
+from mait_code.tools.memory.migrate import ensure_schema
 
 
 def get_data_dir() -> Path:

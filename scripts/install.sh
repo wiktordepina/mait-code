@@ -90,30 +90,22 @@ if [ -d "$PROJECT_DIR/agents" ]; then
     done
 fi
 
-# --- 7. Merge settings.json ---
+# --- 7. Install CLI tools via uv tool ---
+echo "Installing CLI tools..."
+uv tool install "$PROJECT_DIR" --force
+echo "  CLI tools installed to ~/.local/bin/"
+
+# --- 8. Merge settings.json ---
 echo "Merging settings.json..."
 SETTINGS_SRC="$PROJECT_DIR/config/settings.json"
 SETTINGS_DST="$CLAUDE_DIR/settings.json"
 
-uv run --project "$PROJECT_DIR" python -c "
-import json, sys
+uv run python -c "
+import json
 
-project_dir = '$PROJECT_DIR'
-
-# Read source settings and replace placeholder
+# Read source settings
 with open('$SETTINGS_SRC') as f:
     src = json.load(f)
-
-def replace_placeholder(obj):
-    if isinstance(obj, str):
-        return obj.replace('__MAIT_CODE_PROJECT__', project_dir)
-    elif isinstance(obj, list):
-        return [replace_placeholder(v) for v in obj]
-    elif isinstance(obj, dict):
-        return {k: replace_placeholder(v) for k, v in obj.items()}
-    return obj
-
-src = replace_placeholder(src)
 
 # Read or create destination settings
 try:
@@ -141,7 +133,7 @@ with open('$SETTINGS_DST', 'w') as f:
 print('  Settings merged successfully')
 "
 
-# --- 8. Summary ---
+# --- 9. Summary ---
 echo ""
 echo "=== Installation complete ==="
 echo ""

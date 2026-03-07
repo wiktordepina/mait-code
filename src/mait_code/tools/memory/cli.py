@@ -3,11 +3,11 @@
 import argparse
 import sys
 
-from mait_code.memory.db import get_connection
-from mait_code.memory.scoring import composite_score
-from mait_code.memory.search import delete_entry, list_entries, search_entries
-from mait_code.memory.writer import VALID_ENTRY_TYPES
-from mait_code.memory.writer import store_memory as _store_memory
+from mait_code.tools.memory.db import get_connection
+from mait_code.tools.memory.scoring import composite_score
+from mait_code.tools.memory.search import delete_entry, list_entries, search_entries
+from mait_code.tools.memory.writer import VALID_ENTRY_TYPES
+from mait_code.tools.memory.writer import store_memory as _store_memory
 
 
 def cmd_search(args):
@@ -140,6 +140,16 @@ def cmd_stats(_args):
         conn.close()
 
 
+def cmd_rebuild(_args):
+    """Rebuild the memory database from markdown source files."""
+    print("rebuild-db: not yet implemented")
+
+
+def cmd_reflect(_args):
+    """Synthesise recent observations into insights, update MEMORY.md."""
+    print("reflect: not yet implemented")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="mc-tool-memory", description="Memory CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -172,6 +182,14 @@ def main():
     # stats
     p_stats = sub.add_parser("stats", help="Show memory statistics")
     p_stats.set_defaults(func=cmd_stats)
+
+    # rebuild
+    p_rebuild = sub.add_parser("rebuild", help="Rebuild memory database from source files")
+    p_rebuild.set_defaults(func=cmd_rebuild)
+
+    # reflect
+    p_reflect = sub.add_parser("reflect", help="Synthesise recent observations into insights")
+    p_reflect.set_defaults(func=cmd_reflect)
 
     args = parser.parse_args()
     args.func(args)

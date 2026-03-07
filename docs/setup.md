@@ -68,7 +68,7 @@ cat ~/.claude/settings.json | python3 -m json.tool
 # Should contain mait-code hooks and MCP servers
 
 # Verify the memory CLI tool works
-uv run --project /path/to/mait-code mc-tool-memory stats
+mc-tool-memory stats
 # Should print "No memories stored yet." on fresh install
 
 # Check skills are symlinked
@@ -87,17 +87,17 @@ Since `CLAUDE.md` is a symlink, updating is simple:
 ```bash
 cd /path/to/mait-code
 git pull
-uv sync
+./scripts/install.sh
 ```
 
-The symlink ensures Claude Code always reads the latest config. If `config/settings.json` has changed, re-run `./scripts/install.sh` to merge updates.
+The symlink ensures Claude Code always reads the latest config. Re-run `./scripts/install.sh` after pulling to reinstall CLI tools and merge any settings changes.
 
 ## Troubleshooting
 
 **CLAUDE.md not loading:** Check that `~/.claude/CLAUDE.md` is a valid symlink (`ls -la ~/.claude/CLAUDE.md`). Re-run `./scripts/install.sh` if broken.
 
-**Hooks not firing:** Verify `~/.claude/settings.json` contains the hook definitions. Check that `uv run --project /path/to/mait-code mc-hook-session-start` works from the command line.
+**Hooks not firing:** Verify `~/.claude/settings.json` contains the hook definitions. Check that `mc-hook-session-start` works from the command line.
 
-**Memory tool not working:** Run `uv run --project /path/to/mait-code mc-tool-memory stats` to verify. Check that `uv sync` has been run.
+**Memory tool not working:** Run `mc-tool-memory stats` to verify. Check that `./scripts/install.sh` has been run.
 
 **Python version mismatch:** Run `uv python install 3.14` to ensure Python 3.14 is available.
