@@ -1,4 +1,5 @@
 ---
+name: bump-version
 description: Bump the project version number across all locations
 user-invocable: true
 ---
