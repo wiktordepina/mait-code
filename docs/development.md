@@ -29,7 +29,7 @@ uv run ruff format src/ tests/ # Format
 - **Use `uv run` everywhere** — Never activate venvs manually
 - **Entry points in pyproject.toml** — All CLI commands are registered as `[project.scripts]`
 - **Data dir via env var** — Use `MAIT_CODE_DATA_DIR` (defaults to `~/.claude/mait-code-data/`)
-- **No asyncio in CLI tools** — Only MCP servers use async; tools and hooks are synchronous
+- **No asyncio in CLI tools** — Tools and hooks are synchronous; only remaining MCP servers (reminders) use async
 - **Connections via `get_connection()`** — All memory modules use the shared connection factory
 
 ## Memory Module Structure
@@ -46,7 +46,7 @@ src/mait_code/memory/
 
 **Dependency order:** `migrate.py` ← `db.py` ← everything else. The `scoring.py` module has no internal dependencies.
 
-**Pattern:** All search/writer functions receive a `sqlite3.Connection` as their first argument. The MCP server opens and closes connections per tool call.
+**Pattern:** All search/writer functions receive a `sqlite3.Connection` as their first argument. The CLI tool opens and closes connections per subcommand invocation.
 
 ## Adding New Memory Types
 
@@ -75,19 +75,19 @@ def test_with_data(populated_db):
     assert len(results) >= 1
 ```
 
-For MCP server tests, patch `get_connection` to use a temp DB:
+For memory tool tests, patch `get_connection` to use a temp DB:
 
 ```python
 from unittest.mock import patch
 from mait_code.memory.db import get_connection
 
 @pytest.fixture
-def mcp_db(tmp_path):
+def mem_db(tmp_path):
     db_path = tmp_path / "test.db"
     conn = get_connection(db_path)
-    def patched():
+    def patched(**_kwargs):
         return get_connection(db_path)
-    with patch("mait_code.mcp.memory_server.get_connection", side_effect=patched):
+    with patch("mait_code.tools.memory.get_connection", side_effect=patched):
         yield conn
     conn.close()
 ```
@@ -128,7 +128,7 @@ def mcp_db(tmp_path):
 
 ## Adding a New Skill
 
-1. Create `skills/<skill-name>/skill.md` with the skill definition
+1. Create `skills/<skill-name>/SKILL.md` with frontmatter and instructions
 2. Re-run `./scripts/install.sh` to symlink into `~/.claude/skills/`
 3. The skill will be available as `/<skill-name>` in Claude Code
 
@@ -137,27 +137,29 @@ def mcp_db(tmp_path):
 1. Create module in `src/mait_code/hooks/<hook_name>.py` with a `main()` function
 2. Add entry point in `pyproject.toml`:
    ```toml
-   mait-code-<hook-name> = "mait_code.hooks.<hook_name>:main"
+   mc-hook-<hook-name> = "mait_code.hooks.<hook_name>:main"
    ```
 3. Register in `config/settings.json` under the appropriate hook event
-4. Run `uv sync` and re-run `./scripts/install.sh`
-
-## Adding a New MCP Tool
-
-To add a tool to an existing server:
-
-1. Add a `@server.tool()` function in the appropriate server file (`src/mait_code/mcp/`)
-2. The tool is available immediately after restart
-
-To create a new MCP server:
-
-1. Create `src/mait_code/mcp/<server_name>.py` with a `FastMCP` instance and `main()` function
-2. Add entry point in `pyproject.toml`
-3. Register in `config/settings.json` under `mcpServers`
 4. Run `uv sync` and re-run `./scripts/install.sh`
 
 ## Adding a New CLI Tool
 
 1. Create `src/mait_code/tools/<tool_name>.py` with a `main()` function
-2. Add entry point in `pyproject.toml`
+2. Add entry point in `pyproject.toml`:
+   ```toml
+   mc-tool-<tool-name> = "mait_code.tools.<tool_name>:main"
+   ```
 3. Run `uv sync`
+4. Skills can invoke the tool via preprocessing (`!`mc-tool-<name> ...``) or `Bash(mc-tool-<name> *)`
+
+## Adding a New MCP Server
+
+Only use MCP when you need a persistent connection or streaming. Prefer CLI tools + skills for simpler cases.
+
+1. Create `src/mait_code/mcp/<server_name>.py` with a `FastMCP` instance and `main()` function
+2. Add entry point in `pyproject.toml`:
+   ```toml
+   mc-mcp-<server-name> = "mait_code.mcp.<server_name>:main"
+   ```
+3. Register in `config/settings.json` under `mcpServers`
+4. Run `uv sync` and re-run `./scripts/install.sh`

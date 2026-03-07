@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mait-code"
-version = "0.2.0"
+version = "0.3.0"
 description = "Companion framework extending Claude Code with persistent memory, identity, and skills"
 requires-python = ">=3.14"
 dependencies = [
@@ -15,13 +15,13 @@ dependencies = [
 ]
 
 [project.scripts]
-mait-code-session-start = "mait_code.hooks.session_start:main"
-mait-code-observe = "mait_code.hooks.observe:main"
-mait-code-format = "mait_code.hooks.auto_format:main"
-mait-code-memory-server = "mait_code.mcp.memory_server:main"
-mait-code-reminders-server = "mait_code.mcp.reminders_server:main"
-mait-code-reflect = "mait_code.tools.reflect:main"
-mait-code-rebuild-db = "mait_code.tools.rebuild_db:main"
+mc-hook-session-start = "mait_code.hooks.session_start:main"
+mc-hook-observe = "mait_code.hooks.observe:main"
+mc-hook-format = "mait_code.hooks.auto_format:main"
+mc-tool-memory = "mait_code.tools.memory:main"
+mc-mcp-reminders = "mait_code.mcp.reminders_server:main"
+mc-tool-reflect = "mait_code.tools.reflect:main"
+mc-tool-rebuild-db = "mait_code.tools.rebuild_db:main"
 
 [dependency-groups]
 dev = [

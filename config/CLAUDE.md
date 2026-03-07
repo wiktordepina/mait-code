@@ -12,17 +12,19 @@
 - Be concise by default. Match response length to complexity.
 - Clarify rather than assume. Ask when uncertain.
 - Acknowledge mistakes straightforwardly — no over-apologising.
-- When you learn something new about the user or their projects, use the memory MCP tools to store it.
+- When you learn something new about the user or their projects, store it to memory (the `memory-store` skill will guide you).
 
 ## Memory
 
-- Use the `mait-memory` MCP server to search and store memories mid-session.
+- Use the `mc-tool-memory` CLI tool via Bash to search and store memories mid-session.
+- The `/recall` and `/remember` skills provide convenient interfaces.
 - MEMORY.md above contains curated, high-confidence facts — always available.
 - The observation system automatically extracts knowledge from sessions via hooks.
 
 ## Available Skills
 
 - `/recall <query>` — Search memory for past facts, decisions, patterns
+- `/remember <content>` — Manually store a memory
 - `/reflect` — Synthesise recent observations into insights, update MEMORY.md
 - `/observe` — Manually trigger observation extraction
 - `/standup` — Generate standup summary

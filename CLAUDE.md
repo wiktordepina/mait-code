@@ -2,15 +2,16 @@
 
 ## Overview
 
-Companion framework extending Claude Code with persistent memory, identity, and skills. Uses `uv` for Python packaging, hooks for reactive observation, and MCP servers for mid-session memory access.
+Companion framework extending Claude Code with persistent memory, identity, and skills. Uses `uv` for Python packaging, hooks for reactive observation, and CLI tools + skills for mid-session memory access.
 
 ## Key Conventions
 
 - **Always use `uv run`** to execute scripts and tools — never activate venvs manually
 - **Entry points** are defined in `pyproject.toml` under `[project.scripts]`
 - **Data directory** is `~/.claude/mait-code-data/` — configurable via `MAIT_CODE_DATA_DIR` env var
-- **No asyncio in CLI tools** — tools use sync code; only MCP servers use async
-- **No background services** — everything is reactive (hooks, MCP requests, CLI invocations)
+- **No asyncio in CLI tools** — tools use sync code; only remaining MCP servers (reminders) use async
+- **No background services** — everything is reactive (hooks, skill invocations, CLI tools)
+- **Prefer CLI tools + skills over MCP** — simpler, no process overhead, supports preprocessing
 
 ## Testing
 
@@ -26,9 +27,9 @@ uv run ruff format src/        # Format
 ```
 src/mait_code/
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
-├── mcp/             # MCP servers (memory, reminders)
+├── mcp/             # MCP servers (reminders)
 ├── memory/          # Memory storage, retrieval, and vector search
-└── tools/           # CLI tools (reflect, rebuild_db)
+└── tools/           # CLI tools (memory, reflect, rebuild_db)
 config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh
@@ -39,7 +40,7 @@ docs/                # Documentation
 
 ## Adding New Components
 
-- **New hook:** Add module in `src/mait_code/hooks/`, add entry point in `pyproject.toml`, register in `config/settings.json`
-- **New MCP tool:** Add to existing server in `src/mait_code/mcp/` or create new server with entry point
-- **New skill:** Create directory in `skills/` with skill definition file
-- **New CLI tool:** Add module in `src/mait_code/tools/`, add entry point in `pyproject.toml`
+- **New hook:** Add module in `src/mait_code/hooks/`, add entry point (`mc-hook-*`) in `pyproject.toml`, register in `config/settings.json`
+- **New CLI tool:** Add module in `src/mait_code/tools/`, add entry point (`mc-tool-*`) in `pyproject.toml`
+- **New skill:** Create directory in `skills/` with `SKILL.md` — skills can invoke CLI tools via preprocessing or Bash
+- **New MCP server:** Only if persistent connection/streaming needed; add in `src/mait_code/mcp/`, entry point (`mc-mcp-*`)

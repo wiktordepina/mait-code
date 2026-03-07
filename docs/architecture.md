@@ -15,11 +15,11 @@
 │                  Claude Code                    │
 │                                                 │
 │ ┌───────────┐  ┌─────────────┐  ┌─────────────┐ │
-│ │ CLAUDE.md │  │    Hooks    │  │ MCP Servers │ │
+│ │ CLAUDE.md │  │    Hooks    │  │   Skills    │ │
 │ │ (identity │  │             │  │             │ │
-│ │  + rules) │  │ SessionStart│  │ mait-memory │ │
-│ │           │  │ PreCompact  │  │ mait-remind │ │
-│ │ @soul_doc │  │ SessionEnd  │  │             │ │
+│ │  + rules) │  │ SessionStart│  │ /recall     │ │
+│ │           │  │ PreCompact  │  │ /remember   │ │
+│ │ @soul_doc │  │ SessionEnd  │  │ memory-store│ │
 │ │ @user_ctx │  │             │  │             │ │
 │ │ @MEMORY   │  └────┬────────┘  └──────┬──────┘ │
 │ └───────────┘       │                  │        │
@@ -28,13 +28,13 @@
               ┌───────▼──────────────────▼────────┐
               │        mait-code (Python)         │
               │                                   │
-              │  hooks/          mcp/             │
-              │    session_start   memory_server  │
-              │    observe         reminders      │
-              │                                   │
-              │  memory/         tools/           │
-              │    db             reflect         │
-              │    migrate        rebuild_db      │
+              │  hooks/          tools/           │
+              │    session_start   memory (CLI)   │
+              │    observe         reflect        │
+              │                   rebuild_db      │
+              │  memory/         mcp/             │
+              │    db             reminders       │
+              │    migrate                        │
               │    writer                         │
               │    search                         │
               │    scoring                        │
@@ -165,17 +165,19 @@ search_memory() ──► FTS5 BM25 search
 - Manually edited or updated by the reflection system
 - Kept under ~150 lines for context budget
 
+## Memory CLI Tool (`mc-tool-memory`)
+
+Replaces the former MCP server with a sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direct Bash calls.
+
+| Subcommand | Args | Description |
+|------------|------|-------------|
+| `search` | query, --limit?, --type? | FTS5 keyword search with composite score re-ranking |
+| `store` | content, --type?, --importance? | Store with deduplication and validation |
+| `list` | --limit?, --type? | List recent entries, optionally filtered |
+| `delete` | id | Delete by ID |
+| `stats` | — | Counts by entry type and memory class |
+
 ## MCP Servers
-
-### mait-memory
-
-| Tool | Args | Description |
-|------|------|-------------|
-| `search_memory` | query, limit?, entry_type? | FTS5 keyword search with composite score re-ranking |
-| `store_memory` | content, entry_type?, importance? | Store with deduplication and validation |
-| `list_recent_memories` | limit?, entry_type? | List recent entries, optionally filtered |
-| `delete_memory` | entry_id | Delete by ID |
-| `memory_stats` | — | Counts by entry type and memory class |
 
 ### mait-reminders
 - `set_reminder(when, what)` — Schedule a reminder
@@ -233,7 +235,7 @@ Adding a new migration:
 | SQLite + FTS5 + sqlite-vec | Zero infrastructure, single file, portable, keyword + vector search in one DB |
 | JSONL for observations | Append-only, merge-friendly for git sync, one object per line |
 | Hooks over background services | No daemons to manage, reactive model fits Claude Code's architecture |
-| MCP over custom protocols | Native Claude Code integration, standardised tool interface |
+| CLI tools + skills over MCP for memory | No process overhead, preprocessing injects results before Claude sees the skill, simpler debugging |
 | Symlinks over file copying | Updates propagate automatically via `git pull`, no re-install needed |
 | Exponential decay scoring | Recent memories surface naturally, old ones fade unless high importance |
 | Dedup via FTS5 + SequenceMatcher | Fast candidate narrowing, precise similarity comparison, no duplicates |
