@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 
-from mait_code.memory.scoring import (
+from mait_code.tools.memory.scoring import (
     DEFAULT_HALF_LIFE,
     HALF_LIFE_DAYS,
     composite_score,
@@ -86,7 +86,7 @@ class TestImportanceScore:
 class TestCompositeScore:
     def test_weights_sum(self):
         """Default weights should sum to 1.0."""
-        from mait_code.memory.scoring import W_IMPORTANCE, W_RECENCY, W_RELEVANCE
+        from mait_code.tools.memory.scoring import W_IMPORTANCE, W_RECENCY, W_RELEVANCE
 
         assert abs(W_RECENCY + W_IMPORTANCE + W_RELEVANCE - 1.0) < 0.001
 

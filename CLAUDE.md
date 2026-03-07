@@ -28,8 +28,8 @@ uv run ruff format src/        # Format
 src/mait_code/
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
 ├── mcp/             # MCP servers (reminders)
-├── memory/          # Memory storage, retrieval, and vector search
-└── tools/           # CLI tools (memory, reflect, rebuild_db)
+└── tools/           # CLI tools
+    └── memory/      # Memory system (CLI, storage, search, scoring, migrations)
 config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh

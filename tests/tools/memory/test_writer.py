@@ -2,7 +2,7 @@
 
 import sqlite3
 
-from mait_code.memory.writer import (
+from mait_code.tools.memory.writer import (
     MEMORY_CLASS_MAP,
     VALID_ENTRY_TYPES,
     find_duplicate,
