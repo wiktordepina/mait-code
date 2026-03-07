@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0 — Replace memory MCP server with CLI tools + skills (2026-03-06)
+
+Replaced the `mait-memory` MCP server with a sync CLI tool (`mc-tool-memory`) and three skills, eliminating process overhead and simplifying the architecture.
+
+- **`mc-tool-memory` CLI tool:** Subcommands `search`, `store`, `list`, `delete`, `stats` — same functionality as the former MCP server, now invoked via Bash
+- **`/recall` skill:** Uses preprocessing (`!`mc-tool-memory search ...``) to inject results before Claude sees the prompt — zero tool-call overhead
+- **`/remember` skill:** Manual-only (`disable-model-invocation: true`) skill to store memories via slash command
+- **`memory-store` skill:** Auto-invoked by Claude (`user-invocable: false`) to proactively store observations about the user
+- **Removed** `mait-memory` MCP server (`src/mait_code/mcp/memory_server.py`) and its `settings.json` registration
+- **Renamed** all entry points to `mc-{hook|tool|mcp}-*` convention (e.g. `mc-hook-session-start`, `mc-tool-reflect`)
+- **Updated** all documentation to reflect the new architecture
+
 ## v0.2.0 — Phase 1: Memory Core (2026-03-05)
 
 Persistent memory system — the defining feature that makes this a companion, not a tool.

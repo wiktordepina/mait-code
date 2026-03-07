@@ -48,7 +48,7 @@ git push
 cd ~/.claude/mait-code-data
 git pull
 # Rebuild vector database from synced markdown
-uv run --project /path/to/mait-code mait-code-rebuild-db
+uv run --project /path/to/mait-code mc-tool-rebuild-db
 ```
 
 ### Post-merge hook for auto DB rebuild
@@ -59,7 +59,7 @@ Create `~/.claude/mait-code-data/.git/hooks/post-merge`:
 #!/usr/bin/env bash
 # Rebuild vector DB after pulling new observations
 if command -v uv &> /dev/null; then
-    uv run --project /path/to/mait-code mait-code-rebuild-db &
+    uv run --project /path/to/mait-code mc-tool-rebuild-db &
 fi
 ```
 

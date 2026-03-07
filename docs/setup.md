@@ -67,9 +67,9 @@ ls ~/.claude/mait-code-data/
 cat ~/.claude/settings.json | python3 -m json.tool
 # Should contain mait-code hooks and MCP servers
 
-# Verify the memory MCP server starts
-uv run --project /path/to/mait-code mait-code-memory-server
-# Should start without errors (Ctrl+C to stop)
+# Verify the memory CLI tool works
+uv run --project /path/to/mait-code mc-tool-memory stats
+# Should print "No memories stored yet." on fresh install
 
 # Check skills are symlinked
 ls -la ~/.claude/skills/recall/
@@ -96,8 +96,8 @@ The symlink ensures Claude Code always reads the latest config. If `config/setti
 
 **CLAUDE.md not loading:** Check that `~/.claude/CLAUDE.md` is a valid symlink (`ls -la ~/.claude/CLAUDE.md`). Re-run `./scripts/install.sh` if broken.
 
-**Hooks not firing:** Verify `~/.claude/settings.json` contains the hook definitions. Check that `uv run --project /path/to/mait-code mait-code-session-start` works from the command line.
+**Hooks not firing:** Verify `~/.claude/settings.json` contains the hook definitions. Check that `uv run --project /path/to/mait-code mc-hook-session-start` works from the command line.
 
-**MCP servers not connecting:** Run `uv run --project /path/to/mait-code mait-code-memory-server` manually to check for errors. Ensure the project path in `settings.json` is correct.
+**Memory tool not working:** Run `uv run --project /path/to/mait-code mc-tool-memory stats` to verify. Check that `uv sync` has been run.
 
 **Python version mismatch:** Run `uv python install 3.14` to ensure Python 3.14 is available.

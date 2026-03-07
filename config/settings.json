@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project __MAIT_CODE_PROJECT__ mait-code-session-start",
+            "command": "uv run --project __MAIT_CODE_PROJECT__ mc-hook-session-start",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project __MAIT_CODE_PROJECT__ mait-code-observe --trigger precompact",
+            "command": "uv run --project __MAIT_CODE_PROJECT__ mc-hook-observe --trigger precompact",
             "timeout": 60
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project __MAIT_CODE_PROJECT__ mait-code-observe --trigger session-end",
+            "command": "uv run --project __MAIT_CODE_PROJECT__ mc-hook-observe --trigger session-end",
             "timeout": 60
           }
         ]
@@ -35,13 +35,9 @@
     ]
   },
   "mcpServers": {
-    "mait-memory": {
-      "command": "uv",
-      "args": ["run", "--project", "__MAIT_CODE_PROJECT__", "mait-code-memory-server"]
-    },
     "mait-reminders": {
       "command": "uv",
-      "args": ["run", "--project", "__MAIT_CODE_PROJECT__", "mait-code-reminders-server"]
+      "args": ["run", "--project", "__MAIT_CODE_PROJECT__", "mc-mcp-reminders"]
     }
   }
 }

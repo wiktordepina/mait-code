@@ -78,7 +78,7 @@ for hook_name in ['SessionStart', 'PreCompact', 'SessionEnd']:
 
 # Remove mait-code MCP servers
 servers = settings.get('mcpServers', {})
-for server_name in ['mait-memory', 'mait-reminders']:
+for server_name in ['mait-reminders']:
     servers.pop(server_name, None)
 
 # Clean up empty sections

@@ -5,6 +5,8 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Skill | Trigger | Description | Status |
 |-------|---------|-------------|--------|
 | Recall | `/recall <query>` | Search memory for past facts, decisions, patterns | **Implemented** |
+| Remember | `/remember <content>` | Manually store a memory observation | **Implemented** |
+| Memory Store | *(auto)* | Claude auto-stores observations about user/projects | **Implemented** |
 | Reflect | `/reflect` | Synthesise recent observations into insights, update MEMORY.md | Planned |
 | Observe | `/observe` | Manually trigger observation extraction from current session | Planned |
 | Standup | `/standup` | Generate standup summary from recent work and observations | Planned |
@@ -31,11 +33,29 @@ Search memory for past facts, decisions, patterns, and preferences.
 ```
 
 **How it works:**
-1. Uses the `search_memory` tool from the `mait-memory` MCP server
+1. Preprocesses search results via `mc-tool-memory search` (injected before Claude sees the skill)
 2. Results are ranked by composite score (recency + importance + relevance)
-3. If no query is provided, lists recent memories instead
+3. If no query is provided, shows recent memories via `mc-tool-memory list`
+4. For follow-up searches, uses Bash to call `mc-tool-memory search` directly
 
-**MCP tools used:** `search_memory`, `list_recent_memories`
+### /remember
+
+Manually store a memory observation. This is a manual-only skill (`disable-model-invocation: true`) — Claude won't auto-invoke it.
+
+**Usage:**
+```
+/remember always use tabs for Go code
+/remember deployed v2.3 to production today
+/remember the auth service uses JWT with RS256
+```
+
+**How it works:**
+1. Determines the best entry type and importance for the content
+2. Stores via `mc-tool-memory store`
+
+### memory-store (auto-invoked)
+
+Not a slash command — Claude uses this skill proactively when it learns something new about the user. Uses `mc-tool-memory store` via Bash.
 
 ## Skill Architecture
 
@@ -43,8 +63,12 @@ Each skill is a directory in `skills/` containing:
 
 ```
 skills/
-└── recall/
-    └── skill.md     # Skill definition (prompt, triggers, description)
+├── recall/
+│   └── SKILL.md     # Search memory
+├── remember/
+│   └── SKILL.md     # Store memory (manual)
+└── memory-store/
+    └── SKILL.md     # Store memory (auto-invoked by Claude)
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.
@@ -68,5 +92,6 @@ Instructions for Claude when this skill is invoked.
 
 Key fields:
 - `user-invocable: true` — Makes it available as a slash command
-- `allowed-tools` — MCP tools the skill is allowed to use
+- `disable-model-invocation: true` — Prevents Claude from auto-invoking (for side-effect skills)
+- `allowed-tools` — Tools the skill is allowed to use (e.g. `Bash(mc-tool-memory *)`)
 - `argument-hint` — Shown in autocomplete to guide usage
