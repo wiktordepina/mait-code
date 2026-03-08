@@ -24,7 +24,7 @@ The install script:
 1. Creates `~/.claude/mait-code-data/` with memory subdirectories
 2. Copies identity templates (won't overwrite existing files)
 3. Symlinks `CLAUDE.md` into `~/.claude/`
-4. Registers hooks and MCP servers in `~/.claude/settings.json`
+4. Registers hooks in `~/.claude/settings.json`
 
 ## Personalisation
 
@@ -65,7 +65,7 @@ ls ~/.claude/mait-code-data/
 
 # Check settings
 cat ~/.claude/settings.json | python3 -m json.tool
-# Should contain mait-code hooks and MCP servers
+# Should contain mait-code hooks
 
 # Verify the memory CLI tool works
 mc-tool-memory stats

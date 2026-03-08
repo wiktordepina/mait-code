@@ -14,8 +14,8 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Commit | `/commit` | Smart commit with conventional commit message | Planned |
 | Today | `/today` | Dashboard of open tasks, reminders, and standup | Planned |
 | Status | `/status` | Generate comprehensive status dashboard | Planned |
-| Remind | `/remind <when> <what>` | Set a reminder for a future time | Planned |
-| Reminders | `/reminders` | Show active and overdue reminders | Planned |
+| Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
+| Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Incident | `/incident <description>` | Log an incident with timestamp and context | Planned |
 
 ## Implemented Skills
@@ -57,6 +57,36 @@ Manually store a memory observation. This is a manual-only skill (`disable-model
 
 Not a slash command — Claude uses this skill proactively when it learns something new about the user. Uses `mc-tool-memory store` via Bash.
 
+### /remind
+
+Set a reminder for a future time.
+
+**Usage:**
+```
+/remind in 2 hours check deploy status
+/remind tomorrow 9am standup prep
+/remind friday review PR #42
+```
+
+**How it works:**
+1. Parses the time and content from the arguments
+2. Stores via `mc-tool-reminders set "<when>" <what>`
+3. Uses `dateparser` for flexible natural language time parsing with UTC normalization
+
+### /reminders
+
+Show active and overdue reminders.
+
+**Usage:**
+```
+/reminders                    # Show active reminders
+```
+
+**How it works:**
+1. Preprocesses results via `mc-tool-reminders list` (injected before Claude sees the skill)
+2. Presents active and overdue reminders
+3. Supports dismissing reminders via `mc-tool-reminders dismiss <id>`
+
 ## Skill Architecture
 
 Each skill is a directory in `skills/` containing:
@@ -67,8 +97,12 @@ skills/
 │   └── SKILL.md     # Search memory
 ├── remember/
 │   └── SKILL.md     # Store memory (manual)
-└── memory-store/
-    └── SKILL.md     # Store memory (auto-invoked by Claude)
+├── memory-store/
+│   └── SKILL.md     # Store memory (auto-invoked by Claude)
+├── remind/
+│   └── SKILL.md     # Set a reminder
+└── reminders/
+    └── SKILL.md     # Show reminders
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.
