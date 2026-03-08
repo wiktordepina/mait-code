@@ -1,9 +1,11 @@
 """CLI tool for memory search and storage."""
 
 import argparse
+import logging
 import sys
 
 from mait_code.logging import log_invocation, setup_logging
+
 from mait_code.tools.memory.db import get_connection
 from mait_code.tools.memory.embeddings import embed_texts, is_available, serialize_f32
 from mait_code.tools.memory.entities import (
@@ -22,10 +24,13 @@ from mait_code.tools.memory.search import (
 from mait_code.tools.memory.writer import VALID_ENTRY_TYPES
 from mait_code.tools.memory.writer import store_memory as _store_memory
 
+logger = logging.getLogger(__name__)
+
 
 def cmd_search(args):
     query = " ".join(args.query)
     if not query.strip():
+        logger.error("query cannot be empty")
         print("Error: query cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
@@ -82,10 +87,12 @@ def cmd_search(args):
 def cmd_store(args):
     content = " ".join(args.content)
     if not content.strip():
+        logger.error("content cannot be empty")
         print("Error: content cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
     if args.type not in VALID_ENTRY_TYPES:
+        logger.error("invalid type '%s'", args.type)
         print(
             f"Error: invalid type '{args.type}'. "
             f"Valid types: {', '.join(sorted(VALID_ENTRY_TYPES))}",
@@ -135,6 +142,7 @@ def cmd_delete(args):
         if delete_entry(conn, args.id):
             print(f"Memory #{args.id} deleted.")
         else:
+            logger.error("memory #%d not found", args.id)
             print(f"Error: memory #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
     finally:
@@ -213,6 +221,7 @@ def cmd_relationships(args):
     try:
         entity = find_entity_by_name(conn, entity_name)
         if not entity:
+            logger.error("entity '%s' not found", entity_name)
             print(f"Entity '{entity_name}' not found.", file=sys.stderr)
             sys.exit(1)
 
@@ -261,6 +270,7 @@ def _reindex_embeddings(conn):
 
         vectors = embed_texts(texts, prefix="search_document")
         if vectors is None:
+            logger.error("embedding failed")
             print("Error: embedding failed.", file=sys.stderr)
             sys.exit(1)
 
@@ -280,6 +290,7 @@ def _reindex_embeddings(conn):
 def cmd_reindex(_args):
     """Recompute vector embeddings for all memory entries."""
     if not is_available():
+        logger.error("embedding model unavailable")
         print(
             "Error: embedding model unavailable. "
             "Ensure fastembed is installed: pip install fastembed",
@@ -306,11 +317,13 @@ def cmd_restore(args):
 
     obs_dir = get_data_dir() / "memory" / "observations"
     if not obs_dir.exists():
+        logger.error("no observation logs found")
         print("No observation logs found.", file=sys.stderr)
         sys.exit(1)
 
     log_files = sorted(obs_dir.glob("*.jsonl"))
     if not log_files:
+        logger.error("no observation log files found")
         print("No observation log files found.", file=sys.stderr)
         sys.exit(1)
 
@@ -341,6 +354,7 @@ def cmd_restore(args):
                     try:
                         record = json.loads(line)
                     except json.JSONDecodeError:
+                        logger.warning("invalid JSON in %s:%d", log_file.name, line_num)
                         print(f"Warning: invalid JSON in {log_file.name}:{line_num}")
                         errors += 1
                         continue
@@ -363,6 +377,7 @@ def cmd_restore(args):
                                     _store(conn, content, entry_type, importance)
                                     total_memories += 1
                                 except Exception as e:
+                                    logger.warning("failed to store %s: %s", entry_type, e)
                                     print(
                                         f"Warning: failed to store {entry_type}: {e}",
                                         file=sys.stderr,
@@ -385,6 +400,7 @@ def cmd_restore(args):
                                 )
                                 total_entities += 1
                             except Exception as e:
+                                logger.warning("failed to upsert entity '%s': %s", name, e)
                                 print(
                                     f"Warning: failed to upsert entity '{name}': {e}",
                                     file=sys.stderr,

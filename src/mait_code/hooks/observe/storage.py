@@ -1,12 +1,14 @@
 """Bridge extraction results to memory.db and daily observation logs."""
 
 import json
-import sys
+import logging
 from datetime import datetime, timezone
 
 from mait_code.tools.memory.db import get_connection, get_data_dir
 from mait_code.tools.memory.entities import upsert_entity, upsert_relationship
 from mait_code.tools.memory.writer import store_memory
+
+logger = logging.getLogger(__name__)
 
 CATEGORY_TO_TYPE = {
     "facts": "fact",
@@ -47,9 +49,7 @@ def store_extraction(extraction: dict) -> None:
                 try:
                     store_memory(conn, content, entry_type, importance)
                 except Exception as e:
-                    print(
-                        f"observe: failed to store {entry_type}: {e}", file=sys.stderr
-                    )
+                    logger.warning("failed to store %s: %s", entry_type, e)
     finally:
         conn.close()
 
@@ -68,9 +68,7 @@ def store_entities_and_relationships(extraction: dict) -> None:
             try:
                 entity_ids[name.lower()] = upsert_entity(conn, name, entity_type)
             except Exception as e:
-                print(
-                    f"observe: failed to upsert entity '{name}': {e}", file=sys.stderr
-                )
+                logger.warning("failed to upsert entity '%s': %s", name, e)
 
         # Upsert relationships
         for rel in extraction.get("relationships", []):
@@ -88,20 +86,14 @@ def store_entities_and_relationships(extraction: dict) -> None:
                     source_id = upsert_entity(conn, source, "unknown")
                     entity_ids[source.lower()] = source_id
                 except Exception as e:
-                    print(
-                        f"observe: failed to create entity '{source}': {e}",
-                        file=sys.stderr,
-                    )
+                    logger.warning("failed to create entity '%s': %s", source, e)
                     continue
             if target_id is None:
                 try:
                     target_id = upsert_entity(conn, target, "unknown")
                     entity_ids[target.lower()] = target_id
                 except Exception as e:
-                    print(
-                        f"observe: failed to create entity '{target}': {e}",
-                        file=sys.stderr,
-                    )
+                    logger.warning("failed to create entity '%s': %s", target, e)
                     continue
 
             rel_type = rel.get("relationship_type", "related_to")
@@ -109,6 +101,6 @@ def store_entities_and_relationships(extraction: dict) -> None:
             try:
                 upsert_relationship(conn, source_id, target_id, rel_type, context)
             except Exception as e:
-                print(f"observe: failed to upsert relationship: {e}", file=sys.stderr)
+                logger.warning("failed to upsert relationship: %s", e)
     finally:
         conn.close()

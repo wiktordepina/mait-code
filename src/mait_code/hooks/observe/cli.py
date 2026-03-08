@@ -7,6 +7,7 @@ results in memory.db and daily observation logs.
 
 import argparse
 import json
+import logging
 import sys
 
 from mait_code.hooks.observe.cursor import get_cursor, set_cursor
@@ -19,6 +20,8 @@ from mait_code.hooks.observe.storage import (
 from mait_code.hooks.observe.transcript import format_for_extraction, read_new_lines
 from mait_code.logging import log_invocation, setup_logging
 
+logger = logging.getLogger(__name__)
+
 
 @log_invocation(name="mc-hook-observe")
 def main():
@@ -26,8 +29,10 @@ def main():
     setup_logging()
     try:
         _run()
+    except BrokenPipeError:
+        sys.exit(0)
     except Exception as e:
-        print(f"observe: {e}", file=sys.stderr)
+        logger.error("observe: %s", e)
         sys.exit(0)  # Never fail the hook
 
 
@@ -43,7 +48,7 @@ def _run():
     event = json.loads(sys.stdin.read())
     transcript_path = event.get("transcript_path")
     if not transcript_path:
-        print("observe: no transcript_path in event", file=sys.stderr)
+        logger.warning("no transcript_path in event")
         return
 
     byte_offset = get_cursor(transcript_path)

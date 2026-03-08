@@ -1,9 +1,12 @@
 """Claude Haiku invocation for structured observation extraction."""
 
 import json
+import logging
+import os
 import re
 import subprocess
-import sys
+
+logger = logging.getLogger(__name__)
 
 EXTRACTION_PROMPT = """\
 You are an observation extraction system. Analyze the following conversation
@@ -65,22 +68,25 @@ def build_extraction_prompt(conversation_text: str) -> str:
 def call_haiku(prompt: str) -> str | None:
     """Call claude -p --model haiku. Returns stdout or None on failure."""
     try:
+        # Clear CLAUDECODE env var to allow nested claude invocations from hooks
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
         result = subprocess.run(
             ["claude", "-p", "--model", "haiku"],
             input=prompt,
             capture_output=True,
             text=True,
             timeout=45,
+            env=env,
         )
         if result.returncode != 0:
-            print(f"observe: claude exited {result.returncode}", file=sys.stderr)
+            logger.warning("claude exited %d: %s", result.returncode, result.stderr[:200] if result.stderr else "")
             return None
         return result.stdout.strip()
     except FileNotFoundError:
-        print("observe: claude CLI not found", file=sys.stderr)
+        logger.error("claude CLI not found")
         return None
     except subprocess.TimeoutExpired:
-        print("observe: claude timed out", file=sys.stderr)
+        logger.warning("claude timed out")
         return None
 
 
@@ -111,7 +117,7 @@ def parse_extraction(raw_output: str) -> dict | None:
         except json.JSONDecodeError:
             pass
 
-    print("observe: failed to parse extraction JSON", file=sys.stderr)
+    logger.warning("failed to parse extraction JSON: %s", raw_output[:200])
     return None
 
 
