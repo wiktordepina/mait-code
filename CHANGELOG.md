@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.7.0 — Project tasks (2026-03-08)
+
+Per-project task tracking with CLI tool, skills, and session start integration.
+
+- **`mc-tool-tasks` CLI tool:** Subcommands `add`, `list`, `done`, `remove`, `check` with SQLite storage, project scoping by git root basename (falls back to cwd basename)
+- **`/task` skill:** Add tasks via slash command (e.g. `/task Fix login bug`, `/task --priority high Fix auth race`); model-invocable so Claude can proactively suggest tasks during sessions (always asks before adding)
+- **`/tasks` skill:** List open tasks for the current project with preprocessing
+- **Session start hook:** Now surfaces open project tasks alongside overdue reminders at the beginning of each session
+- **SQLite storage:** Dedicated `tasks.db` with `tasks` table indexed on `(project, status)`, priority ordering (high → medium → low), connection factory and migration system matching existing patterns
+- **Test coverage:** 18 tests covering schema migrations, all CLI commands, project scoping, and priority ordering
+
 ## v0.6.0 — Reflection system (2026-03-08)
 
 Synthesise observations into durable insights with the new `/reflect` skill and reflection engine.

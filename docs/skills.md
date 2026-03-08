@@ -16,6 +16,8 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Status | `/status` | Generate comprehensive status dashboard | Planned |
 | Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
+| Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
+| Tasks | `/tasks` | Show open tasks for the current project | **Implemented** |
 
 ## Implemented Skills
 
@@ -104,6 +106,36 @@ Show active and overdue reminders.
 2. Presents active and overdue reminders
 3. Supports dismissing reminders via `mc-tool-reminders dismiss <id>`
 
+### /task
+
+Add a task for the current project. Model-invocable — Claude can proactively suggest tasks during a session, but always asks for confirmation before adding.
+
+**Usage:**
+```
+/task Fix login page CSS
+/task --priority high Fix auth race condition
+/task --priority low Update README with new API docs
+```
+
+**How it works:**
+1. Parses the title and optional `--priority` flag
+2. Stores via `mc-tool-tasks add [--priority <priority>] <title>`
+3. Tasks are scoped to the current project (git root basename or cwd basename)
+
+### /tasks
+
+Show open tasks for the current project.
+
+**Usage:**
+```
+/tasks                        # Show open tasks
+```
+
+**How it works:**
+1. Preprocesses results via `mc-tool-tasks list` (injected before Claude sees the skill)
+2. Presents open tasks sorted by priority (high → medium → low)
+3. Supports completing tasks via `mc-tool-tasks done <id>` or removing via `mc-tool-tasks remove <id>`
+
 ## Skill Architecture
 
 Each skill is a directory in `skills/` containing:
@@ -120,8 +152,12 @@ skills/
 │   └── SKILL.md     # Synthesise observations into insights
 ├── remind/
 │   └── SKILL.md     # Set a reminder
-└── reminders/
-    └── SKILL.md     # Show reminders
+├── reminders/
+│   └── SKILL.md     # Show reminders
+├── task/
+│   └── SKILL.md     # Add a project task
+└── tasks/
+    └── SKILL.md     # Show project tasks
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.
