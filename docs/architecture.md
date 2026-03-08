@@ -2,11 +2,12 @@
 
 ## Design Principles
 
-1. **No background services** — Everything runs reactively in response to Claude Code events (hooks, MCP requests, CLI invocations). No daemons, no cron jobs.
+1. **No background services** — Everything runs reactively in response to Claude Code events (hooks, CLI invocations). No daemons, no cron jobs.
 2. **Standalone project** — Self-contained Python package managed by `uv`. No system-wide installation required.
 3. **Memory-first** — The memory system is the core differentiator. All other features feed into or read from memory.
 4. **Companion identity** — Not a generic assistant. The soul document and user context create a consistent personality.
 5. **uv-managed** — All Python execution goes through `uv run --project`. No manual venv activation.
+6. **CLI tools + skills over MCP** — Simpler, no process overhead, preprocessing injects results before Claude sees the prompt.
 
 ## System Architecture
 
@@ -19,25 +20,38 @@
 │ │ (identity │  │             │  │             │ │
 │ │  + rules) │  │ SessionStart│  │ /recall     │ │
 │ │           │  │ PreCompact  │  │ /remember   │ │
-│ │ @soul_doc │  │ SessionEnd  │  │ memory-store│ │
-│ │ @user_ctx │  │             │  │             │ │
-│ │ @MEMORY   │  └────┬────────┘  └──────┬──────┘ │
-│ └───────────┘       │                  │        │
+│ │ @soul_doc │  │ SessionEnd  │  │ /remind     │ │
+│ │ @user_ctx │  │             │  │ /reminders  │ │
+│ │ @MEMORY   │  └────┬────────┘  │ memory-store│ │
+│ └───────────┘       │           └──────┬──────┘ │
 └─────────────────────┼──────────────────┼────────┘
                       │                  │
               ┌───────▼──────────────────▼────────┐
               │        mait-code (Python)         │
               │                                   │
-              │  hooks/          tools/           │
-              │    session_start   memory (CLI)   │
-              │    observe         reflect        │
-              │                   rebuild_db      │
-              │  memory/         mcp/             │
-              │    db             reminders       │
-              │    migrate                        │
-              │    writer                         │
-              │    search                         │
-              │    scoring                        │
+              │  hooks/                           │
+              │    session_start/  (SessionStart) │
+              │    observe/        (PreCompact,   │
+              │      cli.py          SessionEnd)  │
+              │      extractor.py                 │
+              │      transcript.py                │
+              │      cursor.py                    │
+              │      storage.py                   │
+              │    auto_format/    (PostToolUse)  │
+              │                                   │
+              │  tools/                           │
+              │    memory/         (CLI)          │
+              │      cli.py                       │
+              │      db.py                        │
+              │      migrate.py                   │
+              │      writer.py                    │
+              │      search.py                    │
+              │      scoring.py                   │
+              │      entities.py                  │
+              │    reminders/      (CLI)          │
+              │      cli.py                       │
+              │      db.py                        │
+              │      migrate.py                   │
               └───────────────┬───────────────────┘
                               │
               ┌───────────────▼───────────────────┐
@@ -50,7 +64,7 @@
               │    memory.db        (SQLite)      │
               │    observations/    (raw JSONL)   │
               │    reflections/     (synthesised) │
-              │    graph/           (relations)   │
+              │  reminders.db                     │
               └───────────────────────────────────┘
 ```
 
@@ -85,13 +99,42 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 
 **Vec0 virtual table: `memory_vec`**
 - 1536-dimension cosine distance vectors via `sqlite-vec`
-- Schema present, populated in Phase 2 (semantic search)
+- Schema present, not yet populated (reserved for semantic search)
+
+**Entity table: `memory_entities`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `name` | TEXT UNIQUE NOCASE | Entity name (case-insensitive) |
+| `entity_type` | TEXT | person, project, tool, service, concept, org, unknown |
+| `first_seen` | DATETIME | When the entity was first observed |
+| `last_seen` | DATETIME | When the entity was last mentioned |
+| `mention_count` | INTEGER | How many times the entity has been seen |
+
+**Relationship table: `memory_relationships`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `source_entity_id` | INTEGER FK | References memory_entities |
+| `target_entity_id` | INTEGER FK | References memory_entities |
+| `relationship_type` | TEXT | uses, owns, contributes_to, depends_on, manages, related_to |
+| `context` | TEXT | Description of the relationship |
+| `first_seen` | DATETIME | When the relationship was first observed |
+| `last_seen` | DATETIME | When the relationship was last seen |
+
+Unique constraint on `(source_entity_id, target_entity_id, relationship_type)`.
 
 **Indexes:**
 - `idx_memory_entries_created_at` — temporal queries
 - `idx_memory_entries_type` — type filtering
 - `idx_memory_entries_importance` — importance ranking
 - `idx_memory_entries_class` — class filtering
+- `idx_entities_name` — entity name lookup
+- `idx_entities_type` — entity type filtering
+- `idx_rel_unique` — relationship deduplication
+- `idx_rel_source`, `idx_rel_target` — relationship traversal
 
 ### Composite Scoring
 
@@ -152,8 +195,9 @@ search_memory() ──► FTS5 BM25 search
 ### Tier 1: Observations (raw)
 - Extracted automatically by the `observe` hook at PreCompact and SessionEnd
 - Stored as JSONL files in `memory/observations/YYYY-MM-DD.jsonl`
-- Contains facts, decisions, code patterns, and user preferences observed during sessions
+- Contains facts, decisions, code patterns, user preferences, entities, and relationships
 - Indexed into `memory.db` for structured search
+- Entities and relationships stored in the knowledge graph tables
 
 ### Tier 2: Reflections (synthesised)
 - Generated by the `reflect` tool, which aggregates recent observations
@@ -167,7 +211,7 @@ search_memory() ──► FTS5 BM25 search
 
 ## Memory CLI Tool (`mc-tool-memory`)
 
-Replaces the former MCP server with a sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direct Bash calls.
+Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direct Bash calls.
 
 | Subcommand | Args | Description |
 |------------|------|-------------|
@@ -176,20 +220,51 @@ Replaces the former MCP server with a sync CLI tool invoked via Bash. Skills use
 | `list` | --limit?, --type? | List recent entries, optionally filtered |
 | `delete` | id | Delete by ID |
 | `stats` | — | Counts by entry type and memory class |
+| `entities` | query?, --limit? | Search or list knowledge graph entities |
+| `relationships` | entity_name | Show relationships for an entity |
+| `rebuild` | — | Rebuild database from sources (not yet implemented) |
+| `reflect` | — | Synthesise observations into insights (not yet implemented) |
 
-## MCP Servers
+## Reminders CLI Tool (`mc-tool-reminders`)
 
-### mait-reminders
-- `set_reminder(when, what)` — Schedule a reminder
-- `list_reminders()` — Show active and overdue reminders
+| Subcommand | Args | Description |
+|------------|------|-------------|
+| `set` | when, what | Schedule a reminder with natural language time parsing |
+| `list` | --all? | List active (or all) reminders |
+| `dismiss` | id | Dismiss a reminder by ID |
+| `check` | — | Check for overdue reminders (used by session_start hook) |
 
 ## Hooks
 
-| Hook | Trigger | Purpose |
-|------|---------|---------|
-| `SessionStart` | Session begins | Inject companion context (recent memories, reminders) |
-| `PreCompact` | Before context compaction | Extract observations before conversation is compressed |
-| `SessionEnd` | Session ends | Final observation extraction, update statistics |
+| Hook | Trigger | Mode | Purpose |
+|------|---------|------|---------|
+| `session_start` | SessionStart | sync | Inject companion context (reminders) |
+| `observe` | PreCompact | async | Extract observations before context compaction |
+| `observe` | SessionEnd | sync | Final observation extraction |
+| `auto_format` | — | — | Format code after edits (placeholder) |
+
+The observe hook on PreCompact runs asynchronously (`"async": true`) to avoid blocking the main conversation. It calls Claude Haiku to extract structured observations (facts, preferences, decisions, bugs, entities, relationships) from new transcript lines.
+
+## Observation Pipeline
+
+```
+PreCompact / SessionEnd
+        │
+        ▼
+  cursor.py: get byte offset for transcript
+        │
+        ▼
+  transcript.py: read new JSONL lines, filter user/assistant messages
+        │
+        ▼
+  extractor.py: call Claude Haiku for structured extraction
+        │
+        ▼
+  storage.py: store to memory.db + daily JSONL logs
+        │
+        ▼
+  cursor.py: save new byte offset
+```
 
 ## Identity System
 
@@ -203,7 +278,15 @@ All three are referenced via `@` imports in `config/CLAUDE.md` and loaded into e
 
 ## Migration System
 
-Schema changes are managed via forward-only migrations in `src/mait_code/memory/migrate.py`. Each migration has a version number, description, and body (SQL list or callable). The `schema_version` table tracks which migrations have been applied.
+Schema changes are managed via forward-only migrations in `src/mait_code/tools/memory/migrate.py`. Each migration has a version number, description, and body (SQL list or callable). The `schema_version` table tracks which migrations have been applied.
+
+Current migrations:
+1. `memory_entries` table with indexes
+2. FTS5 virtual table for full-text search
+3. FTS sync triggers (insert/update/delete)
+4. Vec0 virtual table for vector search (requires sqlite-vec)
+5. `memory_entities` table for entity tracking
+6. `memory_relationships` table for entity relationships
 
 Adding a new migration:
 1. Append a tuple to `MIGRATIONS` with the next version number
@@ -218,13 +301,13 @@ Adding a new migration:
 ├── user_context.md           # User profile
 ├── memory/
 │   ├── MEMORY.md             # Curated facts (loaded every session)
-│   ├── memory.db             # SQLite FTS5 + vec0 database
+│   ├── memory.db             # SQLite FTS5 + vec0 + entities database
 │   ├── observations/         # Raw JSONL session extractions
-│   │   └── 2026-03-04.jsonl
-│   ├── reflections/          # Synthesised insights
-│   │   └── 2026-03.md
-│   └── graph/                # Entity relationships
-└── reminders.db              # Reminder database (future)
+│   │   ├── YYYY-MM-DD.jsonl
+│   │   └── cursors.json      # Byte offset tracking per transcript
+│   └── reflections/          # Synthesised insights
+│       └── YYYY-MM.md
+└── reminders.db              # Reminder database
 ```
 
 ## Key Technical Decisions
@@ -235,7 +318,9 @@ Adding a new migration:
 | SQLite + FTS5 + sqlite-vec | Zero infrastructure, single file, portable, keyword + vector search in one DB |
 | JSONL for observations | Append-only, merge-friendly for git sync, one object per line |
 | Hooks over background services | No daemons to manage, reactive model fits Claude Code's architecture |
-| CLI tools + skills over MCP for memory | No process overhead, preprocessing injects results before Claude sees the skill, simpler debugging |
+| CLI tools + skills over MCP | No process overhead, preprocessing injects results before Claude sees the skill, simpler debugging |
 | Symlinks over file copying | Updates propagate automatically via `git pull`, no re-install needed |
 | Exponential decay scoring | Recent memories surface naturally, old ones fade unless high importance |
 | Dedup via FTS5 + SequenceMatcher | Fast candidate narrowing, precise similarity comparison, no duplicates |
+| Async observation hook | PreCompact extraction runs in background, no conversation latency |
+| Entity tables over separate graph DB | Entities live in memory.db alongside memories — single file, recursive CTEs for future traversal |

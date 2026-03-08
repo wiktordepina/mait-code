@@ -75,6 +75,41 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
                USING vec0(embedding float[1536] distance_metric=cosine)""",
         ],
     ),
+    (
+        5,
+        "Create memory_entities table for entity tracking",
+        [
+            """CREATE TABLE IF NOT EXISTS memory_entities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                entity_type TEXT NOT NULL DEFAULT 'unknown',
+                first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                mention_count INTEGER NOT NULL DEFAULT 1
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_entities_name ON memory_entities(name COLLATE NOCASE)",
+            "CREATE INDEX IF NOT EXISTS idx_entities_type ON memory_entities(entity_type)",
+        ],
+    ),
+    (
+        6,
+        "Create memory_relationships table for entity relationships",
+        [
+            """CREATE TABLE IF NOT EXISTS memory_relationships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_entity_id INTEGER NOT NULL REFERENCES memory_entities(id),
+                target_entity_id INTEGER NOT NULL REFERENCES memory_entities(id),
+                relationship_type TEXT NOT NULL,
+                context TEXT,
+                first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE UNIQUE INDEX IF NOT EXISTS idx_rel_unique
+                ON memory_relationships(source_entity_id, target_entity_id, relationship_type)""",
+            "CREATE INDEX IF NOT EXISTS idx_rel_source ON memory_relationships(source_entity_id)",
+            "CREATE INDEX IF NOT EXISTS idx_rel_target ON memory_relationships(target_entity_id)",
+        ],
+    ),
 ]
 
 

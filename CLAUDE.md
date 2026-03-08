@@ -9,7 +9,7 @@ Companion framework extending Claude Code with persistent memory, identity, and 
 - **Always use `uv run`** to execute scripts and tools — never activate venvs manually
 - **Entry points** are defined in `pyproject.toml` under `[project.scripts]`
 - **Data directory** is `~/.claude/mait-code-data/` — configurable via `MAIT_CODE_DATA_DIR` env var
-- **No asyncio in CLI tools** — tools use sync code; only remaining MCP servers (reminders) use async
+- **No asyncio in CLI tools** — tools use sync code; MCP servers use async
 - **No background services** — everything is reactive (hooks, skill invocations, CLI tools)
 - **Prefer CLI tools + skills over MCP** — simpler, no process overhead, supports preprocessing
 
@@ -27,9 +27,8 @@ uv run ruff format src/        # Format
 ```
 src/mait_code/
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
-├── mcp/             # MCP servers (reminders)
+├── mcp/             # MCP servers
 └── tools/           # CLI tools
-    └── memory/      # Memory system (CLI, storage, search, scoring, migrations)
 config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh
@@ -40,7 +39,7 @@ docs/                # Documentation
 
 ## Adding New Components
 
-- **New hook:** Add module in `src/mait_code/hooks/`, add entry point (`mc-hook-*`) in `pyproject.toml`, register in `config/settings.json`
-- **New CLI tool:** Add module in `src/mait_code/tools/`, add entry point (`mc-tool-*`) in `pyproject.toml`
+- **New hook:** Add package in `src/mait_code/hooks/<hook_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-hook-*`) in `pyproject.toml`, register in `config/settings.json`. Use `"async": true` for observation/logging hooks that don't need to feed results back into the conversation, to avoid blocking the user.
+- **New CLI tool:** Add package in `src/mait_code/tools/<tool_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-tool-*`) in `pyproject.toml`
 - **New skill:** Create directory in `skills/` with `SKILL.md` — skills can invoke CLI tools via preprocessing or Bash
-- **New MCP server:** Only if persistent connection/streaming needed; add in `src/mait_code/mcp/`, entry point (`mc-mcp-*`)
+- **New MCP server:** Only if persistent connection/streaming needed; add package in `src/mait_code/mcp/<server_name>/` with `cli.py` as the entry point containing `main()` , entry point (`mc-mcp-*`) in `pyproject.toml`

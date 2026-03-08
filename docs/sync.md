@@ -48,7 +48,7 @@ git push
 cd ~/.claude/mait-code-data
 git pull
 # Rebuild vector database from synced markdown
-mc-tool-rebuild-db
+mc-tool-memory rebuild
 ```
 
 ### Post-merge hook for auto DB rebuild
@@ -58,8 +58,8 @@ Create `~/.claude/mait-code-data/.git/hooks/post-merge`:
 ```bash
 #!/usr/bin/env bash
 # Rebuild vector DB after pulling new observations
-if command -v mc-tool-rebuild-db &> /dev/null; then
-    mc-tool-rebuild-db &
+if command -v mc-tool-memory rebuild &> /dev/null; then
+    mc-tool-memory rebuild &
 fi
 ```
 

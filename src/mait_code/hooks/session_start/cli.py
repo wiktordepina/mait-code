@@ -15,7 +15,7 @@ def _check_reminders() -> str:
             timeout=5,
         )
         return result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError, subprocess.TimeoutExpired:
         return ""
 
 

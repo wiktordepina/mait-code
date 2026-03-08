@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.4.0 — Entity system, observation hooks, and hooks reorganisation (2026-03-08)
+
+Added knowledge graph entity tracking, automatic observation extraction from conversations, and reorganised hooks to follow the same package convention as tools.
+
+- **Entity system:** `memory_entities` and `memory_relationships` tables (migrations 5–6) with CRUD operations — upsert, case-insensitive lookup, relationship tracking with mention counts
+- **Observation hook:** Automatic knowledge extraction via Claude Haiku on `PreCompact` and `SessionEnd` — extracts facts, preferences, decisions, bugs, entities, and relationships from conversation transcripts
+- **Async PreCompact hook:** Observation hook now runs asynchronously to avoid blocking the main conversation during context compaction
+- **Hooks reorganisation:** All hooks now follow `hooks/<hook_name>/cli.py` package pattern (matching `tools/<tool_name>/cli.py`), eliminating the flat-file/submodule inconsistency
+- **CLI commands:** Added `mc-tool-memory entities` and `mc-tool-memory relationships` subcommands for querying the knowledge graph
+- **Cursor-based incremental extraction:** Only processes new transcript lines since last invocation, with automatic pruning of stale cursors (>30 days)
+- **Updated conventions:** CLAUDE.md, docs, and pyproject.toml entry points updated to reflect new package structure
+
 ## v0.3.1 — Replace reminders MCP server with CLI tool (2026-03-07)
 
 Replaced the last MCP server (`mait-reminders`) with a sync CLI tool and skills, eliminating the `mcp` dependency entirely.
