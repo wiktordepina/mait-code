@@ -1,0 +1,71 @@
+"""
+Schema migration for tasks database.
+
+Forward-only, idempotent migrations for tasks.db.
+Call ensure_schema(conn) after opening any connection to guarantee
+the schema is current.
+"""
+
+import logging
+import sqlite3
+from collections.abc import Callable
+
+logger = logging.getLogger(__name__)
+
+type MigrationBody = list[str] | Callable[[sqlite3.Connection], None]
+
+MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
+    (
+        1,
+        "Create tasks table with indexes",
+        [
+            """CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project TEXT NOT NULL,
+                title TEXT NOT NULL,
+                priority TEXT NOT NULL DEFAULT 'medium',
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                completed_at TEXT
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project, status)",
+        ],
+    ),
+]
+
+
+def ensure_schema(conn: sqlite3.Connection) -> None:
+    """
+    Apply any pending migrations to the database.
+
+    Safe to call on every connection open — checks a single integer
+    and returns immediately if the schema is current.
+    """
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER PRIMARY KEY,
+            applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            description TEXT
+        )"""
+    )
+    conn.commit()
+
+    cursor = conn.execute("SELECT COALESCE(MAX(version), 0) FROM schema_version")
+    current_version = cursor.fetchone()[0]
+
+    for version, description, body in MIGRATIONS:
+        if version <= current_version:
+            continue
+
+        if callable(body):
+            body(conn)
+        else:
+            for sql in body:
+                conn.execute(sql)
+
+        conn.execute(
+            "INSERT INTO schema_version (version, description) VALUES (?, ?)",
+            (version, description),
+        )
+        conn.commit()
+        logger.info("Migration %d: %s", version, description)

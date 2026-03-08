@@ -23,6 +23,8 @@
 │ │ @soul_doc │  │ SessionEnd  │  │ /reflect    │ │
 │ │ @user_ctx │  │             │  │ /remind     │ │
 │ │ @MEMORY   │  └────┬────────┘  │ /reminders  │ │
+│ │           │       │           │ /task       │ │
+│ │           │       │           │ /tasks      │ │
 │ │           │       │           │ memory-store│ │
 │ └───────────┘       │           └──────┬──────┘ │
 └─────────────────────┼──────────────────┼────────┘
@@ -55,6 +57,10 @@
               │      cli.py                       │
               │      db.py                        │
               │      migrate.py                   │
+              │    tasks/           (CLI)          │
+              │      cli.py                       │
+              │      db.py                        │
+              │      migrate.py                   │
               │                                   │
               │  llm.py            (shared)       │
               │  logging.py        (shared)       │
@@ -71,6 +77,7 @@
               │    observations/    (raw JSONL)   │
               │    reflections/     (synthesised) │
               │  reminders.db                     │
+              │  tasks.db                         │
               └───────────────────────────────────┘
 ```
 
@@ -258,6 +265,18 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 | `restore` | --dry-run? | Restore memory database from observation JSONL log files, then reindex |
 | `reflect` | --days?, --min-new? | Synthesise observations into insights, propose MEMORY.md updates |
 
+## Tasks CLI Tool (`mc-tool-tasks`)
+
+Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared `tasks.db`.
+
+| Subcommand | Args | Description |
+|------------|------|-------------|
+| `add` | title, --priority? | Add a task (low/medium/high, default: medium) |
+| `list` | --all? | List open tasks (or all including completed) |
+| `done` | id | Mark a task as completed |
+| `remove` | id | Remove a task |
+| `check` | --project? | List open tasks for current project (used by session_start hook) |
+
 ## Reminders CLI Tool (`mc-tool-reminders`)
 
 | Subcommand | Args | Description |
@@ -271,7 +290,7 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 
 | Hook | Trigger | Mode | Purpose |
 |------|---------|------|---------|
-| `session_start` | SessionStart | sync | Inject companion context (reminders) |
+| `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks) |
 | `observe` | PreCompact | async | Extract observations before context compaction |
 | `observe` | SessionEnd | sync | Final observation extraction |
 | `auto_format` | — | — | Format code after edits (placeholder) |
@@ -370,7 +389,8 @@ Adding a new migration:
 │   ├── mait-code.log         # Current log
 │   ├── mait-code.log.1       # Rotated backups
 │   └── ...
-└── reminders.db              # Reminder database
+├── reminders.db              # Reminder database
+└── tasks.db                  # Per-project tasks database
 ```
 
 ## Key Technical Decisions
