@@ -167,15 +167,34 @@ The session start hook automatically surfaces overdue reminders at the beginning
 
 Time parsing uses `dateparser` with UTC normalisation — you can write `"tomorrow 9am"`, `"in 30 minutes"`, `"next friday"`, or ISO dates.
 
-## Tier 2: Reflections (Planned)
+## Tier 2: Reflections
 
-The reflection system will aggregate recent observations into higher-level insights:
+The reflection system synthesises recent observations into higher-level insights:
 
-- **Trigger:** `/reflect` skill (manual) or automatic after N observations accumulate
-- **Input:** Recent observations from the database
-- **Output:** Monthly summaries in `~/.claude/mait-code-data/memory/reflections/YYYY-MM.md`
-- **Purpose:** Identify patterns, recurring themes, and evolving preferences that individual observations miss
-- **Promotion:** High-confidence reflections get promoted to MEMORY.md (Tier 3)
+- **Trigger:** `/reflect` skill (manual)
+- **Input:** Last 7 days of memory entries + observation JSONL logs + current MEMORY.md
+- **Process:** Calls Claude Haiku to identify patterns, themes, and recurring issues across entries
+- **Output:** 3-5 insights stored as `type=insight` in memory.db (importance=6)
+- **MEMORY.md proposals:** High-confidence facts are proposed as additions for user approval
+- **Novelty gate:** Skips reflection if fewer than 3 new observations since the last reflection
+
+### Usage
+
+```
+/reflect                                    # Standard reflection (last 7 days)
+mc-tool-memory reflect --days 14            # Reflect on last 14 days
+mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+```
+
+### How it works
+
+1. Checks the novelty gate — counts non-insight entries since the last `type=insight` was stored
+2. Gathers recent `memory_entries` (excluding insights to avoid feedback loops)
+3. Reads raw observation JSONL logs for richer context
+4. Sends everything to Claude Haiku with a synthesis prompt
+5. Parses `INSIGHT:` lines and `MEMORY_UPDATE:` proposals from the response
+6. Stores insights in memory.db
+7. Presents proposed MEMORY.md changes for user approval
 
 ## Tier 3: MEMORY.md (Curated)
 
@@ -184,7 +203,7 @@ The reflection system will aggregate recent observations into higher-level insig
 **Constraints:**
 - ~150 lines maximum (context budget)
 - Organised by topic, not chronologically
-- Currently updated manually; will be updated by the reflection system
+- Updated by the reflection system (`/reflect`) which proposes additions for user approval
 
 **Examples of what belongs here:**
 - "User works with Kubernetes on GKE"
@@ -216,6 +235,9 @@ The reflection system will aggregate recent observations into higher-level insig
 | `reindex` | Recompute all vector embeddings from scratch |
 | `restore` | Replay observation JSONL logs into the database, then reindex |
 | `restore --dry-run` | Show what would be restored without writing |
+| `reflect` | Synthesise recent observations into insights |
+| `reflect --days 14` | Reflect on last 14 days |
+| `reflect --min-new 0` | Force reflection (skip novelty gate) |
 
 ### Skills
 
@@ -223,6 +245,7 @@ The reflection system will aggregate recent observations into higher-level insig
 |-------|-------|
 | `/recall <query>` | Search memory (results injected via preprocessing) |
 | `/remember <content>` | Manually store a memory |
+| `/reflect` | Synthesise observations into insights, propose MEMORY.md updates |
 | `/remind <when> <what>` | Set a reminder |
 | `/reminders` | Show active and overdue reminders |
 

@@ -26,6 +26,7 @@ uv run ruff format src/        # Format
 
 ```
 src/mait_code/
+├── llm.py           # Shared LLM invocation (call_claude)
 ├── logging.py       # Shared logging (setup_logging, @log_invocation)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
 ├── mcp/             # MCP servers

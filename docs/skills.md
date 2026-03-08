@@ -7,7 +7,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Recall | `/recall <query>` | Search memory for past facts, decisions, patterns | **Implemented** |
 | Remember | `/remember <content>` | Manually store a memory observation | **Implemented** |
 | Memory Store | *(auto)* | Claude auto-stores observations about user/projects | **Implemented** |
-| Reflect | `/reflect` | Synthesise recent observations into insights, update MEMORY.md | Planned |
+| Reflect | `/reflect` | Synthesise recent observations into insights, update MEMORY.md | **Implemented** |
 | Observe | `/observe` | Manually trigger observation extraction from current session | Planned |
 | Standup | `/standup` | Generate standup summary from recent work and observations | Planned |
 | Work History | `/work-history [period]` | Show recent work activity over a time period | Planned |
@@ -56,6 +56,24 @@ Manually store a memory observation. This is a manual-only skill (`disable-model
 
 Not a slash command — Claude uses this skill proactively when it learns something new about the user. Uses `mc-tool-memory store` via Bash.
 
+### /reflect
+
+Synthesise recent observations into high-level insights and propose MEMORY.md updates.
+
+**Usage:**
+```
+/reflect                                    # Reflect on last 7 days
+```
+
+**How it works:**
+1. Preprocesses via `mc-tool-memory reflect` (injected before Claude sees the skill)
+2. Checks the novelty gate — skips if fewer than 3 new observations since last reflection
+3. Gathers recent memory entries and raw observation JSONL logs
+4. Calls Claude Haiku to identify patterns, themes, and recurring issues
+5. Stores insights as `type=insight` (importance=6) in memory.db
+6. If MEMORY.md updates are proposed, presents them for user approval
+7. User can force reflection with different parameters: `mc-tool-memory reflect --days 14 --min-new 0`
+
 ### /remind
 
 Set a reminder for a future time.
@@ -98,6 +116,8 @@ skills/
 │   └── SKILL.md     # Store memory (manual)
 ├── memory-store/
 │   └── SKILL.md     # Store memory (auto-invoked by Claude)
+├── reflect/
+│   └── SKILL.md     # Synthesise observations into insights
 ├── remind/
 │   └── SKILL.md     # Set a reminder
 └── reminders/

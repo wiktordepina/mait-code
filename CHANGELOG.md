@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.0 — Reflection system (2026-03-08)
+
+Synthesise observations into durable insights with the new `/reflect` skill and reflection engine.
+
+- **Reflection engine:** `mc-tool-memory reflect` reads last 7 days of memory entries + observation JSONL logs, calls Claude Haiku to identify patterns and themes, stores insights as `type=insight` (importance=6) in memory.db
+- **`/reflect` skill:** Slash command with preprocessing — presents insights and proposes MEMORY.md additions for user approval
+- **Novelty gate:** Skips reflection if fewer than 3 new observations since last reflection; overridable with `--min-new 0`
+- **CLI flags:** `--days` (default 7) and `--min-new` (default 3) for controlling reflection scope
+- **Shared LLM module:** Extracted `call_claude()` from observe hook into `src/mait_code/llm.py` — reused by both extraction and reflection
+- **Refactored extractor:** `call_haiku` now delegates to shared `call_claude` with `model="haiku"`, `timeout=45`
+- **Test coverage:** 15 new tests covering reflection logic, `_format_extraction`, `read_memory_md`, observation log edge cases, CLI output, and `call_haiku` delegation
+
 ## v0.5.0 — Vector embeddings and shared logging (2026-03-08)
 
 Added semantic search via vector embeddings and a shared logging system across all entry points.
