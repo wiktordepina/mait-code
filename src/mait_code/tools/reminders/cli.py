@@ -151,18 +151,24 @@ def cmd_check(_args):
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="mc-tool-reminders", description="Reminders CLI")
+    parser = argparse.ArgumentParser(
+        prog="mc-tool-reminders", description="Reminders CLI"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     # set
     p_set = sub.add_parser("set", help="Set a reminder")
-    p_set.add_argument("when", help="When (e.g. 'in 2 hours', 'tomorrow 9am', '2026-03-10')")
+    p_set.add_argument(
+        "when", help="When (e.g. 'in 2 hours', 'tomorrow 9am', '2026-03-10')"
+    )
     p_set.add_argument("what", nargs="+", help="Reminder content")
     p_set.set_defaults(func=cmd_set)
 
     # list
     p_list = sub.add_parser("list", help="List active reminders")
-    p_list.add_argument("--all", action="store_true", help="Include dismissed reminders")
+    p_list.add_argument(
+        "--all", action="store_true", help="Include dismissed reminders"
+    )
     p_list.set_defaults(func=cmd_list)
 
     # dismiss

@@ -68,8 +68,11 @@ def test_cmd_list_active(mock_conn, capsys):
     _insert_reminder(mock_conn, "overdue task", now - timedelta(hours=1))
     _insert_reminder(mock_conn, "future task", now + timedelta(hours=1))
     _insert_reminder(
-        mock_conn, "done task", now + timedelta(hours=2),
-        dismissed=True, dismissed_at=now.isoformat(),
+        mock_conn,
+        "done task",
+        now + timedelta(hours=2),
+        dismissed=True,
+        dismissed_at=now.isoformat(),
     )
 
     from mait_code.tools.reminders.cli import cmd_list
@@ -85,8 +88,11 @@ def test_cmd_list_all(mock_conn, capsys):
     now = _now()
     _insert_reminder(mock_conn, "active task", now + timedelta(hours=1))
     _insert_reminder(
-        mock_conn, "dismissed task", now + timedelta(hours=2),
-        dismissed=True, dismissed_at=now.isoformat(),
+        mock_conn,
+        "dismissed task",
+        now + timedelta(hours=2),
+        dismissed=True,
+        dismissed_at=now.isoformat(),
     )
 
     from mait_code.tools.reminders.cli import cmd_list

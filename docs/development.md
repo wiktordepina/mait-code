@@ -134,10 +134,10 @@ def mem_db(tmp_path):
 
 ## Adding a New Hook
 
-1. Create module in `src/mait_code/hooks/<hook_name>.py` with a `main()` function
+1. Create package in `src/mait_code/hooks/<hook_name>/` with `cli.py` containing a `main()` function
 2. Add entry point in `pyproject.toml`:
    ```toml
-   mc-hook-<hook-name> = "mait_code.hooks.<hook_name>:main"
+   mc-hook-<hook-name> = "mait_code.hooks.<hook_name>.cli:main"
    ```
 3. Register in `config/settings.json` under the appropriate hook event
 4. Run `uv sync` and re-run `./scripts/install.sh`

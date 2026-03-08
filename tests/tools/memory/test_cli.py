@@ -122,7 +122,9 @@ class TestCmdStore:
     def test_invalid_type_error(self, mem_db):
         from mait_code.tools.memory.cli import cmd_store
 
-        args = _make_args(content=["some", "content"], type="invalid_type", importance=5)
+        args = _make_args(
+            content=["some", "content"], type="invalid_type", importance=5
+        )
         with pytest.raises(SystemExit):
             cmd_store(args)
 

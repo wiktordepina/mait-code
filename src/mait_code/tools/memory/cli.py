@@ -4,6 +4,11 @@ import argparse
 import sys
 
 from mait_code.tools.memory.db import get_connection
+from mait_code.tools.memory.entities import (
+    find_entity_by_name,
+    get_entity_relationships,
+    search_entities as _search_entities,
+)
 from mait_code.tools.memory.scoring import composite_score
 from mait_code.tools.memory.search import delete_entry, list_entries, search_entries
 from mait_code.tools.memory.writer import VALID_ENTRY_TYPES
@@ -140,6 +145,58 @@ def cmd_stats(_args):
         conn.close()
 
 
+def cmd_entities(args):
+    query = " ".join(args.query) if args.query else ""
+    conn = get_connection()
+    try:
+        if not query:
+            results = _search_entities(conn, "", limit=args.limit)
+        else:
+            results = _search_entities(conn, query, limit=args.limit)
+
+        if not results:
+            print(f"No entities found{' matching ' + repr(query) if query else ''}.")
+            return
+
+        print(
+            f"Entities{' matching ' + repr(query) if query else ''} ({len(results)}):\n"
+        )
+        for e in results:
+            rels = get_entity_relationships(conn, e["id"])
+            print(
+                f"[#{e['id']}] {e['name']} ({e['entity_type']}) "
+                f"— {e['mention_count']} mentions, {len(rels)} relationships"
+            )
+    finally:
+        conn.close()
+
+
+def cmd_relationships(args):
+    entity_name = " ".join(args.entity)
+    conn = get_connection()
+    try:
+        entity = find_entity_by_name(conn, entity_name)
+        if not entity:
+            print(f"Entity '{entity_name}' not found.", file=sys.stderr)
+            sys.exit(1)
+
+        rels = get_entity_relationships(conn, entity["id"])
+        if not rels:
+            print(f"No relationships found for '{entity['name']}'.")
+            return
+
+        print(f"Relationships for '{entity['name']}' ({len(rels)}):\n")
+        for r in rels:
+            if r["source_entity_id"] == entity["id"]:
+                print(f"  → {r['relationship_type']} → {r['target_name']}")
+            else:
+                print(f"  ← {r['relationship_type']} ← {r['source_name']}")
+            if r["context"]:
+                print(f"    {r['context']}")
+    finally:
+        conn.close()
+
+
 def cmd_rebuild(_args):
     """Rebuild the memory database from markdown source files."""
     print("rebuild-db: not yet implemented")
@@ -183,12 +240,27 @@ def main():
     p_stats = sub.add_parser("stats", help="Show memory statistics")
     p_stats.set_defaults(func=cmd_stats)
 
+    # entities
+    p_entities = sub.add_parser("entities", help="Search entities")
+    p_entities.add_argument("query", nargs="*", help="Search query (optional)")
+    p_entities.add_argument("--limit", type=int, default=20)
+    p_entities.set_defaults(func=cmd_entities)
+
+    # relationships
+    p_rels = sub.add_parser("relationships", help="Show relationships for an entity")
+    p_rels.add_argument("entity", nargs="+", help="Entity name")
+    p_rels.set_defaults(func=cmd_relationships)
+
     # rebuild
-    p_rebuild = sub.add_parser("rebuild", help="Rebuild memory database from source files")
+    p_rebuild = sub.add_parser(
+        "rebuild", help="Rebuild memory database from source files"
+    )
     p_rebuild.set_defaults(func=cmd_rebuild)
 
     # reflect
-    p_reflect = sub.add_parser("reflect", help="Synthesise recent observations into insights")
+    p_reflect = sub.add_parser(
+        "reflect", help="Synthesise recent observations into insights"
+    )
     p_reflect.set_defaults(func=cmd_reflect)
 
     args = parser.parse_args()

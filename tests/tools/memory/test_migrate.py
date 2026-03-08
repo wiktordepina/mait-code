@@ -38,7 +38,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 4  # Exactly 4 migrations
+    assert versions == 6  # Exactly 6 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -47,9 +47,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 4
+    assert len(rows) == 6
     assert rows[0][0] == 1
-    assert rows[-1][0] == 4
+    assert rows[-1][0] == 6
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -124,5 +124,29 @@ def test_memory_entries_columns(memory_db: sqlite3.Connection):
         "importance",
         "memory_class",
         "created_at",
+    }
+    assert expected == columns
+
+
+def test_migration_5_creates_entities_table(memory_db: sqlite3.Connection):
+    """memory_entities table should exist with correct columns."""
+    cursor = memory_db.execute("PRAGMA table_info(memory_entities)")
+    columns = {r[1] for r in cursor.fetchall()}
+    expected = {"id", "name", "entity_type", "first_seen", "last_seen", "mention_count"}
+    assert expected == columns
+
+
+def test_migration_6_creates_relationships_table(memory_db: sqlite3.Connection):
+    """memory_relationships table should exist with correct columns."""
+    cursor = memory_db.execute("PRAGMA table_info(memory_relationships)")
+    columns = {r[1] for r in cursor.fetchall()}
+    expected = {
+        "id",
+        "source_entity_id",
+        "target_entity_id",
+        "relationship_type",
+        "context",
+        "first_seen",
+        "last_seen",
     }
     assert expected == columns
