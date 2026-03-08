@@ -85,3 +85,14 @@ def test_extract_observations_haiku_failure():
     with patch("mait_code.hooks.observe.extractor.call_haiku", return_value=None):
         result = extract_observations("USER: hello")
     assert result is None
+
+
+def test_call_haiku_delegates_to_call_claude():
+    """Verify call_haiku passes model='haiku' and timeout=45 to call_claude."""
+    from mait_code.hooks.observe.extractor import call_haiku
+
+    with patch("mait_code.hooks.observe.extractor.call_claude", return_value="response") as mock:
+        result = call_haiku("test prompt")
+
+    assert result == "response"
+    mock.assert_called_once_with("test prompt", model="haiku", timeout=45)

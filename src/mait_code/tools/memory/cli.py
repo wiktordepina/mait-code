@@ -468,9 +468,33 @@ def cmd_restore(args):
             conn.close()
 
 
-def cmd_reflect(_args):
+def cmd_reflect(args):
     """Synthesise recent observations into insights, update MEMORY.md."""
-    print("reflect: not yet implemented")
+    from mait_code.tools.memory.reflect import reflect
+
+    conn = get_connection()
+    try:
+        result = reflect(conn, days=args.days, min_new=args.min_new)
+    finally:
+        conn.close()
+
+    if result["skipped"]:
+        reason = result.get("reason", "not enough new signal")
+        print(f"Reflection skipped — {reason}.")
+        return
+
+    if not result["insights"]:
+        print(f"No insights generated from last {args.days} days of data.")
+        return
+
+    print(f"Generated {len(result['insights'])} insights from last {args.days} days:\n")
+    for i, insight in enumerate(result["insights"], 1):
+        print(f"  {i}. {insight}")
+    print(f"\nStored {result['stored']} insights to memory database.")
+
+    if result["memory_diff"]:
+        print(f"\n{result['memory_diff']}")
+        print("\nReview and apply these changes manually or approve when prompted.")
 
 
 @log_invocation(name="mc-tool-memory")
@@ -546,6 +570,15 @@ def main():
     # reflect
     p_reflect = sub.add_parser(
         "reflect", help="Synthesise recent observations into insights"
+    )
+    p_reflect.add_argument(
+        "--days", type=int, default=7, help="Days of history to reflect on"
+    )
+    p_reflect.add_argument(
+        "--min-new",
+        type=int,
+        default=3,
+        help="Minimum new observations to trigger reflection",
     )
     p_reflect.set_defaults(func=cmd_reflect)
 

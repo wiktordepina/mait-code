@@ -2,9 +2,9 @@
 
 import json
 import logging
-import os
 import re
-import subprocess
+
+from mait_code.llm import call_claude
 
 logger = logging.getLogger(__name__)
 
@@ -66,28 +66,8 @@ def build_extraction_prompt(conversation_text: str) -> str:
 
 
 def call_haiku(prompt: str) -> str | None:
-    """Call claude -p --model haiku. Returns stdout or None on failure."""
-    try:
-        # Clear CLAUDECODE env var to allow nested claude invocations from hooks
-        env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-        result = subprocess.run(
-            ["claude", "-p", "--model", "haiku"],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=45,
-            env=env,
-        )
-        if result.returncode != 0:
-            logger.warning("claude exited %d: %s", result.returncode, result.stderr[:200] if result.stderr else "")
-            return None
-        return result.stdout.strip()
-    except FileNotFoundError:
-        logger.error("claude CLI not found")
-        return None
-    except subprocess.TimeoutExpired:
-        logger.warning("claude timed out")
-        return None
+    """Call Claude Haiku via shared LLM module. Returns stdout or None on failure."""
+    return call_claude(prompt, model="haiku", timeout=45)
 
 
 def parse_extraction(raw_output: str) -> dict | None:
