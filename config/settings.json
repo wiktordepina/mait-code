@@ -1,4 +1,7 @@
 {
+  "env": {
+    "MAIT_CODE_LOG_LEVEL": "INFO"
+  },
   "hooks": {
     "SessionStart": [
       {

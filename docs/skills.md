@@ -16,7 +16,6 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Status | `/status` | Generate comprehensive status dashboard | Planned |
 | Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
-| Incident | `/incident <description>` | Log an incident with timestamp and context | Planned |
 
 ## Implemented Skills
 

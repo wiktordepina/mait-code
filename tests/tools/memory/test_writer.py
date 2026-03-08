@@ -1,6 +1,9 @@
 """Tests for memory writer with deduplication."""
 
 import sqlite3
+from unittest.mock import patch
+
+import numpy as np
 
 from mait_code.tools.memory.writer import (
     MEMORY_CLASS_MAP,
@@ -134,6 +137,54 @@ class TestStoreMemory:
         assert r1["action"] == "created"
         assert r2["action"] == "created"
         assert r1["id"] != r2["id"]
+
+
+class TestStoreMemoryEmbedding:
+    def test_store_creates_embedding(self, memory_db: sqlite3.Connection):
+        """Storing a memory should also insert an embedding."""
+        mock_vec = np.zeros(768, dtype="float32")
+
+        with patch(
+            "mait_code.tools.memory.writer.embed_text",
+            return_value=mock_vec.tolist(),
+        ):
+            result = store_memory(memory_db, "test with embedding", "fact", 5)
+
+        count = memory_db.execute(
+            "SELECT COUNT(*) FROM memory_vec WHERE rowid = ?", (result["id"],)
+        ).fetchone()[0]
+        assert count == 1
+
+    def test_store_works_without_embeddings(self, memory_db: sqlite3.Connection):
+        """Storage should succeed even when embeddings are unavailable."""
+        with patch(
+            "mait_code.tools.memory.writer.embed_text",
+            return_value=None,
+        ):
+            result = store_memory(memory_db, "test without embedding", "fact", 5)
+
+        assert result["action"] == "created"
+        assert result["id"] is not None
+
+        # No embedding should be stored
+        count = memory_db.execute(
+            "SELECT COUNT(*) FROM memory_vec WHERE rowid = ?", (result["id"],)
+        ).fetchone()[0]
+        assert count == 0
+
+    def test_dedup_does_not_embed(self, memory_db: sqlite3.Connection):
+        """Deduplication should not attempt to store a new embedding."""
+        mock_vec = np.zeros(768, dtype="float32")
+
+        with patch(
+            "mait_code.tools.memory.writer.embed_text",
+            return_value=mock_vec.tolist(),
+        ) as mock_embed:
+            store_memory(memory_db, "duplicate content test", "fact", 5)
+            store_memory(memory_db, "duplicate content test", "fact", 5)
+
+        # embed_text should only be called once (for the first store)
+        assert mock_embed.call_count == 1
 
 
 class TestFindDuplicate:

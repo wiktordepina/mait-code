@@ -26,6 +26,7 @@ uv run ruff format src/        # Format
 
 ```
 src/mait_code/
+├── logging.py       # Shared logging (setup_logging, @log_invocation)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
 ├── mcp/             # MCP servers
 └── tools/           # CLI tools
@@ -39,7 +40,7 @@ docs/                # Documentation
 
 ## Adding New Components
 
-- **New hook:** Add package in `src/mait_code/hooks/<hook_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-hook-*`) in `pyproject.toml`, register in `config/settings.json`. Use `"async": true` for observation/logging hooks that don't need to feed results back into the conversation, to avoid blocking the user.
-- **New CLI tool:** Add package in `src/mait_code/tools/<tool_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-tool-*`) in `pyproject.toml`
+- **New hook:** Add package in `src/mait_code/hooks/<hook_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-hook-*`) in `pyproject.toml`, register in `config/settings.json`. Use `"async": true` for observation/logging hooks that don't need to feed results back into the conversation, to avoid blocking the user. Wire in `setup_logging()` and `@log_invocation()`.
+- **New CLI tool:** Add package in `src/mait_code/tools/<tool_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-tool-*`) in `pyproject.toml`. Wire in `setup_logging()` and `@log_invocation()`.
 - **New skill:** Create directory in `skills/` with `SKILL.md` — skills can invoke CLI tools via preprocessing or Bash
 - **New MCP server:** Only if persistent connection/streaming needed; add package in `src/mait_code/mcp/<server_name>/` with `cli.py` as the entry point containing `main()` , entry point (`mc-mcp-*`) in `pyproject.toml`

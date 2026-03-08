@@ -110,6 +110,19 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "CREATE INDEX IF NOT EXISTS idx_rel_target ON memory_relationships(target_entity_id)",
         ],
     ),
+    (
+        7,
+        "Recreate memory_vec with 768 dimensions for nomic-embed-text-v1.5",
+        [
+            "DROP TABLE IF EXISTS memory_vec",
+            """CREATE VIRTUAL TABLE IF NOT EXISTS memory_vec
+               USING vec0(embedding float[768] distance_metric=cosine)""",
+            """CREATE TRIGGER IF NOT EXISTS memory_entries_vec_ad
+               AFTER DELETE ON memory_entries BEGIN
+                 DELETE FROM memory_vec WHERE rowid = old.id;
+               END""",
+        ],
+    ),
 ]
 
 

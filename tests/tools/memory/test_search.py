@@ -1,8 +1,16 @@
 """Tests for search module."""
 
 import sqlite3
+import struct
+from unittest.mock import patch
 
-from mait_code.tools.memory.search import delete_entry, list_entries, search_entries
+from mait_code.tools.memory.search import (
+    delete_entry,
+    hybrid_search,
+    list_entries,
+    search_entries,
+    vector_search_entries,
+)
 
 
 class TestSearchEntries:
@@ -74,6 +82,126 @@ class TestListEntries:
         results = list_entries(populated_db)
         dates = [r["created_at"] for r in results]
         assert dates == sorted(dates, reverse=True)
+
+
+class TestVectorSearch:
+    def _insert_with_embedding(self, conn, content, entry_type, vec):
+        """Helper to insert an entry with a fake embedding."""
+        cursor = conn.execute(
+            """INSERT INTO memory_entries (content, entry_type, importance, memory_class)
+               VALUES (?, ?, 5, 'semantic')""",
+            (content, entry_type),
+        )
+        conn.commit()
+        entry_id = cursor.lastrowid
+        conn.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (entry_id, struct.pack(f"{len(vec)}f", *vec)),
+        )
+        conn.commit()
+        return entry_id
+
+    def test_vector_search_returns_empty_when_unavailable(
+        self, memory_db: sqlite3.Connection
+    ):
+        """Should return empty list when embeddings are unavailable."""
+        with patch(
+            "mait_code.tools.memory.search.embed_text", return_value=None
+        ):
+            results = vector_search_entries(memory_db, "test query")
+        assert results == []
+
+    def test_vector_search_finds_entries(self, memory_db: sqlite3.Connection):
+        """Should find entries by vector similarity."""
+        # Insert entry with a known embedding
+        vec = [1.0] + [0.0] * 767
+        self._insert_with_embedding(memory_db, "vector test entry", "fact", vec)
+
+        # Search with same vector
+        query_vec = [1.0] + [0.0] * 767
+        with patch(
+            "mait_code.tools.memory.search.embed_text",
+            return_value=query_vec,
+        ):
+            results = vector_search_entries(memory_db, "test")
+
+        assert len(results) == 1
+        assert results[0]["content"] == "vector test entry"
+        assert "similarity" in results[0]
+        assert results[0]["similarity"] > 0.9  # Same vector = high similarity
+
+    def test_vector_search_with_type_filter(self, memory_db: sqlite3.Connection):
+        """Should filter by entry_type."""
+        vec = [1.0] + [0.0] * 767
+        self._insert_with_embedding(memory_db, "a fact", "fact", vec)
+        self._insert_with_embedding(memory_db, "an event", "event", vec)
+
+        with patch(
+            "mait_code.tools.memory.search.embed_text",
+            return_value=vec,
+        ):
+            results = vector_search_entries(
+                memory_db, "test", entry_type="fact"
+            )
+
+        assert len(results) == 1
+        assert results[0]["entry_type"] == "fact"
+
+
+class TestHybridSearch:
+    def test_hybrid_falls_back_to_fts(self, populated_db: sqlite3.Connection):
+        """With no embeddings, hybrid should still return FTS results."""
+        with patch(
+            "mait_code.tools.memory.search.embed_text", return_value=None
+        ):
+            results = hybrid_search(populated_db, "dark mode")
+
+        assert len(results) >= 1
+        assert any("dark mode" in r["content"] for r in results)
+        # All results should have a relevance key
+        assert all("relevance" in r for r in results)
+
+    def test_hybrid_returns_empty_for_no_match(
+        self, populated_db: sqlite3.Connection
+    ):
+        """Should return empty list when nothing matches."""
+        with patch(
+            "mait_code.tools.memory.search.embed_text", return_value=None
+        ):
+            results = hybrid_search(populated_db, "nonexistent_xyz")
+
+        assert results == []
+
+    def test_hybrid_merges_fts_and_vector(self, memory_db: sqlite3.Connection):
+        """Results found by both FTS and vector should use vector similarity."""
+        # Insert an entry with both FTS content and embedding
+        memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class)
+               VALUES (?, ?, 7, 'semantic')""",
+            ("unique searchable content here", "fact"),
+        )
+        memory_db.commit()
+        entry_id = memory_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        vec = [1.0] + [0.0] * 767
+        memory_db.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (entry_id, struct.pack("768f", *vec)),
+        )
+        memory_db.commit()
+
+        with patch(
+            "mait_code.tools.memory.search.embed_text",
+            return_value=vec,
+        ):
+            results = hybrid_search(memory_db, "unique searchable")
+
+        assert len(results) >= 1
+        match = [r for r in results if r["id"] == entry_id]
+        assert len(match) == 1
+        # Should have high relevance (found by both, uses vector similarity)
+        assert match[0]["relevance"] > 0.5
 
 
 class TestDeleteEntry:

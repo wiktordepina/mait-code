@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 import dateparser
 
+from mait_code.logging import log_invocation, setup_logging
 from mait_code.tools.reminders.db import get_connection
 
 
@@ -150,7 +151,9 @@ def cmd_check(_args):
     print("\nUse `mc-tool-reminders dismiss <id>` to dismiss.")
 
 
+@log_invocation(name="mc-tool-reminders")
 def main():
+    setup_logging()
     parser = argparse.ArgumentParser(
         prog="mc-tool-reminders", description="Reminders CLI"
     )

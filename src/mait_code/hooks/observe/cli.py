@@ -17,10 +17,13 @@ from mait_code.hooks.observe.storage import (
     write_raw_extraction,
 )
 from mait_code.hooks.observe.transcript import format_for_extraction, read_new_lines
+from mait_code.logging import log_invocation, setup_logging
 
 
+@log_invocation(name="mc-hook-observe")
 def main():
     """Entry point for mc-hook-observe."""
+    setup_logging()
     try:
         _run()
     except Exception as e:

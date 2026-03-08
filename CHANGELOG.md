@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.5.0 — Vector embeddings and shared logging (2026-03-08)
+
+Added semantic search via vector embeddings and a shared logging system across all entry points.
+
+- **Vector embeddings:** `nomic-ai/nomic-embed-text-v1.5` via `fastembed` (ONNX Runtime, no PyTorch) — 768-dimensional embeddings stored in sqlite-vec, auto-computed on memory write
+- **Hybrid search:** New default search mode combining FTS5 keyword search with vector cosine similarity; `--mode` flag to select `hybrid`, `fts`, or `vector`; graceful degradation to FTS-only if embeddings unavailable
+- **Reindex command:** `mc-tool-memory reindex` recomputes vector embeddings for all existing entries in batches of 64 (renamed from `rebuild`)
+- **Restore command:** `mc-tool-memory restore` replays observation JSONL logs into the database (memories, entities, relationships), then reindexes embeddings; supports `--dry-run` to preview without writing
+- **Stats updated:** `mc-tool-memory stats` now shows embedding coverage and model availability
+- **Migration 7:** Recreates `memory_vec` at 768 dimensions (from placeholder 1536), adds delete trigger to keep vec in sync
+- **Shared logging:** `src/mait_code/logging.py` with `setup_logging()` and `@log_invocation()` decorator — file-based rotating logs (`~/.claude/mait-code-data/logs/`), configurable via `MAIT_CODE_LOG_LEVEL` and `MAIT_CODE_LOG_FILE` env vars
+- **All entry points wired:** `mc-tool-memory`, `mc-tool-reminders`, `mc-hook-session-start`, `mc-hook-observe`, `mc-hook-format` all log invocations with automatic parameter truncation for sensitive fields
+- **settings.json:** Added `env` block with `MAIT_CODE_LOG_LEVEL` configuration
+- **New dependency:** `fastembed>=0.4.0`
+- **Bug fix:** Fixed Python 2 exception syntax in session_start hook (`except A, B:` → `except (A, B):`)
+
 ## v0.4.0 — Entity system, observation hooks, and hooks reorganisation (2026-03-08)
 
 Added knowledge graph entity tracking, automatic observation extraction from conversations, and reorganised hooks to follow the same package convention as tools.
