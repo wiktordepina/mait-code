@@ -48,10 +48,13 @@
               │      search.py                    │
               │      scoring.py                   │
               │      entities.py                  │
+              │      embeddings.py                │
               │    reminders/      (CLI)          │
               │      cli.py                       │
               │      db.py                        │
               │      migrate.py                   │
+              │                                   │
+              │  logging.py        (shared)       │
               └───────────────┬───────────────────┘
                               │
               ┌───────────────▼───────────────────┐
@@ -98,8 +101,10 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 - Kept in sync via triggers on insert/update/delete
 
 **Vec0 virtual table: `memory_vec`**
-- 1536-dimension cosine distance vectors via `sqlite-vec`
-- Schema present, not yet populated (reserved for semantic search)
+- 768-dimension cosine distance vectors via `sqlite-vec`
+- Populated by `fastembed` using the `nomic-ai/nomic-embed-text-v1.5` model
+- Embeddings are computed and stored automatically when new memory entries are created
+- Delete trigger (`memory_entries_vec_ad`) keeps vec table in sync when entries are removed
 
 **Entity table: `memory_entities`**
 
@@ -153,7 +158,10 @@ score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 **Importance** is normalized from 1-10 to 0.0-1.0:
 - `importance_norm = (importance - 1) / 9`
 
-**Relevance** is provided by the search method (FTS BM25 or semantic similarity).
+**Relevance** is provided by the search method:
+- **Hybrid mode** (default): combines FTS5 BM25 with vector cosine similarity
+- **FTS mode**: keyword-only BM25 ranking
+- **Vector mode**: semantic similarity only via nomic-embed embeddings
 
 ### Deduplication
 
@@ -179,10 +187,28 @@ store_memory() ──► find_duplicate() ──► FTS5 candidates
                    ▼         ▼
               UPDATE      INSERT
               timestamp   new entry
+                             │
+                             ▼
+                        embed_text()
+                        (nomic-embed, prefix="search_document")
+                             │
+                             ▼
+                        INSERT into memory_vec
 ```
 
 ```
-search_memory() ──► FTS5 BM25 search
+search_memory() ──► hybrid_search()
+                        │
+                   ┌────┴────┐
+                   ▼         ▼
+              FTS5 BM25   vector_search
+              (keywords)  (nomic-embed cosine)
+                   │         │
+                   └────┬────┘
+                        ▼
+                   Merge by entry ID
+                   (both → use vector similarity,
+                    one only → default 0.3)
                         │
                         ▼
                    composite_score()
@@ -215,14 +241,15 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 
 | Subcommand | Args | Description |
 |------------|------|-------------|
-| `search` | query, --limit?, --type? | FTS5 keyword search with composite score re-ranking |
-| `store` | content, --type?, --importance? | Store with deduplication and validation |
+| `search` | query, --limit?, --type?, --mode? | Hybrid (FTS5 + vector) search with composite score re-ranking |
+| `store` | content, --type?, --importance? | Store with deduplication, auto-computes embedding |
 | `list` | --limit?, --type? | List recent entries, optionally filtered |
-| `delete` | id | Delete by ID |
-| `stats` | — | Counts by entry type and memory class |
+| `delete` | id | Delete by ID (vec cleanup via trigger) |
+| `stats` | — | Counts by type, class, and embedding coverage |
 | `entities` | query?, --limit? | Search or list knowledge graph entities |
 | `relationships` | entity_name | Show relationships for an entity |
-| `rebuild` | — | Rebuild database from sources (not yet implemented) |
+| `reindex` | — | Recompute vector embeddings for all entries |
+| `restore` | --dry-run? | Restore memory database from observation JSONL log files, then reindex |
 | `reflect` | — | Synthesise observations into insights (not yet implemented) |
 
 ## Reminders CLI Tool (`mc-tool-reminders`)
@@ -266,6 +293,30 @@ PreCompact / SessionEnd
   cursor.py: save new byte offset
 ```
 
+## Logging
+
+All entry points use a shared logging module (`src/mait_code/logging.py`) that writes to rotating log files. Logs never go to stdout/stderr to avoid interfering with hook JSON output.
+
+**Configuration** (via `settings.json` `env` block or shell environment):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAIT_CODE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| `MAIT_CODE_LOG_FILE` | `~/.claude/mait-code-data/logs/mait-code.log` | Override log file path |
+
+**Features:**
+- `setup_logging()` — call once per entry point; idempotent, configures the `mait_code` logger hierarchy
+- `@log_invocation(name=...)` — decorator that logs command name, parsed arguments, duration, and exit status
+- Sensitive parameters (`content`, `query`, `what`, `prompt`, `message`) are automatically truncated to 80 chars
+- `RotatingFileHandler` — 5 MB max, 3 backups
+
+**Log format:**
+```
+2026-03-08T14:23:01 INFO  mait_code.tools.memory.cli — invoked: mc-tool-memory query="dark mo..." limit=10 mode='hybrid'
+2026-03-08T14:23:01 DEBUG mait_code.tools.memory.search — Vector search: 3 results
+2026-03-08T14:23:01 INFO  mait_code.invocation — completed: mc-tool-memory (0.42s)
+```
+
 ## Identity System
 
 Three files compose the companion's identity:
@@ -284,9 +335,10 @@ Current migrations:
 1. `memory_entries` table with indexes
 2. FTS5 virtual table for full-text search
 3. FTS sync triggers (insert/update/delete)
-4. Vec0 virtual table for vector search (requires sqlite-vec)
+4. Vec0 virtual table for vector search (1536-dim, superseded by migration 7)
 5. `memory_entities` table for entity tracking
 6. `memory_relationships` table for entity relationships
+7. Recreate vec0 with 768 dimensions for nomic-embed-text-v1.5, add vec delete trigger
 
 Adding a new migration:
 1. Append a tuple to `MIGRATIONS` with the next version number
@@ -307,6 +359,11 @@ Adding a new migration:
 │   │   └── cursors.json      # Byte offset tracking per transcript
 │   └── reflections/          # Synthesised insights
 │       └── YYYY-MM.md
+├── models/                   # Cached embedding models (fastembed)
+├── logs/                     # Rotating log files
+│   ├── mait-code.log         # Current log
+│   ├── mait-code.log.1       # Rotated backups
+│   └── ...
 └── reminders.db              # Reminder database
 ```
 
@@ -324,3 +381,7 @@ Adding a new migration:
 | Dedup via FTS5 + SequenceMatcher | Fast candidate narrowing, precise similarity comparison, no duplicates |
 | Async observation hook | PreCompact extraction runs in background, no conversation latency |
 | Entity tables over separate graph DB | Entities live in memory.db alongside memories — single file, recursive CTEs for future traversal |
+| fastembed over sentence-transformers | ONNX Runtime only (~80 MB), no PyTorch (~2 GB); ~300 MB RAM at runtime |
+| nomic-embed-text-v1.5 @ 768 dims | Full-quality representation; 8192 token context; MTEB ~62.4; negligible storage cost at expected scale |
+| Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |
+| File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `RotatingFileHandler` keeps log size bounded |

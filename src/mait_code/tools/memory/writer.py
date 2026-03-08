@@ -6,8 +6,13 @@ precise similarity checking. Near-identical entries (>= 90% similar)
 are merged rather than duplicated.
 """
 
+import logging
 import sqlite3
 from difflib import SequenceMatcher
+
+from mait_code.tools.memory.embeddings import embed_text, serialize_f32
+
+logger = logging.getLogger(__name__)
 
 # Maps entry_type to memory_class for decay-rate separation
 MEMORY_CLASS_MAP: dict[str, str] = {
@@ -117,4 +122,24 @@ def store_memory(
         (content, entry_type, importance, memory_class),
     )
     conn.commit()
-    return {"action": "created", "id": cursor.lastrowid, "content": content}
+
+    entry_id = cursor.lastrowid
+    _store_embedding(conn, entry_id, content)
+
+    return {"action": "created", "id": entry_id, "content": content}
+
+
+def _store_embedding(
+    conn: sqlite3.Connection, entry_id: int, content: str
+) -> None:
+    """Compute and store embedding for a memory entry. Never raises."""
+    try:
+        vec = embed_text(content, prefix="search_document")
+        if vec is not None:
+            conn.execute(
+                "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+                (entry_id, serialize_f32(vec)),
+            )
+            conn.commit()
+    except Exception as e:
+        logger.debug("Embedding storage failed for entry %d: %s", entry_id, e)

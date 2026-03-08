@@ -1,6 +1,8 @@
 """Tests for memory CLI tool functions.
 
 Tests call the command functions directly using a temp database.
+Embeddings are mocked to avoid model loading overhead and to ensure
+deterministic FTS-only behaviour in CLI tests.
 """
 
 from unittest.mock import patch
@@ -9,6 +11,14 @@ import pytest
 
 from mait_code.tools.memory.db import get_connection
 from mait_code.tools.memory.writer import store_memory as db_store
+
+# Mock embed_text at the two import sites (writer and search) so tests
+# don't download/load the real model and behaviour is deterministic.
+_EMBED_PATCHES = [
+    "mait_code.tools.memory.writer.embed_text",
+    "mait_code.tools.memory.search.embed_text",
+    "mait_code.tools.memory.cli.is_available",
+]
 
 
 @pytest.fixture
@@ -20,8 +30,14 @@ def mem_db(tmp_path):
     def patched_get_connection(**_kwargs):
         return get_connection(db_path)
 
-    with patch(
-        "mait_code.tools.memory.cli.get_connection", side_effect=patched_get_connection
+    with (
+        patch(
+            "mait_code.tools.memory.cli.get_connection",
+            side_effect=patched_get_connection,
+        ),
+        patch(_EMBED_PATCHES[0], return_value=None),
+        patch(_EMBED_PATCHES[1], return_value=None),
+        patch(_EMBED_PATCHES[2], return_value=False),
     ):
         yield conn
 
@@ -186,6 +202,7 @@ class TestCmdStats:
         assert "3 total" in out
         assert "By type:" in out
         assert "By class:" in out
+        assert "Embeddings:" in out
 
     def test_empty_db(self, mem_db, capsys):
         from mait_code.tools.memory.cli import cmd_stats
@@ -193,3 +210,116 @@ class TestCmdStats:
         cmd_stats(None)
         out = capsys.readouterr().out
         assert "No memories" in out
+
+
+class TestCmdReindex:
+    def test_reindex_no_model(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_reindex
+
+        with pytest.raises(SystemExit):
+            cmd_reindex(None)
+        err = capsys.readouterr().err
+        assert "embedding model unavailable" in err
+
+    def test_reindex_empty_db(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_reindex
+
+        with (
+            patch("mait_code.tools.memory.cli.is_available", return_value=True),
+        ):
+            cmd_reindex(None)
+        out = capsys.readouterr().out
+        assert "No memory entries" in out
+
+
+class TestCmdRestore:
+    def test_restore_no_obs_dir(self, mem_db, tmp_path, capsys):
+        from mait_code.tools.memory.cli import cmd_restore
+
+        with patch(
+            "mait_code.tools.memory.db.get_data_dir",
+            return_value=tmp_path / "nonexistent",
+        ):
+            args = _make_args(dry_run=False)
+            with pytest.raises(SystemExit):
+                cmd_restore(args)
+
+    def test_restore_dry_run(self, mem_db, tmp_path, capsys):
+        import json
+
+        from mait_code.tools.memory.cli import cmd_restore
+
+        # Create observation log
+        obs_dir = tmp_path / "data" / "memory" / "observations"
+        obs_dir.mkdir(parents=True)
+        record = {
+            "timestamp": "2025-01-01T00:00:00Z",
+            "trigger": "PreCompact",
+            "extraction": {
+                "facts": [{"content": "Python uses indentation", "importance": 7}],
+                "entities": [{"name": "Python", "entity_type": "tool"}],
+                "relationships": [],
+            },
+        }
+        (obs_dir / "2025-01-01.jsonl").write_text(json.dumps(record) + "\n")
+
+        with patch(
+            "mait_code.tools.memory.db.get_data_dir",
+            return_value=tmp_path / "data",
+        ):
+            args = _make_args(dry_run=True)
+            cmd_restore(args)
+
+        out = capsys.readouterr().out
+        assert "[dry-run]" in out
+        assert "Memories stored: 1" in out
+        assert "Entities upserted: 1" in out
+
+        # Verify nothing was actually written
+        count = mem_db.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
+        assert count == 0
+
+    def test_restore_replays_data(self, mem_db, tmp_path, capsys):
+        import json
+
+        from mait_code.tools.memory.cli import cmd_restore
+
+        # Create observation log
+        obs_dir = tmp_path / "data" / "memory" / "observations"
+        obs_dir.mkdir(parents=True)
+        record = {
+            "timestamp": "2025-01-01T00:00:00Z",
+            "trigger": "PreCompact",
+            "extraction": {
+                "facts": [{"content": "Auth uses JWT RS256", "importance": 8}],
+                "preferences": [{"content": "Dark mode preferred", "importance": 6}],
+                "entities": [
+                    {"name": "Auth Service", "entity_type": "service"},
+                ],
+                "relationships": [
+                    {
+                        "source": "Auth Service",
+                        "target": "JWT",
+                        "relationship_type": "uses",
+                        "context": "RS256 signing",
+                    }
+                ],
+            },
+        }
+        (obs_dir / "2025-01-01.jsonl").write_text(json.dumps(record) + "\n")
+
+        with patch(
+            "mait_code.tools.memory.db.get_data_dir",
+            return_value=tmp_path / "data",
+        ):
+            args = _make_args(dry_run=False)
+            cmd_restore(args)
+
+        out = capsys.readouterr().out
+        assert "Memories stored: 2" in out
+        assert "Entities upserted: 1" in out
+        assert "Relationships upserted: 1" in out
+
+        # Verify data was written
+        count = mem_db.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
+        assert count == 2

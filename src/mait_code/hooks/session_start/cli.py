@@ -4,6 +4,8 @@ import json
 import subprocess
 import sys
 
+from mait_code.logging import log_invocation, setup_logging
+
 
 def _check_reminders() -> str:
     """Check for overdue reminders via the CLI tool."""
@@ -15,24 +17,18 @@ def _check_reminders() -> str:
             timeout=5,
         )
         return result.stdout.strip()
-    except FileNotFoundError, subprocess.TimeoutExpired:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return ""
 
 
+@log_invocation(name="mc-hook-session-start")
 def main():
     """Read session start event from stdin and output companion context."""
+    setup_logging()
     _event = json.loads(sys.stdin.read())
-
-    parts = [
-        "# Session Context\n",
-        "Mait Code companion loaded. Memory and identity systems not yet implemented.",
-    ]
 
     reminders = _check_reminders()
     if reminders:
-        parts.append(f"\n## Reminders\n\n{reminders}")
-
-    context = "\n".join(parts) + "\n"
-
-    result = {"hookSpecificOutput": {"context": context}}
-    print(json.dumps(result))
+        context = f"# Session Context\n\n## Reminders\n\n{reminders}\n"
+        result = {"hookSpecificOutput": {"context": context}}
+        print(json.dumps(result))

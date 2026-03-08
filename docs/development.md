@@ -42,14 +42,49 @@ src/mait_code/tools/memory/
 ├── db.py          # Connection factory (get_connection, get_data_dir)
 ├── migrate.py     # Schema migrations (ensure_schema)
 ├── scoring.py     # Composite scoring (pure functions, no DB)
-├── search.py      # FTS5 keyword search + list + delete
-├── writer.py      # Store with deduplication
-└── entities.py    # Entity and relationship CRUD
+├── search.py      # FTS5 keyword, vector, and hybrid search + list + delete
+├── writer.py      # Store with deduplication + auto-embedding
+├── entities.py    # Entity and relationship CRUD
+└── embeddings.py  # fastembed wrapper (lazy-loading, graceful degradation)
 ```
 
-**Dependency order:** `migrate.py` ← `db.py` ← everything else. The `scoring.py` module has no internal dependencies.
+**Dependency order:** `migrate.py` ← `db.py` ← everything else. `scoring.py` has no internal dependencies. `embeddings.py` depends only on `db.py` (for data dir).
 
 **Pattern:** All search/writer/entity functions receive a `sqlite3.Connection` as their first argument. The CLI tool opens and closes connections per subcommand invocation.
+
+## Logging
+
+All entry points use the shared logging module at `src/mait_code/logging.py`.
+
+### Adding logging to a new component
+
+```python
+from mait_code.logging import log_invocation, setup_logging
+
+@log_invocation(name="mc-tool-mycommand")
+def main():
+    setup_logging()
+    # ... your code here
+```
+
+For internal modules, use standard `logging.getLogger(__name__)`:
+
+```python
+import logging
+logger = logging.getLogger(__name__)
+
+def my_function():
+    logger.debug("Processing...")
+```
+
+The `mait_code` logger hierarchy is configured by `setup_logging()` in the entry point — internal modules don't need to call it.
+
+### Configuration
+
+- `MAIT_CODE_LOG_LEVEL` env var (default: `INFO`) — set via `settings.json` `env` block
+- `MAIT_CODE_LOG_FILE` env var — override log file path
+- Logs write to `~/.claude/mait-code-data/logs/mait-code.log` (rotating, 5 MB, 3 backups)
+- Logs never go to stdout/stderr
 
 ## Adding New Memory Types
 
@@ -138,23 +173,41 @@ def mem_db(tmp_path):
 ## Adding a New Hook
 
 1. Create package in `src/mait_code/hooks/<hook_name>/` with `cli.py` containing a `main()` function
-2. Add entry point in `pyproject.toml`:
+2. Wire in logging:
+   ```python
+   from mait_code.logging import log_invocation, setup_logging
+
+   @log_invocation(name="mc-hook-<hook-name>")
+   def main():
+       setup_logging()
+       # ...
+   ```
+3. Add entry point in `pyproject.toml`:
    ```toml
    mc-hook-<hook-name> = "mait_code.hooks.<hook_name>.cli:main"
    ```
-3. Register in `config/settings.json` under the appropriate hook event
-4. Use `"async": true` for observation/logging hooks that don't feed results back into the conversation
-5. Run `uv sync` and re-run `./scripts/install.sh`
+4. Register in `config/settings.json` under the appropriate hook event
+5. Use `"async": true` for observation/logging hooks that don't feed results back into the conversation
+6. Run `uv sync` and re-run `./scripts/install.sh`
 
 ## Adding a New CLI Tool
 
 1. Create package in `src/mait_code/tools/<tool_name>/` with `cli.py` containing a `main()` function
-2. Add entry point in `pyproject.toml`:
+2. Wire in logging:
+   ```python
+   from mait_code.logging import log_invocation, setup_logging
+
+   @log_invocation(name="mc-tool-<tool-name>")
+   def main():
+       setup_logging()
+       # ...
+   ```
+3. Add entry point in `pyproject.toml`:
    ```toml
    mc-tool-<tool-name> = "mait_code.tools.<tool_name>.cli:main"
    ```
-3. Run `uv sync`
-4. Skills can invoke the tool via preprocessing (`!`mc-tool-<name> ...``) or `Bash(mc-tool-<name> *)`
+4. Run `uv sync`
+5. Skills can invoke the tool via preprocessing (`!`mc-tool-<name> ...``) or `Bash(mc-tool-<name> *)`
 
 ## Adding a New MCP Server
 

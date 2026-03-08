@@ -1,4 +1,7 @@
 {
+  "env": {
+    "MAIT_CODE_LOG_LEVEL": "INFO"
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -29,7 +32,8 @@
           {
             "type": "command",
             "command": "mc-hook-observe --trigger session-end",
-            "timeout": 60
+            "timeout": 60,
+            "async": true
           }
         ]
       }

@@ -38,7 +38,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 6  # Exactly 6 migrations
+    assert versions == 7  # Exactly 7 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -47,9 +47,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 6
+    assert len(rows) == 7
     assert rows[0][0] == 1
-    assert rows[-1][0] == 6
+    assert rows[-1][0] == 7
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -150,3 +150,53 @@ def test_migration_6_creates_relationships_table(memory_db: sqlite3.Connection):
         "last_seen",
     }
     assert expected == columns
+
+
+def test_migration_7_recreates_vec_768(memory_db: sqlite3.Connection):
+    """memory_vec should exist as a vec0 table after migration 7."""
+    tables = memory_db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_vec'"
+    ).fetchall()
+    assert len(tables) == 1
+
+    # Verify migration 7 is recorded
+    row = memory_db.execute(
+        "SELECT description FROM schema_version WHERE version = 7"
+    ).fetchone()
+    assert row is not None
+    assert "768" in row[0]
+
+
+def test_vec_delete_trigger(memory_db: sqlite3.Connection):
+    """Deleting a memory entry should remove its embedding via trigger."""
+    import struct
+
+    memory_db.execute(
+        "INSERT INTO memory_entries (content, entry_type) VALUES (?, ?)",
+        ("trigger test", "fact"),
+    )
+    memory_db.commit()
+    entry_id = memory_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    # Insert a fake embedding
+    fake_vec = struct.pack("768f", *([0.1] * 768))
+    memory_db.execute(
+        "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+        (entry_id, fake_vec),
+    )
+    memory_db.commit()
+
+    # Verify embedding exists
+    count = memory_db.execute(
+        "SELECT COUNT(*) FROM memory_vec WHERE rowid = ?", (entry_id,)
+    ).fetchone()[0]
+    assert count == 1
+
+    # Delete entry — trigger should remove embedding
+    memory_db.execute("DELETE FROM memory_entries WHERE id = ?", (entry_id,))
+    memory_db.commit()
+
+    count = memory_db.execute(
+        "SELECT COUNT(*) FROM memory_vec WHERE rowid = ?", (entry_id,)
+    ).fetchone()[0]
+    assert count == 0
