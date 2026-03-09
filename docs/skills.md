@@ -9,11 +9,13 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Memory Store | *(auto)* | Claude auto-stores observations about user/projects | **Implemented** |
 | Reflect | `/reflect` | Synthesise recent observations into insights, update MEMORY.md | **Implemented** |
 | Observe | `/observe` | Manually trigger observation extraction from current session | Planned |
-| Standup | `/standup` | Generate standup summary from recent work and observations | Planned |
-| Work History | `/work-history [period]` | Show recent work activity over a time period | Planned |
-| Commit | `/commit` | Smart commit with conventional commit message | Planned |
-| Today | `/today` | Dashboard of open tasks, reminders, and standup | Planned |
-| Status | `/status` | Generate comprehensive status dashboard | Planned |
+| Commit | `/commit` | Detect changes, generate conventional commit message, confirm and commit | **Implemented** |
+| Standup | `/standup` | Generate standup summary from git history, tasks, memory, and PRs | **Implemented** |
+| Work History | `/work-history [period]` | Show project work history (git log + memory) for a time period | **Implemented** |
+| Today | `/today` | Daily overview — open tasks, reminders, recent activity, PRs | **Implemented** |
+| Status | `/status` | Generate STATUS.md with project overview, tasks, recent work | **Implemented** |
+| PRs | `/prs` | List open PRs across all registered projects | **Implemented** |
+| Projects | `/projects` | List and manage registered projects | **Implemented** |
 | Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
@@ -136,6 +138,110 @@ Show open tasks for the current project.
 2. Presents open tasks sorted by priority (high → medium → low)
 3. Supports completing tasks via `mc-tool-tasks done <id>` or removing via `mc-tool-tasks remove <id>`
 
+### /commit
+
+Detect changes, generate a conventional commit message, confirm with user, and commit.
+
+**Usage:**
+```
+/commit                          # Analyse changes and propose a commit
+```
+
+**How it works:**
+1. Preprocesses `git diff --cached --stat`, `git diff --stat`, and untracked files
+2. Analyses the changes and generates a conventional commit message (`type(scope): description`)
+3. Presents the proposed message for user confirmation or editing
+4. On approval, stages files if needed and runs `git commit`
+
+### /standup
+
+Generate a standup summary from git history, tasks, memory, and open PRs.
+
+**Usage:**
+```
+/standup                         # Generate standup report
+```
+
+**How it works:**
+1. Preprocesses: git log (last 24h), all open tasks, recent memories, reminders, registered projects
+2. For each registered project with a GitHub URL, checks for open PRs via `gh pr list`
+3. Formats as standup: Yesterday, Today, Blockers, Open PRs
+
+### /work-history
+
+Show recent work history for the current project.
+
+**Usage:**
+```
+/work-history                    # Today's work (default)
+/work-history today              # Same as above
+/work-history yesterday          # Last 24-48 hours
+/work-history week               # Last 7 days
+```
+
+**How it works:**
+1. Parses the time period argument (defaults to "today")
+2. Runs `git log` and `mc-tool-memory list --since` with the appropriate time range
+3. Shows completed tasks from the period
+4. Presents a formatted work history
+
+### /today
+
+Daily overview dashboard — open tasks, reminders, recent activity, and open PRs.
+
+**Usage:**
+```
+/today                           # Show daily overview
+```
+
+**How it works:**
+1. Preprocesses: all open tasks, reminders, recent commits, recent memories, registered projects
+2. For each registered project with a GitHub URL, checks for open PRs
+3. Presents sections: Tasks, Reminders, Recent Activity, Open PRs
+
+### /status
+
+Generate a STATUS.md for the current project.
+
+**Usage:**
+```
+/status                          # Generate STATUS.md
+```
+
+**How it works:**
+1. Preprocesses: project tasks, reminders, git log (7 days), recent memories, project info
+2. Reads existing STATUS.md (if present) for continuity
+3. Generates STATUS.md with sections: Project, Open Tasks, Recent Work, Completed Tasks, Reminders
+4. Writes to the project root
+
+### /prs
+
+List open PRs across all registered projects.
+
+**Usage:**
+```
+/prs                             # Show all open PRs
+```
+
+**How it works:**
+1. Preprocesses the registered projects list
+2. For each project with a GitHub URL, runs `gh pr list` to find open PRs
+3. Shows PR number, title, author, and review status grouped by project
+
+### /projects
+
+List all registered projects.
+
+**Usage:**
+```
+/projects                        # Show registered projects
+```
+
+**How it works:**
+1. Preprocesses results via `mc-tool-tasks projects`
+2. Shows each project's name, disk path, GitHub URL, and registration date
+3. Projects are auto-registered when any task subcommand runs in a project directory
+
 ## Skill Architecture
 
 Each skill is a directory in `skills/` containing:
@@ -156,8 +262,22 @@ skills/
 │   └── SKILL.md     # Show reminders
 ├── task/
 │   └── SKILL.md     # Add a project task
-└── tasks/
-    └── SKILL.md     # Show project tasks
+├── tasks/
+│   └── SKILL.md     # Show project tasks
+├── commit/
+│   └── SKILL.md     # Smart commit with conventional message
+├── standup/
+│   └── SKILL.md     # Standup summary
+├── work-history/
+│   └── SKILL.md     # Project work history
+├── today/
+│   └── SKILL.md     # Daily overview dashboard
+├── status/
+│   └── SKILL.md     # Generate STATUS.md
+├── prs/
+│   └── SKILL.md     # Cross-project PR listing
+└── projects/
+    └── SKILL.md     # Registered projects
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.

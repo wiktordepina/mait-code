@@ -31,6 +31,30 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "CREATE INDEX IF NOT EXISTS idx_tasks_project_status ON tasks(project, status)",
         ],
     ),
+    (
+        2,
+        "Create projects table and recreate tasks with foreign key",
+        [
+            """CREATE TABLE IF NOT EXISTS projects (
+                name TEXT PRIMARY KEY,
+                path TEXT NOT NULL,
+                github_url TEXT,
+                added_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            )""",
+            "DROP TABLE IF EXISTS tasks",
+            "DROP INDEX IF EXISTS idx_tasks_project_status",
+            """CREATE TABLE tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project TEXT NOT NULL REFERENCES projects(name),
+                title TEXT NOT NULL,
+                priority TEXT NOT NULL DEFAULT 'medium',
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                completed_at TEXT
+            )""",
+            "CREATE INDEX idx_tasks_project_status ON tasks(project, status)",
+        ],
+    ),
 ]
 
 

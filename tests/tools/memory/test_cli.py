@@ -149,7 +149,7 @@ class TestCmdList:
     def test_with_entries(self, populated_mem_db, capsys):
         from mait_code.tools.memory.cli import cmd_list
 
-        args = _make_args(limit=10, type=None)
+        args = _make_args(limit=10, type=None, since=None)
         cmd_list(args)
         out = capsys.readouterr().out
         assert "Recent" in out
@@ -158,7 +158,7 @@ class TestCmdList:
     def test_empty_db(self, mem_db, capsys):
         from mait_code.tools.memory.cli import cmd_list
 
-        args = _make_args(limit=10, type=None)
+        args = _make_args(limit=10, type=None, since=None)
         cmd_list(args)
         out = capsys.readouterr().out
         assert "No memories" in out
@@ -166,10 +166,35 @@ class TestCmdList:
     def test_with_type_filter(self, populated_mem_db, capsys):
         from mait_code.tools.memory.cli import cmd_list
 
-        args = _make_args(limit=10, type="preference")
+        args = _make_args(limit=10, type="preference", since=None)
         cmd_list(args)
         out = capsys.readouterr().out
         assert "dark mode" in out
+
+
+    def test_with_since_filter(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_list
+
+        args = _make_args(limit=10, type=None, since="24h")
+        cmd_list(args)
+        out = capsys.readouterr().out
+        # Entries were just inserted so should appear in last 24h
+        assert "dark mode" in out
+        assert "since 24h" in out
+
+    def test_with_since_no_results(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_list
+
+        # Set all entries to old timestamps
+        populated_mem_db.execute(
+            "UPDATE memory_entries SET created_at = '2020-01-01T00:00:00Z'"
+        )
+        populated_mem_db.commit()
+
+        args = _make_args(limit=10, type=None, since="24h")
+        cmd_list(args)
+        out = capsys.readouterr().out
+        assert "No memories found" in out
 
 
 class TestCmdDelete:

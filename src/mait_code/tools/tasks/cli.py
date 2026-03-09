@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from mait_code.logging import log_invocation, setup_logging
 
-from mait_code.tools.tasks.db import get_connection, get_project
+from mait_code.tools.tasks.db import ensure_project, get_connection, get_project
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ def cmd_add(args):
     project = get_project()
     conn = get_connection()
     try:
+        ensure_project(conn, project)
         cursor = conn.execute(
             "INSERT INTO tasks (project, title, priority, created_at) VALUES (?, ?, ?, ?)",
             (project, title.strip(), priority, _now().isoformat()),
@@ -49,6 +50,7 @@ def cmd_list(args):
     project = get_project()
     conn = get_connection()
     try:
+        ensure_project(conn, project)
         if args.all:
             rows = conn.execute(
                 "SELECT id, title, priority, status, completed_at FROM tasks "
@@ -139,6 +141,7 @@ def cmd_check(args):
     project = args.project if args.project else get_project()
     conn = get_connection()
     try:
+        ensure_project(conn, project)
         rows = conn.execute(
             "SELECT id, title, priority FROM tasks "
             "WHERE project = ? AND status = 'open' ORDER BY "
@@ -154,6 +157,57 @@ def cmd_check(args):
     print(f"You have {len(rows)} open task(s):\n")
     for tid, title, priority in rows:
         print(f"  [#{tid}] ({priority}) {title}")
+
+
+def cmd_list_all(_args):
+    """List open tasks across all projects."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT t.id, t.project, t.title, t.priority FROM tasks t "
+            "WHERE t.status = 'open' ORDER BY t.project, "
+            "CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, t.id",
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        print("No open tasks across any project.")
+        return
+
+    current_project = None
+    for tid, project, title, priority in rows:
+        if project != current_project:
+            if current_project is not None:
+                print()
+            print(f"{project}:")
+            current_project = project
+        print(f"  [#{tid}] ({priority}) {title}")
+    print()
+
+
+def cmd_projects(_args):
+    """List all registered projects."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT name, path, github_url, added_at FROM projects ORDER BY name",
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        print("No projects registered yet.")
+        return
+
+    print(f"Registered projects ({len(rows)}):\n")
+    for name, path, github_url, added_at in rows:
+        print(f"  {name}")
+        print(f"    path: {path}")
+        if github_url:
+            print(f"    github: {github_url}")
+        print(f"    added: {added_at[:10]}")
+        print()
 
 
 @log_invocation(name="mc-tool-tasks")
@@ -198,6 +252,14 @@ def main():
         "--project", help="Project path (defaults to git root or cwd)"
     )
     p_check.set_defaults(func=cmd_check)
+
+    # list-all
+    p_list_all = sub.add_parser("list-all", help="List open tasks across all projects")
+    p_list_all.set_defaults(func=cmd_list_all)
+
+    # projects
+    p_projects = sub.add_parser("projects", help="List all registered projects")
+    p_projects.set_defaults(func=cmd_projects)
 
     args = parser.parse_args()
     args.func(args)

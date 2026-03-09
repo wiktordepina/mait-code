@@ -21,17 +21,10 @@
 - MEMORY.md above contains curated, high-confidence facts — always available.
 - The observation system automatically extracts knowledge from sessions via hooks.
 
-## Available Skills
+## Skills
 
-- `/recall <query>` — Search memory for past facts, decisions, patterns
-- `/remember <content>` — Manually store a memory
-- `/reflect` — Synthesise recent observations into insights, update MEMORY.md
-- `/observe` — Manually trigger observation extraction
-- `/standup` — Generate standup summary
-- `/work-history [period]` — Show recent work
-- `/commit` — Smart commit with conventional message
-- `/today` — Open tasks + reminders + standup
-- `/status` — Generate status dashboard
-- `/remind <when> <what>` — Set a reminder
-- `/reminders` — Show active and overdue reminders
-- `/incident <description>` — Log an incident
+Skills are auto-discovered from `~/.claude/skills/`. Use `/help` to see the full list. Key ones to know about:
+
+- **Memory:** `/recall`, `/remember`, `/reflect`, `memory-store` (auto-invoked)
+- **Workflow:** `/commit`, `/standup`, `/today`, `/status`, `/work-history`, `/prs`, `/projects`
+- **Tasks & reminders:** `/task`, `/tasks`, `/remind`, `/reminders`

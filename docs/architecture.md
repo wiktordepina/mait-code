@@ -256,7 +256,7 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 |------------|------|-------------|
 | `search` | query, --limit?, --type?, --mode? | Hybrid (FTS5 + vector) search with composite score re-ranking |
 | `store` | content, --type?, --importance? | Store with deduplication, auto-computes embedding |
-| `list` | --limit?, --type? | List recent entries, optionally filtered |
+| `list` | --limit?, --type?, --since? | List recent entries, optionally filtered by type and time period (e.g. `24h`, `7d`, `1w`) |
 | `delete` | id | Delete by ID (vec cleanup via trigger) |
 | `stats` | — | Counts by type, class, and embedding coverage |
 | `entities` | query?, --limit? | Search or list knowledge graph entities |
@@ -265,9 +265,38 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 | `restore` | --dry-run? | Restore memory database from observation JSONL log files, then reindex |
 | `reflect` | --days?, --min-new? | Synthesise observations into insights, propose MEMORY.md updates |
 
+## Tasks Database
+
+The tasks database (`tasks.db`) stores project registrations and per-project tasks.
+
+**Projects table: `projects`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `name` | TEXT PK | Project identifier (basename of git root or cwd) |
+| `path` | TEXT | Full absolute path on disk |
+| `github_url` | TEXT | GitHub remote URL (nullable, from `git remote get-url origin`) |
+| `added_at` | DATETIME | When the project was first registered |
+
+Projects are auto-registered via `ensure_project()` whenever a task subcommand runs in a project directory. If the project name is not in the table, the function resolves the full path and GitHub URL from git and inserts a row. If already present, it's a no-op.
+
+**Tasks table: `tasks`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `project` | TEXT FK | References `projects(name)` |
+| `title` | TEXT | Task description |
+| `priority` | TEXT | `low`, `medium`, or `high` (default: `medium`) |
+| `status` | TEXT | `open` or `done` (default: `open`) |
+| `created_at` | DATETIME | Timestamp of creation |
+| `completed_at` | DATETIME | Timestamp of completion (null if open) |
+
+Foreign key enforcement is enabled via `PRAGMA foreign_keys=ON` on every connection.
+
 ## Tasks CLI Tool (`mc-tool-tasks`)
 
-Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared `tasks.db`.
+Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared `tasks.db`. Projects are auto-registered in the `projects` table when any task subcommand runs.
 
 | Subcommand | Args | Description |
 |------------|------|-------------|
@@ -276,6 +305,8 @@ Per-project task tracking. Tasks are scoped by the basename of the git root (or 
 | `done` | id | Mark a task as completed |
 | `remove` | id | Remove a task |
 | `check` | --project? | List open tasks for current project (used by session_start hook) |
+| `list-all` | — | List open tasks across all registered projects |
+| `projects` | — | List all registered projects (name, path, GitHub URL) |
 
 ## Reminders CLI Tool (`mc-tool-reminders`)
 

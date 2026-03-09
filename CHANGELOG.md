@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.8.0 — Projects registry and workflow skills (2026-03-09)
+
+Cross-project awareness via a projects registry, 7 new skills for daily workflow, and time-filtered memory queries.
+
+- **Projects table:** New `projects` table in `tasks.db` storing project name, full disk path, GitHub remote URL, and registration date; foreign key from `tasks.project` to `projects.name` with `PRAGMA foreign_keys=ON` enforcement
+- **`ensure_project()`:** Auto-registers the current project on any task subcommand — resolves path via `git rev-parse --show-toplevel` and GitHub URL via `git remote get-url origin`; no-op if project already registered
+- **`mc-tool-tasks list-all`:** New subcommand listing open tasks across all registered projects, grouped by project
+- **`mc-tool-tasks projects`:** New subcommand listing all registered projects with path, GitHub URL, and added date
+- **`mc-tool-memory list --since`:** New time-period filter accepting `24h`, `7d`, `1w` etc. for listing recent memories
+- **`/commit` skill:** Detect changes, generate conventional commit message, confirm with user, commit
+- **`/standup` skill:** Standup summary from git history (24h), all open tasks, recent memories, reminders, and open PRs across registered projects via `gh`
+- **`/work-history` skill:** Project-specific work history for today/yesterday/week from git log and memory
+- **`/today` skill:** Daily overview dashboard — open tasks (all projects), reminders, recent activity, open PRs
+- **`/status` skill:** Generate STATUS.md with project overview, tasks, recent work, and reminders
+- **`/prs` skill:** List open PRs across all registered projects via `gh pr list`
+- **`/projects` skill:** List all registered projects
+- **Documentation:** Updated architecture (projects table schema, new CLI subcommands), skills reference (7 new skill sections), memory docs (tasks CLI reference, `--since` flag), and config CLAUDE.md (replaced explicit skills list with categorised summary — skills are auto-discovered)
+
 ## v0.7.0 — Project tasks (2026-03-08)
 
 Per-project task tracking with CLI tool, skills, and session start integration.
