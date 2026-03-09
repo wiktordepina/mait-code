@@ -307,7 +307,6 @@ def reflect(
         prompt,
         system_prompt=REFLECTION_SYSTEM_PROMPT,
         model="haiku",
-        max_tokens=1024,
         timeout=60,
     )
 

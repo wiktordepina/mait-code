@@ -1,9 +1,9 @@
 """
 Write to memory database with deduplication.
 
-Uses FTS5 for fast candidate retrieval and SequenceMatcher for
-precise similarity checking. Near-identical entries (>= 90% similar)
-are merged rather than duplicated.
+Uses FTS5 + vector similarity for candidate retrieval, then applies
+dual-threshold checking: SequenceMatcher for string-level duplicates
+and cosine similarity for semantic duplicates.
 """
 
 import logging
@@ -26,19 +26,14 @@ MEMORY_CLASS_MAP: dict[str, str] = {
 
 VALID_ENTRY_TYPES: set[str] = set(MEMORY_CLASS_MAP)
 
-SIMILARITY_THRESHOLD: float = 0.90
+STRING_SIMILARITY_THRESHOLD: float = 0.85
+VECTOR_SIMILARITY_THRESHOLD: float = 0.92
 
 
-def find_duplicate(
+def _fts_candidates(
     conn: sqlite3.Connection, content: str, entry_type: str
-) -> int | None:
-    """
-    Check for near-duplicate content in the database.
-
-    Uses FTS5 for fast candidate retrieval, then SequenceMatcher for
-    precise similarity. Returns the ID of the duplicate if found
-    (>= 0.90 similarity), or None.
-    """
+) -> list[tuple[int, str]]:
+    """Retrieve dedup candidates via FTS5 keyword matching."""
     words = [w for w in content.split()[:8] if len(w) > 2]
 
     try:
@@ -56,7 +51,7 @@ def find_duplicate(
                 "SELECT id, content FROM memory_entries WHERE entry_type = ? LIMIT 20",
                 (entry_type,),
             )
-        candidates = cursor.fetchall()
+        return cursor.fetchall()
     except sqlite3.OperationalError:
         # FTS table doesn't exist yet — fall back to LIKE
         first_words = " ".join(content.split()[:5])
@@ -66,14 +61,72 @@ def find_duplicate(
                LIMIT 20""",
             (entry_type, f"%{first_words}%"),
         )
-        candidates = cursor.fetchall()
+        return cursor.fetchall()
 
-    for row_id, existing_content in candidates:
+
+def _vector_candidates(
+    conn: sqlite3.Connection, content: str, entry_type: str
+) -> list[tuple[int, str, float]]:
+    """Retrieve dedup candidates via vector similarity.
+
+    Returns list of (id, content, similarity) tuples.
+    """
+    vec = embed_text(content, prefix="search_document")
+    if vec is None:
+        return []
+
+    try:
+        cursor = conn.execute(
+            """SELECT m.id, m.content, v.distance
+               FROM memory_vec v
+               JOIN memory_entries m ON m.id = v.rowid
+               WHERE v.embedding MATCH ? AND k = 10
+                 AND m.entry_type = ?""",
+            (serialize_f32(vec), entry_type),
+        )
+        return [(r[0], r[1], max(0.0, 1.0 - r[2])) for r in cursor.fetchall()]
+    except Exception as e:
+        logger.debug("Vector dedup search failed: %s", e)
+        return []
+
+
+def find_duplicate(
+    conn: sqlite3.Connection, content: str, entry_type: str
+) -> int | None:
+    """
+    Check for near-duplicate content in the database.
+
+    Uses two candidate sources (FTS5 keywords + vector similarity) and
+    two similarity measures: SequenceMatcher >= 0.85 for string-level
+    duplicates, cosine similarity >= 0.92 for semantic duplicates.
+
+    Returns the ID of the duplicate if found, or None.
+    """
+    # Gather candidates from FTS
+    fts_hits = _fts_candidates(conn, content, entry_type)
+
+    # Check FTS candidates with string similarity
+    for row_id, existing_content in fts_hits:
         if (
             SequenceMatcher(None, content, existing_content).ratio()
-            >= SIMILARITY_THRESHOLD
+            >= STRING_SIMILARITY_THRESHOLD
         ):
             return row_id
+
+    # Check vector candidates for semantic duplicates
+    seen_ids = {row_id for row_id, _ in fts_hits}
+    vec_hits = _vector_candidates(conn, content, entry_type)
+
+    for row_id, existing_content, similarity in vec_hits:
+        if similarity >= VECTOR_SIMILARITY_THRESHOLD:
+            return row_id
+        # Also string-check vector candidates not seen via FTS
+        if row_id not in seen_ids:
+            if (
+                SequenceMatcher(None, content, existing_content).ratio()
+                >= STRING_SIMILARITY_THRESHOLD
+            ):
+                return row_id
 
     return None
 

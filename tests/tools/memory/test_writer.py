@@ -7,7 +7,9 @@ import numpy as np
 
 from mait_code.tools.memory.writer import (
     MEMORY_CLASS_MAP,
+    STRING_SIMILARITY_THRESHOLD,
     VALID_ENTRY_TYPES,
+    VECTOR_SIMILARITY_THRESHOLD,
     find_duplicate,
     store_memory,
 )
@@ -48,7 +50,7 @@ class TestStoreMemory:
         assert count == 1
 
     def test_dedup_near_identical(self, memory_db: sqlite3.Connection):
-        """Content with >= 90% similarity should be deduplicated."""
+        """Content with >= 85% string similarity should be deduplicated."""
         store_memory(
             memory_db, "User prefers dark mode in all text editors", "preference", 5
         )
@@ -57,6 +59,37 @@ class TestStoreMemory:
         )
 
         assert result["action"] == "deduplicated"
+
+    def test_dedup_paraphrase_via_vector(self, memory_db: sqlite3.Connection):
+        """Semantic duplicates below string threshold should be caught by vector similarity."""
+        original = "Tool invocations in skill instructions execute within allowed-tools permission scope"
+        store_memory(memory_db, original, "fact", 8)
+
+        # Paraphrase with extra words — string similarity ~0.87, under 0.90
+        paraphrase = "Tool invocations in skill instructions execute within the allowed-tools permission scope, unlike preprocessing"
+
+        # Mock vector search to return high similarity
+        with patch(
+            "mait_code.tools.memory.writer._vector_candidates",
+            return_value=[(1, original, 0.96)],
+        ):
+            result = store_memory(memory_db, paraphrase, "fact", 8)
+
+        assert result["action"] == "deduplicated"
+
+    def test_dedup_vector_below_threshold(self, memory_db: sqlite3.Connection):
+        """Content with vector similarity below threshold should not be deduplicated."""
+        store_memory(memory_db, "Python is a programming language", "fact", 5)
+
+        with patch(
+            "mait_code.tools.memory.writer._vector_candidates",
+            return_value=[(1, "Python is a programming language", 0.80)],
+        ):
+            result = store_memory(
+                memory_db, "JavaScript is a scripting language", "fact", 5
+            )
+
+        assert result["action"] == "created"
 
     def test_dedup_updates_importance(self, memory_db: sqlite3.Connection):
         """Dedup should keep the maximum importance."""
@@ -172,19 +205,20 @@ class TestStoreMemoryEmbedding:
         ).fetchone()[0]
         assert count == 0
 
-    def test_dedup_does_not_embed(self, memory_db: sqlite3.Connection):
-        """Deduplication should not attempt to store a new embedding."""
+    def test_dedup_does_not_store_new_embedding(self, memory_db: sqlite3.Connection):
+        """Deduplication should not insert a new embedding row."""
         mock_vec = np.zeros(768, dtype="float32")
 
         with patch(
             "mait_code.tools.memory.writer.embed_text",
             return_value=mock_vec.tolist(),
-        ) as mock_embed:
+        ):
             store_memory(memory_db, "duplicate content test", "fact", 5)
             store_memory(memory_db, "duplicate content test", "fact", 5)
 
-        # embed_text should only be called once (for the first store)
-        assert mock_embed.call_count == 1
+        # Only one embedding row should exist (from the first store)
+        count = memory_db.execute("SELECT COUNT(*) FROM memory_vec").fetchone()[0]
+        assert count == 1
 
 
 class TestFindDuplicate:
@@ -204,3 +238,22 @@ class TestFindDuplicate:
         """All expected types should be present."""
         expected = {"fact", "preference", "event", "insight", "task", "relationship"}
         assert VALID_ENTRY_TYPES == expected
+
+    def test_similarity_thresholds(self):
+        """Thresholds should be set correctly."""
+        assert STRING_SIMILARITY_THRESHOLD == 0.85
+        assert VECTOR_SIMILARITY_THRESHOLD == 0.92
+
+    def test_vector_candidates_graceful_without_embeddings(
+        self, memory_db: sqlite3.Connection
+    ):
+        """Vector candidate retrieval should return empty when embeddings unavailable."""
+        from mait_code.tools.memory.writer import _vector_candidates
+
+        with patch(
+            "mait_code.tools.memory.writer.embed_text",
+            return_value=None,
+        ):
+            result = _vector_candidates(memory_db, "test content", "fact")
+
+        assert result == []
