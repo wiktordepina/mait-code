@@ -24,7 +24,7 @@ def test_call_claude_basic(mock_subprocess):
     assert result == "Hello world"
     mock_subprocess.assert_called_once()
     args = mock_subprocess.call_args
-    assert args[0][0] == ["claude", "-p", "--model", "haiku", "--max-tokens", "1024"]
+    assert args[0][0] == ["claude", "-p", "--model", "haiku", "--no-session-persistence"]
     assert args[1]["input"] == "test prompt"
     assert args[1]["timeout"] == 60
 
@@ -34,10 +34,10 @@ def test_call_claude_custom_model(mock_subprocess):
     mock_subprocess.return_value.stdout = "response"
     mock_subprocess.return_value.stderr = ""
 
-    call_claude("prompt", model="sonnet", max_tokens=512, timeout=30)
+    call_claude("prompt", model="sonnet", timeout=30)
 
     args = mock_subprocess.call_args
-    assert args[0][0] == ["claude", "-p", "--model", "sonnet", "--max-tokens", "512"]
+    assert args[0][0] == ["claude", "-p", "--model", "sonnet", "--no-session-persistence"]
     assert args[1]["timeout"] == 30
 
 

@@ -92,7 +92,7 @@ fi
 
 # --- 7. Install CLI tools via uv tool ---
 echo "Installing CLI tools..."
-uv tool install "$PROJECT_DIR" --force
+uv tool install "$PROJECT_DIR" --force --reinstall
 echo "  CLI tools installed to ~/.local/bin/"
 
 # --- 8. Merge settings.json ---

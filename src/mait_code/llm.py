@@ -17,7 +17,6 @@ def call_claude(
     *,
     system_prompt: str | None = None,
     model: str = "haiku",
-    max_tokens: int = 1024,
     timeout: int = 60,
 ) -> str | None:
     """
@@ -27,7 +26,6 @@ def call_claude(
         prompt: The user prompt to send.
         system_prompt: Optional system prompt (prepended with [S]: prefix).
         model: Model name for --model flag (default: haiku).
-        max_tokens: Maximum tokens for --max-tokens flag.
         timeout: Subprocess timeout in seconds.
 
     Returns:
@@ -37,7 +35,7 @@ def call_claude(
     if system_prompt:
         full_prompt = f"[System instruction]: {system_prompt}\n\n{prompt}"
 
-    cmd = ["claude", "-p", "--model", model, "--max-tokens", str(max_tokens)]
+    cmd = ["claude", "-p", "--model", model, "--no-session-persistence"]
 
     try:
         # Clear CLAUDECODE env var to allow nested claude invocations from hooks

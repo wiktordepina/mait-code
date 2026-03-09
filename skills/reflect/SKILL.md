@@ -1,20 +1,17 @@
 ---
 name: reflect
 description: Synthesise recent observations into insights and propose MEMORY.md updates
-allowed-tools: Bash(mc-tool-memory reflect *), Bash(mc-tool-memory search *), Read, Edit
+allowed-tools: Bash(mc-tool-memory *), Read, Edit
 ---
 
 # /reflect
 
 Synthesise recent observations into high-level insights.
 
-## Reflection output:
-
-!`mc-tool-memory reflect 2>/dev/null`
-
 ## Instructions
 
-Present the generated insights to the user. If the output includes proposed MEMORY.md updates:
+1. Run `mc-tool-memory reflect` via Bash to generate insights.
+2. Present the generated insights to the user. If the output includes proposed MEMORY.md updates:
 
 1. Show the proposed changes clearly
 2. Ask the user if they want to apply the changes
