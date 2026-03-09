@@ -2,9 +2,11 @@
 
 import sqlite3
 import struct
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from mait_code.tools.memory.search import (
+    _parse_since,
     delete_entry,
     hybrid_search,
     list_entries,
@@ -82,6 +84,90 @@ class TestListEntries:
         results = list_entries(populated_db)
         dates = [r["created_at"] for r in results]
         assert dates == sorted(dates, reverse=True)
+
+
+class TestParseSince:
+    def test_hours(self):
+        assert _parse_since("24h") == "-24 hours"
+
+    def test_days(self):
+        assert _parse_since("7d") == "-7 days"
+
+    def test_weeks(self):
+        assert _parse_since("1w") == "-7 days"
+        assert _parse_since("2w") == "-14 days"
+
+    def test_with_whitespace(self):
+        assert _parse_since(" 24h ") == "-24 hours"
+
+    def test_case_insensitive(self):
+        assert _parse_since("24H") == "-24 hours"
+        assert _parse_since("7D") == "-7 days"
+
+    def test_invalid_returns_none(self):
+        assert _parse_since("invalid") is None
+        assert _parse_since("") is None
+        assert _parse_since("24x") is None
+        assert _parse_since("abc") is None
+
+
+class TestListEntriesSince:
+    def test_since_filters_recent(self, memory_db: sqlite3.Connection):
+        """Entries within the time window should be returned."""
+        now = datetime.now(timezone.utc)
+        # Insert a recent entry
+        memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            ("recent entry", "fact", 5, "semantic", now.isoformat()),
+        )
+        # Insert an old entry
+        old = now - timedelta(days=30)
+        memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            ("old entry", "fact", 5, "semantic", old.isoformat()),
+        )
+        memory_db.commit()
+
+        results = list_entries(memory_db, since="7d")
+        contents = [r["content"] for r in results]
+        assert "recent entry" in contents
+        assert "old entry" not in contents
+
+    def test_since_with_type_filter(self, memory_db: sqlite3.Connection):
+        """Since and type filters should combine."""
+        now = datetime.now(timezone.utc)
+        memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            ("recent fact", "fact", 5, "semantic", now.isoformat()),
+        )
+        memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            ("recent event", "event", 5, "episodic", now.isoformat()),
+        )
+        memory_db.commit()
+
+        results = list_entries(memory_db, since="24h", entry_type="fact")
+        assert len(results) == 1
+        assert results[0]["content"] == "recent fact"
+
+    def test_since_invalid_ignored(self, populated_db: sqlite3.Connection):
+        """Invalid since value should be ignored (return all)."""
+        results_all = list_entries(populated_db)
+        results_bad = list_entries(populated_db, since="invalid")
+        assert len(results_all) == len(results_bad)
+
+    def test_since_none_returns_all(self, populated_db: sqlite3.Connection):
+        """since=None should return all entries (same as no filter)."""
+        results = list_entries(populated_db, since=None)
+        assert len(results) == 7  # All entries from fixture
 
 
 class TestVectorSearch:

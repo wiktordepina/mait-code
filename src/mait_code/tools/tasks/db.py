@@ -48,6 +48,7 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     Open a tasks database connection.
 
     - Enables WAL mode for concurrent reads
+    - Enables foreign key enforcement
     - Runs schema migrations to ensure current schema
 
     Args:
@@ -61,5 +62,51 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
 
     conn = sqlite3.connect(str(path))
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
     ensure_schema(conn)
     return conn
+
+
+def ensure_project(conn: sqlite3.Connection, name: str) -> None:
+    """Register the current project in the projects table if not already present."""
+    row = conn.execute(
+        "SELECT name FROM projects WHERE name = ?", (name,)
+    ).fetchone()
+    if row is not None:
+        return
+
+    # Resolve full path
+    path = ""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            path = result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    if not path:
+        path = str(Path.cwd())
+
+    # Resolve GitHub URL
+    github_url = None
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            github_url = result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    conn.execute(
+        "INSERT INTO projects (name, path, github_url) VALUES (?, ?, ?)",
+        (name, path, github_url),
+    )
+    conn.commit()

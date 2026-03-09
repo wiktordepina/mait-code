@@ -227,6 +227,7 @@ mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gat
 | `search <query> --type fact` | Filter by entry type |
 | `store <content> --type preference --importance 8` | Store a memory manually |
 | `list` | Recent entries by creation time |
+| `list --since 24h` | Filter by time period (`24h`, `7d`, `1w`, etc.) |
 | `list --type event` | Filter by type |
 | `delete <id>` | Delete an entry (embedding cleaned up by trigger) |
 | `stats` | Entry counts, class distribution, embedding coverage |
@@ -239,6 +240,20 @@ mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gat
 | `reflect --days 14` | Reflect on last 14 days |
 | `reflect --min-new 0` | Force reflection (skip novelty gate) |
 
+### Tasks tool (`mc-tool-tasks`)
+
+| Command | Description |
+|---------|-------------|
+| `add <title> [--priority high]` | Add a task for the current project |
+| `list [--all]` | List open (or all) tasks for the current project |
+| `done <id>` | Mark a task as completed |
+| `remove <id>` | Remove a task |
+| `check [--project <name>]` | Check open tasks (used by session_start hook) |
+| `list-all` | List open tasks across all registered projects |
+| `projects` | List all registered projects (name, path, GitHub URL) |
+
+Projects are auto-registered when any task subcommand runs in a project directory.
+
 ### Skills
 
 | Skill | Usage |
@@ -248,6 +263,13 @@ mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gat
 | `/reflect` | Synthesise observations into insights, propose MEMORY.md updates |
 | `/remind <when> <what>` | Set a reminder |
 | `/reminders` | Show active and overdue reminders |
+| `/commit` | Detect changes, generate conventional commit, confirm and commit |
+| `/standup` | Standup summary from git, tasks, memory, and PRs |
+| `/work-history [period]` | Project work history (today/yesterday/week) |
+| `/today` | Daily overview — tasks, reminders, activity, PRs |
+| `/status` | Generate STATUS.md for current project |
+| `/prs` | List open PRs across all registered projects |
+| `/projects` | List all registered projects |
 
 ## Multi-Machine Sync
 

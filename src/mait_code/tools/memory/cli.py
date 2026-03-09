@@ -119,12 +119,17 @@ def cmd_store(args):
 def cmd_list(args):
     conn = get_connection()
     try:
-        results = list_entries(conn, limit=args.limit, entry_type=args.type)
+        results = list_entries(
+            conn, limit=args.limit, entry_type=args.type, since=args.since
+        )
         if not results:
-            print("No memories stored yet.")
+            print("No memories found." if args.since else "No memories stored yet.")
             return
 
-        print(f"Recent {len(results)} memories:\n")
+        header = f"Recent {len(results)} memories"
+        if args.since:
+            header += f" (since {args.since})"
+        print(f"{header}:\n")
         for r in results:
             print(
                 f"[#{r['id']}] ({r['entry_type']}, importance={r['importance']}) "
@@ -527,6 +532,11 @@ def main():
     p_list = sub.add_parser("list", help="List recent memories")
     p_list.add_argument("--limit", type=int, default=10)
     p_list.add_argument("--type", choices=sorted(VALID_ENTRY_TYPES), default=None)
+    p_list.add_argument(
+        "--since",
+        default=None,
+        help="Time period filter (e.g. 24h, 7d, 1w)",
+    )
     p_list.set_defaults(func=cmd_list)
 
     # delete

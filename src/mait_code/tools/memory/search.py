@@ -91,27 +91,61 @@ def search_entries(
     ]
 
 
+def _parse_since(since: str) -> str | None:
+    """Parse a human-readable period into a SQLite datetime modifier.
+
+    Accepts formats like '24h', '48h', '7d', '1w'. Returns a modifier
+    string for datetime('now', modifier), or None if unparseable.
+    """
+    import re
+
+    m = re.fullmatch(r"(\d+)\s*(h|d|w)", since.strip().lower())
+    if not m:
+        return None
+    value, unit = int(m.group(1)), m.group(2)
+    if unit == "h":
+        return f"-{value} hours"
+    if unit == "d":
+        return f"-{value} days"
+    if unit == "w":
+        return f"-{value * 7} days"
+    return None
+
+
 def list_entries(
     conn: sqlite3.Connection,
     limit: int = 20,
     entry_type: str | None = None,
+    since: str | None = None,
 ) -> list[dict]:
-    """List recent memory entries, optionally filtered by type."""
+    """List recent memory entries, optionally filtered by type and time period.
+
+    Args:
+        since: Human-readable period like '24h', '7d', '1w'.
+    """
+    conditions = []
+    params: list = []
+
     if entry_type:
-        cursor = conn.execute(
-            """SELECT id, content, entry_type, importance, memory_class, created_at
-               FROM memory_entries
-               WHERE entry_type = ?
-               ORDER BY created_at DESC LIMIT ?""",
-            (entry_type, limit),
-        )
-    else:
-        cursor = conn.execute(
-            """SELECT id, content, entry_type, importance, memory_class, created_at
-               FROM memory_entries
-               ORDER BY created_at DESC LIMIT ?""",
-            (limit,),
-        )
+        conditions.append("entry_type = ?")
+        params.append(entry_type)
+
+    if since:
+        modifier = _parse_since(since)
+        if modifier:
+            conditions.append("created_at >= datetime('now', ?)")
+            params.append(modifier)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    cursor = conn.execute(
+        f"""SELECT id, content, entry_type, importance, memory_class, created_at
+            FROM memory_entries
+            {where}
+            ORDER BY created_at DESC LIMIT ?""",
+        params,
+    )
 
     return [
         {
