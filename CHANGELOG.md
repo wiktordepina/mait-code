@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.1 — Fix observe hook recursion (2026-03-10)
+
+Prevent recursive hook invocations when `call_claude()` spawns nested CLI sessions.
+
+- **Recursion guard:** Set `MAIT_CODE_NESTED=1` env var in `call_claude()` subprocess environment
+- **Early exit:** Observe hook checks for `MAIT_CODE_NESTED` and skips execution in nested invocations
+
 ## v0.8.0 — Projects registry and workflow skills (2026-03-09)
 
 Cross-project awareness via a projects registry, 7 new skills for daily workflow, and time-filtered memory queries.
