@@ -11,74 +11,37 @@
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│                  Claude Code                    │
-│                                                 │
-│ ┌───────────┐  ┌─────────────┐  ┌─────────────┐ │
-│ │ CLAUDE.md │  │    Hooks    │  │   Skills    │ │
-│ │ (identity │  │             │  │             │ │
-│ │  + rules) │  │ SessionStart│  │ /recall     │ │
-│ │           │  │ PreCompact  │  │ /remember   │ │
-│ │ @soul_doc │  │ SessionEnd  │  │ /reflect    │ │
-│ │ @user_ctx │  │             │  │ /remind     │ │
-│ │ @MEMORY   │  └────┬────────┘  │ /reminders  │ │
-│ │           │       │           │ /task       │ │
-│ │           │       │           │ /tasks      │ │
-│ │           │       │           │ memory-store│ │
-│ └───────────┘       │           └──────┬──────┘ │
-└─────────────────────┼──────────────────┼────────┘
-                      │                  │
-              ┌───────▼──────────────────▼────────┐
-              │        mait-code (Python)         │
-              │                                   │
-              │  hooks/                           │
-              │    session_start/  (SessionStart) │
-              │    observe/        (PreCompact,   │
-              │      cli.py          SessionEnd)  │
-              │      extractor.py                 │
-              │      transcript.py                │
-              │      cursor.py                    │
-              │      storage.py                   │
-              │    auto_format/    (PostToolUse)  │
-              │                                   │
-              │  tools/                           │
-              │    memory/         (CLI)          │
-              │      cli.py                       │
-              │      db.py                        │
-              │      migrate.py                   │
-              │      writer.py                    │
-              │      search.py                    │
-              │      scoring.py                   │
-              │      entities.py                  │
-              │      embeddings.py                │
-              │      reflect.py                   │
-              │    reminders/      (CLI)          │
-              │      cli.py                       │
-              │      db.py                        │
-              │      migrate.py                   │
-              │    tasks/           (CLI)          │
-              │      cli.py                       │
-              │      db.py                        │
-              │      migrate.py                   │
-              │                                   │
-              │  llm.py            (shared)       │
-              │  logging.py        (shared)       │
-              └───────────────┬───────────────────┘
-                              │
-              ┌───────────────▼───────────────────┐
-              │    ~/.claude/mait-code-data/      │
-              │                                   │
-              │  soul_document.md                 │
-              │  user_context.md                  │
-              │  memory/                          │
-              │    MEMORY.md        (curated)     │
-              │    memory.db        (SQLite)      │
-              │    observations/    (raw JSONL)   │
-              │    reflections/     (synthesised) │
-              │  reminders.db                     │
-              │  tasks.db                         │
-              └───────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph claude_code ["Claude Code"]
+        CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
+        HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, memory-store"]
+    end
+
+    subgraph mait_code ["mait-code (Python)"]
+        subgraph hooks_pkg ["hooks/"]
+            session_start["session_start/ <i>(SessionStart)</i>"]
+            observe["observe/ <i>(PreCompact, SessionEnd)</i><br/>cli, extractor, transcript<br/>cursor, storage"]
+            auto_format["auto_format/ <i>(PostToolUse)</i>"]
+        end
+        subgraph tools_pkg ["tools/"]
+            memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect"]
+            reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
+            tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
+        end
+        shared["llm.py + logging.py <i>(shared)</i>"]
+    end
+
+    subgraph data_dir ["~/.claude/mait-code-data/"]
+        identity["soul_document.md<br/>user_context.md"]
+        memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>memory.db <i>(SQLite)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
+        other_dbs["reminders.db<br/>tasks.db"]
+    end
+
+    HOOKS --> mait_code
+    SKILLS --> mait_code
+    mait_code --> data_dir
 ```
 
 ## Memory Architecture
@@ -185,47 +148,26 @@ Before storing a new memory, the writer checks for near-duplicates:
 
 ### Data Flow
 
-```
-store_memory() ──► find_duplicate() ──► FTS5 candidates
-                        │                    │
-                        ▼                    ▼
-                   SequenceMatcher     memory_entries
-                   similarity >= 0.90?
-                        │
-                   ┌────┴────┐
-                   │ Yes     │ No
-                   ▼         ▼
-              UPDATE      INSERT
-              timestamp   new entry
-                             │
-                             ▼
-                        embed_text()
-                        (nomic-embed, prefix="search_document")
-                             │
-                             ▼
-                        INSERT into memory_vec
+```mermaid
+flowchart TD
+    A["store_memory()"] --> B["find_duplicate()"]
+    B --> C["FTS5 candidates"]
+    C --> D["SequenceMatcher<br/>similarity >= 0.90?"]
+    D -->|Yes| E["UPDATE timestamp"]
+    D -->|No| F["INSERT new entry"]
+    F --> G["embed_text()<br/><i>nomic-embed, prefix=search_document</i>"]
+    G --> H["INSERT into memory_vec"]
 ```
 
-```
-search_memory() ──► hybrid_search()
-                        │
-                   ┌────┴────┐
-                   ▼         ▼
-              FTS5 BM25   vector_search
-              (keywords)  (nomic-embed cosine)
-                   │         │
-                   └────┬────┘
-                        ▼
-                   Merge by entry ID
-                   (both → use vector similarity,
-                    one only → default 0.3)
-                        │
-                        ▼
-                   composite_score()
-                   (recency + importance + relevance)
-                        │
-                        ▼
-                   Sort by score, return top N
+```mermaid
+flowchart TD
+    A["search_memory()"] --> B["hybrid_search()"]
+    B --> C["FTS5 BM25<br/><i>keywords</i>"]
+    B --> D["vector_search<br/><i>nomic-embed cosine</i>"]
+    C --> E["Merge by entry ID<br/><i>both: use vector similarity</i><br/><i>one only: default 0.3</i>"]
+    D --> E
+    E --> F["composite_score()<br/><i>recency + importance + relevance</i>"]
+    F --> G["Sort by score, return top N"]
 ```
 
 ### Tier 1: Observations (raw)
@@ -330,23 +272,13 @@ The observe hook on PreCompact runs asynchronously (`"async": true`) to avoid bl
 
 ## Observation Pipeline
 
-```
-PreCompact / SessionEnd
-        │
-        ▼
-  cursor.py: get byte offset for transcript
-        │
-        ▼
-  transcript.py: read new JSONL lines, filter user/assistant messages
-        │
-        ▼
-  extractor.py: call Claude Haiku for structured extraction
-        │
-        ▼
-  storage.py: store to memory.db + daily JSONL logs
-        │
-        ▼
-  cursor.py: save new byte offset
+```mermaid
+flowchart TD
+    A["PreCompact / SessionEnd"] --> B["cursor.py<br/>get byte offset for transcript"]
+    B --> C["transcript.py<br/>read new JSONL lines,<br/>filter user/assistant messages"]
+    C --> D["extractor.py<br/>call Claude Haiku for<br/>structured extraction"]
+    D --> E["storage.py<br/>store to memory.db +<br/>daily JSONL logs"]
+    E --> F["cursor.py<br/>save new byte offset"]
 ```
 
 ## Logging

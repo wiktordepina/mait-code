@@ -59,7 +59,7 @@ uv tool uninstall mait-code 2>/dev/null && echo "  Removed CLI tools" || echo " 
 SETTINGS_DST="$CLAUDE_DIR/settings.json"
 if [ -f "$SETTINGS_DST" ]; then
     echo "Cleaning settings.json..."
-    python3 -c "
+    uv run python -c "
 import json
 
 with open('$SETTINGS_DST') as f:

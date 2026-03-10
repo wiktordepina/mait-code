@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.2 — Maintenance updates (2026-03-10)
+
+- **Docs:** Convert architecture diagrams from ASCII to Mermaid
+- **Install:** Pin Python 3.14 in uv tool install
+- **Uninstall:** Use `uv run python` instead of `python3` for consistency
+
 ## v0.8.1 — Fix observe hook recursion (2026-03-10)
 
 Prevent recursive hook invocations when `call_claude()` spawns nested CLI sessions.
