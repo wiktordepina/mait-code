@@ -38,8 +38,10 @@ def call_claude(
     cmd = ["claude", "-p", "--model", model, "--no-session-persistence"]
 
     try:
-        # Clear CLAUDECODE env var to allow nested claude invocations from hooks
+        # Clear CLAUDECODE env var to allow nested claude invocations from hooks.
+        # Set MAIT_CODE_NESTED to prevent hooks from recursing.
         env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+        env["MAIT_CODE_NESTED"] = "1"
         result = subprocess.run(
             cmd,
             input=full_prompt,

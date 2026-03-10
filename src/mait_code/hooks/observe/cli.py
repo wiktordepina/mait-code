@@ -8,6 +8,7 @@ results in memory.db and daily observation logs.
 import argparse
 import json
 import logging
+import os
 import sys
 
 from mait_code.hooks.observe.cursor import get_cursor, set_cursor
@@ -27,6 +28,9 @@ logger = logging.getLogger(__name__)
 def main():
     """Entry point for mc-hook-observe."""
     setup_logging()
+    if os.environ.get("MAIT_CODE_NESTED"):
+        logger.debug("skipping observe hook in nested claude invocation")
+        return
     try:
         _run()
     except BrokenPipeError:
