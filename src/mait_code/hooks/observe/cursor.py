@@ -27,7 +27,7 @@ def load_cursors() -> dict:
         return {}
     try:
         return json.loads(path.read_text())
-    except json.JSONDecodeError, OSError:
+    except (json.JSONDecodeError, OSError):
         return {}
 
 

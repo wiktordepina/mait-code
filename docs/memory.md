@@ -6,19 +6,15 @@ This guide explains how mait-code remembers things across sessions — from auto
 
 Memory flows through three tiers, from raw to refined:
 
-```
-Conversations
-      │
-      ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ Tier 1      │     │ Tier 2      │     │ Tier 3      │
-│ Observations│ ──► │ Reflections │ ──► │ MEMORY.md   │
-│ (raw)       │     │ (synthesised│     │ (curated)   │
-│             │     │  — planned) │     │             │
-│ JSONL logs  │     │ Monthly     │     │ ~150 lines  │
-│ memory.db   │     │ summaries   │     │ loaded every│
-│ embeddings  │     │             │     │ session     │
-└─────────────┘     └─────────────┘     └─────────────┘
+```mermaid
+graph LR
+    C[Conversations] --> T1
+
+    T1["**Tier 1: Observations**<br>*(raw)*<br>JSONL logs<br>memory.db<br>embeddings"]
+    T2["**Tier 2: Reflections**<br>*(synthesised — planned)*<br>Monthly summaries"]
+    T3["**Tier 3: MEMORY.md**<br>*(curated)*<br>~150 lines<br>loaded every session"]
+
+    T1 --> T2 --> T3
 ```
 
 **Tier 1** is fully implemented and automatic. **Tier 2** is planned. **Tier 3** exists but is currently updated manually.

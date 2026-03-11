@@ -1,9 +1,17 @@
 # Changelog
 
+## v0.9.0 — Database hardening and LLM resilience (2026-03-11)
+
+- **Database context managers:** New `connection()` context manager in all three `db.py` modules (`memory`, `reminders`, `tasks`) — guarantees connection cleanup on exit. All CLI commands and hooks migrated from manual `try/finally/conn.close()`.
+- **LLM retry/backoff:** `call_claude()` now accepts `retries` and `backoff_base` parameters with exponential backoff on transient failures (timeouts, non-zero exits). `FileNotFoundError` is not retried (permanent). Default `retries=0` preserves existing fail-fast behaviour for interactive tools.
+- **Observe hook resilience:** Extraction calls now retry twice (3 total attempts) with 1s/2s backoff, reducing silent data loss from transient LLM failures.
+- **Python 3.13:** Downgrade minimum Python from 3.14 to 3.13 for broader compatibility.
+- **Docs:** Convert architecture diagrams from ASCII to Mermaid, update setup and memory docs.
+
 ## v0.8.2 — Maintenance updates (2026-03-10)
 
 - **Docs:** Convert architecture diagrams from ASCII to Mermaid
-- **Install:** Pin Python 3.14 in uv tool install
+- **Install:** Pin Python 3.13 in uv tool install
 - **Uninstall:** Use `uv run python` instead of `python3` for consistency
 
 ## v0.8.1 — Fix observe hook recursion (2026-03-10)
@@ -124,7 +132,7 @@ Persistent memory system — the defining feature that makes this a companion, n
 
 Initial project scaffold establishing the core structure and tooling.
 
-- **Packaging:** uv/hatchling build system with Python 3.14+, dependencies on `mcp`, `sqlite-vec`, `dateparser`, `pyyaml`
+- **Packaging:** uv/hatchling build system with Python 3.13+, dependencies on `mcp`, `sqlite-vec`, `dateparser`, `pyyaml`
 - **Hooks:** Stub entry points for `session_start`, `observe`, and `auto_format` hooks
 - **MCP servers:** Stub `memory_server` and `reminders_server`
 - **CLI tools:** Stub `reflect` and `rebuild_db` commands

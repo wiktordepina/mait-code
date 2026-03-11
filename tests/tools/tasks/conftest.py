@@ -1,8 +1,8 @@
 """Shared test fixtures for tasks tool tests."""
 
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,12 +29,14 @@ def tasks_db(tmp_path: Path) -> sqlite3.Connection:
 
 @pytest.fixture
 def mock_conn(tasks_db, monkeypatch):
-    """Monkeypatch get_connection and get_project in cli module to use test db."""
+    """Monkeypatch connection and get_project in cli module to use test db."""
     import mait_code.tools.tasks.cli as cli_mod
 
-    wrapper = MagicMock(wraps=tasks_db)
-    wrapper.close = MagicMock()
-    monkeypatch.setattr(cli_mod, "get_connection", lambda: wrapper)
+    @contextmanager
+    def fake_connection():
+        yield tasks_db
+
+    monkeypatch.setattr(cli_mod, "connection", fake_connection)
     monkeypatch.setattr(cli_mod, "get_project", lambda: TEST_PROJECT)
     # No-op ensure_project since test project is already registered
     monkeypatch.setattr(cli_mod, "ensure_project", lambda conn, name: None)

@@ -9,7 +9,7 @@ import dateparser
 
 from mait_code.logging import log_invocation, setup_logging
 
-from mait_code.tools.reminders.db import get_connection
+from mait_code.tools.reminders.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -46,16 +46,13 @@ def cmd_set(args):
         print(f"Error: could not parse time '{when_str}'.", file=sys.stderr)
         sys.exit(1)
 
-    conn = get_connection()
-    try:
+    with connection() as conn:
         cursor = conn.execute(
             "INSERT INTO reminders (what, due, created_at) VALUES (?, ?, ?)",
             (what.strip(), due.isoformat(), _now().isoformat()),
         )
         conn.commit()
         reminder_id = cursor.lastrowid
-    finally:
-        conn.close()
 
     print(
         f"Reminder #{reminder_id} set for "
@@ -64,13 +61,10 @@ def cmd_set(args):
 
 
 def cmd_list(args):
-    conn = get_connection()
-    try:
+    with connection() as conn:
         rows = conn.execute(
             "SELECT id, what, due, dismissed FROM reminders ORDER BY due"
         ).fetchall()
-    finally:
-        conn.close()
 
     active = [(r[0], r[1], r[2]) for r in rows if not r[3]]
     dismissed = [(r[0], r[1], r[2]) for r in rows if r[3]]
@@ -110,8 +104,7 @@ def cmd_list(args):
 
 
 def cmd_dismiss(args):
-    conn = get_connection()
-    try:
+    with connection() as conn:
         row = conn.execute(
             "SELECT dismissed FROM reminders WHERE id = ?", (args.id,)
         ).fetchone()
@@ -130,23 +123,18 @@ def cmd_dismiss(args):
             (_now().isoformat(), args.id),
         )
         conn.commit()
-    finally:
-        conn.close()
 
     print(f"Reminder #{args.id} dismissed.")
 
 
 def cmd_check(_args):
     """Check for overdue reminders. Used by session_start hook."""
-    conn = get_connection()
-    try:
+    with connection() as conn:
         rows = conn.execute(
             "SELECT id, what, due FROM reminders "
             "WHERE dismissed = 0 AND due <= ? ORDER BY due",
             (_now().isoformat(),),
         ).fetchall()
-    finally:
-        conn.close()
 
     if not rows:
         return

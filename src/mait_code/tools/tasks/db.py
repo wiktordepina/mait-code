@@ -8,6 +8,7 @@ instead of creating their own connections.
 import os
 import sqlite3
 import subprocess
+from contextlib import contextmanager
 from pathlib import Path
 
 from mait_code.tools.tasks.migrate import ensure_schema
@@ -65,6 +66,16 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys=ON")
     ensure_schema(conn)
     return conn
+
+
+@contextmanager
+def connection(db_path: Path | None = None):
+    """Context manager that opens and closes a tasks database connection."""
+    conn = get_connection(db_path)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def ensure_project(conn: sqlite3.Connection, name: str) -> None:

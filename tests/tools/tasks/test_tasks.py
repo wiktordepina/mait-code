@@ -293,7 +293,7 @@ def test_cmd_projects(mock_conn, capsys):
 
 def test_cmd_projects_empty(tasks_db, monkeypatch, capsys):
     """Test projects command with no registered projects."""
-    from unittest.mock import MagicMock
+    from contextlib import contextmanager
 
     import mait_code.tools.tasks.cli as cli_mod
 
@@ -306,9 +306,12 @@ def test_cmd_projects_empty(tasks_db, monkeypatch, capsys):
         from mait_code.tools.tasks.db import get_connection as _gc
 
         conn = _gc(db_path)
-        wrapper = MagicMock(wraps=conn)
-        wrapper.close = MagicMock()
-        monkeypatch.setattr(cli_mod, "get_connection", lambda: wrapper)
+
+        @contextmanager
+        def fake_connection():
+            yield conn
+
+        monkeypatch.setattr(cli_mod, "connection", fake_connection)
 
         from mait_code.tools.tasks.cli import cmd_projects
 

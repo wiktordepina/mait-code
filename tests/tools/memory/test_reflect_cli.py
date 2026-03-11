@@ -21,7 +21,7 @@ def test_cmd_reflect_skipped(tmp_path):
         "memory_diff": None,
     }
 
-    with patch("mait_code.tools.memory.cli.get_connection"), \
+    with patch("mait_code.tools.memory.cli.connection"), \
          patch("mait_code.tools.memory.reflect.reflect", return_value=mock_result):
         captured = StringIO()
         sys.stdout = captured
@@ -51,7 +51,7 @@ def test_cmd_reflect_success(tmp_path):
         "memory_diff": "Proposed additions to MEMORY.md:\n\n+ New fact",
     }
 
-    with patch("mait_code.tools.memory.cli.get_connection"), \
+    with patch("mait_code.tools.memory.cli.connection"), \
          patch("mait_code.tools.memory.reflect.reflect", return_value=mock_result):
         captured = StringIO()
         sys.stdout = captured
@@ -85,7 +85,7 @@ def test_cmd_reflect_no_insights(tmp_path):
         "memory_diff": None,
     }
 
-    with patch("mait_code.tools.memory.cli.get_connection"), \
+    with patch("mait_code.tools.memory.cli.connection"), \
          patch("mait_code.tools.memory.reflect.reflect", return_value=mock_result):
         captured = StringIO()
         sys.stdout = captured
@@ -115,7 +115,7 @@ def test_cmd_reflect_success_without_memory_diff(tmp_path):
         "memory_diff": None,
     }
 
-    with patch("mait_code.tools.memory.cli.get_connection"), \
+    with patch("mait_code.tools.memory.cli.connection"), \
          patch("mait_code.tools.memory.reflect.reflect", return_value=mock_result):
         captured = StringIO()
         sys.stdout = captured

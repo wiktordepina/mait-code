@@ -35,7 +35,7 @@ claude
 
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
-- Python >= 3.14
+- Python >= 3.13
 
 ## Project Structure
 

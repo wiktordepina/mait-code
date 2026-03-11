@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from mait_code.logging import log_invocation, setup_logging
 
-from mait_code.tools.tasks.db import ensure_project, get_connection, get_project
+from mait_code.tools.tasks.db import connection, ensure_project, get_project
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,7 @@ def cmd_add(args):
         sys.exit(1)
 
     project = get_project()
-    conn = get_connection()
-    try:
+    with connection() as conn:
         ensure_project(conn, project)
         cursor = conn.execute(
             "INSERT INTO tasks (project, title, priority, created_at) VALUES (?, ?, ?, ?)",
@@ -40,16 +39,13 @@ def cmd_add(args):
         )
         conn.commit()
         task_id = cursor.lastrowid
-    finally:
-        conn.close()
 
     print(f"Task #{task_id} added ({priority}): {title.strip()}")
 
 
 def cmd_list(args):
     project = get_project()
-    conn = get_connection()
-    try:
+    with connection() as conn:
         ensure_project(conn, project)
         if args.all:
             rows = conn.execute(
@@ -65,8 +61,6 @@ def cmd_list(args):
                 "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, id",
                 (project,),
             ).fetchall()
-    finally:
-        conn.close()
 
     if not rows:
         print("No tasks." if not args.all else "No tasks for this project.")
@@ -90,8 +84,7 @@ def cmd_list(args):
 
 
 def cmd_done(args):
-    conn = get_connection()
-    try:
+    with connection() as conn:
         row = conn.execute(
             "SELECT status FROM tasks WHERE id = ?", (args.id,)
         ).fetchone()
@@ -110,15 +103,12 @@ def cmd_done(args):
             (_now().isoformat(), args.id),
         )
         conn.commit()
-    finally:
-        conn.close()
 
     print(f"Task #{args.id} completed.")
 
 
 def cmd_remove(args):
-    conn = get_connection()
-    try:
+    with connection() as conn:
         row = conn.execute(
             "SELECT id FROM tasks WHERE id = ?", (args.id,)
         ).fetchone()
@@ -130,8 +120,6 @@ def cmd_remove(args):
 
         conn.execute("DELETE FROM tasks WHERE id = ?", (args.id,))
         conn.commit()
-    finally:
-        conn.close()
 
     print(f"Task #{args.id} removed.")
 
@@ -139,8 +127,7 @@ def cmd_remove(args):
 def cmd_check(args):
     """List open tasks for current project. Used by session_start hook."""
     project = args.project if args.project else get_project()
-    conn = get_connection()
-    try:
+    with connection() as conn:
         ensure_project(conn, project)
         rows = conn.execute(
             "SELECT id, title, priority FROM tasks "
@@ -148,8 +135,6 @@ def cmd_check(args):
             "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, id",
             (project,),
         ).fetchall()
-    finally:
-        conn.close()
 
     if not rows:
         return
@@ -161,15 +146,12 @@ def cmd_check(args):
 
 def cmd_list_all(_args):
     """List open tasks across all projects."""
-    conn = get_connection()
-    try:
+    with connection() as conn:
         rows = conn.execute(
             "SELECT t.id, t.project, t.title, t.priority FROM tasks t "
             "WHERE t.status = 'open' ORDER BY t.project, "
             "CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, t.id",
         ).fetchall()
-    finally:
-        conn.close()
 
     if not rows:
         print("No open tasks across any project.")
@@ -188,13 +170,10 @@ def cmd_list_all(_args):
 
 def cmd_projects(_args):
     """List all registered projects."""
-    conn = get_connection()
-    try:
+    with connection() as conn:
         rows = conn.execute(
             "SELECT name, path, github_url, added_at FROM projects ORDER BY name",
         ).fetchall()
-    finally:
-        conn.close()
 
     if not rows:
         print("No projects registered yet.")
