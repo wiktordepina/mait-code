@@ -10,7 +10,7 @@ Synthesise recent observations into high-level insights.
 
 ## Instructions
 
-1. Run `mc-tool-memory reflect` via Bash to generate insights.
+1. Run `mc-tool-memory reflect` via Bash to generate insights (scoped to current project by default).
 2. Present the generated insights to the user. If the output includes proposed MEMORY.md updates:
 
 1. Show the proposed changes clearly
@@ -21,3 +21,5 @@ Synthesise recent observations into high-level insights.
 If reflection was skipped (not enough new observations), explain that there isn't enough new data since the last reflection and suggest trying again later.
 
 If the user wants to force a reflection with a different time window, run `mc-tool-memory reflect --days <N> --min-new 0`.
+
+For cross-project reflection, run `mc-tool-memory reflect --scope all`.

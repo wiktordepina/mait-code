@@ -8,6 +8,7 @@ from mait_code.tools.memory.scoring import (
     composite_score,
     importance_score,
     recency_score,
+    scope_boost,
 )
 
 
@@ -127,3 +128,85 @@ class TestCompositeScore:
                 created = now - timedelta(days=days_ago)
                 score = composite_score(created, imp, now=now)
                 assert 0.0 <= score <= 1.0
+
+    def test_scope_boost_applied(self):
+        """Scope boost should reduce score for global entries in project context."""
+        now = datetime.now(UTC)
+        base = composite_score(now, importance=8, relevance=0.8, now=now)
+        boosted = composite_score(
+            now,
+            importance=8,
+            relevance=0.8,
+            now=now,
+            entry_scope="global",
+            entry_project=None,
+            entry_branch=None,
+            query_project="my-proj",
+        )
+        assert boosted < base  # Global gets 0.7 multiplier
+
+    def test_no_scope_backward_compat(self):
+        """Without scope params, score should be unchanged."""
+        now = datetime.now(UTC)
+        score_old = composite_score(now, importance=8, relevance=0.8, now=now)
+        score_new = composite_score(
+            now,
+            importance=8,
+            relevance=0.8,
+            now=now,
+            entry_scope=None,
+        )
+        assert score_old == score_new
+
+    def test_branch_match_full_score(self):
+        """Branch-matched entry should get full score (multiplier 1.0)."""
+        now = datetime.now(UTC)
+        base = composite_score(now, importance=8, relevance=0.8, now=now)
+        boosted = composite_score(
+            now,
+            importance=8,
+            relevance=0.8,
+            now=now,
+            entry_scope="branch",
+            entry_project="proj",
+            entry_branch="feat/x",
+            query_project="proj",
+            query_branch="feat/x",
+        )
+        assert abs(base - boosted) < 0.001
+
+
+class TestScopeBoost:
+    def test_no_query_context(self):
+        assert scope_boost("global", None, None) == 1.0
+        assert scope_boost("project", "proj", None) == 1.0
+        assert scope_boost("branch", "proj", "feat/x") == 1.0
+
+    def test_global_entry(self):
+        assert scope_boost("global", None, None, query_project="proj") == 0.7
+
+    def test_project_match(self):
+        assert scope_boost("project", "proj", None, query_project="proj") == 0.85
+
+    def test_project_mismatch(self):
+        assert scope_boost("project", "proj-a", None, query_project="proj-b") == 0.3
+
+    def test_branch_match(self):
+        boost = scope_boost(
+            "branch",
+            "proj",
+            "feat/x",
+            query_project="proj",
+            query_branch="feat/x",
+        )
+        assert boost == 1.0
+
+    def test_branch_mismatch(self):
+        boost = scope_boost(
+            "branch",
+            "proj",
+            "feat/x",
+            query_project="proj",
+            query_branch="feat/y",
+        )
+        assert boost == 0.85  # Falls through to project match

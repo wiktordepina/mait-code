@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
+from mait_code.hooks.observe.scope import resolve_scope
 from mait_code.tools.memory.db import connection, get_data_dir
 from mait_code.tools.memory.entities import upsert_entity, upsert_relationship
 from mait_code.tools.memory.writer import store_memory
@@ -18,7 +19,13 @@ CATEGORY_TO_TYPE = {
 }
 
 
-def write_raw_extraction(extraction: dict, trigger: str) -> None:
+def write_raw_extraction(
+    extraction: dict,
+    trigger: str,
+    *,
+    project: str | None = None,
+    branch: str | None = None,
+) -> None:
     """Append extraction to daily JSONL log file."""
     data_dir = get_data_dir()
     obs_dir = data_dir / "memory" / "observations"
@@ -30,13 +37,20 @@ def write_raw_extraction(extraction: dict, trigger: str) -> None:
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "trigger": trigger,
+        "project": project,
+        "branch": branch,
         "extraction": extraction,
     }
     with open(path, "a") as f:
         f.write(json.dumps(record) + "\n")
 
 
-def store_extraction(extraction: dict) -> None:
+def store_extraction(
+    extraction: dict,
+    *,
+    project: str | None = None,
+    branch: str | None = None,
+) -> None:
     """Store extracted facts, preferences, decisions, bugs to memory.db."""
     with connection() as conn:
         for category, entry_type in CATEGORY_TO_TYPE.items():
@@ -45,8 +59,17 @@ def store_extraction(extraction: dict) -> None:
                 if not content:
                     continue
                 importance = item.get("importance", 5)
+                scope = resolve_scope(item, category, project, branch)
                 try:
-                    store_memory(conn, content, entry_type, importance)
+                    store_memory(
+                        conn,
+                        content,
+                        entry_type,
+                        importance,
+                        scope=scope,
+                        project=project if scope != "global" else None,
+                        branch=branch if scope == "branch" else None,
+                    )
                 except Exception as e:
                     logger.warning("failed to store %s: %s", entry_type, e)
 

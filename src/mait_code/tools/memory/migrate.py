@@ -18,6 +18,77 @@ logger = logging.getLogger(__name__)
 
 type MigrationBody = list[str] | Callable[[sqlite3.Connection], None]
 
+
+def _migrate_8_scoped_memory(conn: sqlite3.Connection) -> None:
+    """Add scope/project/branch columns and rebuild FTS with new columns."""
+    # 1. Add columns
+    conn.execute(
+        "ALTER TABLE memory_entries ADD COLUMN scope TEXT NOT NULL DEFAULT 'global'"
+    )
+    conn.execute("ALTER TABLE memory_entries ADD COLUMN project TEXT DEFAULT NULL")
+    conn.execute("ALTER TABLE memory_entries ADD COLUMN branch TEXT DEFAULT NULL")
+
+    # 2. Create indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_memory_entries_scope ON memory_entries(scope)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_memory_entries_project ON memory_entries(project)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_memory_entries_project_scope "
+        "ON memory_entries(project, scope)"
+    )
+
+    # 3. Drop old FTS triggers
+    conn.execute("DROP TRIGGER IF EXISTS memory_entries_ai")
+    conn.execute("DROP TRIGGER IF EXISTS memory_entries_ad")
+    conn.execute("DROP TRIGGER IF EXISTS memory_entries_au")
+
+    # 4. Drop and recreate FTS table with project and scope columns
+    conn.execute("DROP TABLE IF EXISTS memory_entries_fts")
+    conn.execute(
+        """CREATE VIRTUAL TABLE memory_entries_fts
+           USING fts5(content, entry_type, project, scope,
+                      content=memory_entries, content_rowid=id)"""
+    )
+
+    # 5. Repopulate FTS from existing data
+    conn.execute(
+        """INSERT INTO memory_entries_fts(rowid, content, entry_type, project, scope)
+           SELECT id, content, entry_type, COALESCE(project, ''), COALESCE(scope, 'global')
+           FROM memory_entries"""
+    )
+
+    # 6. Recreate sync triggers with new columns
+    conn.execute(
+        """CREATE TRIGGER memory_entries_ai AFTER INSERT ON memory_entries BEGIN
+             INSERT INTO memory_entries_fts(rowid, content, entry_type, project, scope)
+             VALUES (new.id, new.content, new.entry_type,
+                     COALESCE(new.project, ''), COALESCE(new.scope, 'global'));
+           END"""
+    )
+    conn.execute(
+        """CREATE TRIGGER memory_entries_ad AFTER DELETE ON memory_entries BEGIN
+             INSERT INTO memory_entries_fts(
+                 memory_entries_fts, rowid, content, entry_type, project, scope)
+             VALUES ('delete', old.id, old.content, old.entry_type,
+                     COALESCE(old.project, ''), COALESCE(old.scope, 'global'));
+           END"""
+    )
+    conn.execute(
+        """CREATE TRIGGER memory_entries_au AFTER UPDATE ON memory_entries BEGIN
+             INSERT INTO memory_entries_fts(
+                 memory_entries_fts, rowid, content, entry_type, project, scope)
+             VALUES ('delete', old.id, old.content, old.entry_type,
+                     COALESCE(old.project, ''), COALESCE(old.scope, 'global'));
+             INSERT INTO memory_entries_fts(rowid, content, entry_type, project, scope)
+             VALUES (new.id, new.content, new.entry_type,
+                     COALESCE(new.project, ''), COALESCE(new.scope, 'global'));
+           END"""
+    )
+
+
 MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
     (
         1,
@@ -122,6 +193,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
                  DELETE FROM memory_vec WHERE rowid = old.id;
                END""",
         ],
+    ),
+    (
+        8,
+        "Add scope, project, branch columns for scoped memory",
+        _migrate_8_scoped_memory,
     ),
 ]
 

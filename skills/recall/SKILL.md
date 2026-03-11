@@ -23,4 +23,6 @@ Recent memories:
 
 Present the results above clearly. If the search returned no results, suggest broadening the query. If only the recent list has results (no query was given), present those.
 
+Results are scoped to the current project and branch by default. If the user wants cross-project results, run `mc-tool-memory search <query> --scope all` via Bash.
+
 If the user wants to refine, run `mc-tool-memory search <new query>` via Bash.

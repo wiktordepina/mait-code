@@ -57,18 +57,18 @@ class TestSetupLogging:
 
         logger = logging.getLogger("mait_code")
         # Should only have one handler despite three calls
-        file_handlers = [
-            h for h in logger.handlers
-            if hasattr(h, "baseFilename")
-        ]
+        file_handlers = [h for h in logger.handlers if hasattr(h, "baseFilename")]
         assert len(file_handlers) == 1
 
     def test_respects_log_level(self, tmp_path):
         log_file = tmp_path / "test.log"
-        with patch.dict(os.environ, {
-            "MAIT_CODE_LOG_FILE": str(log_file),
-            "MAIT_CODE_LOG_LEVEL": "WARNING",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "MAIT_CODE_LOG_FILE": str(log_file),
+                "MAIT_CODE_LOG_LEVEL": "WARNING",
+            },
+        ):
             setup_logging()
 
         logger = logging.getLogger("mait_code")
@@ -155,6 +155,7 @@ class TestLogInvocation:
     def test_logs_invocation_and_completion(self, tmp_path):
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+
             @log_invocation(name="test-cmd")
             def my_func():
                 return 42
@@ -169,6 +170,7 @@ class TestLogInvocation:
     def test_logs_argparse_namespace(self, tmp_path):
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+
             @log_invocation(name="test-cmd")
             def my_func(args):
                 pass
@@ -185,6 +187,7 @@ class TestLogInvocation:
     def test_truncates_sensitive_args(self, tmp_path):
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+
             @log_invocation(name="test-cmd")
             def my_func(args):
                 pass
@@ -200,6 +203,7 @@ class TestLogInvocation:
     def test_logs_exception(self, tmp_path):
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+
             @log_invocation(name="test-cmd")
             def my_func():
                 raise ValueError("boom")
@@ -214,6 +218,7 @@ class TestLogInvocation:
     def test_logs_system_exit(self, tmp_path):
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+
             @log_invocation(name="test-cmd")
             def my_func():
                 sys.exit(1)
@@ -227,6 +232,7 @@ class TestLogInvocation:
     def test_extra_truncate_params(self, tmp_path):
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+
             @log_invocation(name="test-cmd", truncate_params={"custom_field"})
             def my_func(args):
                 pass
@@ -243,6 +249,7 @@ class TestLogInvocation:
         """The argparse 'func' attribute should not be logged."""
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+
             @log_invocation(name="test-cmd")
             def my_func(args):
                 pass

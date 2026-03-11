@@ -91,7 +91,9 @@ def test_call_haiku_delegates_to_call_claude():
     """Verify call_haiku passes model='haiku', timeout=45, and retries=2 to call_claude."""
     from mait_code.hooks.observe.extractor import call_haiku
 
-    with patch("mait_code.hooks.observe.extractor.call_claude", return_value="response") as mock:
+    with patch(
+        "mait_code.hooks.observe.extractor.call_claude", return_value="response"
+    ) as mock:
         result = call_haiku("test prompt")
 
     assert result == "response"

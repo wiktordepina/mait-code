@@ -67,12 +67,18 @@ def _run():
         set_cursor(transcript_path, new_offset)
         return
 
-    extraction = extract_observations(conversation_text)
+    from mait_code.context import get_context
+
+    ctx = get_context()
+    project = ctx["project"]
+    branch = ctx["branch"]
+
+    extraction = extract_observations(conversation_text, project=project, branch=branch)
     if not extraction:
         set_cursor(transcript_path, new_offset)
         return
 
-    write_raw_extraction(extraction, args.trigger)
-    store_extraction(extraction)
+    write_raw_extraction(extraction, args.trigger, project=project, branch=branch)
+    store_extraction(extraction, project=project, branch=branch)
     store_entities_and_relationships(extraction)
     set_cursor(transcript_path, new_offset)

@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.10.0 — Scoped memory and tasks alignment (2026-03-11)
+
+Three-tier memory scoping (global/project/branch) and removal of the projects registry from tasks.
+
+### Scoped memory
+- **Three-tier scope:** Memory entries are now scoped as `global`, `project`, or `branch`. Scope is auto-detected from git context and can be overridden with `--scope`, `--project`, `--branch` flags.
+- **Shared context module:** New `src/mait_code/context.py` with `get_project()`, `get_branch()`, `get_context()` — used by memory, tasks, and hooks.
+- **Scope-aware search:** All search functions (`search`, `list`, `hybrid_search`, `vector_search`) filter by scope — global entries are always visible, project/branch entries only visible in matching context. Use `--scope all` to disable filtering.
+- **Scope-aware dedup:** Deduplication is project-scoped — same content in different projects creates separate entries.
+- **Scope-aware scoring:** New `scope_boost()` multiplier in composite scoring — branch match: 1.0, project match: 0.85, global: 0.7.
+- **Scope-aware reflection:** `mc-tool-memory reflect` filters by current project context.
+- **LLM scope classification:** Extraction prompt now includes scope guidance; `resolve_scope()` heuristic promotes preferences to global, defaults decisions to project, bugs on feature branches to branch.
+- **Schema migration 8:** Adds `scope`, `project`, `branch` columns to `memory_entries`, rebuilds FTS5 index with `project` and `scope` columns, recreates sync triggers.
+
+### Tasks alignment
+- **Removed projects table:** Migration 3 drops the `projects` table and FK constraint from `tasks.db`. Tasks store project as a plain string column.
+- **Removed `ensure_project()`:** No longer needed without the projects registry.
+- **Removed `/projects` skill:** Project discovery via `mc-tool-memory stats` (by-project breakdown) or `mc-tool-tasks list-all`.
+- **Updated PR skills:** `/prs`, `/standup`, `/today` now use `gh search prs --author=@me --state=open` instead of iterating over registered projects.
+- **Updated `/status`:** Derives project info from git directly instead of the projects table.
+
+### Skill updates
+- `/recall`, `/remember`, `memory-store`, `/reflect` — updated instructions for scope-aware behaviour.
+- `/standup`, `/today` — use `--scope all` for cross-project memory queries.
+
 ## v0.9.0 — Database hardening and LLM resilience (2026-03-11)
 
 - **Database context managers:** New `connection()` context manager in all three `db.py` modules (`memory`, `reminders`, `tasks`) — guarantees connection cleanup on exit. All CLI commands and hooks migrated from manual `try/finally/conn.close()`.

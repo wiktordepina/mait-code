@@ -14,8 +14,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Work History | `/work-history [period]` | Show project work history (git log + memory) for a time period | **Implemented** |
 | Today | `/today` | Daily overview — open tasks, reminders, recent activity, PRs | **Implemented** |
 | Status | `/status` | Generate STATUS.md with project overview, tasks, recent work | **Implemented** |
-| PRs | `/prs` | List open PRs across all registered projects | **Implemented** |
-| Projects | `/projects` | List and manage registered projects | **Implemented** |
+| PRs | `/prs` | List open PRs across all projects | **Implemented** |
 | Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
@@ -163,8 +162,8 @@ Generate a standup summary from git history, tasks, memory, and open PRs.
 ```
 
 **How it works:**
-1. Preprocesses: git log (last 24h), all open tasks, recent memories, reminders, registered projects
-2. For each registered project with a GitHub URL, checks for open PRs via `gh pr list`
+1. Preprocesses: git log (last 24h), all open tasks, recent memories, reminders
+2. Checks for open PRs via `gh search prs --author=@me --state=open`
 3. Formats as standup: Yesterday, Today, Blockers, Open PRs
 
 ### /work-history
@@ -195,8 +194,8 @@ Daily overview dashboard — open tasks, reminders, recent activity, and open PR
 ```
 
 **How it works:**
-1. Preprocesses: all open tasks, reminders, recent commits, recent memories, registered projects
-2. For each registered project with a GitHub URL, checks for open PRs
+1. Preprocesses: all open tasks, reminders, recent commits, recent memories
+2. Checks for open PRs via `gh search prs --author=@me --state=open`
 3. Presents sections: Tasks, Reminders, Recent Activity, Open PRs
 
 ### /status
@@ -209,14 +208,15 @@ Generate a STATUS.md for the current project.
 ```
 
 **How it works:**
-1. Preprocesses: project tasks, reminders, git log (7 days), recent memories, project info
-2. Reads existing STATUS.md (if present) for continuity
-3. Generates STATUS.md with sections: Project, Open Tasks, Recent Work, Completed Tasks, Reminders
-4. Writes to the project root
+1. Preprocesses: project tasks, reminders, git log (7 days), recent memories
+2. Gets project info from git (name, remote URL)
+3. Reads existing STATUS.md (if present) for continuity
+4. Generates STATUS.md with sections: Project, Open Tasks, Recent Work, Completed Tasks, Reminders
+5. Writes to the project root
 
 ### /prs
 
-List open PRs across all registered projects.
+List open PRs across all projects.
 
 **Usage:**
 ```
@@ -224,23 +224,8 @@ List open PRs across all registered projects.
 ```
 
 **How it works:**
-1. Preprocesses the registered projects list
-2. For each project with a GitHub URL, runs `gh pr list` to find open PRs
-3. Shows PR number, title, author, and review status grouped by project
-
-### /projects
-
-List all registered projects.
-
-**Usage:**
-```
-/projects                        # Show registered projects
-```
-
-**How it works:**
-1. Preprocesses results via `mc-tool-tasks projects`
-2. Shows each project's name, disk path, GitHub URL, and registration date
-3. Projects are auto-registered when any task subcommand runs in a project directory
+1. Preprocesses via `gh search prs --author=@me --state=open`
+2. Shows PR number, title, and review status grouped by repository
 
 ## Skill Architecture
 
@@ -274,10 +259,8 @@ skills/
 │   └── SKILL.md     # Daily overview dashboard
 ├── status/
 │   └── SKILL.md     # Generate STATUS.md
-├── prs/
-│   └── SKILL.md     # Cross-project PR listing
-└── projects/
-    └── SKILL.md     # Registered projects
+└── prs/
+    └── SKILL.md     # Cross-project PR listing
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.

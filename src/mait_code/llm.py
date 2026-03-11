@@ -64,8 +64,10 @@ def call_claude(
                     result.stderr[:200] if result.stderr else "",
                 )
                 if attempt < retries:
-                    delay = backoff_base ** attempt
-                    logger.info("retrying in %.1fs (attempt %d/%d)", delay, attempt + 1, retries)
+                    delay = backoff_base**attempt
+                    logger.info(
+                        "retrying in %.1fs (attempt %d/%d)", delay, attempt + 1, retries
+                    )
                     time.sleep(delay)
                     continue
                 return None
@@ -76,8 +78,10 @@ def call_claude(
         except subprocess.TimeoutExpired:
             logger.warning("claude timed out after %ds", timeout)
             if attempt < retries:
-                delay = backoff_base ** attempt
-                logger.info("retrying in %.1fs (attempt %d/%d)", delay, attempt + 1, retries)
+                delay = backoff_base**attempt
+                logger.info(
+                    "retrying in %.1fs (attempt %d/%d)", delay, attempt + 1, retries
+                )
                 time.sleep(delay)
                 continue
             return None

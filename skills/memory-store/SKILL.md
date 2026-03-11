@@ -30,3 +30,6 @@ Importance: 1 (trivial) to 10 (critical), default 5
 - Don't store session-specific ephemera (current file being edited, temporary errors)
 - Don't store information already in MEMORY.md or user_context.md
 - Deduplication is automatic — storing similar content updates the existing entry
+- Memories are automatically scoped to the current project and branch
+- User preferences are promoted to global scope automatically
+- If the user explicitly says something applies to all their projects, add `--scope global`

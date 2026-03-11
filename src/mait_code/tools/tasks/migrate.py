@@ -14,6 +14,31 @@ logger = logging.getLogger(__name__)
 
 type MigrationBody = list[str] | Callable[[sqlite3.Connection], None]
 
+
+def _migrate_3_drop_projects(conn: sqlite3.Connection) -> None:
+    """Remove projects table and FK constraint from tasks."""
+    conn.execute("ALTER TABLE tasks RENAME TO tasks_old")
+    conn.execute(
+        """CREATE TABLE tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project TEXT NOT NULL,
+            title TEXT NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'medium',
+            status TEXT NOT NULL DEFAULT 'open',
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            completed_at TEXT
+        )"""
+    )
+    conn.execute(
+        """INSERT INTO tasks (id, project, title, priority, status, created_at, completed_at)
+           SELECT id, project, title, priority, status, created_at, completed_at
+           FROM tasks_old"""
+    )
+    conn.execute("DROP TABLE tasks_old")
+    conn.execute("CREATE INDEX idx_tasks_project_status ON tasks(project, status)")
+    conn.execute("DROP TABLE IF EXISTS projects")
+
+
 MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
     (
         1,
@@ -54,6 +79,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             )""",
             "CREATE INDEX idx_tasks_project_status ON tasks(project, status)",
         ],
+    ),
+    (
+        3,
+        "Remove projects table and FK constraint",
+        _migrate_3_drop_projects,
     ),
 ]
 

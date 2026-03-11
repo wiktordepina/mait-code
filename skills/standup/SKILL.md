@@ -18,13 +18,9 @@ Open tasks (all projects):
 
 !`mc-tool-tasks list-all 2>/dev/null || echo "No open tasks."`
 
-Registered projects:
-
-!`mc-tool-tasks projects 2>/dev/null || echo "No projects registered."`
-
 Recent memories (last 24h):
 
-!`mc-tool-memory list --since 24h --limit 15 2>/dev/null || echo "No recent memories."`
+!`mc-tool-memory list --since 24h --limit 15 --scope all 2>/dev/null || echo "No recent memories."`
 
 Reminders:
 
@@ -36,5 +32,5 @@ Reminders:
    - **Yesterday** — what was accomplished (from git log and memories)
    - **Today** — what's planned (from open tasks and reminders)
    - **Blockers** — any issues or blockers (from memories/tasks, or "None" if clear)
-2. For each registered project that has a github_url, run `gh pr list --repo <github_url> --author @me --state open` via Bash to check for open PRs. Include a **Open PRs** section if any are found.
+2. Check for open PRs by running `gh search prs --author=@me --state=open --limit 20` via Bash. Include an **Open PRs** section if any are found.
 3. Keep it concise — bullet points, not paragraphs.
