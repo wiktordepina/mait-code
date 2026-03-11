@@ -245,10 +245,7 @@ mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gat
 | `done <id>` | Mark a task as completed |
 | `remove <id>` | Remove a task |
 | `check [--project <name>]` | Check open tasks (used by session_start hook) |
-| `list-all` | List open tasks across all registered projects |
-| `projects` | List all registered projects (name, path, GitHub URL) |
-
-Projects are auto-registered when any task subcommand runs in a project directory.
+| `list-all` | List open tasks across all projects |
 
 ### Skills
 
@@ -264,8 +261,7 @@ Projects are auto-registered when any task subcommand runs in a project director
 | `/work-history [period]` | Project work history (today/yesterday/week) |
 | `/today` | Daily overview — tasks, reminders, activity, PRs |
 | `/status` | Generate STATUS.md for current project |
-| `/prs` | List open PRs across all registered projects |
-| `/projects` | List all registered projects |
+| `/prs` | List open PRs across all projects |
 
 ## Multi-Machine Sync
 

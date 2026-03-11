@@ -173,7 +173,6 @@ class TestCmdList:
         out = capsys.readouterr().out
         assert "dark mode" in out
 
-
     def test_with_since_filter(self, populated_mem_db, capsys):
         from mait_code.tools.memory.cli import cmd_list
 

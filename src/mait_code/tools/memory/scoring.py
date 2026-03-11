@@ -68,12 +68,52 @@ def importance_score(importance: int) -> float:
     return max(0.0, min(1.0, (importance - 1) / 9.0))
 
 
+def scope_boost(
+    entry_scope: str,
+    entry_project: str | None,
+    entry_branch: str | None,
+    *,
+    query_project: str | None = None,
+    query_branch: str | None = None,
+) -> float:
+    """Compute a multiplicative boost based on scope match.
+
+    Returns:
+        1.0 for branch match, 0.85 for project match, 0.7 for global,
+        1.0 when no query context is provided (backward compat).
+    """
+    # No query context — no boost applied
+    if query_project is None:
+        return 1.0
+
+    if entry_scope == "global" or entry_project is None:
+        return 0.7
+
+    if entry_project != query_project:
+        return 0.3  # Shouldn't happen given search filtering, but defensive
+
+    if (
+        entry_scope == "branch"
+        and entry_branch is not None
+        and query_branch is not None
+        and entry_branch == query_branch
+    ):
+        return 1.0
+
+    return 0.85  # Project match
+
+
 def composite_score(
     created_at: str | datetime,
     importance: int,
     relevance: float = 0.5,
     *,
     memory_class: str | None = None,
+    entry_scope: str | None = None,
+    entry_project: str | None = None,
+    entry_branch: str | None = None,
+    query_project: str | None = None,
+    query_branch: str | None = None,
     w_recency: float = W_RECENCY,
     w_importance: float = W_IMPORTANCE,
     w_relevance: float = W_RELEVANCE,
@@ -87,6 +127,11 @@ def composite_score(
         importance: Importance level 1-10.
         relevance: Relevance score 0.0-1.0 (from search or default 0.5).
         memory_class: 'episodic' or 'semantic' (controls decay rate).
+        entry_scope: Scope of the entry ('global', 'project', 'branch').
+        entry_project: Project of the entry.
+        entry_branch: Branch of the entry.
+        query_project: Project context for the query.
+        query_branch: Branch context for the query.
         w_recency: Weight for recency component.
         w_importance: Weight for importance component.
         w_relevance: Weight for relevance component.
@@ -97,4 +142,16 @@ def composite_score(
     """
     r = recency_score(created_at, now, memory_class=memory_class)
     i = importance_score(importance)
-    return w_recency * r + w_importance * i + w_relevance * relevance
+    base = w_recency * r + w_importance * i + w_relevance * relevance
+
+    if entry_scope is not None:
+        boost = scope_boost(
+            entry_scope,
+            entry_project,
+            entry_branch,
+            query_project=query_project,
+            query_branch=query_branch,
+        )
+        return base * boost
+
+    return base

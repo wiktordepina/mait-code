@@ -1,25 +1,24 @@
 ---
 name: prs
-description: List open PRs across all registered projects
-allowed-tools: Bash(gh *), Bash(mc-tool-tasks *)
+description: List my open PRs across all known projects
+allowed-tools: Bash(gh *)
 ---
 
 # /prs
 
-Show open pull requests across all registered projects.
+Show my open pull requests across all known projects.
 
 ## Data
 
-Registered projects:
+My open PRs:
 
-!`mc-tool-tasks projects 2>/dev/null || echo "No projects registered."`
+!`gh search prs --author=@me --state=open --limit 30 2>/dev/null || echo "Could not fetch PRs."`
 
 ## Instructions
 
-1. For each registered project that has a github_url, run `gh pr list --repo <github_url> --state open --limit 20` via Bash.
-2. Present results grouped by project, showing for each PR:
+1. Present results grouped by repository, showing for each PR:
    - PR number and title
-   - Author
-   - Review status (if available via `gh pr list --json number,title,author,reviewDecision`)
-3. If a project has no open PRs, note that briefly.
-4. Show a total count at the end.
+   - Repository
+   - Review status (if available — run `gh pr view <url> --json reviewDecision` for details if needed)
+2. If there are no open PRs, say so briefly.
+3. Show a total count at the end.

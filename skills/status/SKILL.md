@@ -26,18 +26,15 @@ Recent memories (last 7 days):
 
 !`mc-tool-memory list --since 7d --limit 20 2>/dev/null || echo "No recent memories."`
 
-Project info:
-
-!`mc-tool-tasks projects 2>/dev/null || echo "No project info."`
-
 ## Instructions
 
 1. Read the existing STATUS.md if present (for continuity), and README.md or CLAUDE.md for project context.
-2. Generate a STATUS.md with these sections:
-   - **Project** — name, path, github URL (from project info above)
+2. For project info, run `git remote get-url origin` and `basename $(git rev-parse --show-toplevel)` via Bash to get the project name and GitHub URL.
+3. Generate a STATUS.md with these sections:
+   - **Project** — name, path, github URL (from git info above)
    - **Open Tasks** — current tasks by priority
    - **Recent Work** — summary of last week's activity from git log and memories
    - **Completed Tasks** — recently completed tasks
    - **Reminders** — any active reminders
-3. Write the file to the project root as STATUS.md.
-4. Show a brief summary of what was written.
+4. Write the file to the project root as STATUS.md.
+5. Show a brief summary of what was written.

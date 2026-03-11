@@ -7,7 +7,6 @@ instead of creating their own connections.
 
 import os
 import sqlite3
-import subprocess
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -29,19 +28,13 @@ def get_db_path() -> Path:
 
 
 def get_project() -> str:
-    """Return the current project identifier (basename of git root or cwd)."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0:
-            return Path(result.stdout.strip()).name
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-    return Path.cwd().name
+    """Return the current project identifier (basename of git root or cwd).
+
+    Delegates to mait_code.context.get_project() — kept here for backward compat.
+    """
+    from mait_code.context import get_project as _get_project
+
+    return _get_project() or Path.cwd().name
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
@@ -76,48 +69,3 @@ def connection(db_path: Path | None = None):
         yield conn
     finally:
         conn.close()
-
-
-def ensure_project(conn: sqlite3.Connection, name: str) -> None:
-    """Register the current project in the projects table if not already present."""
-    row = conn.execute(
-        "SELECT name FROM projects WHERE name = ?", (name,)
-    ).fetchone()
-    if row is not None:
-        return
-
-    # Resolve full path
-    path = ""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0:
-            path = result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-    if not path:
-        path = str(Path.cwd())
-
-    # Resolve GitHub URL
-    github_url = None
-    try:
-        result = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0:
-            github_url = result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-
-    conn.execute(
-        "INSERT INTO projects (name, path, github_url) VALUES (?, ?, ?)",
-        (name, path, github_url),
-    )
-    conn.commit()

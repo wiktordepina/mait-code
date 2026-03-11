@@ -17,12 +17,6 @@ def tasks_db(tmp_path: Path) -> sqlite3.Connection:
     """Create a fresh temp tasks database with schema applied."""
     db_path = tmp_path / "test_tasks.db"
     conn = get_connection(db_path)
-    # Pre-register the test project so FK constraints are satisfied
-    conn.execute(
-        "INSERT OR IGNORE INTO projects (name, path) VALUES (?, ?)",
-        (TEST_PROJECT, str(tmp_path)),
-    )
-    conn.commit()
     yield conn
     conn.close()
 
@@ -38,6 +32,4 @@ def mock_conn(tasks_db, monkeypatch):
 
     monkeypatch.setattr(cli_mod, "connection", fake_connection)
     monkeypatch.setattr(cli_mod, "get_project", lambda: TEST_PROJECT)
-    # No-op ensure_project since test project is already registered
-    monkeypatch.setattr(cli_mod, "ensure_project", lambda conn, name: None)
     return tasks_db

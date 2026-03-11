@@ -191,9 +191,7 @@ class TestVectorSearch:
         self, memory_db: sqlite3.Connection
     ):
         """Should return empty list when embeddings are unavailable."""
-        with patch(
-            "mait_code.tools.memory.search.embed_text", return_value=None
-        ):
+        with patch("mait_code.tools.memory.search.embed_text", return_value=None):
             results = vector_search_entries(memory_db, "test query")
         assert results == []
 
@@ -226,9 +224,7 @@ class TestVectorSearch:
             "mait_code.tools.memory.search.embed_text",
             return_value=vec,
         ):
-            results = vector_search_entries(
-                memory_db, "test", entry_type="fact"
-            )
+            results = vector_search_entries(memory_db, "test", entry_type="fact")
 
         assert len(results) == 1
         assert results[0]["entry_type"] == "fact"
@@ -237,9 +233,7 @@ class TestVectorSearch:
 class TestHybridSearch:
     def test_hybrid_falls_back_to_fts(self, populated_db: sqlite3.Connection):
         """With no embeddings, hybrid should still return FTS results."""
-        with patch(
-            "mait_code.tools.memory.search.embed_text", return_value=None
-        ):
+        with patch("mait_code.tools.memory.search.embed_text", return_value=None):
             results = hybrid_search(populated_db, "dark mode")
 
         assert len(results) >= 1
@@ -247,13 +241,9 @@ class TestHybridSearch:
         # All results should have a relevance key
         assert all("relevance" in r for r in results)
 
-    def test_hybrid_returns_empty_for_no_match(
-        self, populated_db: sqlite3.Connection
-    ):
+    def test_hybrid_returns_empty_for_no_match(self, populated_db: sqlite3.Connection):
         """Should return empty list when nothing matches."""
-        with patch(
-            "mait_code.tools.memory.search.embed_text", return_value=None
-        ):
+        with patch("mait_code.tools.memory.search.embed_text", return_value=None):
             results = hybrid_search(populated_db, "nonexistent_xyz")
 
         assert results == []
@@ -319,3 +309,106 @@ class TestDeleteEntry:
 
         fts_results = search_entries(populated_db, "dark mode")
         assert len(fts_results) == 0
+
+
+class TestScopedSearch:
+    """Tests for scope-aware search filtering."""
+
+    def _insert_scoped(
+        self, conn, content, entry_type, scope, project=None, branch=None
+    ):
+        conn.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, scope, project, branch)
+               VALUES (?, ?, 7, 'semantic', ?, ?, ?)""",
+            (content, entry_type, scope, project, branch),
+        )
+        conn.commit()
+
+    def test_global_entries_visible_in_project_search(self, memory_db):
+        self._insert_scoped(
+            memory_db, "global preference about testing", "preference", "global"
+        )
+        results = search_entries(memory_db, "testing", project="my-proj")
+        assert len(results) == 1
+
+    def test_project_entries_visible_in_same_project(self, memory_db):
+        self._insert_scoped(
+            memory_db, "project-specific API convention", "fact", "project", "my-proj"
+        )
+        results = search_entries(memory_db, "convention", project="my-proj")
+        assert len(results) == 1
+
+    def test_project_entries_hidden_from_other_project(self, memory_db):
+        self._insert_scoped(
+            memory_db, "project-specific secret convention", "fact", "project", "proj-a"
+        )
+        results = search_entries(memory_db, "secret", project="proj-b")
+        assert len(results) == 0
+
+    def test_branch_entries_visible_on_same_branch(self, memory_db):
+        self._insert_scoped(
+            memory_db,
+            "branch-specific bug workaround",
+            "event",
+            "branch",
+            "my-proj",
+            "feature/x",
+        )
+        results = search_entries(
+            memory_db, "workaround", project="my-proj", branch="feature/x"
+        )
+        assert len(results) == 1
+
+    def test_branch_entries_hidden_from_other_branch(self, memory_db):
+        self._insert_scoped(
+            memory_db,
+            "branch-only detail about fixup",
+            "event",
+            "branch",
+            "my-proj",
+            "feature/x",
+        )
+        results = search_entries(
+            memory_db, "fixup", project="my-proj", branch="feature/y"
+        )
+        assert len(results) == 0
+
+    def test_no_project_returns_all(self, memory_db):
+        """Without project context, all entries are returned."""
+        self._insert_scoped(memory_db, "global fact about patterns", "fact", "global")
+        self._insert_scoped(
+            memory_db, "project fact about patterns", "fact", "project", "proj-a"
+        )
+        self._insert_scoped(
+            memory_db,
+            "branch fact about patterns",
+            "fact",
+            "branch",
+            "proj-a",
+            "feat/x",
+        )
+        results = search_entries(memory_db, "patterns")
+        assert len(results) == 3
+
+    def test_list_entries_scope_filter(self, memory_db):
+        self._insert_scoped(memory_db, "a global entry", "fact", "global")
+        self._insert_scoped(memory_db, "a project entry", "fact", "project", "proj")
+        results = list_entries(memory_db, scope="global")
+        assert all(r["scope"] == "global" for r in results)
+        assert len(results) == 1
+
+    def test_search_returns_scope_fields(self, memory_db):
+        self._insert_scoped(
+            memory_db,
+            "scoped search result content",
+            "fact",
+            "branch",
+            "my-proj",
+            "feat/y",
+        )
+        results = search_entries(memory_db, "scoped search result")
+        assert len(results) == 1
+        assert results[0]["scope"] == "branch"
+        assert results[0]["project"] == "my-proj"
+        assert results[0]["branch"] == "feat/y"

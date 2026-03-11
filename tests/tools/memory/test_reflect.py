@@ -71,7 +71,13 @@ def obs_dir(tmp_path: Path) -> Path:
                 "preferences": [{"content": "Prefers dark mode", "importance": 5}],
                 "decisions": [],
                 "bugs_fixed": [],
-                "entities": [{"name": "PostgreSQL", "entity_type": "tool", "context": "Primary database"}],
+                "entities": [
+                    {
+                        "name": "PostgreSQL",
+                        "entity_type": "tool",
+                        "context": "Primary database",
+                    }
+                ],
                 "relationships": [],
             }
         },
@@ -79,7 +85,9 @@ def obs_dir(tmp_path: Path) -> Path:
             "extraction": {
                 "facts": [{"content": "Kubernetes cluster on GKE", "importance": 6}],
                 "preferences": [],
-                "decisions": [{"content": "Use Helm charts for deployment", "importance": 7}],
+                "decisions": [
+                    {"content": "Use Helm charts for deployment", "importance": 7}
+                ],
                 "bugs_fixed": [],
                 "entities": [],
                 "relationships": [],
@@ -234,7 +242,10 @@ def test_get_recent_entries_excludes_insights(memory_db):
 
 def test_read_observation_logs(obs_dir):
     # get_data_dir() / "memory" / "observations" must resolve to obs_dir
-    with patch("mait_code.tools.memory.reflect.get_data_dir", return_value=obs_dir.parent.parent):
+    with patch(
+        "mait_code.tools.memory.reflect.get_data_dir",
+        return_value=obs_dir.parent.parent,
+    ):
         text = read_observation_logs(days=7)
 
     assert "PostgreSQL 16" in text
@@ -389,8 +400,13 @@ INSIGHT: Testing and iteration speed are prioritised over comprehensive coverage
 ## Memory Updates
 MEMORY_UPDATE: Primary testing approach: pytest with -x flag"""
 
-    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response), \
-         patch("mait_code.tools.memory.reflect.read_observation_logs", return_value="some observations"):
+    with (
+        patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response),
+        patch(
+            "mait_code.tools.memory.reflect.read_observation_logs",
+            return_value="some observations",
+        ),
+    ):
         result = reflect(db_with_entries, days=7, min_new=0)
 
     assert result["skipped"] is False
@@ -408,8 +424,12 @@ MEMORY_UPDATE: Primary testing approach: pytest with -x flag"""
 
 
 def test_reflect_llm_failure(db_with_entries):
-    with patch("mait_code.tools.memory.reflect.call_claude", return_value=None), \
-         patch("mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"):
+    with (
+        patch("mait_code.tools.memory.reflect.call_claude", return_value=None),
+        patch(
+            "mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"
+        ),
+    ):
         result = reflect(db_with_entries, days=7, min_new=0)
 
     assert result["skipped"] is False
@@ -421,8 +441,12 @@ def test_reflect_llm_failure(db_with_entries):
 def test_reflect_no_memory_updates(db_with_entries):
     llm_response = "INSIGHT: Just one insight with no memory updates"
 
-    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response), \
-         patch("mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"):
+    with (
+        patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response),
+        patch(
+            "mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"
+        ),
+    ):
         result = reflect(db_with_entries, days=7, min_new=0)
 
     assert result["skipped"] is False
@@ -443,9 +467,15 @@ def test_reflect_with_memory_md_content(db_with_entries, tmp_path):
         captured_prompt["value"] = prompt
         return llm_response
 
-    with patch("mait_code.tools.memory.reflect.call_claude", side_effect=fake_call_claude), \
-         patch("mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"), \
-         patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path):
+    with (
+        patch(
+            "mait_code.tools.memory.reflect.call_claude", side_effect=fake_call_claude
+        ),
+        patch(
+            "mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"
+        ),
+        patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path),
+    ):
         result = reflect(db_with_entries, days=7, min_new=0)
 
     assert result["skipped"] is False
@@ -475,7 +505,11 @@ def test_format_extraction_all_categories():
 def test_format_extraction_entities():
     extraction = {
         "entities": [
-            {"name": "PostgreSQL", "entity_type": "tool", "context": "Primary database"},
+            {
+                "name": "PostgreSQL",
+                "entity_type": "tool",
+                "context": "Primary database",
+            },
             {"name": "Alice", "entity_type": "person", "context": "Team lead"},
         ],
     }
@@ -578,16 +612,22 @@ def test_read_observation_logs_skips_old_files(tmp_path):
     # Create an old file (30 days ago)
     old_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
     old_file = obs_dir / f"{old_date}.jsonl"
-    old_file.write_text(json.dumps({
-        "extraction": {"facts": [{"content": "Old fact", "importance": 5}]}
-    }) + "\n")
+    old_file.write_text(
+        json.dumps(
+            {"extraction": {"facts": [{"content": "Old fact", "importance": 5}]}}
+        )
+        + "\n"
+    )
 
     # Create a recent file
     today = datetime.now().strftime("%Y-%m-%d")
     new_file = obs_dir / f"{today}.jsonl"
-    new_file.write_text(json.dumps({
-        "extraction": {"facts": [{"content": "Recent fact", "importance": 5}]}
-    }) + "\n")
+    new_file.write_text(
+        json.dumps(
+            {"extraction": {"facts": [{"content": "Recent fact", "importance": 5}]}}
+        )
+        + "\n"
+    )
 
     with patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path):
         text = read_observation_logs(days=7)
@@ -605,7 +645,9 @@ def test_read_observation_logs_malformed_json(tmp_path):
     log_file = obs_dir / f"{today}.jsonl"
     lines = [
         "this is not json",
-        json.dumps({"extraction": {"facts": [{"content": "Valid fact", "importance": 7}]}}),
+        json.dumps(
+            {"extraction": {"facts": [{"content": "Valid fact", "importance": 7}]}}
+        ),
         "{broken json",
     ]
     log_file.write_text("\n".join(lines) + "\n")

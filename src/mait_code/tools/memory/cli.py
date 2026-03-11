@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 
+from mait_code.context import get_context
 from mait_code.logging import log_invocation, setup_logging
 
 from mait_code.tools.memory.db import connection
@@ -26,6 +27,42 @@ from mait_code.tools.memory.writer import store_memory as _store_memory
 
 logger = logging.getLogger(__name__)
 
+VALID_SCOPES = {"global", "project", "branch"}
+
+
+def _resolve_context(args) -> dict:
+    """Resolve project/branch/scope from CLI args + auto-detection."""
+    ctx = get_context()
+    project = getattr(args, "project", None) or ctx["project"]
+    branch = getattr(args, "branch", None) or ctx["branch"]
+    scope_filter = getattr(args, "scope", None)
+
+    # --scope all means no filtering
+    if scope_filter == "all":
+        project = None
+        branch = None
+        scope_filter = None
+
+    return {
+        "project": project,
+        "branch": branch,
+        "scope_filter": scope_filter,
+    }
+
+
+def _format_scope_label(r: dict) -> str:
+    """Format scope info for display."""
+    scope = r.get("scope", "global")
+    project = r.get("project")
+    branch = r.get("branch")
+    if scope == "global":
+        return "global"
+    if scope == "branch" and branch:
+        return f"{project}:{branch}"
+    if project:
+        return f"{project}"
+    return scope
+
 
 def cmd_search(args):
     query = " ".join(args.query)
@@ -35,24 +72,27 @@ def cmd_search(args):
         sys.exit(1)
 
     mode = getattr(args, "mode", "hybrid")
+    ctx = _resolve_context(args)
+    project = ctx["project"]
+    branch = ctx["branch"]
 
     with connection() as conn:
+        search_kwargs = dict(
+            limit=args.limit * 2,
+            entry_type=args.type,
+            project=project,
+            branch=branch,
+        )
         if mode == "fts":
-            results = search_entries(
-                conn, query, limit=args.limit * 2, entry_type=args.type
-            )
+            results = search_entries(conn, query, **search_kwargs)
             for r in results:
                 r["relevance"] = 0.7
         elif mode == "vector":
-            results = vector_search_entries(
-                conn, query, limit=args.limit * 2, entry_type=args.type
-            )
+            results = vector_search_entries(conn, query, **search_kwargs)
             for r in results:
                 r["relevance"] = r.pop("similarity", 0.5)
         else:
-            results = hybrid_search(
-                conn, query, limit=args.limit * 2, entry_type=args.type
-            )
+            results = hybrid_search(conn, query, **search_kwargs)
 
         if not results:
             print(f"No memories found matching '{query}'.")
@@ -65,6 +105,11 @@ def cmd_search(args):
                 r["importance"],
                 relevance=r.get("relevance", 0.5),
                 memory_class=r.get("memory_class"),
+                entry_scope=r.get("scope"),
+                entry_project=r.get("project"),
+                entry_branch=r.get("branch"),
+                query_project=project,
+                query_branch=branch,
             )
             scored.append((score, r))
 
@@ -73,9 +118,10 @@ def cmd_search(args):
 
         print(f"Found {len(scored)} memories matching '{query}':\n")
         for score, r in scored:
+            scope_label = _format_scope_label(r)
             print(
                 f"[#{r['id']}] ({r['entry_type']}, importance={r['importance']}, "
-                f"score={score:.2f}) {r['created_at'][:10]}"
+                f"scope={scope_label}, score={score:.2f}) {r['created_at'][:10]}"
             )
             print(f"  {r['content']}")
             print()
@@ -97,8 +143,36 @@ def cmd_store(args):
         )
         sys.exit(1)
 
+    ctx = _resolve_context(args)
+    project = ctx["project"]
+    branch = ctx["branch"]
+
+    # Determine scope
+    scope = getattr(args, "scope", None)
+    if scope and scope in VALID_SCOPES:
+        pass
+    elif branch:
+        scope = "branch"
+    elif project:
+        scope = "project"
+    else:
+        scope = "global"
+
+    # Clear project/branch for global scope
+    store_project = project if scope != "global" else None
+    store_branch = branch if scope == "branch" else None
+
     with connection() as conn:
-        result = _store_memory(conn, content.strip(), args.type, args.importance)
+        result = _store_memory(
+            conn,
+            content.strip(),
+            args.type,
+            args.importance,
+            scope=scope,
+            project=store_project,
+            branch=store_branch,
+        )
+        scope_label = _format_scope_label(result)
         if result["action"] == "deduplicated":
             print(
                 f"Memory deduplicated (updated entry #{result['id']}): {content[:80]}"
@@ -106,14 +180,23 @@ def cmd_store(args):
         else:
             print(
                 f"Memory stored (#{result['id']}): "
-                f"[{args.type}, importance={args.importance}] {content[:80]}"
+                f"[{args.type}, importance={args.importance}, "
+                f"scope={scope_label}] {content[:80]}"
             )
 
 
 def cmd_list(args):
+    ctx = _resolve_context(args)
+
     with connection() as conn:
         results = list_entries(
-            conn, limit=args.limit, entry_type=args.type, since=args.since
+            conn,
+            limit=args.limit,
+            entry_type=args.type,
+            since=args.since,
+            project=ctx["project"],
+            branch=ctx["branch"],
+            scope=ctx["scope_filter"],
         )
         if not results:
             print("No memories found." if args.since else "No memories stored yet.")
@@ -124,9 +207,10 @@ def cmd_list(args):
             header += f" (since {args.since})"
         print(f"{header}:\n")
         for r in results:
+            scope_label = _format_scope_label(r)
             print(
-                f"[#{r['id']}] ({r['entry_type']}, importance={r['importance']}) "
-                f"{r['created_at'][:10]}"
+                f"[#{r['id']}] ({r['entry_type']}, importance={r['importance']}, "
+                f"scope={scope_label}) {r['created_at'][:10]}"
             )
             print(f"  {r['content'][:120]}")
             print()
@@ -156,12 +240,17 @@ def cmd_stats(_args):
         by_class = conn.execute(
             "SELECT memory_class, COUNT(*) FROM memory_entries GROUP BY memory_class"
         ).fetchall()
+        by_scope = conn.execute(
+            "SELECT scope, COUNT(*) FROM memory_entries GROUP BY scope ORDER BY COUNT(*) DESC"
+        ).fetchall()
+        by_project = conn.execute(
+            "SELECT COALESCE(project, '(global)'), COUNT(*) FROM memory_entries "
+            "GROUP BY project ORDER BY COUNT(*) DESC"
+        ).fetchall()
 
         # Embedding stats
         try:
-            embedded = conn.execute(
-                "SELECT COUNT(*) FROM memory_vec"
-            ).fetchone()[0]
+            embedded = conn.execute("SELECT COUNT(*) FROM memory_vec").fetchone()[0]
         except Exception:
             embedded = 0
 
@@ -171,6 +260,12 @@ def cmd_stats(_args):
             print(f"  {row[0]}: {row[1]}")
         print("\nBy class:")
         for row in by_class:
+            print(f"  {row[0]}: {row[1]}")
+        print("\nBy scope:")
+        for row in by_scope:
+            print(f"  {row[0]}: {row[1]}")
+        print("\nBy project:")
+        for row in by_project:
             print(f"  {row[0]}: {row[1]}")
 
         pct = round(100 * embedded / total) if total else 0
@@ -292,6 +387,7 @@ def cmd_restore(args):
     """Restore memory database from observation JSONL log files."""
     import json
 
+    from mait_code.hooks.observe.scope import resolve_scope
     from mait_code.tools.memory.db import get_data_dir
     from mait_code.tools.memory.entities import upsert_entity, upsert_relationship
     from mait_code.tools.memory.writer import store_memory as _store
@@ -344,6 +440,8 @@ def cmd_restore(args):
                         continue
 
                     extraction = record.get("extraction", {})
+                    rec_project = record.get("project")
+                    rec_branch = record.get("branch")
                     total_records += 1
                     file_records += 1
 
@@ -354,14 +452,29 @@ def cmd_restore(args):
                             if not content:
                                 continue
                             importance = item.get("importance", 5)
+                            scope = resolve_scope(
+                                item, category, rec_project, rec_branch
+                            )
+                            store_project = rec_project if scope != "global" else None
+                            store_branch = rec_branch if scope == "branch" else None
                             if dry_run:
                                 total_memories += 1
                             else:
                                 try:
-                                    _store(conn, content, entry_type, importance)
+                                    _store(
+                                        conn,
+                                        content,
+                                        entry_type,
+                                        importance,
+                                        scope=scope,
+                                        project=store_project,
+                                        branch=store_branch,
+                                    )
                                     total_memories += 1
                                 except Exception as e:
-                                    logger.warning("failed to store %s: %s", entry_type, e)
+                                    logger.warning(
+                                        "failed to store %s: %s", entry_type, e
+                                    )
                                     print(
                                         f"Warning: failed to store {entry_type}: {e}",
                                         file=sys.stderr,
@@ -384,7 +497,9 @@ def cmd_restore(args):
                                 )
                                 total_entities += 1
                             except Exception as e:
-                                logger.warning("failed to upsert entity '%s': %s", name, e)
+                                logger.warning(
+                                    "failed to upsert entity '%s': %s", name, e
+                                )
                                 print(
                                     f"Warning: failed to upsert entity '{name}': {e}",
                                     file=sys.stderr,
@@ -429,7 +544,9 @@ def cmd_restore(args):
                         except Exception:
                             errors += 1
 
-            print(f"{'[dry-run] ' if dry_run else ''}{log_file.name}: {file_records} records")
+            print(
+                f"{'[dry-run] ' if dry_run else ''}{log_file.name}: {file_records} records"
+            )
 
         prefix = "[dry-run] " if dry_run else ""
         print(f"\n{prefix}Restore complete:")
@@ -453,8 +570,16 @@ def cmd_reflect(args):
     """Synthesise recent observations into insights, update MEMORY.md."""
     from mait_code.tools.memory.reflect import reflect
 
+    ctx = _resolve_context(args)
+
     with connection() as conn:
-        result = reflect(conn, days=args.days, min_new=args.min_new)
+        result = reflect(
+            conn,
+            days=args.days,
+            min_new=args.min_new,
+            project=ctx["project"],
+            branch=ctx["branch"],
+        )
 
     if result["skipped"]:
         reason = result.get("reason", "not enough new signal")
@@ -481,6 +606,21 @@ def main():
     parser = argparse.ArgumentParser(prog="mc-tool-memory", description="Memory CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    def _add_scope_args(p):
+        """Add --project, --branch, --scope flags to a subparser."""
+        p.add_argument(
+            "--project", default=None, help="Project filter (default: auto-detected)"
+        )
+        p.add_argument(
+            "--branch", default=None, help="Branch filter (default: auto-detected)"
+        )
+        p.add_argument(
+            "--scope",
+            choices=["global", "project", "branch", "all"],
+            default=None,
+            help="Scope filter (default: context-aware; 'all' disables filtering)",
+        )
+
     # search
     p_search = sub.add_parser("search", help="Search memories")
     p_search.add_argument("query", nargs="+", help="Search query")
@@ -492,6 +632,7 @@ def main():
         default="hybrid",
         help="Search mode: hybrid (default), fts (keyword only), vector (semantic only)",
     )
+    _add_scope_args(p_search)
     p_search.set_defaults(func=cmd_search)
 
     # store
@@ -499,6 +640,7 @@ def main():
     p_store.add_argument("content", nargs="+", help="Memory content")
     p_store.add_argument("--type", choices=sorted(VALID_ENTRY_TYPES), default="fact")
     p_store.add_argument("--importance", type=int, default=5, choices=range(1, 11))
+    _add_scope_args(p_store)
     p_store.set_defaults(func=cmd_store)
 
     # list
@@ -510,6 +652,7 @@ def main():
         default=None,
         help="Time period filter (e.g. 24h, 7d, 1w)",
     )
+    _add_scope_args(p_list)
     p_list.set_defaults(func=cmd_list)
 
     # delete
@@ -563,6 +706,7 @@ def main():
         default=3,
         help="Minimum new observations to trigger reflection",
     )
+    _add_scope_args(p_reflect)
     p_reflect.set_defaults(func=cmd_reflect)
 
     args = parser.parse_args()

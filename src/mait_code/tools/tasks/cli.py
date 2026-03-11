@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from mait_code.logging import log_invocation, setup_logging
 
-from mait_code.tools.tasks.db import connection, ensure_project, get_project
+from mait_code.tools.tasks.db import connection, get_project
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,6 @@ def cmd_add(args):
 
     project = get_project()
     with connection() as conn:
-        ensure_project(conn, project)
         cursor = conn.execute(
             "INSERT INTO tasks (project, title, priority, created_at) VALUES (?, ?, ?, ?)",
             (project, title.strip(), priority, _now().isoformat()),
@@ -46,7 +45,6 @@ def cmd_add(args):
 def cmd_list(args):
     project = get_project()
     with connection() as conn:
-        ensure_project(conn, project)
         if args.all:
             rows = conn.execute(
                 "SELECT id, title, priority, status, completed_at FROM tasks "
@@ -109,9 +107,7 @@ def cmd_done(args):
 
 def cmd_remove(args):
     with connection() as conn:
-        row = conn.execute(
-            "SELECT id FROM tasks WHERE id = ?", (args.id,)
-        ).fetchone()
+        row = conn.execute("SELECT id FROM tasks WHERE id = ?", (args.id,)).fetchone()
 
         if row is None:
             logger.error("task #%d not found", args.id)
@@ -128,7 +124,6 @@ def cmd_check(args):
     """List open tasks for current project. Used by session_start hook."""
     project = args.project if args.project else get_project()
     with connection() as conn:
-        ensure_project(conn, project)
         rows = conn.execute(
             "SELECT id, title, priority FROM tasks "
             "WHERE project = ? AND status = 'open' ORDER BY "
@@ -168,27 +163,6 @@ def cmd_list_all(_args):
     print()
 
 
-def cmd_projects(_args):
-    """List all registered projects."""
-    with connection() as conn:
-        rows = conn.execute(
-            "SELECT name, path, github_url, added_at FROM projects ORDER BY name",
-        ).fetchall()
-
-    if not rows:
-        print("No projects registered yet.")
-        return
-
-    print(f"Registered projects ({len(rows)}):\n")
-    for name, path, github_url, added_at in rows:
-        print(f"  {name}")
-        print(f"    path: {path}")
-        if github_url:
-            print(f"    github: {github_url}")
-        print(f"    added: {added_at[:10]}")
-        print()
-
-
 @log_invocation(name="mc-tool-tasks")
 def main():
     setup_logging()
@@ -210,9 +184,7 @@ def main():
 
     # list
     p_list = sub.add_parser("list", help="List open tasks")
-    p_list.add_argument(
-        "--all", action="store_true", help="Include completed tasks"
-    )
+    p_list.add_argument("--all", action="store_true", help="Include completed tasks")
     p_list.set_defaults(func=cmd_list)
 
     # done
@@ -227,18 +199,12 @@ def main():
 
     # check (for hooks)
     p_check = sub.add_parser("check", help="Check open tasks for current project")
-    p_check.add_argument(
-        "--project", help="Project path (defaults to git root or cwd)"
-    )
+    p_check.add_argument("--project", help="Project path (defaults to git root or cwd)")
     p_check.set_defaults(func=cmd_check)
 
     # list-all
     p_list_all = sub.add_parser("list-all", help="List open tasks across all projects")
     p_list_all.set_defaults(func=cmd_list_all)
-
-    # projects
-    p_projects = sub.add_parser("projects", help="List all registered projects")
-    p_projects.set_defaults(func=cmd_projects)
 
     args = parser.parse_args()
     args.func(args)

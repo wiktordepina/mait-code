@@ -28,9 +28,14 @@ When the user invokes `/remember <content>`:
    - 7-9: important, referenced often
    - 10: critical, must not forget
 
-3. Store using: `mc-tool-memory store "<content>" --type <type> --importance <N>`
+3. Determine scope:
+   - Cross-project facts (e.g., "always use tabs for Go code") → `--scope global`
+   - Project-specific facts (e.g., "this repo uses 4-space indent") → auto-detected (default)
+   - Branch-specific notes → auto-detected (default)
 
-4. Confirm what was stored.
+4. Store using: `mc-tool-memory store "<content>" --type <type> --importance <N>` (add `--scope global` if applicable)
+
+5. Confirm what was stored.
 
 ## Examples
 

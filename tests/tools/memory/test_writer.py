@@ -172,6 +172,121 @@ class TestStoreMemory:
         assert r1["id"] != r2["id"]
 
 
+class TestScopedDedup:
+    def test_same_project_different_branch_deduplicates(
+        self, memory_db: sqlite3.Connection
+    ):
+        """Same content in same project but different branches should deduplicate."""
+        content = "The API uses JSON responses"
+        r1 = store_memory(
+            memory_db,
+            content,
+            "fact",
+            5,
+            scope="branch",
+            project="my-project",
+            branch="feature/a",
+        )
+        r2 = store_memory(
+            memory_db,
+            content,
+            "fact",
+            5,
+            scope="branch",
+            project="my-project",
+            branch="feature/b",
+        )
+        assert r1["action"] == "created"
+        assert r2["action"] == "deduplicated"
+
+    def test_different_projects_not_deduplicated(self, memory_db: sqlite3.Connection):
+        """Same content in different projects should NOT deduplicate."""
+        content = "Uses PostgreSQL for persistence"
+        r1 = store_memory(
+            memory_db,
+            content,
+            "fact",
+            5,
+            scope="project",
+            project="project-a",
+        )
+        r2 = store_memory(
+            memory_db,
+            content,
+            "fact",
+            5,
+            scope="project",
+            project="project-b",
+        )
+        assert r1["action"] == "created"
+        assert r2["action"] == "created"
+        assert r1["id"] != r2["id"]
+
+    def test_global_vs_project_not_deduplicated(self, memory_db: sqlite3.Connection):
+        """Global and project-scoped same content should NOT deduplicate."""
+        content = "Redis is used for caching"
+        r1 = store_memory(memory_db, content, "fact", 5)  # global (default)
+        r2 = store_memory(
+            memory_db,
+            content,
+            "fact",
+            5,
+            scope="project",
+            project="my-project",
+        )
+        assert r1["action"] == "created"
+        assert r2["action"] == "created"
+        assert r1["id"] != r2["id"]
+
+    def test_store_returns_scope_fields(self, memory_db: sqlite3.Connection):
+        """store_memory should return scope, project, branch in result dict."""
+        result = store_memory(
+            memory_db,
+            "scoped content",
+            "fact",
+            5,
+            scope="branch",
+            project="my-project",
+            branch="feature/x",
+        )
+        assert result["scope"] == "branch"
+        assert result["project"] == "my-project"
+        assert result["branch"] == "feature/x"
+
+    def test_store_persists_scope_fields(self, memory_db: sqlite3.Connection):
+        """Scope fields should be stored in the database."""
+        result = store_memory(
+            memory_db,
+            "persisted scope",
+            "fact",
+            7,
+            scope="project",
+            project="test-proj",
+        )
+        row = memory_db.execute(
+            "SELECT scope, project, branch FROM memory_entries WHERE id = ?",
+            (result["id"],),
+        ).fetchone()
+        assert row[0] == "project"
+        assert row[1] == "test-proj"
+        assert row[2] is None
+
+    def test_invalid_scope_defaults_to_global(self, memory_db: sqlite3.Connection):
+        """Invalid scope value should default to 'global'."""
+        result = store_memory(
+            memory_db,
+            "bad scope",
+            "fact",
+            5,
+            scope="invalid",
+        )
+        row = memory_db.execute(
+            "SELECT scope FROM memory_entries WHERE id = ?",
+            (result["id"],),
+        ).fetchone()
+        assert row[0] == "global"
+
+
 class TestStoreMemoryEmbedding:
     def test_store_creates_embedding(self, memory_db: sqlite3.Connection):
         """Storing a memory should also insert an embedding."""

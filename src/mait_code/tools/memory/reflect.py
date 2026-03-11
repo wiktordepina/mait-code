@@ -41,13 +41,26 @@ If none, omit this section.\
 """
 
 
-def get_last_reflection_date(conn: sqlite3.Connection) -> datetime | None:
+def get_last_reflection_date(
+    conn: sqlite3.Connection,
+    *,
+    project: str | None = None,
+) -> datetime | None:
     """Get the timestamp of the most recent insight entry."""
-    cursor = conn.execute(
-        """SELECT created_at FROM memory_entries
-           WHERE entry_type = 'insight'
-           ORDER BY created_at DESC LIMIT 1"""
-    )
+    if project is not None:
+        cursor = conn.execute(
+            """SELECT created_at FROM memory_entries
+               WHERE entry_type = 'insight'
+                 AND (scope = 'global' OR project = ?)
+               ORDER BY created_at DESC LIMIT 1""",
+            (project,),
+        )
+    else:
+        cursor = conn.execute(
+            """SELECT created_at FROM memory_entries
+               WHERE entry_type = 'insight'
+               ORDER BY created_at DESC LIMIT 1"""
+        )
     row = cursor.fetchone()
     if row:
         try:
@@ -61,32 +74,42 @@ def count_entries_since(
     conn: sqlite3.Connection,
     since: datetime,
     exclude_types: tuple[str, ...] = ("insight",),
+    *,
+    project: str | None = None,
 ) -> int:
     """Count non-insight memory entries added since a given timestamp."""
+    conditions = ["created_at >= ?"]
+    params: list = [since.strftime("%Y-%m-%d %H:%M:%S")]
+
     if exclude_types:
         placeholders = ", ".join("?" for _ in exclude_types)
-        query = f"""SELECT COUNT(*) FROM memory_entries
-                    WHERE created_at >= ? AND entry_type NOT IN ({placeholders})"""
-        params = (since.strftime("%Y-%m-%d %H:%M:%S"), *exclude_types)
-    else:
-        query = "SELECT COUNT(*) FROM memory_entries WHERE created_at >= ?"
-        params = (since.strftime("%Y-%m-%d %H:%M:%S"),)
+        conditions.append(f"entry_type NOT IN ({placeholders})")
+        params.extend(exclude_types)
 
+    if project is not None:
+        conditions.append("(scope = 'global' OR project = ?)")
+        params.append(project)
+
+    query = f"SELECT COUNT(*) FROM memory_entries WHERE {' AND '.join(conditions)}"
     return conn.execute(query, params).fetchone()[0]
 
 
-def check_novelty_gate(conn: sqlite3.Connection, min_new: int = 3) -> bool:
+def check_novelty_gate(
+    conn: sqlite3.Connection,
+    min_new: int = 3,
+    *,
+    project: str | None = None,
+) -> bool:
     """
     Check whether there are enough new observations to justify reflection.
 
     Returns True if reflection should proceed, False to skip.
     """
-    last_reflection = get_last_reflection_date(conn)
+    last_reflection = get_last_reflection_date(conn, project=project)
     if last_reflection is None:
-        # Never reflected before — always proceed
         return True
 
-    new_count = count_entries_since(conn, last_reflection)
+    new_count = count_entries_since(conn, last_reflection, project=project)
     return new_count >= min_new
 
 
@@ -95,28 +118,33 @@ def get_recent_entries(
     days: int = 7,
     limit: int = 200,
     exclude_types: tuple[str, ...] = ("insight",),
+    *,
+    project: str | None = None,
 ) -> list[tuple]:
     """
     Get memory entries from the last N days.
 
     Excludes insight entries by default to prevent feedback loops.
+    When project is provided, includes global + matching project entries.
     """
+    conditions = ["created_at >= datetime('now', ?)"]
+    params: list = [f"-{days} days"]
+
     if exclude_types:
         placeholders = ", ".join("?" for _ in exclude_types)
-        query = f"""SELECT content, entry_type, importance, created_at
-                    FROM memory_entries
-                    WHERE created_at >= datetime('now', ?)
-                      AND entry_type NOT IN ({placeholders})
-                    ORDER BY created_at DESC
-                    LIMIT ?"""
-        params = (f"-{days} days", *exclude_types, limit)
-    else:
-        query = """SELECT content, entry_type, importance, created_at
-                   FROM memory_entries
-                   WHERE created_at >= datetime('now', ?)
-                   ORDER BY created_at DESC
-                   LIMIT ?"""
-        params = (f"-{days} days", limit)
+        conditions.append(f"entry_type NOT IN ({placeholders})")
+        params.extend(exclude_types)
+
+    if project is not None:
+        conditions.append("(scope = 'global' OR project = ?)")
+        params.append(project)
+
+    params.append(limit)
+    query = f"""SELECT content, entry_type, importance, created_at
+                FROM memory_entries
+                WHERE {" AND ".join(conditions)}
+                ORDER BY created_at DESC
+                LIMIT ?"""
 
     return conn.execute(query, params).fetchall()
 
@@ -217,11 +245,24 @@ def parse_reflection_response(response: str) -> dict:
     return {"insights": insights, "memory_updates": memory_updates}
 
 
-def store_insights(conn: sqlite3.Connection, insights: list[str]) -> int:
+def store_insights(
+    conn: sqlite3.Connection,
+    insights: list[str],
+    *,
+    project: str | None = None,
+) -> int:
     """Store insights in memory database with fixed importance=6."""
     stored = 0
+    scope = "project" if project else "global"
     for insight in insights:
-        store_memory(conn, insight, "insight", importance=6)
+        store_memory(
+            conn,
+            insight,
+            "insight",
+            importance=6,
+            scope=scope,
+            project=project,
+        )
         stored += 1
     return stored
 
@@ -246,9 +287,14 @@ def reflect(
     conn: sqlite3.Connection,
     days: int = 7,
     min_new: int = 3,
+    *,
+    project: str | None = None,
+    branch: str | None = None,
 ) -> dict:
     """
     Main reflection orchestrator.
+
+    When project is provided, reflects only on global + project-scoped entries.
 
     Returns:
         {
@@ -260,7 +306,7 @@ def reflect(
         }
     """
     # Novelty gate
-    if not check_novelty_gate(conn, min_new):
+    if not check_novelty_gate(conn, min_new, project=project):
         return {
             "skipped": True,
             "reason": "not enough new observations since last reflection",
@@ -270,7 +316,7 @@ def reflect(
         }
 
     # Gather data
-    entries = get_recent_entries(conn, days)
+    entries = get_recent_entries(conn, days, project=project)
     observations_text = read_observation_logs(days)
 
     if not entries and not observations_text:
@@ -296,8 +342,12 @@ def reflect(
     current_memory = read_memory_md()
     if current_memory:
         # Cap MEMORY.md content
-        prompt_parts.append(
-            f"Current MEMORY.md content:\n{current_memory[:2000]}"
+        prompt_parts.append(f"Current MEMORY.md content:\n{current_memory[:2000]}")
+
+    if project:
+        prompt_parts.insert(
+            0,
+            f"Project context: {project}" + (f" (branch: {branch})" if branch else ""),
         )
 
     prompt = "\n\n".join(prompt_parts)
@@ -325,7 +375,7 @@ def reflect(
     memory_updates = parsed["memory_updates"]
 
     # Store insights
-    stored = store_insights(conn, insights) if insights else 0
+    stored = store_insights(conn, insights, project=project) if insights else 0
 
     # Generate memory diff
     memory_diff = None

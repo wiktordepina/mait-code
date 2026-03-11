@@ -24,11 +24,7 @@ Recent commits (current project):
 
 Recent memories (last 24h):
 
-!`mc-tool-memory list --since 24h --limit 10 2>/dev/null || echo "No recent memories."`
-
-Registered projects:
-
-!`mc-tool-tasks projects 2>/dev/null || echo "No projects registered."`
+!`mc-tool-memory list --since 24h --limit 10 --scope all 2>/dev/null || echo "No recent memories."`
 
 ## Instructions
 
@@ -36,5 +32,5 @@ Registered projects:
    - **Tasks** — open tasks grouped by project
    - **Reminders** — any active reminders
    - **Recent Activity** — summary of recent commits and memory events
-   - **Open PRs** — for each registered project with a github_url, run `gh pr list --repo <github_url> --author @me --state open` via Bash
+   - **Open PRs** — run `gh search prs --author=@me --state=open --limit 20` via Bash to check for open PRs
 2. Keep formatting clean and scannable — use bullet points.

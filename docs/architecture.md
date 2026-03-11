@@ -209,36 +209,25 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 
 ## Tasks Database
 
-The tasks database (`tasks.db`) stores project registrations and per-project tasks.
-
-**Projects table: `projects`**
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `name` | TEXT PK | Project identifier (basename of git root or cwd) |
-| `path` | TEXT | Full absolute path on disk |
-| `github_url` | TEXT | GitHub remote URL (nullable, from `git remote get-url origin`) |
-| `added_at` | DATETIME | When the project was first registered |
-
-Projects are auto-registered via `ensure_project()` whenever a task subcommand runs in a project directory. If the project name is not in the table, the function resolves the full path and GitHub URL from git and inserts a row. If already present, it's a no-op.
+The tasks database (`tasks.db`) stores per-project tasks.
 
 **Tasks table: `tasks`**
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | INTEGER PK | Auto-incrementing identifier |
-| `project` | TEXT FK | References `projects(name)` |
+| `project` | TEXT | Project identifier (basename of git root or cwd) |
 | `title` | TEXT | Task description |
 | `priority` | TEXT | `low`, `medium`, or `high` (default: `medium`) |
 | `status` | TEXT | `open` or `done` (default: `open`) |
 | `created_at` | DATETIME | Timestamp of creation |
 | `completed_at` | DATETIME | Timestamp of completion (null if open) |
 
-Foreign key enforcement is enabled via `PRAGMA foreign_keys=ON` on every connection.
+Project detection uses `mait_code.context.get_project()` — the basename of the git root or current working directory.
 
 ## Tasks CLI Tool (`mc-tool-tasks`)
 
-Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared `tasks.db`. Projects are auto-registered in the `projects` table when any task subcommand runs.
+Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared `tasks.db`.
 
 | Subcommand | Args | Description |
 |------------|------|-------------|
@@ -247,8 +236,7 @@ Per-project task tracking. Tasks are scoped by the basename of the git root (or 
 | `done` | id | Mark a task as completed |
 | `remove` | id | Remove a task |
 | `check` | --project? | List open tasks for current project (used by session_start hook) |
-| `list-all` | — | List open tasks across all registered projects |
-| `projects` | — | List all registered projects (name, path, GitHub URL) |
+| `list-all` | — | List open tasks across all projects |
 
 ## Reminders CLI Tool (`mc-tool-reminders`)
 

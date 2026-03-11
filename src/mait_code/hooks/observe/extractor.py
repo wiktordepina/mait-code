@@ -16,16 +16,16 @@ Return ONLY a JSON object with these arrays (use empty arrays if none found):
 
 {
   "facts": [
-    {"content": "...", "importance": 1-10}
+    {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
   ],
   "preferences": [
-    {"content": "...", "importance": 1-10}
+    {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
   ],
   "decisions": [
-    {"content": "...", "importance": 1-10}
+    {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
   ],
   "bugs_fixed": [
-    {"content": "...", "importance": 1-10}
+    {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
   ],
   "entities": [
     {"name": "...", "entity_type": "person|project|tool|service|concept|org", "context": "..."}
@@ -43,11 +43,22 @@ Guidelines:
 - entities: People, projects, tools, services, or concepts discussed
 - relationships: How entities relate to each other
 - importance: 1=trivial, 5=moderate, 8=significant, 10=critical
+- scope: How broadly this item applies:
+  - "global": user-level preferences, personal facts, cross-project knowledge
+  - "project": project-specific facts, architecture decisions, conventions
+  - "branch": task-specific context, WIP notes, branch-specific bugs
+  Hints: preferences are usually global; decisions are usually project-scoped;
+  bugs_fixed on feature branches are usually branch-scoped.
 - Be specific and concise. Each item should stand alone without context.
 - Do NOT extract generic observations. Focus on project-specific, actionable knowledge.
 - If the conversation is routine with nothing notable, return all empty arrays.
+"""
 
-CONVERSATION:
+CONTEXT_HEADER = """\
+PROJECT CONTEXT:
+Project: {project}
+Branch: {branch}
+
 """
 
 EXPECTED_KEYS = {
@@ -60,9 +71,21 @@ EXPECTED_KEYS = {
 }
 
 
-def build_extraction_prompt(conversation_text: str) -> str:
+def build_extraction_prompt(
+    conversation_text: str,
+    *,
+    project: str | None = None,
+    branch: str | None = None,
+) -> str:
     """Wrap conversation text in the extraction system prompt."""
-    return EXTRACTION_PROMPT + conversation_text
+    parts = [EXTRACTION_PROMPT]
+    if project:
+        parts.append(
+            CONTEXT_HEADER.format(project=project, branch=branch or "(default branch)")
+        )
+    parts.append("CONVERSATION:\n")
+    parts.append(conversation_text)
+    return "".join(parts)
 
 
 def call_haiku(prompt: str) -> str | None:
@@ -101,8 +124,13 @@ def parse_extraction(raw_output: str) -> dict | None:
     return None
 
 
-def extract_observations(conversation_text: str) -> dict | None:
+def extract_observations(
+    conversation_text: str,
+    *,
+    project: str | None = None,
+    branch: str | None = None,
+) -> dict | None:
     """Full pipeline: build prompt -> call haiku -> parse."""
-    prompt = build_extraction_prompt(conversation_text)
+    prompt = build_extraction_prompt(conversation_text, project=project, branch=branch)
     raw = call_haiku(prompt)
     return parse_extraction(raw)
