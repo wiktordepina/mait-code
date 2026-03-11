@@ -6,7 +6,7 @@ import sys
 
 from mait_code.logging import log_invocation, setup_logging
 
-from mait_code.tools.memory.db import get_connection
+from mait_code.tools.memory.db import connection
 from mait_code.tools.memory.embeddings import embed_texts, is_available, serialize_f32
 from mait_code.tools.memory.entities import (
     find_entity_by_name,
@@ -36,8 +36,7 @@ def cmd_search(args):
 
     mode = getattr(args, "mode", "hybrid")
 
-    conn = get_connection()
-    try:
+    with connection() as conn:
         if mode == "fts":
             results = search_entries(
                 conn, query, limit=args.limit * 2, entry_type=args.type
@@ -80,8 +79,6 @@ def cmd_search(args):
             )
             print(f"  {r['content']}")
             print()
-    finally:
-        conn.close()
 
 
 def cmd_store(args):
@@ -100,8 +97,7 @@ def cmd_store(args):
         )
         sys.exit(1)
 
-    conn = get_connection()
-    try:
+    with connection() as conn:
         result = _store_memory(conn, content.strip(), args.type, args.importance)
         if result["action"] == "deduplicated":
             print(
@@ -112,13 +108,10 @@ def cmd_store(args):
                 f"Memory stored (#{result['id']}): "
                 f"[{args.type}, importance={args.importance}] {content[:80]}"
             )
-    finally:
-        conn.close()
 
 
 def cmd_list(args):
-    conn = get_connection()
-    try:
+    with connection() as conn:
         results = list_entries(
             conn, limit=args.limit, entry_type=args.type, since=args.since
         )
@@ -137,26 +130,20 @@ def cmd_list(args):
             )
             print(f"  {r['content'][:120]}")
             print()
-    finally:
-        conn.close()
 
 
 def cmd_delete(args):
-    conn = get_connection()
-    try:
+    with connection() as conn:
         if delete_entry(conn, args.id):
             print(f"Memory #{args.id} deleted.")
         else:
             logger.error("memory #%d not found", args.id)
             print(f"Error: memory #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
-    finally:
-        conn.close()
 
 
 def cmd_stats(_args):
-    conn = get_connection()
-    try:
+    with connection() as conn:
         total = conn.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
         if total == 0:
             print("No memories stored yet.")
@@ -190,14 +177,11 @@ def cmd_stats(_args):
         available = "yes" if is_available() else "no"
         print(f"\nEmbeddings: {embedded}/{total} entries ({pct}%)")
         print(f"Embedding model available: {available}")
-    finally:
-        conn.close()
 
 
 def cmd_entities(args):
     query = " ".join(args.query) if args.query else ""
-    conn = get_connection()
-    try:
+    with connection() as conn:
         if not query:
             results = _search_entities(conn, "", limit=args.limit)
         else:
@@ -216,14 +200,11 @@ def cmd_entities(args):
                 f"[#{e['id']}] {e['name']} ({e['entity_type']}) "
                 f"— {e['mention_count']} mentions, {len(rels)} relationships"
             )
-    finally:
-        conn.close()
 
 
 def cmd_relationships(args):
     entity_name = " ".join(args.entity)
-    conn = get_connection()
-    try:
+    with connection() as conn:
         entity = find_entity_by_name(conn, entity_name)
         if not entity:
             logger.error("entity '%s' not found", entity_name)
@@ -243,8 +224,6 @@ def cmd_relationships(args):
                 print(f"  ← {r['relationship_type']} ← {r['source_name']}")
             if r["context"]:
                 print(f"    {r['context']}")
-    finally:
-        conn.close()
 
 
 def _reindex_embeddings(conn):
@@ -303,13 +282,10 @@ def cmd_reindex(_args):
         )
         sys.exit(1)
 
-    conn = get_connection()
-    try:
+    with connection() as conn:
         embedded = _reindex_embeddings(conn)
         if embedded:
             print(f"\nDone. {embedded} embeddings stored.")
-    finally:
-        conn.close()
 
 
 def cmd_restore(args):
@@ -347,8 +323,11 @@ def cmd_restore(args):
     total_relationships = 0
     errors = 0
 
-    conn = None if dry_run else get_connection()
-    try:
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        conn = None if dry_run else stack.enter_context(connection())
+
         for log_file in log_files:
             file_records = 0
             with open(log_file) as f:
@@ -468,20 +447,14 @@ def cmd_restore(args):
             embedded = _reindex_embeddings(conn)
             if embedded:
                 print(f"Done. {embedded} embeddings stored.")
-    finally:
-        if conn is not None:
-            conn.close()
 
 
 def cmd_reflect(args):
     """Synthesise recent observations into insights, update MEMORY.md."""
     from mait_code.tools.memory.reflect import reflect
 
-    conn = get_connection()
-    try:
+    with connection() as conn:
         result = reflect(conn, days=args.days, min_new=args.min_new)
-    finally:
-        conn.close()
 
     if result["skipped"]:
         reason = result.get("reason", "not enough new signal")

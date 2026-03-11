@@ -1,8 +1,8 @@
 """Shared test fixtures for reminders tool tests."""
 
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,10 +20,12 @@ def reminders_db(tmp_path: Path) -> sqlite3.Connection:
 
 @pytest.fixture
 def mock_conn(reminders_db, monkeypatch):
-    """Monkeypatch get_connection in cli module to return the test db."""
+    """Monkeypatch connection in cli module to return the test db."""
     import mait_code.tools.reminders.cli as cli_mod
 
-    wrapper = MagicMock(wraps=reminders_db)
-    wrapper.close = MagicMock()
-    monkeypatch.setattr(cli_mod, "get_connection", lambda: wrapper)
+    @contextmanager
+    def fake_connection():
+        yield reminders_db
+
+    monkeypatch.setattr(cli_mod, "connection", fake_connection)
     return reminders_db

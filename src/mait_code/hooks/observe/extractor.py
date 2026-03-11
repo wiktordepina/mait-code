@@ -67,7 +67,7 @@ def build_extraction_prompt(conversation_text: str) -> str:
 
 def call_haiku(prompt: str) -> str | None:
     """Call Claude Haiku via shared LLM module. Returns stdout or None on failure."""
-    return call_claude(prompt, model="haiku", timeout=45)
+    return call_claude(prompt, model="haiku", timeout=45, retries=2)
 
 
 def parse_extraction(raw_output: str) -> dict | None:

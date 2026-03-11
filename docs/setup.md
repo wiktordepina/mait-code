@@ -4,7 +4,7 @@
 
 - **uv** — Install from [docs.astral.sh/uv](https://docs.astral.sh/uv/)
 - **Claude Code** — Install from [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code)
-- **Python >= 3.14** — Managed by uv automatically
+- **Python >= 3.13** — Managed by uv automatically
 
 ## Installation
 
@@ -100,4 +100,4 @@ The symlink ensures Claude Code always reads the latest config. Re-run `./script
 
 **Memory tool not working:** Run `mc-tool-memory stats` to verify. Check that `./scripts/install.sh` has been run.
 
-**Python version mismatch:** Run `uv python install 3.14` to ensure Python 3.14 is available.
+**Python version mismatch:** Run `uv python install 3.13` to ensure Python 3.13 is available.

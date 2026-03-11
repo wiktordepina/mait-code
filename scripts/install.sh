@@ -92,7 +92,7 @@ fi
 
 # --- 7. Install CLI tools via uv tool ---
 echo "Installing CLI tools..."
-uv tool install "$PROJECT_DIR" --force --reinstall --python 3.14
+uv tool install "$PROJECT_DIR" --force --reinstall --python 3.13
 echo "  CLI tools installed to ~/.local/bin/"
 
 # --- 8. Merge settings.json ---

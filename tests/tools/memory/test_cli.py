@@ -5,6 +5,7 @@ Embeddings are mocked to avoid model loading overhead and to ensure
 deterministic FTS-only behaviour in CLI tests.
 """
 
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import pytest
@@ -23,17 +24,18 @@ _EMBED_PATCHES = [
 
 @pytest.fixture
 def mem_db(tmp_path):
-    """Patch get_connection to use a temp database for memory tool."""
+    """Patch connection to use a temp database for memory tool."""
     db_path = tmp_path / "tool_test.db"
     conn = get_connection(db_path)
 
-    def patched_get_connection(**_kwargs):
-        return get_connection(db_path)
+    @contextmanager
+    def patched_connection():
+        yield conn
 
     with (
         patch(
-            "mait_code.tools.memory.cli.get_connection",
-            side_effect=patched_get_connection,
+            "mait_code.tools.memory.cli.connection",
+            side_effect=patched_connection,
         ),
         patch(_EMBED_PATCHES[0], return_value=None),
         patch(_EMBED_PATCHES[1], return_value=None),

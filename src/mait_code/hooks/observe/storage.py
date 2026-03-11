@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from mait_code.tools.memory.db import get_connection, get_data_dir
+from mait_code.tools.memory.db import connection, get_data_dir
 from mait_code.tools.memory.entities import upsert_entity, upsert_relationship
 from mait_code.tools.memory.writer import store_memory
 
@@ -38,8 +38,7 @@ def write_raw_extraction(extraction: dict, trigger: str) -> None:
 
 def store_extraction(extraction: dict) -> None:
     """Store extracted facts, preferences, decisions, bugs to memory.db."""
-    conn = get_connection()
-    try:
+    with connection() as conn:
         for category, entry_type in CATEGORY_TO_TYPE.items():
             for item in extraction.get(category, []):
                 content = item.get("content", "").strip()
@@ -50,14 +49,11 @@ def store_extraction(extraction: dict) -> None:
                     store_memory(conn, content, entry_type, importance)
                 except Exception as e:
                     logger.warning("failed to store %s: %s", entry_type, e)
-    finally:
-        conn.close()
 
 
 def store_entities_and_relationships(extraction: dict) -> None:
     """Upsert entities and relationships from extraction."""
-    conn = get_connection()
-    try:
+    with connection() as conn:
         # Upsert entities and build name->id map
         entity_ids: dict[str, int] = {}
         for entity in extraction.get("entities", []):
@@ -102,5 +98,3 @@ def store_entities_and_relationships(extraction: dict) -> None:
                 upsert_relationship(conn, source_id, target_id, rel_type, context)
             except Exception as e:
                 logger.warning("failed to upsert relationship: %s", e)
-    finally:
-        conn.close()

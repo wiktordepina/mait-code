@@ -50,7 +50,7 @@ def test_store_extraction_creates_memories(data_dir: Path):
 
     with (
         patch("mait_code.hooks.observe.storage.store_memory") as mock_store,
-        patch("mait_code.hooks.observe.storage.get_connection") as mock_conn,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
     ):
         mock_conn.return_value.__enter__ = lambda s: s
         mock_conn.return_value.__exit__ = lambda s, *a: None
@@ -80,7 +80,7 @@ def test_store_extraction_skips_empty_content(data_dir: Path):
 
     with (
         patch("mait_code.hooks.observe.storage.store_memory") as mock_store,
-        patch("mait_code.hooks.observe.storage.get_connection") as mock_conn,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
     ):
         mock_conn.return_value.__enter__ = lambda s: s
         mock_conn.return_value.__exit__ = lambda s, *a: None
@@ -113,7 +113,7 @@ def test_store_entities_and_relationships(data_dir: Path):
     with (
         patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
         patch("mait_code.hooks.observe.storage.upsert_relationship") as mock_rel,
-        patch("mait_code.hooks.observe.storage.get_connection") as mock_conn,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
     ):
         mock_conn.return_value.__enter__ = lambda s: s
         mock_conn.return_value.__exit__ = lambda s, *a: None
@@ -142,7 +142,7 @@ def test_store_entities_auto_creates_for_relationships(data_dir: Path):
     with (
         patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
         patch("mait_code.hooks.observe.storage.upsert_relationship") as mock_rel,
-        patch("mait_code.hooks.observe.storage.get_connection") as mock_conn,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
     ):
         mock_conn.return_value.__enter__ = lambda s: s
         mock_conn.return_value.__exit__ = lambda s, *a: None

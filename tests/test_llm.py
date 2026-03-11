@@ -1,6 +1,7 @@
 """Tests for the shared LLM invocation module."""
 
-from unittest.mock import patch
+import subprocess as _subprocess
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -12,6 +13,13 @@ def mock_subprocess():
     """Mock subprocess.run for claude CLI calls."""
     with patch("mait_code.llm.subprocess.run") as mock_run:
         yield mock_run
+
+
+@pytest.fixture
+def mock_sleep():
+    """Mock time.sleep to avoid delays in retry tests."""
+    with patch("mait_code.llm.time.sleep") as mock:
+        yield mock
 
 
 def test_call_claude_basic(mock_subprocess):
@@ -89,3 +97,85 @@ def test_call_claude_strips_claudecode_env(mock_subprocess):
     env = mock_subprocess.call_args[1]["env"]
     assert "CLAUDECODE" not in env
     assert "PATH" in env
+
+
+class TestRetryBackoff:
+    def test_retries_on_timeout_then_succeeds(self, mock_subprocess, mock_sleep):
+        success = MagicMock()
+        success.returncode = 0
+        success.stdout = "ok"
+        success.stderr = ""
+
+        mock_subprocess.side_effect = [
+            _subprocess.TimeoutExpired(cmd="claude", timeout=60),
+            success,
+        ]
+
+        result = call_claude("prompt", retries=2)
+        assert result == "ok"
+        assert mock_subprocess.call_count == 2
+        mock_sleep.assert_called_once_with(1.0)  # 2.0 ** 0
+
+    def test_retries_on_nonzero_exit_then_succeeds(self, mock_subprocess, mock_sleep):
+        fail = MagicMock()
+        fail.returncode = 1
+        fail.stdout = ""
+        fail.stderr = "error"
+
+        success = MagicMock()
+        success.returncode = 0
+        success.stdout = "ok"
+        success.stderr = ""
+
+        mock_subprocess.side_effect = [fail, fail, success]
+
+        result = call_claude("prompt", retries=3)
+        assert result == "ok"
+        assert mock_subprocess.call_count == 3
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_any_call(1.0)  # 2.0 ** 0
+        mock_sleep.assert_any_call(2.0)  # 2.0 ** 1
+
+    def test_no_retry_on_file_not_found(self, mock_subprocess, mock_sleep):
+        mock_subprocess.side_effect = FileNotFoundError()
+
+        result = call_claude("prompt", retries=2)
+        assert result is None
+        assert mock_subprocess.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_retries_exhausted_returns_none(self, mock_subprocess, mock_sleep):
+        mock_subprocess.side_effect = _subprocess.TimeoutExpired(
+            cmd="claude", timeout=60
+        )
+
+        result = call_claude("prompt", retries=2)
+        assert result is None
+        assert mock_subprocess.call_count == 3
+        assert mock_sleep.call_count == 2
+
+    def test_default_no_retry(self, mock_subprocess):
+        mock_subprocess.side_effect = _subprocess.TimeoutExpired(
+            cmd="claude", timeout=60
+        )
+
+        result = call_claude("prompt")
+        assert result is None
+        assert mock_subprocess.call_count == 1
+
+    def test_custom_backoff_base(self, mock_subprocess, mock_sleep):
+        fail = MagicMock()
+        fail.returncode = 1
+        fail.stdout = ""
+        fail.stderr = "error"
+
+        success = MagicMock()
+        success.returncode = 0
+        success.stdout = "ok"
+        success.stderr = ""
+
+        mock_subprocess.side_effect = [fail, success]
+
+        result = call_claude("prompt", retries=1, backoff_base=5.0)
+        assert result == "ok"
+        mock_sleep.assert_called_once_with(1.0)  # 5.0 ** 0 = 1.0

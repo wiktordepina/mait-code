@@ -7,6 +7,7 @@ instead of creating their own connections.
 
 import os
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 
 import sqlite_vec
@@ -52,3 +53,13 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     ensure_schema(conn)
     return conn
+
+
+@contextmanager
+def connection(db_path: Path | None = None):
+    """Context manager that opens and closes a memory database connection."""
+    conn = get_connection(db_path)
+    try:
+        yield conn
+    finally:
+        conn.close()
