@@ -19,6 +19,8 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
 | Tasks | `/tasks` | Show open tasks for the current project | **Implemented** |
+| Decision | `/decision [--status ...] [--tags ...] <title>` | Record a technical decision | **Implemented** |
+| Decisions | `/decisions` | Browse and search decision records | **Implemented** |
 
 ## Implemented Skills
 
@@ -228,6 +230,36 @@ List open PRs across all projects.
 1. Preprocesses via `gh search prs --author=@me --state=open`
 2. Shows PR number, title, and review status grouped by repository
 
+### /decision
+
+Record a technical decision for the current project. Model-invocable — Claude can proactively suggest recording decisions during sessions, but always asks for confirmation.
+
+**Usage:**
+```
+/decision Use PostgreSQL for primary store
+/decision --context "Need structured data" --tags db Use PostgreSQL
+/decision --status proposed Migrate to gRPC
+```
+
+**How it works:**
+1. Parses the title and optional flags (`--context`, `--alternatives`, `--consequences`, `--status`, `--tags`)
+2. If only a title is given, asks briefly about context and alternatives before recording
+3. Records via `mc-tool-decisions record [flags] <title>`
+4. Auto-regenerates `docs/decisions.md` at the git root
+
+### /decisions
+
+Browse and search decision records for the current project.
+
+**Usage:**
+```
+/decisions                        # Show accepted and proposed decisions
+```
+
+**How it works:**
+1. Preprocesses results via `mc-tool-decisions list` (injected before Claude sees the skill)
+2. Supports show (`mc-tool-decisions show <id>`), search (`mc-tool-decisions search <query>`), amend, supersede, and remove via follow-up commands
+
 ## Skill Architecture
 
 Each skill is a directory in `skills/` containing:
@@ -260,8 +292,12 @@ skills/
 │   └── SKILL.md     # Daily overview dashboard
 ├── status/
 │   └── SKILL.md     # Generate STATUS.md
-└── prs/
-    └── SKILL.md     # Cross-project PR listing
+├── prs/
+│   └── SKILL.md     # Cross-project PR listing
+├── decision/
+│   └── SKILL.md     # Record a technical decision
+└── decisions/
+    └── SKILL.md     # Browse/search decision records
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.

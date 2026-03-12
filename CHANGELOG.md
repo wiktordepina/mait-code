@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.12.0 — Decision log (2026-03-12)
+
+ADR-lite decision records for capturing why technical choices were made.
+
+- **`mc-tool-decisions` CLI tool:** 8 subcommands — `record`, `list`, `show`, `amend`, `supersede`, `search`, `remove`, `sync`. SQLite-backed with FTS5 full-text search across title, context, alternatives, and consequences.
+- **Automatic markdown rendering:** Every mutation regenerates `docs/decisions.md` at the git root with a summary table and full decision sections. Skips silently outside git repos.
+- **`/decision` skill:** Record a decision via slash command; model-invocable so Claude can suggest recording significant technical choices during sessions.
+- **`/decisions` skill:** Browse and search decision records with preprocessing.
+- **FK-safe removal:** Deleting a decision clears `superseded_by` references from other decisions before deletion.
+- **Test coverage:** 39 tests covering migrations, FTS sync triggers, all CLI commands, rendering (strikethrough, field omission, superseded links), and file writing.
+- **3 initial decisions recorded** from project memory: SQLite as DB engine (DR-1), CLI tools over MCP (DR-2), watermark-based reflection idempotency (DR-3).
+
 ## v0.11.0 — Idempotent reflection with batching (2026-03-12)
 
 Reflection is now idempotent and supports batched processing of large backlogs.
