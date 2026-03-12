@@ -199,6 +199,18 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
         "Add scope, project, branch columns for scoped memory",
         _migrate_8_scoped_memory,
     ),
+    (
+        9,
+        "Create reflection_watermark table for idempotent reflection",
+        [
+            """CREATE TABLE IF NOT EXISTS reflection_watermark (
+                project TEXT NOT NULL DEFAULT '',
+                last_reflected_id INTEGER NOT NULL,
+                last_reflected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (project)
+            )""",
+        ],
+    ),
 ]
 
 

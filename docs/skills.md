@@ -65,17 +65,18 @@ Synthesise recent observations into high-level insights and propose MEMORY.md up
 
 **Usage:**
 ```
-/reflect                                    # Reflect on last 7 days
+/reflect                                    # Reflect on unreflected entries
 ```
 
 **How it works:**
 1. Preprocesses via `mc-tool-memory reflect` (injected before Claude sees the skill)
-2. Checks the novelty gate — skips if fewer than 3 new observations since last reflection
-3. Gathers recent memory entries and raw observation JSONL logs
+2. Checks the novelty gate — skips if fewer than 3 unreflected entries exist
+3. Gathers unreflected memory entries (tracked by per-project watermark)
 4. Calls Claude Haiku to identify patterns, themes, and recurring issues
 5. Stores insights as `type=insight` (importance=6) in memory.db
-6. If MEMORY.md updates are proposed, presents them for user approval
-7. User can force reflection with different parameters: `mc-tool-memory reflect --days 14 --min-new 0`
+6. Advances the watermark — running `/reflect` again without new entries is a no-op
+7. If MEMORY.md updates are proposed, presents them for user approval
+8. For large backlogs: `mc-tool-memory reflect --drain --batch-size 20`
 
 ### /remind
 

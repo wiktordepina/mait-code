@@ -38,7 +38,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 8  # Exactly 8 migrations
+    assert versions == 9  # Exactly 9 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -47,9 +47,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 8
+    assert len(rows) == 9
     assert rows[0][0] == 1
-    assert rows[-1][0] == 8
+    assert rows[-1][0] == 9
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):

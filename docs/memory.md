@@ -11,13 +11,11 @@ graph LR
     C[Conversations] --> T1
 
     T1["**Tier 1: Observations**<br>*(raw)*<br>JSONL logs<br>memory.db<br>embeddings"]
-    T2["**Tier 2: Reflections**<br>*(synthesised — planned)*<br>Monthly summaries"]
+    T2["**Tier 2: Reflections**<br>*(synthesised)*<br>Monthly summaries"]
     T3["**Tier 3: MEMORY.md**<br>*(curated)*<br>~150 lines<br>loaded every session"]
 
     T1 --> T2 --> T3
 ```
-
-**Tier 1** is fully implemented and automatic. **Tier 2** is planned. **Tier 3** exists but is currently updated manually.
 
 ## Tier 1: Observations
 
@@ -168,28 +166,32 @@ Time parsing uses `dateparser` with UTC normalisation — you can write `"tomorr
 The reflection system synthesises recent observations into higher-level insights:
 
 - **Trigger:** `/reflect` skill (manual)
-- **Input:** Last 7 days of memory entries + observation JSONL logs + current MEMORY.md
+- **Input:** Unreflected memory entries + current MEMORY.md
 - **Process:** Calls Claude Haiku to identify patterns, themes, and recurring issues across entries
 - **Output:** 3-5 insights stored as `type=insight` in memory.db (importance=6)
 - **MEMORY.md proposals:** High-confidence facts are proposed as additions for user approval
-- **Novelty gate:** Skips reflection if fewer than 3 new observations since the last reflection
+- **Idempotent:** A per-project watermark tracks the last reflected entry ID. Each observation is only reflected on once.
+- **Novelty gate:** Skips reflection if fewer than 3 unreflected entries exist
+- **Batching:** Processes entries in configurable batches (default 50), oldest first
 
 ### Usage
 
 ```
-/reflect                                    # Standard reflection (last 7 days)
-mc-tool-memory reflect --days 14            # Reflect on last 14 days
+/reflect                                    # Standard reflection
+mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
 mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+mc-tool-memory reflect --drain              # Process all unreflected entries in batches
+mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 ```
 
 ### How it works
 
-1. Checks the novelty gate — counts non-insight entries since the last `type=insight` was stored
-2. Gathers recent `memory_entries` (excluding insights to avoid feedback loops)
-3. Reads raw observation JSONL logs for richer context
-4. Sends everything to Claude Haiku with a synthesis prompt
-5. Parses `INSIGHT:` lines and `MEMORY_UPDATE:` proposals from the response
-6. Stores insights in memory.db
+1. Checks the novelty gate — counts unreflected non-insight entries (entries with ID > watermark)
+2. Gathers unreflected `memory_entries` (excluding insights to avoid feedback loops), limited by batch size
+3. Sends entries + MEMORY.md to Claude Haiku with a synthesis prompt
+4. Parses `INSIGHT:` lines and `MEMORY_UPDATE:` proposals from the response
+5. Stores insights in memory.db
+6. Advances the watermark to the highest entry ID processed
 7. Presents proposed MEMORY.md changes for user approval
 
 ## Tier 3: MEMORY.md (Curated)
@@ -232,9 +234,11 @@ mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gat
 | `reindex` | Recompute all vector embeddings from scratch |
 | `restore` | Replay observation JSONL logs into the database, then reindex |
 | `restore --dry-run` | Show what would be restored without writing |
-| `reflect` | Synthesise recent observations into insights |
-| `reflect --days 14` | Reflect on last 14 days |
+| `reflect` | Synthesise unreflected observations into insights |
+| `reflect --days 14` | Bootstrap window for first reflection |
 | `reflect --min-new 0` | Force reflection (skip novelty gate) |
+| `reflect --batch-size 20` | Limit entries per batch (default 50) |
+| `reflect --drain` | Loop until all unreflected entries are processed |
 
 ### Tasks tool (`mc-tool-tasks`)
 

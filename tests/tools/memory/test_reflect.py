@@ -12,16 +12,20 @@ from mait_code.tools.memory.db import get_connection
 from mait_code.tools.memory.reflect import (
     _format_extraction,
     check_novelty_gate,
+    check_novelty_gate_v2,
     count_entries_since,
     format_entries_text,
     generate_memory_diff,
     get_last_reflection_date,
     get_recent_entries,
+    get_unreflected_entries,
+    get_watermark,
     parse_reflection_response,
     read_memory_md,
     read_observation_logs,
     reflect,
     store_insights,
+    update_watermark,
 )
 
 
@@ -101,7 +105,172 @@ def obs_dir(tmp_path: Path) -> Path:
     return obs_path
 
 
-# --- get_last_reflection_date ---
+# ---------------------------------------------------------------------------
+# Watermark functions
+# ---------------------------------------------------------------------------
+
+
+def test_get_watermark_no_prior_reflection(memory_db):
+    assert get_watermark(memory_db) is None
+
+
+def test_get_watermark_after_update(memory_db):
+    update_watermark(memory_db, 42)
+    assert get_watermark(memory_db) == 42
+
+
+def test_update_watermark_upserts(memory_db):
+    update_watermark(memory_db, 10)
+    assert get_watermark(memory_db) == 10
+    update_watermark(memory_db, 25)
+    assert get_watermark(memory_db) == 25
+
+
+def test_update_watermark_per_project(memory_db):
+    update_watermark(memory_db, 10)
+    update_watermark(memory_db, 20, project="project-a")
+    update_watermark(memory_db, 30, project="project-b")
+
+    assert get_watermark(memory_db) == 10
+    assert get_watermark(memory_db, project="project-a") == 20
+    assert get_watermark(memory_db, project="project-b") == 30
+
+
+# ---------------------------------------------------------------------------
+# check_novelty_gate_v2
+# ---------------------------------------------------------------------------
+
+
+def test_novelty_gate_v2_no_watermark(db_with_entries):
+    """No watermark means all entries are unreflected — should pass."""
+    assert check_novelty_gate_v2(db_with_entries, min_new=3) is True
+
+
+def test_novelty_gate_v2_enough_unreflected(db_with_entries):
+    """Entries after watermark >= min_new."""
+    # Set watermark to ID 2 — entries 3, 4, 5 are unreflected
+    update_watermark(db_with_entries, 2)
+    assert check_novelty_gate_v2(db_with_entries, min_new=3) is True
+
+
+def test_novelty_gate_v2_not_enough(db_with_entries):
+    """Entries after watermark < min_new."""
+    # Set watermark to ID 4 — only entry 5 is unreflected
+    update_watermark(db_with_entries, 4)
+    assert check_novelty_gate_v2(db_with_entries, min_new=3) is False
+
+
+def test_novelty_gate_v2_ignores_insights(memory_db):
+    """Insight entries should not count toward the novelty threshold."""
+    now = datetime.now()
+    memory_db.execute(
+        """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
+           VALUES ('an insight', 'insight', 6, 'semantic', ?)""",
+        (now.strftime("%Y-%m-%d %H:%M:%S"),),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
+           VALUES ('a fact', 'fact', 5, 'semantic', ?)""",
+        (now.strftime("%Y-%m-%d %H:%M:%S"),),
+    )
+    memory_db.commit()
+
+    assert check_novelty_gate_v2(memory_db, min_new=2) is False
+    assert check_novelty_gate_v2(memory_db, min_new=1) is True
+
+
+def test_novelty_gate_v2_project_scoped(memory_db):
+    """Only counts entries matching the given project."""
+    now = datetime.now()
+    for i in range(3):
+        memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at, scope, project)
+               VALUES (?, 'fact', 5, 'semantic', ?, 'project', 'other-project')""",
+            (f"other fact {i}", now.strftime("%Y-%m-%d %H:%M:%S")),
+        )
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('my fact', 'fact', 5, 'semantic', ?, 'project', 'my-project')""",
+        (now.strftime("%Y-%m-%d %H:%M:%S"),),
+    )
+    memory_db.commit()
+
+    assert check_novelty_gate_v2(memory_db, min_new=2, project="my-project") is False
+    assert check_novelty_gate_v2(memory_db, min_new=1, project="my-project") is True
+
+
+# ---------------------------------------------------------------------------
+# get_unreflected_entries
+# ---------------------------------------------------------------------------
+
+
+def test_get_unreflected_entries_no_watermark_uses_days(db_with_entries):
+    """Without watermark, falls back to days-based window."""
+    entries = get_unreflected_entries(db_with_entries, batch_size=50, days=3)
+    # Should include entries from last 3 days (1, 2, 3 days ago)
+    assert len(entries) >= 2
+    # Verify 5-tuple shape
+    assert len(entries[0]) == 5
+
+
+def test_get_unreflected_entries_with_watermark(db_with_entries):
+    """With watermark, returns only entries after watermark."""
+    entries = get_unreflected_entries(
+        db_with_entries, batch_size=50, days=7, watermark=3
+    )
+    # Should only include entries with id > 3
+    assert all(e[0] > 3 for e in entries)
+
+
+def test_get_unreflected_entries_batch_size(db_with_entries):
+    """Respects batch_size limit."""
+    entries = get_unreflected_entries(db_with_entries, batch_size=2, days=7)
+    assert len(entries) == 2
+
+
+def test_get_unreflected_entries_excludes_insights(memory_db):
+    now = datetime.now()
+    memory_db.execute(
+        """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
+           VALUES ('an insight', 'insight', 6, 'semantic', ?)""",
+        (now.strftime("%Y-%m-%d %H:%M:%S"),),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
+           VALUES ('a fact', 'fact', 5, 'semantic', ?)""",
+        (now.strftime("%Y-%m-%d %H:%M:%S"),),
+    )
+    memory_db.commit()
+
+    entries = get_unreflected_entries(memory_db, batch_size=50, days=7)
+    assert len(entries) == 1
+    assert entries[0][2] == "fact"
+
+
+def test_get_unreflected_entries_ordered_by_id_asc(db_with_entries):
+    """Entries should be returned in ascending ID order."""
+    entries = get_unreflected_entries(db_with_entries, batch_size=50, days=7)
+    ids = [e[0] for e in entries]
+    assert ids == sorted(ids)
+
+
+def test_get_unreflected_entries_returns_five_tuple(db_with_entries):
+    """Verify the tuple shape is (id, content, entry_type, importance, created_at)."""
+    entries = get_unreflected_entries(db_with_entries, batch_size=1, days=7)
+    assert len(entries) == 1
+    entry_id, content, entry_type, importance, created_at = entries[0]
+    assert isinstance(entry_id, int)
+    assert isinstance(content, str)
+    assert isinstance(entry_type, str)
+    assert isinstance(importance, int)
+    assert isinstance(created_at, str)
+
+
+# ---------------------------------------------------------------------------
+# Deprecated: get_last_reflection_date
+# ---------------------------------------------------------------------------
 
 
 def test_get_last_reflection_date_no_insights(memory_db):
@@ -123,7 +292,9 @@ def test_get_last_reflection_date_with_insight(memory_db):
     assert result.day == 1
 
 
-# --- count_entries_since ---
+# ---------------------------------------------------------------------------
+# Deprecated: count_entries_since
+# ---------------------------------------------------------------------------
 
 
 def test_count_entries_since(db_with_entries):
@@ -152,7 +323,9 @@ def test_count_entries_since_excludes_insights(memory_db):
     assert count == 1  # Only the fact, not the insight
 
 
-# --- check_novelty_gate ---
+# ---------------------------------------------------------------------------
+# Deprecated: check_novelty_gate
+# ---------------------------------------------------------------------------
 
 
 def test_novelty_gate_no_prior_reflection(memory_db):
@@ -208,7 +381,9 @@ def test_novelty_gate_exactly_min_new(memory_db):
     assert check_novelty_gate(memory_db, min_new=3) is True
 
 
-# --- get_recent_entries ---
+# ---------------------------------------------------------------------------
+# Deprecated: get_recent_entries
+# ---------------------------------------------------------------------------
 
 
 def test_get_recent_entries(db_with_entries):
@@ -237,7 +412,9 @@ def test_get_recent_entries_excludes_insights(memory_db):
     assert entries[0][1] == "fact"
 
 
-# --- read_observation_logs ---
+# ---------------------------------------------------------------------------
+# read_observation_logs
+# ---------------------------------------------------------------------------
 
 
 def test_read_observation_logs(obs_dir):
@@ -271,13 +448,26 @@ def test_read_observation_logs_no_dir(tmp_path):
     assert text == ""
 
 
-# --- format_entries_text ---
+# ---------------------------------------------------------------------------
+# format_entries_text
+# ---------------------------------------------------------------------------
 
 
-def test_format_entries_text():
+def test_format_entries_text_4_tuple():
     entries = [
         ("User likes dark mode", "preference", 7, "2026-03-01 12:00:00"),
         ("Fixed auth bug", "event", 5, "2026-03-02 10:00:00"),
+    ]
+    text = format_entries_text(entries)
+    assert "[2026-03-01]" in text
+    assert "(preference, imp=7)" in text
+    assert "Fixed auth bug" in text
+
+
+def test_format_entries_text_5_tuple():
+    entries = [
+        (1, "User likes dark mode", "preference", 7, "2026-03-01 12:00:00"),
+        (2, "Fixed auth bug", "event", 5, "2026-03-02 10:00:00"),
     ]
     text = format_entries_text(entries)
     assert "[2026-03-01]" in text
@@ -289,7 +479,9 @@ def test_format_entries_text_empty():
     assert format_entries_text([]) == ""
 
 
-# --- parse_reflection_response ---
+# ---------------------------------------------------------------------------
+# parse_reflection_response
+# ---------------------------------------------------------------------------
 
 
 def test_parse_reflection_response_full():
@@ -329,7 +521,9 @@ def test_parse_reflection_response_blank_lines():
     assert len(parsed["insights"]) == 2
 
 
-# --- store_insights ---
+# ---------------------------------------------------------------------------
+# store_insights
+# ---------------------------------------------------------------------------
 
 
 def test_store_insights(memory_db):
@@ -353,7 +547,9 @@ def test_store_insights_empty(memory_db):
     assert stored == 0
 
 
-# --- generate_memory_diff ---
+# ---------------------------------------------------------------------------
+# generate_memory_diff
+# ---------------------------------------------------------------------------
 
 
 def test_generate_memory_diff():
@@ -364,18 +560,23 @@ def test_generate_memory_diff():
     assert "Proposed additions" in diff
 
 
-# --- reflect (integration) ---
+# ---------------------------------------------------------------------------
+# reflect (integration)
+# ---------------------------------------------------------------------------
 
 
 def test_reflect_skipped_novelty_gate(memory_db):
+    """With watermark set and no new entries, reflection should skip."""
     now = datetime.now()
-    # Add a recent insight with no new entries after it
+    # Add one entry and set watermark past it
     memory_db.execute(
         """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
-           VALUES ('recent insight', 'insight', 6, 'semantic', ?)""",
+           VALUES ('a fact', 'fact', 5, 'semantic', ?)""",
         (now.strftime("%Y-%m-%d %H:%M:%S"),),
     )
     memory_db.commit()
+    # Set watermark past the only entry
+    update_watermark(memory_db, 999)
 
     result = reflect(memory_db, days=7, min_new=3)
     assert result["skipped"] is True
@@ -383,12 +584,10 @@ def test_reflect_skipped_novelty_gate(memory_db):
 
 
 def test_reflect_skipped_no_data(memory_db):
-    # No entries at all, no observation logs
-    with patch("mait_code.tools.memory.reflect.read_observation_logs", return_value=""):
-        result = reflect(memory_db, days=7, min_new=0)
-
+    """No entries at all — should skip."""
+    result = reflect(memory_db, days=7, min_new=0)
     assert result["skipped"] is True
-    assert "no data" in result["reason"]
+    assert "no unreflected entries" in result["reason"]
 
 
 def test_reflect_success(db_with_entries):
@@ -400,12 +599,8 @@ INSIGHT: Testing and iteration speed are prioritised over comprehensive coverage
 ## Memory Updates
 MEMORY_UPDATE: Primary testing approach: pytest with -x flag"""
 
-    with (
-        patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response),
-        patch(
-            "mait_code.tools.memory.reflect.read_observation_logs",
-            return_value="some observations",
-        ),
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
     ):
         result = reflect(db_with_entries, days=7, min_new=0)
 
@@ -416,36 +611,40 @@ MEMORY_UPDATE: Primary testing approach: pytest with -x flag"""
     assert result["memory_diff"] is not None
     assert "Primary testing approach" in result["memory_diff"]
 
+    # Verify batch_info
+    assert result["batch_info"] is not None
+    assert result["batch_info"]["processed"] == 5
+    assert result["batch_info"]["watermark"] > 0
+
     # Verify insights were stored in DB
     rows = db_with_entries.execute(
         "SELECT content FROM memory_entries WHERE entry_type = 'insight'"
     ).fetchall()
     assert len(rows) == 3
 
+    # Verify watermark was set
+    assert get_watermark(db_with_entries) is not None
+
 
 def test_reflect_llm_failure(db_with_entries):
-    with (
-        patch("mait_code.tools.memory.reflect.call_claude", return_value=None),
-        patch(
-            "mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"
-        ),
-    ):
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=None):
         result = reflect(db_with_entries, days=7, min_new=0)
 
     assert result["skipped"] is False
     assert "LLM call failed" in result["reason"]
     assert result["insights"] == []
     assert result["stored"] == 0
+    assert result["batch_info"] is None
+
+    # Watermark should NOT be updated on failure
+    assert get_watermark(db_with_entries) is None
 
 
 def test_reflect_no_memory_updates(db_with_entries):
     llm_response = "INSIGHT: Just one insight with no memory updates"
 
-    with (
-        patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response),
-        patch(
-            "mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"
-        ),
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
     ):
         result = reflect(db_with_entries, days=7, min_new=0)
 
@@ -471,9 +670,6 @@ def test_reflect_with_memory_md_content(db_with_entries, tmp_path):
         patch(
             "mait_code.tools.memory.reflect.call_claude", side_effect=fake_call_claude
         ),
-        patch(
-            "mait_code.tools.memory.reflect.read_observation_logs", return_value="obs"
-        ),
         patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path),
     ):
         result = reflect(db_with_entries, days=7, min_new=0)
@@ -483,7 +679,89 @@ def test_reflect_with_memory_md_content(db_with_entries, tmp_path):
     assert "Current MEMORY.md content" in captured_prompt["value"]
 
 
-# --- _format_extraction ---
+# ---------------------------------------------------------------------------
+# Idempotency and batching integration tests
+# ---------------------------------------------------------------------------
+
+
+def test_reflect_idempotent(db_with_entries):
+    """Running reflect twice with no new entries — second call should skip."""
+    llm_response = "INSIGHT: Some insight"
+
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
+    ):
+        result1 = reflect(db_with_entries, days=7, min_new=0)
+
+    assert result1["skipped"] is False
+
+    # Second call — same data, watermark set
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
+    ):
+        result2 = reflect(db_with_entries, days=7, min_new=0)
+
+    assert result2["skipped"] is True
+
+
+def test_reflect_incremental(db_with_entries):
+    """After reflection, adding new entries allows a second reflection."""
+    llm_response = "INSIGHT: First insight"
+
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
+    ):
+        result1 = reflect(db_with_entries, days=7, min_new=0)
+
+    assert result1["skipped"] is False
+    watermark_after_first = get_watermark(db_with_entries)
+
+    # Add new entries
+    now = datetime.now()
+    for i in range(3):
+        db_with_entries.execute(
+            """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
+               VALUES (?, 'fact', 5, 'semantic', ?)""",
+            (f"new fact {i}", now.strftime("%Y-%m-%d %H:%M:%S")),
+        )
+    db_with_entries.commit()
+
+    llm_response2 = "INSIGHT: Second insight"
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response2
+    ):
+        result2 = reflect(db_with_entries, days=7, min_new=0)
+
+    assert result2["skipped"] is False
+    assert result2["batch_info"]["processed"] == 3  # Only the new entries
+
+    watermark_after_second = get_watermark(db_with_entries)
+    assert watermark_after_second > watermark_after_first
+
+
+def test_reflect_batch_size_limits_entries(db_with_entries):
+    """With batch_size=2, only 2 entries should be processed."""
+    llm_response = "INSIGHT: Batch insight"
+
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
+    ):
+        result = reflect(db_with_entries, days=7, min_new=0, batch_size=2)
+
+    assert result["batch_info"]["processed"] == 2
+
+
+def test_reflect_watermark_not_updated_on_failure(db_with_entries):
+    """LLM failure should not advance the watermark."""
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=None):
+        reflect(db_with_entries, days=7, min_new=0)
+
+    assert get_watermark(db_with_entries) is None
+
+
+# ---------------------------------------------------------------------------
+# _format_extraction
+# ---------------------------------------------------------------------------
 
 
 def test_format_extraction_all_categories():
@@ -565,7 +843,9 @@ def test_format_extraction_skips_nameless_entities():
     assert "[entity] Valid" in text
 
 
-# --- read_memory_md ---
+# ---------------------------------------------------------------------------
+# read_memory_md
+# ---------------------------------------------------------------------------
 
 
 def test_read_memory_md_exists(tmp_path):
@@ -587,7 +867,9 @@ def test_read_memory_md_missing(tmp_path):
     assert content is None
 
 
-# --- get_last_reflection_date edge cases ---
+# ---------------------------------------------------------------------------
+# get_last_reflection_date edge cases
+# ---------------------------------------------------------------------------
 
 
 def test_get_last_reflection_date_malformed_timestamp(memory_db):
@@ -601,7 +883,9 @@ def test_get_last_reflection_date_malformed_timestamp(memory_db):
     assert result is None
 
 
-# --- read_observation_logs edge cases ---
+# ---------------------------------------------------------------------------
+# read_observation_logs edge cases
+# ---------------------------------------------------------------------------
 
 
 def test_read_observation_logs_skips_old_files(tmp_path):

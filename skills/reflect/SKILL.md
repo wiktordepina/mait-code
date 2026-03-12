@@ -18,8 +18,12 @@ Synthesise recent observations into high-level insights.
 3. If approved, edit `~/.claude/mait-code-data/memory/MEMORY.md` to incorporate the updates
 4. Keep MEMORY.md under ~150 lines
 
+Reflection is idempotent — each observation is only reflected on once, tracked by a per-project watermark. Running `/reflect` twice without new observations is a no-op.
+
 If reflection was skipped (not enough new observations), explain that there isn't enough new data since the last reflection and suggest trying again later.
 
 If the user wants to force a reflection with a different time window, run `mc-tool-memory reflect --days <N> --min-new 0`.
+
+For large backlogs, use `mc-tool-memory reflect --drain` to process all unreflected entries in batches. Use `--batch-size <N>` to control entries per batch (default 50).
 
 For cross-project reflection, run `mc-tool-memory reflect --scope all`.

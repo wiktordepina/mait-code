@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.11.0 — Idempotent reflection with batching (2026-03-12)
+
+Reflection is now idempotent and supports batched processing of large backlogs.
+
+- **Watermark tracking:** New `reflection_watermark` table (migration 9) tracks the highest entry ID reflected per project. Running `/reflect` twice without new observations is a no-op.
+- **Batching:** New `--batch-size N` flag (default 50) limits entries processed per reflection. Entries are processed oldest-first via ascending ID order.
+- **Drain mode:** New `--drain` flag loops until all unreflected entries are processed, with a safety cap of 20 iterations.
+- **JSONL removed from reflect:** Observation JSONL logs are no longer read during reflection — observations are already in `memory_entries` via the observe hook. `read_observation_logs()` remains for `restore`.
+- **Deprecated functions:** `get_last_reflection_date()`, `count_entries_since()`, `check_novelty_gate()`, `get_recent_entries()` kept for backward compatibility but replaced by watermark-based equivalents.
+- **New functions:** `get_watermark()`, `update_watermark()`, `check_novelty_gate_v2()`, `get_unreflected_entries()`.
+- **Test coverage:** 60 tests for the reflection system including idempotency, incremental processing, batch limiting, and failure safety.
+
 ## v0.10.0 — Scoped memory and tasks alignment (2026-03-11)
 
 Three-tier memory scoping (global/project/branch) and removal of the projects registry from tasks.

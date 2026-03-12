@@ -571,32 +571,58 @@ def cmd_reflect(args):
     from mait_code.tools.memory.reflect import reflect
 
     ctx = _resolve_context(args)
+    total_insights = []
+    total_stored = 0
+    last_memory_diff = None
+    iterations = 0
+    max_iterations = 20
 
     with connection() as conn:
-        result = reflect(
-            conn,
-            days=args.days,
-            min_new=args.min_new,
-            project=ctx["project"],
-            branch=ctx["branch"],
-        )
+        while True:
+            iterations += 1
+            result = reflect(
+                conn,
+                days=args.days,
+                min_new=args.min_new,
+                batch_size=args.batch_size,
+                project=ctx["project"],
+                branch=ctx["branch"],
+            )
 
-    if result["skipped"]:
-        reason = result.get("reason", "not enough new signal")
-        print(f"Reflection skipped — {reason}.")
+            if result["skipped"]:
+                if iterations == 1:
+                    reason = result.get("reason", "not enough new signal")
+                    print(f"Reflection skipped — {reason}.")
+                break
+
+            total_insights.extend(result["insights"])
+            total_stored += result["stored"]
+            if result["memory_diff"]:
+                last_memory_diff = result["memory_diff"]
+
+            batch_info = result.get("batch_info") or {}
+            processed = batch_info.get("processed", 0)
+
+            if not args.drain:
+                break
+            if processed < args.batch_size:
+                break
+            if iterations >= max_iterations:
+                print(f"Reached maximum drain iterations ({max_iterations}).")
+                break
+
+    if not total_insights:
+        if iterations > 1:
+            print("Drain complete — no more unreflected entries.")
         return
 
-    if not result["insights"]:
-        print(f"No insights generated from last {args.days} days of data.")
-        return
-
-    print(f"Generated {len(result['insights'])} insights from last {args.days} days:\n")
-    for i, insight in enumerate(result["insights"], 1):
+    print(f"Generated {len(total_insights)} insights:\n")
+    for i, insight in enumerate(total_insights, 1):
         print(f"  {i}. {insight}")
-    print(f"\nStored {result['stored']} insights to memory database.")
+    print(f"\nStored {total_stored} insights to memory database.")
 
-    if result["memory_diff"]:
-        print(f"\n{result['memory_diff']}")
+    if last_memory_diff:
+        print(f"\n{last_memory_diff}")
         print("\nReview and apply these changes manually or approve when prompted.")
 
 
@@ -705,6 +731,17 @@ def main():
         type=int,
         default=3,
         help="Minimum new observations to trigger reflection",
+    )
+    p_reflect.add_argument(
+        "--batch-size",
+        type=int,
+        default=50,
+        help="Maximum entries to process per reflection (default: 50)",
+    )
+    p_reflect.add_argument(
+        "--drain",
+        action="store_true",
+        help="Loop until all unreflected entries are processed",
     )
     _add_scope_args(p_reflect)
     p_reflect.set_defaults(func=cmd_reflect)

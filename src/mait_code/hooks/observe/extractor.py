@@ -83,8 +83,9 @@ def build_extraction_prompt(
         parts.append(
             CONTEXT_HEADER.format(project=project, branch=branch or "(default branch)")
         )
-    parts.append("CONVERSATION:\n")
+    parts.append("<CONVERSATION>\n")
     parts.append(conversation_text)
+    parts.append("\n</CONVERSATION>")
     return "".join(parts)
 
 
