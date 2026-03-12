@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mait-code"
-version = "0.11.0"
+version = "0.12.0"
 description = "Companion framework extending Claude Code with persistent memory, identity, and skills"
 requires-python = ">=3.13"
 dependencies = [
@@ -21,6 +21,7 @@ mc-hook-format = "mait_code.hooks.auto_format.cli:main"
 mc-tool-memory = "mait_code.tools.memory.cli:main"
 mc-tool-reminders = "mait_code.tools.reminders.cli:main"
 mc-tool-tasks = "mait_code.tools.tasks.cli:main"
+mc-tool-decisions = "mait_code.tools.decisions.cli:main"
 
 [dependency-groups]
 dev = [

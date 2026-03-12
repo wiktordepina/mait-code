@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, memory-store"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /decision, /decisions<br/>memory-store"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -29,6 +29,7 @@ graph TD
             memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect"]
             reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
             tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
+            decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
         end
         shared["llm.py + logging.py <i>(shared)</i>"]
     end
@@ -36,7 +37,7 @@ graph TD
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md<br/>user_context.md"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>memory.db <i>(SQLite)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
-        other_dbs["reminders.db<br/>tasks.db"]
+        other_dbs["reminders.db<br/>tasks.db<br/>decisions.db"]
     end
 
     HOOKS --> mait_code
@@ -239,6 +240,45 @@ Per-project task tracking. Tasks are scoped by the basename of the git root (or 
 | `check` | --project? | List open tasks for current project (used by session_start hook) |
 | `list-all` | — | List open tasks across all projects |
 
+## Decisions Database
+
+The decisions database (`decisions.db`) stores project-scoped technical decision records (ADR-lite).
+
+**Decisions table: `decisions`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `project` | TEXT | Project identifier (basename of git root or cwd) |
+| `title` | TEXT | Decision title |
+| `context` | TEXT | Problem or situation that prompted this |
+| `alternatives` | TEXT | Other options considered |
+| `consequences` | TEXT | Known trade-offs |
+| `status` | TEXT | `accepted`, `proposed`, `deprecated`, or `superseded` (default: `accepted`) |
+| `superseded_by` | INTEGER FK | References decisions(id) |
+| `tags` | TEXT | Comma-separated tags |
+| `created_at` | DATETIME | Timestamp of creation |
+| `updated_at` | DATETIME | Timestamp of last update |
+
+**FTS5 virtual table: `decisions_fts`** — full-text search across title, context, alternatives, and consequences. Kept in sync via insert/update/delete triggers.
+
+## Decisions CLI Tool (`mc-tool-decisions`)
+
+Project-scoped decision records with full-text search and automatic markdown rendering.
+
+| Subcommand | Args | Description |
+|------------|------|-------------|
+| `record` | title, --context?, --alternatives?, --consequences?, --status?, --tags? | Record a new decision |
+| `list` | --all?, --tag?, --status? | List decisions (default: accepted + proposed only) |
+| `show` | id | Show full decision details |
+| `amend` | id, --context?, --alternatives?, --consequences?, --status?, --tags? | Update specific fields |
+| `supersede` | old_id, new_id | Mark old decision as superseded by new |
+| `search` | query | FTS5 full-text search across all fields |
+| `remove` | id | Delete a decision (clears superseded_by references) |
+| `sync` | — | Manually regenerate `docs/decisions.md` |
+
+Every mutation auto-regenerates `docs/decisions.md` at the project's git root with a summary table and full decision sections.
+
 ## Reminders CLI Tool (`mc-tool-reminders`)
 
 | Subcommand | Args | Description |
@@ -342,7 +382,8 @@ Adding a new migration:
 │   ├── mait-code.log.1       # Rotated backups
 │   └── ...
 ├── reminders.db              # Reminder database
-└── tasks.db                  # Per-project tasks database
+├── tasks.db                  # Per-project tasks database
+└── decisions.db              # Decision records database
 ```
 
 ## Key Technical Decisions
@@ -363,3 +404,5 @@ Adding a new migration:
 | nomic-embed-text-v1.5 @ 768 dims | Full-quality representation; 8192 token context; MTEB ~62.4; negligible storage cost at expected scale |
 | Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |
 | File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `RotatingFileHandler` keeps log size bounded |
+| Watermark table for reflection idempotency | Separate table over `reflected_at` column — atomic batch tracking, no feedback loops, clean separation of concerns |
+| Decisions in SQLite + FTS5 | Consistent with existing tool patterns; full-text search across decision fields; auto-rendered to `docs/decisions.md` for git-friendly visibility |
