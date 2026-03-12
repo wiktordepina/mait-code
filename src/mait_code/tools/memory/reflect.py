@@ -41,12 +41,144 @@ If none, omit this section.\
 """
 
 
+# ---------------------------------------------------------------------------
+# Watermark — idempotent reflection tracking
+# ---------------------------------------------------------------------------
+
+
+def get_watermark(
+    conn: sqlite3.Connection,
+    *,
+    project: str | None = None,
+) -> int | None:
+    """Get the last reflected entry ID for a project (or global).
+
+    Returns None if no reflection has ever been done for this scope.
+    """
+    project_key = project or ""
+    row = conn.execute(
+        "SELECT last_reflected_id FROM reflection_watermark WHERE project = ?",
+        (project_key,),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def update_watermark(
+    conn: sqlite3.Connection,
+    last_id: int,
+    *,
+    project: str | None = None,
+) -> None:
+    """Set the watermark to the given entry ID."""
+    project_key = project or ""
+    conn.execute(
+        """INSERT INTO reflection_watermark (project, last_reflected_id, last_reflected_at)
+           VALUES (?, ?, CURRENT_TIMESTAMP)
+           ON CONFLICT(project) DO UPDATE SET
+             last_reflected_id = excluded.last_reflected_id,
+             last_reflected_at = excluded.last_reflected_at""",
+        (project_key, last_id),
+    )
+    conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Novelty gate (watermark-based)
+# ---------------------------------------------------------------------------
+
+
+def check_novelty_gate_v2(
+    conn: sqlite3.Connection,
+    min_new: int = 3,
+    *,
+    project: str | None = None,
+) -> bool:
+    """Check if there are enough unreflected entries to justify reflection."""
+    watermark = get_watermark(conn, project=project)
+
+    conditions = ["entry_type != 'insight'"]
+    params: list = []
+
+    if watermark is not None:
+        conditions.append("id > ?")
+        params.append(watermark)
+
+    if project is not None:
+        conditions.append("(scope = 'global' OR project = ?)")
+        params.append(project)
+
+    query = f"SELECT COUNT(*) FROM memory_entries WHERE {' AND '.join(conditions)}"
+    count = conn.execute(query, params).fetchone()[0]
+    return count >= min_new
+
+
+# ---------------------------------------------------------------------------
+# Entry retrieval (watermark-aware, batch-limited)
+# ---------------------------------------------------------------------------
+
+
+def get_unreflected_entries(
+    conn: sqlite3.Connection,
+    batch_size: int = 50,
+    days: int | None = None,
+    exclude_types: tuple[str, ...] = ("insight",),
+    *,
+    project: str | None = None,
+    watermark: int | None = None,
+) -> list[tuple]:
+    """
+    Get entries that haven't been reflected on yet.
+
+    Uses watermark (last reflected ID) for idempotency.
+    If no watermark exists and days is provided, uses days as a bootstrap window.
+
+    Returns tuples of (id, content, entry_type, importance, created_at).
+    """
+    conditions: list[str] = []
+    params: list = []
+
+    if watermark is not None:
+        conditions.append("id > ?")
+        params.append(watermark)
+    elif days is not None:
+        conditions.append("created_at >= datetime('now', ?)")
+        params.append(f"-{days} days")
+
+    if exclude_types:
+        placeholders = ", ".join("?" for _ in exclude_types)
+        conditions.append(f"entry_type NOT IN ({placeholders})")
+        params.extend(exclude_types)
+
+    if project is not None:
+        conditions.append("(scope = 'global' OR project = ?)")
+        params.append(project)
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(batch_size)
+
+    query = f"""SELECT id, content, entry_type, importance, created_at
+                FROM memory_entries
+                {where}
+                ORDER BY id ASC
+                LIMIT ?"""
+
+    return conn.execute(query, params).fetchall()
+
+
+# ---------------------------------------------------------------------------
+# Deprecated — kept for backward compatibility, no longer called by reflect()
+# ---------------------------------------------------------------------------
+
+
 def get_last_reflection_date(
     conn: sqlite3.Connection,
     *,
     project: str | None = None,
 ) -> datetime | None:
-    """Get the timestamp of the most recent insight entry."""
+    """Get the timestamp of the most recent insight entry.
+
+    Deprecated: replaced by get_watermark(). Kept for backward compat.
+    """
     if project is not None:
         cursor = conn.execute(
             """SELECT created_at FROM memory_entries
@@ -77,7 +209,10 @@ def count_entries_since(
     *,
     project: str | None = None,
 ) -> int:
-    """Count non-insight memory entries added since a given timestamp."""
+    """Count non-insight memory entries added since a given timestamp.
+
+    Deprecated: replaced by check_novelty_gate_v2(). Kept for backward compat.
+    """
     conditions = ["created_at >= ?"]
     params: list = [since.strftime("%Y-%m-%d %H:%M:%S")]
 
@@ -100,10 +235,9 @@ def check_novelty_gate(
     *,
     project: str | None = None,
 ) -> bool:
-    """
-    Check whether there are enough new observations to justify reflection.
+    """Check whether there are enough new observations to justify reflection.
 
-    Returns True if reflection should proceed, False to skip.
+    Deprecated: replaced by check_novelty_gate_v2(). Kept for backward compat.
     """
     last_reflection = get_last_reflection_date(conn, project=project)
     if last_reflection is None:
@@ -121,11 +255,9 @@ def get_recent_entries(
     *,
     project: str | None = None,
 ) -> list[tuple]:
-    """
-    Get memory entries from the last N days.
+    """Get memory entries from the last N days.
 
-    Excludes insight entries by default to prevent feedback loops.
-    When project is provided, includes global + matching project entries.
+    Deprecated: replaced by get_unreflected_entries(). Kept for backward compat.
     """
     conditions = ["created_at >= datetime('now', ?)"]
     params: list = [f"-{days} days"]
@@ -147,6 +279,11 @@ def get_recent_entries(
                 LIMIT ?"""
 
     return conn.execute(query, params).fetchall()
+
+
+# ---------------------------------------------------------------------------
+# Observation log reading (kept for restore command, no longer used by reflect)
+# ---------------------------------------------------------------------------
 
 
 def read_observation_logs(days: int = 7) -> str:
@@ -213,12 +350,27 @@ def _format_extraction(extraction: dict) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Formatting and parsing
+# ---------------------------------------------------------------------------
+
+
 def format_entries_text(entries: list[tuple]) -> str:
-    """Format DB entries into text for the reflection prompt."""
-    return "\n".join(
-        f"- [{created_at[:10]}] ({entry_type}, imp={importance}) {content[:200]}"
-        for content, entry_type, importance, created_at in entries
-    )
+    """Format DB entries into text for the reflection prompt.
+
+    Accepts both 4-tuples (legacy: content, type, importance, created_at)
+    and 5-tuples (new: id, content, type, importance, created_at).
+    """
+    lines = []
+    for entry in entries:
+        if len(entry) == 5:
+            _, content, entry_type, importance, created_at = entry
+        else:
+            content, entry_type, importance, created_at = entry
+        lines.append(
+            f"- [{created_at[:10]}] ({entry_type}, imp={importance}) {content[:200]}"
+        )
+    return "\n".join(lines)
 
 
 def parse_reflection_response(response: str) -> dict:
@@ -283,16 +435,25 @@ def generate_memory_diff(memory_updates: list[str]) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Main orchestrator
+# ---------------------------------------------------------------------------
+
+
 def reflect(
     conn: sqlite3.Connection,
     days: int = 7,
     min_new: int = 3,
+    batch_size: int = 50,
     *,
     project: str | None = None,
     branch: str | None = None,
 ) -> dict:
     """
     Main reflection orchestrator.
+
+    Uses a watermark to track which entries have been reflected on,
+    ensuring idempotent operation. Processes entries in batches.
 
     When project is provided, reflects only on global + project-scoped entries.
 
@@ -303,29 +464,38 @@ def reflect(
             "insights": list[str],
             "stored": int,
             "memory_diff": str | None,
+            "batch_info": {"processed": int, "watermark": int} | None,
         }
     """
-    # Novelty gate
-    if not check_novelty_gate(conn, min_new, project=project):
+    # Novelty gate (watermark-based)
+    if not check_novelty_gate_v2(conn, min_new, project=project):
         return {
             "skipped": True,
             "reason": "not enough new observations since last reflection",
             "insights": [],
             "stored": 0,
             "memory_diff": None,
+            "batch_info": None,
         }
 
-    # Gather data
-    entries = get_recent_entries(conn, days, project=project)
-    observations_text = read_observation_logs(days)
+    # Get watermark and unreflected entries
+    watermark = get_watermark(conn, project=project)
+    entries = get_unreflected_entries(
+        conn,
+        batch_size,
+        days=days if watermark is None else None,
+        project=project,
+        watermark=watermark,
+    )
 
-    if not entries and not observations_text:
+    if not entries:
         return {
             "skipped": True,
-            "reason": "no data found for the given time period",
+            "reason": "no unreflected entries found",
             "insights": [],
             "stored": 0,
             "memory_diff": None,
+            "batch_info": None,
         }
 
     # Build prompt
@@ -333,15 +503,10 @@ def reflect(
 
     prompt_parts = []
     if entries_text:
-        prompt_parts.append(f"Recent memory entries ({days} days):\n{entries_text}")
-    if observations_text:
-        # Cap observation text to avoid exceeding context limits
-        obs_capped = observations_text[:4000]
-        prompt_parts.append(f"Recent observation logs:\n{obs_capped}")
+        prompt_parts.append(f"Recent memory entries:\n{entries_text}")
 
     current_memory = read_memory_md()
     if current_memory:
-        # Cap MEMORY.md content
         prompt_parts.append(f"Current MEMORY.md content:\n{current_memory[:2000]}")
 
     if project:
@@ -367,6 +532,7 @@ def reflect(
             "insights": [],
             "stored": 0,
             "memory_diff": None,
+            "batch_info": None,
         }
 
     # Parse response
@@ -376,6 +542,10 @@ def reflect(
 
     # Store insights
     stored = store_insights(conn, insights, project=project) if insights else 0
+
+    # Update watermark to highest entry ID processed
+    new_watermark = max(e[0] for e in entries)
+    update_watermark(conn, new_watermark, project=project)
 
     # Generate memory diff
     memory_diff = None
@@ -388,4 +558,5 @@ def reflect(
         "insights": insights,
         "stored": stored,
         "memory_diff": memory_diff,
+        "batch_info": {"processed": len(entries), "watermark": new_watermark},
     }
