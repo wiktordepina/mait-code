@@ -9,6 +9,7 @@ Companion framework extending Claude Code with persistent memory, identity, and 
 - **Always use `uv run`** to execute scripts and tools — never activate venvs manually
 - **Entry points** are defined in `pyproject.toml` under `[project.scripts]`
 - **Data directory** is `~/.claude/mait-code-data/` — configurable via `MAIT_CODE_DATA_DIR` env var
+- **Embedding provider** is configurable via `MAIT_CODE_EMBEDDING_PROVIDER` (`local` or `bedrock`) — see `docs/memory.md` for full config
 - **No asyncio in CLI tools** — tools use sync code; MCP servers use async
 - **No background services** — everything is reactive (hooks, skill invocations, CLI tools)
 - **Prefer CLI tools + skills over MCP** — simpler, no process overhead, supports preprocessing

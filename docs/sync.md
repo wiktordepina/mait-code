@@ -81,6 +81,10 @@ MEMORY.md is the most likely file to have merge conflicts (both machines may upd
 
 Observations are timestamped files, so conflicts are rare. If they occur, keep both versions — the reflection system will deduplicate.
 
+## Embedding Provider
+
+Ensure the same embedding provider (`MAIT_CODE_EMBEDDING_PROVIDER`) is configured on all machines. If you switch providers (e.g. from `local` to `bedrock`), run `mc-tool-memory reindex` on each machine after pulling — it will detect the dimension mismatch and recreate the vec table automatically.
+
 ## Security Note
 
 Your companion data may contain sensitive information (project details, preferences, work patterns). Use a **private** repository and consider encrypting sensitive fields in the future.

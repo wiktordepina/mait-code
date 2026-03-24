@@ -45,7 +45,7 @@ src/mait_code/tools/memory/
 ├── search.py      # FTS5 keyword, vector, and hybrid search + list + delete
 ├── writer.py      # Store with deduplication + auto-embedding
 ├── entities.py    # Entity and relationship CRUD
-└── embeddings.py  # fastembed wrapper (lazy-loading, graceful degradation)
+└── embeddings.py  # Embedding providers (local fastembed / AWS Bedrock, lazy-loading, graceful degradation)
 ```
 
 **Dependency order:** `migrate.py` ← `db.py` ← everything else. `scoring.py` has no internal dependencies. `embeddings.py` depends only on `db.py` (for data dir).
