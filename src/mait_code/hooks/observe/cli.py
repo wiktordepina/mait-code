@@ -46,22 +46,45 @@ def _read_event() -> dict:
 def _find_transcript(cwd: str | None = None) -> str | None:
     """Find the most recently modified transcript for the current project.
 
-    Fallback for when stdin is empty (macOS async hook bug). Derives the
-    Claude Code project slug from cwd and finds the newest .jsonl file.
+    Fallback for when stdin is empty (macOS async hook bug). First tries to
+    derive the Claude Code project slug from cwd. If that fails (e.g. async
+    hooks may not inherit the project's working directory), scans all project
+    directories for the most recently modified transcript.
     """
+    projects_root = Path.home() / ".claude" / "projects"
+    if not projects_root.is_dir():
+        logger.debug("projects root not found: %s", projects_root)
+        return None
+
+    # Try cwd-based slug first (fast path)
     cwd = cwd or os.getcwd()
     slug = cwd.replace("/", "-").replace(".", "-")
-    project_dir = Path.home() / ".claude" / "projects" / slug
-    if not project_dir.is_dir():
-        logger.debug("project dir not found: %s", project_dir)
-        return None
-    transcripts = list(project_dir.glob("*.jsonl"))
-    if not transcripts:
-        logger.debug("no transcripts in %s", project_dir)
-        return None
-    newest = max(transcripts, key=lambda p: p.stat().st_mtime)
-    logger.debug("transcript fallback: %s", newest)
-    return str(newest)
+    project_dir = projects_root / slug
+    if project_dir.is_dir():
+        transcripts = list(project_dir.glob("*.jsonl"))
+        if transcripts:
+            newest = max(transcripts, key=lambda p: p.stat().st_mtime)
+            logger.debug("transcript fallback (slug): %s", newest)
+            return str(newest)
+
+    # Broad scan: find the most recently modified transcript across all projects
+    newest_path = None
+    newest_mtime = 0.0
+    for candidate_dir in projects_root.iterdir():
+        if not candidate_dir.is_dir():
+            continue
+        for t in candidate_dir.glob("*.jsonl"):
+            mtime = t.stat().st_mtime
+            if mtime > newest_mtime:
+                newest_mtime = mtime
+                newest_path = t
+
+    if newest_path:
+        logger.debug("transcript fallback (scan): %s", newest_path)
+        return str(newest_path)
+
+    logger.debug("no transcripts found under %s", projects_root)
+    return None
 
 
 @log_invocation(name="mc-hook-observe")
@@ -102,7 +125,7 @@ def _run():
         return
 
     byte_offset = get_cursor(transcript_path)
-    messages, new_offset = read_new_lines(transcript_path, byte_offset)
+    messages, new_offset, metadata = read_new_lines(transcript_path, byte_offset)
 
     if not messages:
         set_cursor(transcript_path, new_offset)
@@ -113,11 +136,8 @@ def _run():
         set_cursor(transcript_path, new_offset)
         return
 
-    from mait_code.context import get_context
-
-    ctx = get_context()
-    project = ctx["project"]
-    branch = ctx["branch"]
+    project = metadata.get("project")
+    branch = metadata.get("branch")
 
     extraction = extract_observations(conversation_text, project=project, branch=branch)
     if not extraction:
