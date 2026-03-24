@@ -31,7 +31,7 @@ graph TD
             tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
             decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
         end
-        shared["llm.py + logging.py <i>(shared)</i>"]
+        shared["llm.py + logging.py + ssl.py <i>(shared)</i>"]
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
@@ -402,6 +402,7 @@ Adding a new migration:
 | Dedup via FTS5 + SequenceMatcher | Fast candidate narrowing, precise similarity comparison, no duplicates |
 | Async observation hook | PreCompact extraction runs in background, no conversation latency |
 | Entity tables over separate graph DB | Entities live in memory.db alongside memories — single file, recursive CTEs for future traversal |
+| truststore for SSL | Injects OS trust store into Python's ssl module — corporate proxy CAs (e.g. Netskope) are trusted automatically without manual cert management |
 | fastembed over sentence-transformers | ONNX Runtime only (~80 MB), no PyTorch (~2 GB); ~300 MB RAM at runtime |
 | nomic-embed-text-v1.5 @ 768 dims | Full-quality representation; 8192 token context; MTEB ~62.4; negligible storage cost at expected scale |
 | Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |

@@ -1,12 +1,23 @@
 # Changelog
 
-## v0.12.1 — Fix observe hook on macOS (2026-03-24)
+## v0.12.1 — macOS compatibility fixes (2026-03-24)
 
-Workaround for macOS bug where async Claude Code hooks receive empty stdin ([#38162](https://github.com/anthropics/claude-code/issues/38162)).
+Workarounds for macOS-specific issues: async hook stdin bug and corporate proxy SSL.
 
+### Async hook stdin fix
 - **Resilient stdin parsing:** `_read_event()` returns an empty dict on empty or invalid stdin instead of crashing with `JSONDecodeError`.
-- **Transcript fallback:** `_find_transcript()` discovers the most recently modified `.jsonl` transcript from the Claude Code project directory when stdin is unavailable.
-- **Test coverage:** 9 tests covering stdin parsing (valid, empty, whitespace, invalid JSON) and filesystem fallback (slug derivation, newest file selection, missing/empty dirs).
+- **Transcript fallback:** `_find_transcript()` discovers the most recently modified `.jsonl` transcript from the Claude Code project directory when stdin is unavailable. Workaround for macOS bug where async hooks receive empty stdin ([#38162](https://github.com/anthropics/claude-code/issues/38162)).
+- **Slug derivation fix:** Project slug now replaces both `/` and `.` with `-`, matching Claude Code's actual behaviour (e.g. `/Users/wiktor.depina/...` → `-Users-wiktor-depina-...`).
+
+### SSL trust store for corporate proxies
+- **`truststore` integration:** New `setup_ssl()` in `src/mait_code/ssl.py` injects the OS trust store into Python's `ssl` module at startup, so corporate proxy CA certificates (e.g. Netskope) are trusted automatically.
+- **Wired into entry points:** `mc-hook-observe` and `mc-tool-memory` call `setup_ssl()` before any network requests.
+- **Graceful degradation:** If `truststore` is unavailable or injection fails, the system continues with Python's default cert bundle.
+- **New dependency:** `truststore>=0.9`.
+
+### Test coverage
+- 10 tests for stdin parsing and transcript fallback (including dot-in-path slug derivation).
+- 4 tests for SSL setup (injection, idempotency, missing package, injection failure).
 
 ## v0.12.0 — Decision log (2026-03-12)
 

@@ -50,7 +50,7 @@ def _find_transcript(cwd: str | None = None) -> str | None:
     Claude Code project slug from cwd and finds the newest .jsonl file.
     """
     cwd = cwd or os.getcwd()
-    slug = cwd.replace("/", "-")
+    slug = cwd.replace("/", "-").replace(".", "-")
     project_dir = Path.home() / ".claude" / "projects" / slug
     if not project_dir.is_dir():
         logger.debug("project dir not found: %s", project_dir)
@@ -68,6 +68,10 @@ def _find_transcript(cwd: str | None = None) -> str | None:
 def main():
     """Entry point for mc-hook-observe."""
     setup_logging()
+
+    from mait_code.ssl import setup_ssl
+
+    setup_ssl()
     if os.environ.get("MAIT_CODE_NESTED"):
         logger.debug("skipping observe hook in nested claude invocation")
         return
