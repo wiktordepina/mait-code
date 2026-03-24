@@ -31,7 +31,7 @@ graph TD
             tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
             decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
         end
-        shared["llm.py + logging.py <i>(shared)</i>"]
+        shared["llm.py + logging.py + ssl.py <i>(shared)</i>"]
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
@@ -294,10 +294,12 @@ Every mutation auto-regenerates `docs/decisions.md` at the project's git root wi
 |------|---------|------|---------|
 | `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks) |
 | `observe` | PreCompact | async | Extract observations before context compaction |
-| `observe` | SessionEnd | sync | Final observation extraction |
+| `observe` | SessionEnd | async | Final observation extraction |
 | `auto_format` | — | — | Format code after edits (placeholder) |
 
-The observe hook on PreCompact runs asynchronously (`"async": true`) to avoid blocking the main conversation. It calls Claude Haiku to extract structured observations (facts, preferences, decisions, bugs, entities, relationships) from new transcript lines.
+Both observe hooks run asynchronously (`"async": true`) to avoid blocking the main conversation. They call Claude Haiku to extract structured observations (facts, preferences, decisions, bugs, entities, relationships) from new transcript lines.
+
+**macOS caveat:** Async hooks on macOS may receive empty stdin due to a Claude Code bug ([#38162](https://github.com/anthropics/claude-code/issues/38162)). The observe hook handles this by falling back to transcript discovery from the filesystem — it derives the Claude Code project slug from cwd and finds the most recently modified `.jsonl` transcript.
 
 ## Observation Pipeline
 
@@ -400,6 +402,7 @@ Adding a new migration:
 | Dedup via FTS5 + SequenceMatcher | Fast candidate narrowing, precise similarity comparison, no duplicates |
 | Async observation hook | PreCompact extraction runs in background, no conversation latency |
 | Entity tables over separate graph DB | Entities live in memory.db alongside memories — single file, recursive CTEs for future traversal |
+| truststore for SSL | Injects OS trust store into Python's ssl module — corporate proxy CAs (e.g. Netskope) are trusted automatically without manual cert management |
 | fastembed over sentence-transformers | ONNX Runtime only (~80 MB), no PyTorch (~2 GB); ~300 MB RAM at runtime |
 | nomic-embed-text-v1.5 @ 768 dims | Full-quality representation; 8192 token context; MTEB ~62.4; negligible storage cost at expected scale |
 | Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |

@@ -79,6 +79,25 @@ def my_function():
 
 The `mait_code` logger hierarchy is configured by `setup_logging()` in the entry point — internal modules don't need to call it.
 
+### SSL setup for network-calling entry points
+
+Entry points that make outbound HTTPS requests (e.g. embedding model downloads, API calls) should also call `setup_ssl()` after `setup_logging()`:
+
+```python
+from mait_code.logging import log_invocation, setup_logging
+
+@log_invocation(name="mc-tool-mycommand")
+def main():
+    setup_logging()
+
+    from mait_code.ssl import setup_ssl
+    setup_ssl()
+
+    # ... your code here
+```
+
+This injects the OS trust store into Python's `ssl` module via the `truststore` package, so corporate proxy CA certificates (e.g. Netskope) are trusted automatically. It is idempotent and fails silently if `truststore` is unavailable.
+
 ### Configuration
 
 - `MAIT_CODE_LOG_LEVEL` env var (default: `INFO`) — set via `settings.json` `env` block
@@ -187,7 +206,7 @@ def mem_db(tmp_path):
    mc-hook-<hook-name> = "mait_code.hooks.<hook_name>.cli:main"
    ```
 4. Register in `config/settings.json` under the appropriate hook event
-5. Use `"async": true` for observation/logging hooks that don't feed results back into the conversation
+5. Use `"async": true` for observation/logging hooks that don't feed results back into the conversation. **Note:** Async hooks on macOS may receive empty stdin due to a Claude Code bug ([#38162](https://github.com/anthropics/claude-code/issues/38162)) — handle this by falling back to filesystem discovery or other means.
 6. Run `uv sync` and re-run `./scripts/install.sh`
 
 ## Adding a New CLI Tool

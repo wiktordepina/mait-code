@@ -629,6 +629,10 @@ def cmd_reflect(args):
 @log_invocation(name="mc-tool-memory")
 def main():
     setup_logging()
+
+    from mait_code.ssl import setup_ssl
+
+    setup_ssl()
     parser = argparse.ArgumentParser(prog="mc-tool-memory", description="Memory CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 

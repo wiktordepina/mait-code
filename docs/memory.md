@@ -24,7 +24,7 @@ graph LR
 The `observe` hook fires on two events:
 
 - **PreCompact** — when Claude Code's context window fills up (runs async, no blocking)
-- **SessionEnd** — when a session closes (runs sync)
+- **SessionEnd** — when a session closes (runs async, no blocking)
 
 Each time, it:
 
@@ -93,6 +93,7 @@ How it works:
 - **On delete:** a database trigger automatically removes the corresponding embedding.
 - **Model caching:** the ONNX model (~550 MB) downloads on first use and caches in `~/.claude/mait-code-data/models/`.
 - **Graceful degradation:** if `fastembed` is not installed or the model fails to load, everything falls back to keyword-only search. Memory storage is never blocked by embedding failures.
+- **Corporate proxy support:** the `truststore` package injects the OS trust store into Python's `ssl` module, so model downloads work behind corporate proxies (e.g. Netskope) without manual certificate management.
 
 ### Hybrid search
 
