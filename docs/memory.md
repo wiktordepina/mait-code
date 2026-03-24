@@ -24,7 +24,7 @@ graph LR
 The `observe` hook fires on two events:
 
 - **PreCompact** — when Claude Code's context window fills up (runs async, no blocking)
-- **SessionEnd** — when a session closes (runs sync)
+- **SessionEnd** — when a session closes (runs async, no blocking)
 
 Each time, it:
 

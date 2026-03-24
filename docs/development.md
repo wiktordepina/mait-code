@@ -187,7 +187,7 @@ def mem_db(tmp_path):
    mc-hook-<hook-name> = "mait_code.hooks.<hook_name>.cli:main"
    ```
 4. Register in `config/settings.json` under the appropriate hook event
-5. Use `"async": true` for observation/logging hooks that don't feed results back into the conversation
+5. Use `"async": true` for observation/logging hooks that don't feed results back into the conversation. **Note:** Async hooks on macOS may receive empty stdin due to a Claude Code bug ([#38162](https://github.com/anthropics/claude-code/issues/38162)) — handle this by falling back to filesystem discovery or other means.
 6. Run `uv sync` and re-run `./scripts/install.sh`
 
 ## Adding a New CLI Tool

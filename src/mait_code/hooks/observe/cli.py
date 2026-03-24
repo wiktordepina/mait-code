@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 
 from mait_code.hooks.observe.cursor import get_cursor, set_cursor
 from mait_code.hooks.observe.extractor import extract_observations
@@ -22,6 +23,45 @@ from mait_code.hooks.observe.transcript import format_for_extraction, read_new_l
 from mait_code.logging import log_invocation, setup_logging
 
 logger = logging.getLogger(__name__)
+
+
+def _read_event() -> dict:
+    """Read hook event JSON from stdin.
+
+    Returns an empty dict if stdin is empty or contains invalid JSON.
+    This handles the macOS bug where async hooks receive no stdin data
+    (https://github.com/anthropics/claude-code/issues/38162).
+    """
+    raw = sys.stdin.read()
+    if not raw.strip():
+        logger.debug("stdin empty, async hook likely did not receive input")
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        logger.warning("failed to parse stdin as JSON: %s", e)
+        return {}
+
+
+def _find_transcript(cwd: str | None = None) -> str | None:
+    """Find the most recently modified transcript for the current project.
+
+    Fallback for when stdin is empty (macOS async hook bug). Derives the
+    Claude Code project slug from cwd and finds the newest .jsonl file.
+    """
+    cwd = cwd or os.getcwd()
+    slug = cwd.replace("/", "-")
+    project_dir = Path.home() / ".claude" / "projects" / slug
+    if not project_dir.is_dir():
+        logger.debug("project dir not found: %s", project_dir)
+        return None
+    transcripts = list(project_dir.glob("*.jsonl"))
+    if not transcripts:
+        logger.debug("no transcripts in %s", project_dir)
+        return None
+    newest = max(transcripts, key=lambda p: p.stat().st_mtime)
+    logger.debug("transcript fallback: %s", newest)
+    return str(newest)
 
 
 @log_invocation(name="mc-hook-observe")
@@ -49,10 +89,12 @@ def _run():
     )
     args = parser.parse_args()
 
-    event = json.loads(sys.stdin.read())
+    event = _read_event()
     transcript_path = event.get("transcript_path")
     if not transcript_path:
-        logger.warning("no transcript_path in event")
+        transcript_path = _find_transcript(cwd=event.get("cwd"))
+    if not transcript_path:
+        logger.warning("no transcript_path available (stdin and fallback both failed)")
         return
 
     byte_offset = get_cursor(transcript_path)

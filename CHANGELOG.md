@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.12.1 — Fix observe hook on macOS (2026-03-24)
+
+Workaround for macOS bug where async Claude Code hooks receive empty stdin ([#38162](https://github.com/anthropics/claude-code/issues/38162)).
+
+- **Resilient stdin parsing:** `_read_event()` returns an empty dict on empty or invalid stdin instead of crashing with `JSONDecodeError`.
+- **Transcript fallback:** `_find_transcript()` discovers the most recently modified `.jsonl` transcript from the Claude Code project directory when stdin is unavailable.
+- **Test coverage:** 9 tests covering stdin parsing (valid, empty, whitespace, invalid JSON) and filesystem fallback (slug derivation, newest file selection, missing/empty dirs).
+
 ## v0.12.0 — Decision log (2026-03-12)
 
 ADR-lite decision records for capturing why technical choices were made.

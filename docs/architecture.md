@@ -294,10 +294,12 @@ Every mutation auto-regenerates `docs/decisions.md` at the project's git root wi
 |------|---------|------|---------|
 | `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks) |
 | `observe` | PreCompact | async | Extract observations before context compaction |
-| `observe` | SessionEnd | sync | Final observation extraction |
+| `observe` | SessionEnd | async | Final observation extraction |
 | `auto_format` | — | — | Format code after edits (placeholder) |
 
-The observe hook on PreCompact runs asynchronously (`"async": true`) to avoid blocking the main conversation. It calls Claude Haiku to extract structured observations (facts, preferences, decisions, bugs, entities, relationships) from new transcript lines.
+Both observe hooks run asynchronously (`"async": true`) to avoid blocking the main conversation. They call Claude Haiku to extract structured observations (facts, preferences, decisions, bugs, entities, relationships) from new transcript lines.
+
+**macOS caveat:** Async hooks on macOS may receive empty stdin due to a Claude Code bug ([#38162](https://github.com/anthropics/claude-code/issues/38162)). The observe hook handles this by falling back to transcript discovery from the filesystem — it derives the Claude Code project slug from cwd and finds the most recently modified `.jsonl` transcript.
 
 ## Observation Pipeline
 
