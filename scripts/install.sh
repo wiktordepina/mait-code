@@ -90,12 +90,33 @@ if [ -d "$PROJECT_DIR/agents" ]; then
     done
 fi
 
-# --- 7. Install CLI tools via uv tool ---
+# --- 7. Choose embedding provider ---
+echo ""
+echo "Embedding provider:"
+echo "  1) local    — fastembed/HuggingFace (runs locally, ~550 MB model download)"
+echo "  2) bedrock  — AWS Bedrock (requires AWS credentials, no local model)"
+echo ""
+read -rp "Choose embedding provider [1/2] (default: 1): " EMBED_CHOICE
+case "$EMBED_CHOICE" in
+    2|bedrock)
+        EMBEDDING_PROVIDER="bedrock"
+        INSTALL_EXTRAS="[bedrock]"
+        echo "  Selected: bedrock (AWS Bedrock)"
+        ;;
+    *)
+        EMBEDDING_PROVIDER="local"
+        INSTALL_EXTRAS=""
+        echo "  Selected: local (fastembed)"
+        ;;
+esac
+echo ""
+
+# --- 8. Install CLI tools via uv tool ---
 echo "Installing CLI tools..."
-uv tool install "$PROJECT_DIR" --force --reinstall --python 3.13
+uv tool install "$PROJECT_DIR$INSTALL_EXTRAS" --force --reinstall --python 3.13
 echo "  CLI tools installed to ~/.local/bin/"
 
-# --- 8. Merge settings.json ---
+# --- 9. Merge settings.json ---
 echo "Merging settings.json..."
 SETTINGS_SRC="$PROJECT_DIR/config/settings.json"
 SETTINGS_DST="$CLAUDE_DIR/settings.json"
@@ -126,6 +147,11 @@ if 'mcpServers' not in dst:
 for server_name, server_config in src.get('mcpServers', {}).items():
     dst['mcpServers'][server_name] = server_config
 
+# Set embedding provider
+if 'env' not in dst:
+    dst['env'] = {}
+dst['env']['MAIT_CODE_EMBEDDING_PROVIDER'] = '$EMBEDDING_PROVIDER'
+
 with open('$SETTINGS_DST', 'w') as f:
     json.dump(dst, f, indent=2)
     f.write('\n')
@@ -133,7 +159,7 @@ with open('$SETTINGS_DST', 'w') as f:
 print('  Settings merged successfully')
 "
 
-# --- 9. Summary ---
+# --- 10. Summary ---
 echo ""
 echo "=== Installation complete ==="
 echo ""
@@ -141,6 +167,7 @@ echo "Installed:"
 echo "  CLAUDE.md    → $CLAUDE_DIR/CLAUDE.md"
 echo "  Data dir     → $DATA_DIR/"
 echo "  Settings     → $SETTINGS_DST"
+echo "  Embeddings   → $EMBEDDING_PROVIDER"
 echo ""
 echo "Next steps:"
 echo "  1. Personalise $DATA_DIR/soul_document.md"

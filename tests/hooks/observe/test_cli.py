@@ -52,7 +52,18 @@ class TestFindTranscript:
 
         assert result == str(new)
 
-    def test_no_project_dir(self, tmp_path: Path):
+    def test_no_projects_root(self, tmp_path: Path):
+        """No ~/.claude/projects/ directory at all."""
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = _find_transcript(cwd="/nonexistent/project")
+
+        assert result is None
+
+    def test_no_matching_slug_no_transcripts(self, tmp_path: Path):
+        """Slug doesn't match and no transcripts anywhere."""
+        projects_root = tmp_path / ".claude" / "projects"
+        projects_root.mkdir(parents=True)
+
         with patch.object(Path, "home", return_value=tmp_path):
             result = _find_transcript(cwd="/nonexistent/project")
 
@@ -95,6 +106,41 @@ class TestFindTranscript:
             result = _find_transcript(cwd=cwd)
 
         assert result == str(transcript)
+
+    def test_broad_scan_when_slug_misses(self, tmp_path: Path):
+        """When cwd slug doesn't match, falls back to scanning all projects."""
+        projects_root = tmp_path / ".claude" / "projects"
+        # Create a project dir that does NOT match the cwd slug
+        other_project = projects_root / "-Users-someone-projects-real-app"
+        other_project.mkdir(parents=True)
+        transcript = other_project / "session.jsonl"
+        transcript.write_text('{"type": "user"}\n')
+
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = _find_transcript(cwd="/wrong/cwd")
+
+        assert result == str(transcript)
+
+    def test_broad_scan_picks_newest(self, tmp_path: Path):
+        """Broad scan returns the most recently modified transcript."""
+        projects_root = tmp_path / ".claude" / "projects"
+
+        proj_a = projects_root / "-project-a"
+        proj_a.mkdir(parents=True)
+        old = proj_a / "old.jsonl"
+        old.write_text('{"type": "user"}\n')
+
+        time.sleep(0.05)
+
+        proj_b = projects_root / "-project-b"
+        proj_b.mkdir(parents=True)
+        new = proj_b / "new.jsonl"
+        new.write_text('{"type": "user"}\n')
+
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = _find_transcript(cwd="/wrong/cwd")
+
+        assert result == str(new)
 
     def test_defaults_to_getcwd(self, tmp_path: Path, monkeypatch: object):
         monkeypatch.chdir(tmp_path)

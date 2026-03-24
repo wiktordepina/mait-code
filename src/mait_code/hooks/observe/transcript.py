@@ -1,13 +1,22 @@
 """JSONL transcript parsing and message formatting for extraction."""
 
 import json
+from pathlib import Path
+
+from mait_code.context import DEFAULT_BRANCHES
 
 
-def read_new_lines(transcript_path: str, byte_offset: int) -> tuple[list[dict], int]:
+def read_new_lines(
+    transcript_path: str, byte_offset: int
+) -> tuple[list[dict], int, dict]:
     """Read new JSONL lines from byte_offset to EOF.
 
-    Returns (filtered_messages, new_byte_offset).
+    Returns (filtered_messages, new_byte_offset, metadata).
     Only returns user and assistant messages, skipping tool_result content.
+
+    metadata contains ``project`` and ``branch`` extracted from the transcript
+    entries' ``cwd`` and ``gitBranch`` fields respectively.  The last non-empty
+    values encountered are used.
     """
     with open(transcript_path, "rb") as f:
         f.seek(byte_offset)
@@ -19,10 +28,12 @@ def read_new_lines(transcript_path: str, byte_offset: int) -> tuple[list[dict], 
         raw = raw[: last_newline + 1]
 
     if not raw:
-        return [], byte_offset
+        return [], byte_offset, {}
 
     new_offset = byte_offset + len(raw)
     messages = []
+    last_cwd: str | None = None
+    last_branch: str | None = None
 
     for line in raw.decode("utf-8", errors="replace").splitlines():
         line = line.strip()
@@ -32,6 +43,12 @@ def read_new_lines(transcript_path: str, byte_offset: int) -> tuple[list[dict], 
             entry = json.loads(line)
         except json.JSONDecodeError:
             continue
+
+        # Capture cwd / gitBranch from any entry that carries them
+        if entry.get("cwd"):
+            last_cwd = entry["cwd"]
+        if entry.get("gitBranch"):
+            last_branch = entry["gitBranch"]
 
         entry_type = entry.get("type")
         if entry_type not in ("user", "assistant"):
@@ -54,7 +71,13 @@ def read_new_lines(transcript_path: str, byte_offset: int) -> tuple[list[dict], 
 
         messages.append(entry)
 
-    return messages, new_offset
+    # Derive project name from cwd (basename of git root / working dir)
+    project = Path(last_cwd).name if last_cwd else None
+    # Treat default branches as None (project-scoped, not branch-scoped)
+    branch = last_branch if last_branch and last_branch not in DEFAULT_BRANCHES else None
+
+    metadata = {"project": project, "branch": branch}
+    return messages, new_offset, metadata
 
 
 def _extract_text(message: dict) -> str:

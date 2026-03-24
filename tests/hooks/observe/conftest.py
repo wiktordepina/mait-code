@@ -23,6 +23,8 @@ def sample_transcript(tmp_path: Path) -> Path:
             "uuid": "u1",
             "timestamp": "2026-03-07T10:00:00Z",
             "sessionId": "sess-1",
+            "cwd": "/Users/someone/projects/my-app",
+            "gitBranch": "feature/dark-mode",
             "message": {
                 "role": "user",
                 "content": "Can you add a dark mode toggle to the settings page?",
@@ -34,6 +36,8 @@ def sample_transcript(tmp_path: Path) -> Path:
             "parentUuid": "u1",
             "timestamp": "2026-03-07T10:00:05Z",
             "sessionId": "sess-1",
+            "cwd": "/Users/someone/projects/my-app",
+            "gitBranch": "feature/dark-mode",
             "message": {
                 "role": "assistant",
                 "content": [
@@ -49,6 +53,8 @@ def sample_transcript(tmp_path: Path) -> Path:
             "uuid": "s1",
             "timestamp": "2026-03-07T10:00:06Z",
             "sessionId": "sess-1",
+            "cwd": "/Users/someone/projects/my-app",
+            "gitBranch": "feature/dark-mode",
             "content": "Running Edit tool...",
             "level": "info",
         },
@@ -57,6 +63,8 @@ def sample_transcript(tmp_path: Path) -> Path:
             "uuid": "u2",
             "timestamp": "2026-03-07T10:00:10Z",
             "sessionId": "sess-1",
+            "cwd": "/Users/someone/projects/my-app",
+            "gitBranch": "feature/dark-mode",
             "message": {
                 "role": "user",
                 "content": [
@@ -73,6 +81,8 @@ def sample_transcript(tmp_path: Path) -> Path:
             "uuid": "a2",
             "timestamp": "2026-03-07T10:00:15Z",
             "sessionId": "sess-1",
+            "cwd": "/Users/someone/projects/my-app",
+            "gitBranch": "feature/dark-mode",
             "message": {
                 "role": "assistant",
                 "content": [
@@ -88,6 +98,8 @@ def sample_transcript(tmp_path: Path) -> Path:
             "uuid": "u3",
             "timestamp": "2026-03-07T10:01:00Z",
             "sessionId": "sess-1",
+            "cwd": "/Users/someone/projects/my-app",
+            "gitBranch": "feature/dark-mode",
             "message": {
                 "role": "user",
                 "content": "Great, we also use PostgreSQL for the backend database.",
