@@ -1,50 +1,226 @@
 """
-Vector embeddings for semantic search using fastembed.
+Vector embeddings for semantic search.
 
-Wraps nomic-embed-text-v1.5 behind a lazy-loading singleton.
-Degrades gracefully if fastembed is not installed or the model
-fails to load — callers always get None instead of exceptions.
+Supports two providers:
+- local: fastembed with HuggingFace models (default, for personal use)
+- bedrock: AWS Bedrock Titan/Cohere models (for corporate environments)
+
+Provider is configured via MAIT_CODE_EMBEDDING_PROVIDER env var.
+Degrades gracefully if the provider fails to load — callers always
+get None instead of exceptions.
 """
 
+import json
 import logging
+import os
 import struct
+from abc import ABC, abstractmethod
 
 from mait_code.tools.memory.db import get_data_dir
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5"
-EMBEDDING_DIM = 768
 
-_embedder = None
-_embedder_failed = False
+# ---------------------------------------------------------------------------
+# Provider abstraction
+# ---------------------------------------------------------------------------
 
 
-def get_embedder():
-    """
-    Return a lazily-initialised TextEmbedding instance, or None.
+class EmbeddingProvider(ABC):
+    """Internal interface for embedding providers."""
 
-    The model is downloaded on first use into the data directory.
-    If fastembed is not installed or initialisation fails, returns
-    None on this and all subsequent calls.
-    """
-    global _embedder, _embedder_failed
+    @abstractmethod
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed a batch of texts. Returns list of float vectors."""
+        ...
 
-    if _embedder is not None:
-        return _embedder
-    if _embedder_failed:
-        return None
+    @property
+    @abstractmethod
+    def dimension(self) -> int:
+        """Return the embedding dimension for this provider/model."""
+        ...
 
-    try:
+    @property
+    @abstractmethod
+    def model_name(self) -> str:
+        """Human-readable model identifier."""
+        ...
+
+
+class LocalProvider(EmbeddingProvider):
+    """fastembed/HuggingFace local embeddings."""
+
+    KNOWN_MODELS = {
+        "nomic-ai/nomic-embed-text-v1.5": 768,
+    }
+    DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1.5"
+
+    def __init__(self):
         from fastembed import TextEmbedding
 
+        model = os.environ.get("MAIT_CODE_EMBEDDING_MODEL", self.DEFAULT_MODEL)
+        self._model_name = model
+        self._dim = self.KNOWN_MODELS.get(model, 768)
         cache_dir = str(get_data_dir() / "models")
-        _embedder = TextEmbedding(model_name=EMBEDDING_MODEL, cache_dir=cache_dir)
-        return _embedder
-    except Exception as e:
-        _embedder_failed = True
-        logger.warning("Failed to load embedding model: %s", e)
+        self._embedder = TextEmbedding(model_name=model, cache_dir=cache_dir)
+
+    @property
+    def dimension(self) -> int:
+        return self._dim
+
+    @property
+    def model_name(self) -> str:
+        return self._model_name
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        results = list(self._embedder.embed(texts))
+        return [r.tolist() for r in results]
+
+
+class BedrockProvider(EmbeddingProvider):
+    """AWS Bedrock embedding provider."""
+
+    KNOWN_MODELS = {
+        "amazon.titan-embed-text-v2:0": 1024,
+        "amazon.titan-embed-text-v1": 1536,
+        "cohere.embed-english-v3": 1024,
+        "cohere.embed-multilingual-v3": 1024,
+    }
+    DEFAULT_MODEL = "amazon.titan-embed-text-v2:0"
+    DEFAULT_REGION = "eu-west-2"
+
+    def __init__(self):
+        from mait_code.ssl import setup_ssl
+
+        setup_ssl()
+
+        import boto3
+
+        model_id = os.environ.get("MAIT_CODE_BEDROCK_MODEL_ID", self.DEFAULT_MODEL)
+        region = os.environ.get("MAIT_CODE_BEDROCK_REGION", self.DEFAULT_REGION)
+        self._model_id = model_id
+        self._dim = self.KNOWN_MODELS.get(model_id, 1024)
+        self._is_titan = "titan" in model_id.lower()
+        self._client = boto3.client("bedrock-runtime", region_name=region)
+
+    @property
+    def dimension(self) -> int:
+        return self._dim
+
+    @property
+    def model_name(self) -> str:
+        return self._model_id
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        results = []
+        for text in texts:
+            if self._is_titan:
+                body = json.dumps({"inputText": text, "dimensions": self._dim})
+            else:
+                body = json.dumps({"texts": [text], "input_type": "search_document"})
+
+            response = self._client.invoke_model(modelId=self._model_id, body=body)
+            result = json.loads(response["body"].read())
+
+            if self._is_titan:
+                results.append(result["embedding"])
+            else:
+                results.append(result["embeddings"][0])
+
+        return results
+
+
+# ---------------------------------------------------------------------------
+# Configuration helpers (no provider instantiation needed)
+# ---------------------------------------------------------------------------
+
+
+def _get_provider_name() -> str:
+    """Read the configured provider from env. Default: local."""
+    return os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
+
+
+def _get_embedding_dim() -> int:
+    """Compute expected embedding dimension from config."""
+    provider_name = _get_provider_name()
+    if provider_name == "bedrock":
+        model_id = os.environ.get(
+            "MAIT_CODE_BEDROCK_MODEL_ID", BedrockProvider.DEFAULT_MODEL
+        )
+        return BedrockProvider.KNOWN_MODELS.get(model_id, 1024)
+    model = os.environ.get("MAIT_CODE_EMBEDDING_MODEL", LocalProvider.DEFAULT_MODEL)
+    return LocalProvider.KNOWN_MODELS.get(model, 768)
+
+
+def _get_embedding_model() -> str:
+    """Get the configured model name."""
+    provider_name = _get_provider_name()
+    if provider_name == "bedrock":
+        return os.environ.get(
+            "MAIT_CODE_BEDROCK_MODEL_ID", BedrockProvider.DEFAULT_MODEL
+        )
+    return os.environ.get("MAIT_CODE_EMBEDDING_MODEL", LocalProvider.DEFAULT_MODEL)
+
+
+# Module-level "constants" — computed from env vars at import time.
+EMBEDDING_DIM: int = _get_embedding_dim()
+EMBEDDING_MODEL: str = _get_embedding_model()
+
+
+# ---------------------------------------------------------------------------
+# Provider singleton
+# ---------------------------------------------------------------------------
+
+_provider: EmbeddingProvider | None = None
+_provider_failed: bool = False
+
+
+def get_provider() -> EmbeddingProvider | None:
+    """Return the lazily-initialised embedding provider, or None.
+
+    On first call, instantiates the provider configured by
+    MAIT_CODE_EMBEDDING_PROVIDER. If instantiation fails, returns
+    None on this and all subsequent calls.
+    """
+    global _provider, _provider_failed
+
+    if _provider is not None:
+        return _provider
+    if _provider_failed:
         return None
+
+    provider_name = _get_provider_name()
+
+    try:
+        if provider_name == "bedrock":
+            _provider = BedrockProvider()
+        else:
+            _provider = LocalProvider()
+        return _provider
+    except ImportError as e:
+        _provider_failed = True
+        dep = "boto3" if provider_name == "bedrock" else "fastembed"
+        logger.warning(
+            "Embedding provider '%s' unavailable (missing %s): %s",
+            provider_name,
+            dep,
+            e,
+        )
+        return None
+    except Exception as e:
+        _provider_failed = True
+        logger.warning("Failed to load embedding provider '%s': %s", provider_name, e)
+        return None
+
+
+def _needs_prefix() -> bool:
+    """Whether the current provider uses text prefixes (nomic does, Bedrock doesn't)."""
+    return _get_provider_name() != "bedrock"
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 
 def embed_text(text: str, *, prefix: str = "search_document") -> list[float] | None:
@@ -55,18 +231,19 @@ def embed_text(text: str, *, prefix: str = "search_document") -> list[float] | N
         text: The text to embed.
         prefix: Task prefix for nomic-embed. Use "search_document" when
                 storing/indexing, "search_query" when searching.
+                Ignored for Bedrock providers.
 
     Returns:
-        List of 768 floats, or None if embeddings are unavailable.
+        List of floats, or None if embeddings are unavailable.
     """
-    embedder = get_embedder()
-    if embedder is None:
+    provider = get_provider()
+    if provider is None:
         return None
 
     try:
-        prefixed = f"{prefix}: {text}"
-        result = list(embedder.embed([prefixed]))
-        return result[0].tolist()
+        input_text = f"{prefix}: {text}" if _needs_prefix() else text
+        results = provider.embed([input_text])
+        return results[0]
     except Exception as e:
         logger.warning("Embedding failed: %s", e)
         return None
@@ -80,19 +257,21 @@ def embed_texts(
 
     Args:
         texts: List of texts to embed.
-        prefix: Task prefix for nomic-embed.
+        prefix: Task prefix for nomic-embed. Ignored for Bedrock providers.
 
     Returns:
         List of embedding vectors, or None if unavailable.
     """
-    embedder = get_embedder()
-    if embedder is None:
+    provider = get_provider()
+    if provider is None:
         return None
 
     try:
-        prefixed = [f"{prefix}: {t}" for t in texts]
-        results = list(embedder.embed(prefixed))
-        return [r.tolist() for r in results]
+        if _needs_prefix():
+            input_texts = [f"{prefix}: {t}" for t in texts]
+        else:
+            input_texts = texts
+        return provider.embed(input_texts)
     except Exception as e:
         logger.warning("Batch embedding failed: %s", e)
         return None
@@ -104,5 +283,43 @@ def serialize_f32(vec: list[float]) -> bytes:
 
 
 def is_available() -> bool:
-    """Check whether the embedding model can be loaded."""
-    return get_embedder() is not None
+    """Check whether the embedding provider can be loaded."""
+    return get_provider() is not None
+
+
+def _parse_vec_table_dim(conn) -> int | None:
+    """Parse the declared dimension from the memory_vec CREATE statement."""
+    try:
+        row = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE name='memory_vec'"
+        ).fetchone()
+        if row and row[0]:
+            import re
+
+            m = re.search(r"float\[(\d+)\]", row[0])
+            if m:
+                return int(m.group(1))
+    except Exception:
+        pass
+    return None
+
+
+def check_dimension_match(conn) -> tuple[bool, int | None, int]:
+    """Check if the vec table dimension matches the configured provider.
+
+    Returns (matches, table_dim, expected_dim).
+    table_dim is None if the vec table doesn't exist.
+    """
+    expected = _get_embedding_dim()
+    try:
+        row = conn.execute("SELECT embedding FROM memory_vec LIMIT 1").fetchone()
+        if row is None:
+            # Table exists but is empty — check the declared dimension
+            table_dim = _parse_vec_table_dim(conn)
+            if table_dim is None:
+                return True, None, expected
+            return table_dim == expected, table_dim, expected
+        table_dim = len(row[0]) // 4  # 4 bytes per float32
+        return table_dim == expected, table_dim, expected
+    except Exception:
+        return True, None, expected

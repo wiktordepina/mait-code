@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.13.0 — Configurable embedding providers (2026-03-24)
+
+Support for multiple embedding providers — local (fastembed/HuggingFace) and AWS Bedrock — configurable via environment variables. Designed for corporate environments where HuggingFace may be blocked.
+
+### Embedding provider abstraction
+- **Provider abstraction:** New `EmbeddingProvider` ABC with `LocalProvider` (fastembed) and `BedrockProvider` (AWS Bedrock) implementations. Public API (`embed_text`, `embed_texts`, `is_available`, `serialize_f32`) unchanged.
+- **`LocalProvider`:** Wraps fastembed with nomic-embed-text-v1.5 (768d). Reads `MAIT_CODE_EMBEDDING_MODEL` env var. Prefixes text with task type (`search_document:` / `search_query:`).
+- **`BedrockProvider`:** Calls AWS Bedrock `invoke_model` API. Supports Titan and Cohere model families. Reads `MAIT_CODE_BEDROCK_MODEL_ID` and `MAIT_CODE_BEDROCK_REGION` env vars. Calls `setup_ssl()` for corporate proxy compatibility.
+- **Configuration:** `MAIT_CODE_EMBEDDING_PROVIDER` env var (`local` or `bedrock`). Deployment-time decision — pick a provider and stick with it.
+- **Dimension handling:** `EMBEDDING_DIM` and `EMBEDDING_MODEL` computed from env vars at import time. `check_dimension_match()` detects vec table dimension mismatches.
+- **`cmd_reindex` migration:** Automatically detects dimension mismatch when switching providers, drops and recreates the vec table with the correct dimension before reindexing.
+- **`cmd_stats` enhanced:** Now shows embedding provider, model name, and dimension alongside existing statistics.
+- **Provider-specific error messages:** `cmd_reindex` hints at the correct dependency (`fastembed` or `boto3`) based on the configured provider.
+- **Optional dependency:** `pip install mait-code[bedrock]` installs `boto3>=1.34`.
+- **Graceful degradation:** Both providers fail silently if their dependency is missing — memory storage and keyword search continue to work.
+
+### Documentation
+- Updated `docs/memory.md` with provider configuration, corporate setup guide, and env var table.
+- Updated `docs/architecture.md` with provider env vars, key decision, and vec table description.
+- Updated `docs/development.md` with revised embeddings module description.
+
+### Test coverage
+- Rewrote `test_embeddings.py` for provider abstraction: mock provider tests for prefix handling (local vs bedrock), bedrock dimension config, bedrock invoke_model mock, dimension check (empty, matching, mismatch, error), graceful degradation.
+
 ## v0.12.1 — macOS compatibility fixes (2026-03-24)
 
 Workarounds for macOS-specific issues: async hook stdin bug and corporate proxy SSL.

@@ -8,7 +8,17 @@ from mait_code.context import get_context
 from mait_code.logging import log_invocation, setup_logging
 
 from mait_code.tools.memory.db import connection
-from mait_code.tools.memory.embeddings import embed_texts, is_available, serialize_f32
+from mait_code.tools.memory.embeddings import (
+    EMBEDDING_DIM,
+    EMBEDDING_MODEL,
+    check_dimension_match,
+    embed_texts,
+    is_available,
+    serialize_f32,
+)
+from mait_code.tools.memory.embeddings import (
+    _get_provider_name as _embedding_provider_name,
+)
 from mait_code.tools.memory.entities import (
     find_entity_by_name,
     get_entity_relationships,
@@ -271,6 +281,9 @@ def cmd_stats(_args):
         pct = round(100 * embedded / total) if total else 0
         available = "yes" if is_available() else "no"
         print(f"\nEmbeddings: {embedded}/{total} entries ({pct}%)")
+        print(f"Embedding provider: {_embedding_provider_name()}")
+        print(f"Embedding model: {EMBEDDING_MODEL}")
+        print(f"Embedding dimension: {EMBEDDING_DIM}")
         print(f"Embedding model available: {available}")
 
 
@@ -366,18 +379,44 @@ def _reindex_embeddings(conn):
     return embedded
 
 
+def _recreate_vec_table(conn, dim: int):
+    """Drop and recreate the vec table with the given dimension."""
+    conn.execute("DROP TRIGGER IF EXISTS memory_entries_vec_ad")
+    conn.execute("DROP TABLE IF EXISTS memory_vec")
+    conn.execute(
+        f"CREATE VIRTUAL TABLE memory_vec "
+        f"USING vec0(embedding float[{dim}] distance_metric=cosine)"
+    )
+    conn.execute(
+        """CREATE TRIGGER memory_entries_vec_ad
+           AFTER DELETE ON memory_entries BEGIN
+             DELETE FROM memory_vec WHERE rowid = old.id;
+           END"""
+    )
+    conn.commit()
+
+
 def cmd_reindex(_args):
     """Recompute vector embeddings for all memory entries."""
+    provider = _embedding_provider_name()
     if not is_available():
         logger.error("embedding model unavailable")
-        print(
-            "Error: embedding model unavailable. "
-            "Ensure fastembed is installed: pip install fastembed",
-            file=sys.stderr,
-        )
+        if provider == "bedrock":
+            hint = "Ensure boto3 is installed: pip install boto3"
+        else:
+            hint = "Ensure fastembed is installed: pip install fastembed"
+        print(f"Error: embedding model unavailable. {hint}", file=sys.stderr)
         sys.exit(1)
 
     with connection() as conn:
+        matches, table_dim, expected_dim = check_dimension_match(conn)
+        if not matches:
+            print(
+                f"Dimension mismatch: vec table has {table_dim}d, "
+                f"provider expects {expected_dim}d. Recreating vec table..."
+            )
+            _recreate_vec_table(conn, expected_dim)
+
         embedded = _reindex_embeddings(conn)
         if embedded:
             print(f"\nDone. {embedded} embeddings stored.")

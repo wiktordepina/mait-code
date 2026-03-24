@@ -75,10 +75,11 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 - Kept in sync via triggers on insert/update/delete
 
 **Vec0 virtual table: `memory_vec`**
-- 768-dimension cosine distance vectors via `sqlite-vec`
-- Populated by `fastembed` using the `nomic-ai/nomic-embed-text-v1.5` model
+- Cosine distance vectors via `sqlite-vec` (768d for local/nomic, 1024d for Bedrock/Titan)
+- Populated by the configured embedding provider (local fastembed or AWS Bedrock)
 - Embeddings are computed and stored automatically when new memory entries are created
 - Delete trigger (`memory_entries_vec_ad`) keeps vec table in sync when entries are removed
+- Dimension is a deployment-time decision; `mc-tool-memory reindex` handles migration
 
 **Entity table: `memory_entities`**
 
@@ -135,7 +136,7 @@ score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 **Relevance** is provided by the search method:
 - **Hybrid mode** (default): combines FTS5 BM25 with vector cosine similarity
 - **FTS mode**: keyword-only BM25 ranking
-- **Vector mode**: semantic similarity only via nomic-embed embeddings
+- **Vector mode**: semantic similarity only via the configured embedding provider
 
 ### Deduplication
 
@@ -156,7 +157,7 @@ flowchart TD
     C --> D["SequenceMatcher<br/>similarity >= 0.90?"]
     D -->|Yes| E["UPDATE timestamp"]
     D -->|No| F["INSERT new entry"]
-    F --> G["embed_text()<br/><i>nomic-embed, prefix=search_document</i>"]
+    F --> G["embed_text()<br/><i>configured provider</i>"]
     G --> H["INSERT into memory_vec"]
 ```
 
@@ -164,7 +165,7 @@ flowchart TD
 flowchart TD
     A["search_memory()"] --> B["hybrid_search()"]
     B --> C["FTS5 BM25<br/><i>keywords</i>"]
-    B --> D["vector_search<br/><i>nomic-embed cosine</i>"]
+    B --> D["vector_search<br/><i>cosine similarity</i>"]
     C --> E["Merge by entry ID<br/><i>both: use vector similarity</i><br/><i>one only: default 0.3</i>"]
     D --> E
     E --> F["composite_score()<br/><i>recency + importance + relevance</i>"]
@@ -202,7 +203,7 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 | `store` | content, --type?, --importance? | Store with deduplication, auto-computes embedding |
 | `list` | --limit?, --type?, --since? | List recent entries, optionally filtered by type and time period (e.g. `24h`, `7d`, `1w`) |
 | `delete` | id | Delete by ID (vec cleanup via trigger) |
-| `stats` | — | Counts by type, class, and embedding coverage |
+| `stats` | — | Counts by type, class, embedding coverage, and provider info |
 | `entities` | query?, --limit? | Search or list knowledge graph entities |
 | `relationships` | entity_name | Show relationships for an entity |
 | `reindex` | — | Recompute vector embeddings for all entries |
@@ -322,6 +323,10 @@ All entry points use a shared logging module (`src/mait_code/logging.py`) that w
 |----------|---------|-------------|
 | `MAIT_CODE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `MAIT_CODE_LOG_FILE` | `~/.claude/mait-code-data/logs/mait-code.log` | Override log file path |
+| `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | Embedding provider: `local` (fastembed) or `bedrock` (AWS) |
+| `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local embedding provider |
+| `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock embedding provider |
+| `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Model ID for Bedrock embedding provider |
 
 **Features:**
 - `setup_logging()` — call once per entry point; idempotent, configures the `mait_code` logger hierarchy
@@ -357,7 +362,7 @@ Current migrations:
 4. Vec0 virtual table for vector search (1536-dim, superseded by migration 7)
 5. `memory_entities` table for entity tracking
 6. `memory_relationships` table for entity relationships
-7. Recreate vec0 with 768 dimensions for nomic-embed-text-v1.5, add vec delete trigger
+7. Recreate vec0 with 768 dimensions (default for local provider), add vec delete trigger
 
 Adding a new migration:
 1. Append a tuple to `MIGRATIONS` with the next version number
@@ -378,7 +383,7 @@ Adding a new migration:
 │   │   └── cursors.json      # Byte offset tracking per transcript
 │   └── reflections/          # Synthesised insights
 │       └── YYYY-MM.md
-├── models/                   # Cached embedding models (fastembed)
+├── models/                   # Cached embedding models (local provider only)
 ├── logs/                     # Rotating log files
 │   ├── mait-code.log         # Current log
 │   ├── mait-code.log.1       # Rotated backups
@@ -405,6 +410,7 @@ Adding a new migration:
 | truststore for SSL | Injects OS trust store into Python's ssl module — corporate proxy CAs (e.g. Netskope) are trusted automatically without manual cert management |
 | fastembed over sentence-transformers | ONNX Runtime only (~80 MB), no PyTorch (~2 GB); ~300 MB RAM at runtime |
 | nomic-embed-text-v1.5 @ 768 dims | Full-quality representation; 8192 token context; MTEB ~62.4; negligible storage cost at expected scale |
+| Configurable embedding providers | Local (fastembed) for personal use, AWS Bedrock for corporate environments where HuggingFace is blocked; deployment-time decision, reindex to migrate |
 | Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |
 | File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `RotatingFileHandler` keeps log size bounded |
 | Watermark table for reflection idempotency | Separate table over `reflected_at` column — atomic batch tracking, no feedback loops, clean separation of concerns |

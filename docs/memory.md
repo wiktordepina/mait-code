@@ -84,16 +84,55 @@ Every entry is automatically indexed in a full-text search table using SQLite's 
 
 ### Vector search (sqlite-vec)
 
-Every entry also gets a 768-dimensional vector embedding computed by `nomic-ai/nomic-embed-text-v1.5` via the `fastembed` library (ONNX Runtime, no PyTorch required).
+Every entry gets a vector embedding stored in a `vec0` virtual table for semantic search via cosine distance.
 
-How it works:
+#### Embedding providers
 
-- **On store:** the content is prefixed with `"search_document: "` and embedded. The vector is stored in a `vec0` virtual table alongside the entry.
-- **On search:** the query is prefixed with `"search_query: "` and embedded. sqlite-vec finds the nearest neighbours by cosine distance.
+Two providers are supported, configured via the `MAIT_CODE_EMBEDDING_PROVIDER` environment variable:
+
+| Provider | Value | Model | Dimensions | Use case |
+|----------|-------|-------|-----------|----------|
+| **Local** (default) | `local` | `nomic-ai/nomic-embed-text-v1.5` via fastembed | 768 | Personal use — runs locally via ONNX Runtime |
+| **AWS Bedrock** | `bedrock` | `amazon.titan-embed-text-v2:0` (default) | 1024 | Corporate environments where HuggingFace is blocked |
+
+**Configuration (environment variables):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | `local` (fastembed) or `bedrock` |
+| `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local provider |
+| `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock |
+| `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Bedrock model ID |
+
+Set these in `settings.json` under `env` or in your shell environment.
+
+**Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table.
+
+#### How it works
+
+- **On store:** the content is embedded and the vector is stored in a `vec0` virtual table alongside the entry. For the local provider, content is prefixed with `"search_document: "` (nomic-embed requires this); Bedrock providers receive raw text.
+- **On search:** the query is embedded (with `"search_query: "` prefix for local). sqlite-vec finds the nearest neighbours by cosine distance.
 - **On delete:** a database trigger automatically removes the corresponding embedding.
-- **Model caching:** the ONNX model (~550 MB) downloads on first use and caches in `~/.claude/mait-code-data/models/`.
-- **Graceful degradation:** if `fastembed` is not installed or the model fails to load, everything falls back to keyword-only search. Memory storage is never blocked by embedding failures.
-- **Corporate proxy support:** the `truststore` package injects the OS trust store into Python's `ssl` module, so model downloads work behind corporate proxies (e.g. Netskope) without manual certificate management.
+- **Model caching (local):** the ONNX model (~550 MB) downloads on first use and caches in `~/.claude/mait-code-data/models/`.
+- **Graceful degradation:** if the provider fails to load (missing `fastembed` or `boto3`), everything falls back to keyword-only search. Memory storage is never blocked by embedding failures.
+- **Corporate proxy support:** the `truststore` package injects the OS trust store into Python's `ssl` module, so model downloads and API calls work behind corporate proxies (e.g. Netskope) without manual certificate management.
+
+#### Corporate setup (Bedrock)
+
+If HuggingFace is blocked on your corporate network, use the Bedrock provider:
+
+1. Install the optional dependency: `uv pip install mait-code[bedrock]`
+2. Set environment variables in `settings.json`:
+   ```json
+   {
+     "env": {
+       "MAIT_CODE_EMBEDDING_PROVIDER": "bedrock",
+       "MAIT_CODE_BEDROCK_REGION": "eu-west-2"
+     }
+   }
+   ```
+3. Ensure AWS credentials are available (e.g. via `aws configure` or IAM role)
+4. If you have existing local embeddings, run `mc-tool-memory reindex` to migrate
 
 ### Hybrid search
 
@@ -229,7 +268,7 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `list --since 24h` | Filter by time period (`24h`, `7d`, `1w`, etc.) |
 | `list --type event` | Filter by type |
 | `delete <id>` | Delete an entry (embedding cleaned up by trigger) |
-| `stats` | Entry counts, class distribution, embedding coverage |
+| `stats` | Entry counts, class distribution, embedding coverage, and provider info |
 | `entities [query]` | Search or list knowledge graph entities |
 | `relationships <entity>` | Show relationships for an entity |
 | `reindex` | Recompute all vector embeddings from scratch |
