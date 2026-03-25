@@ -20,7 +20,7 @@ Reminders:
 
 Recent commits (last 7 days):
 
-!`git log --since="7 days ago" --oneline 2>/dev/null || echo "No recent commits."`
+!`git log --since="7 days ago" --oneline --all --author="$(git config user.name)" 2>/dev/null || echo "No recent commits."`
 
 Recent memories (last 7 days):
 

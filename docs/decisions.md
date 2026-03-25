@@ -4,16 +4,101 @@
 
 | # | Decision | Status | Tags | Date |
 |---|----------|--------|------|------|
-| 1 | Keep SQLite as the sole database engine | accepted | db,architecture | 2026-03-12 |
-| 2 | Reactive CLI tools over MCP servers as primary extension pattern | accepted | architecture,tooling | 2026-03-12 |
-| 3 | Watermark table for reflection idempotency over reflected_at column | accepted | memory,architecture,idempotency | 2026-03-12 |
+| 1 | Extract transcript metadata instead of git commands in observe hook | accepted | hooks,observe,architecture | 2026-03-25 |
+| 2 | Configurable embedding providers with one-way dimension commitment | accepted | memory,embeddings,architecture | 2026-03-25 |
+| 3 | Use truststore package for corporate proxy SSL handling | accepted | ssl,networking,architecture | 2026-03-25 |
+| 4 | MAIT_CODE_NESTED env var to prevent observe hook recursion | accepted | hooks,observe,recursion | 2026-03-25 |
+| 5 | Three-tier memory scope with auto-detection | accepted | memory,scope,architecture | 2026-03-25 |
+| 6 | Keep SQLite as the sole database engine | accepted | db,architecture | 2026-03-25 |
+| 7 | Reactive CLI tools over MCP servers as primary extension pattern | accepted | architecture,tooling | 2026-03-25 |
+| 8 | Watermark table for reflection idempotency over reflected_at column | accepted | memory,architecture,idempotency | 2026-03-25 |
 
 ---
 
-## DR-1: Keep SQLite as the sole database engine
+## DR-1: Extract transcript metadata instead of git commands in observe hook
+
+**Status:** accepted | **Tags:** hooks,observe,architecture
+**Recorded:** 2026-03-25
+
+### Context
+Observe hook runs async, so its working directory may differ from the session's. Shelling out to git for project/branch context returned incorrect values. Transcript entries contain cwd and gitBranch fields on every user/assistant entry.
+
+### Alternatives considered
+git commands via get_context() — failed for async hooks with different cwd; env vars — not reliably passed to async subprocesses
+
+### Consequences
+Observe hook reads project name from transcript cwd (basename) and branch from gitBranch field. Fallback broad scan of ~/.claude/projects/ when slug-derived path misses. No dependency on git being available or correct cwd.
+
+---
+
+## DR-2: Configurable embedding providers with one-way dimension commitment
+
+**Status:** accepted | **Tags:** memory,embeddings,architecture
+**Recorded:** 2026-03-25
+
+### Context
+HuggingFace model downloads blocked by Netskope on corporate network, so fastembed could not download nomic-embed. Needed an alternative embedding backend that works behind corporate proxies. AWS Bedrock Titan v2 uses 1024 dimensions vs fastembed/nomic 768 dimensions.
+
+### Alternatives considered
+Proxy exception for HuggingFace — not feasible in corporate environment; pre-bundled model weights — too large for distribution; OpenAI embeddings API — adds another provider dependency without solving the corporate network issue
+
+### Consequences
+EmbeddingProvider ABC with identical public API regardless of backend. Provider chosen at install time via MAIT_CODE_EMBEDDING_PROVIDER env var. Dimension is set once at initial deploy — switching providers requires reindex (mc-tool-memory reindex). check_dimension_match() detects mismatches and recreates vec table automatically. One-way commitment per deployment.
+
+---
+
+## DR-3: Use truststore package for corporate proxy SSL handling
+
+**Status:** accepted | **Tags:** ssl,networking,architecture
+**Recorded:** 2026-03-25
+
+### Context
+Netskope SSL inspection intercepts HTTPS on macOS. Root CA is in the system keychain but not in Python's cert store, causing SSL handshake failures for embedding model downloads and any outbound HTTPS from Python.
+
+### Alternatives considered
+Manual cert bundle management with SSL_CERT_FILE env var — fragile, requires users to find and export the cert; requests[security] with certifi — doesn't include corporate CAs; disabling SSL verification — insecure
+
+### Consequences
+Shared setup_ssl() in src/mait_code/ssl.py, called only in entry points that make HTTPS requests (observe hook, memory tool). Uses truststore package to inject OS trust store into Python ssl context. Idempotent — safe to call multiple times. Added to CLAUDE.md component guidance for new tools.
+
+---
+
+## DR-4: MAIT_CODE_NESTED env var to prevent observe hook recursion
+
+**Status:** accepted | **Tags:** hooks,observe,recursion
+**Recorded:** 2026-03-25
+
+### Context
+Observe hook calls call_claude() which spawns a nested claude -p session. When that session ends, it fires SessionEnd again, triggering another observe hook — creating an infinite recursive loop.
+
+### Alternatives considered
+Check process tree for parent claude processes — platform-dependent and fragile; file-based lock — race conditions between concurrent sessions; hook name filtering — Claude Code doesn't expose which hook triggered the event
+
+### Consequences
+call_claude() sets MAIT_CODE_NESTED=1 in the subprocess env. Observe hook checks for this var and exits early. Process-scoped — no bleed between concurrent sessions. Simple, reliable, no cleanup needed.
+
+---
+
+## DR-5: Three-tier memory scope with auto-detection
+
+**Status:** accepted | **Tags:** memory,scope,architecture
+**Recorded:** 2026-03-25
+
+### Context
+Memory entries were unscoped — all observations were global, making search noisy across projects. Needed a way to scope memories to the relevant project and branch while still allowing cross-project queries.
+
+### Alternatives considered
+Project-only scope (two tiers) — insufficient for branch-specific notes like feature flags or WIP context; tag-based filtering — more flexible but harder to auto-detect and query; separate databases per project — isolation but no cross-project search
+
+### Consequences
+Three-tier scope: global (preferences, cross-cutting facts), project (project-specific conventions), branch (WIP context). Auto-detected from git context via shared context.py module. LLM scope classification in extraction prompt with heuristic fallback (resolve_scope()). Scope-aware search, deduplication, and scoring. Tasks simplified to plain string project column (no FK). Removed projects table.
+
+---
+
+## DR-6: Keep SQLite as the sole database engine
 
 **Status:** accepted | **Tags:** db,architecture
-**Recorded:** 2026-03-12
+**Recorded:** 2026-03-25
 
 ### Context
 Evaluated whether to migrate to PostgreSQL, DuckDB, or other engines as the project grew. mait-code is a single-user, single-writer workload with short-lived connections and explicit commits — SQLite's writer serialisation is not a limiting factor.
@@ -26,10 +111,10 @@ No server process needed. FTS5 and sqlite-vec ship with Python's SQLite. Revisit
 
 ---
 
-## DR-2: Reactive CLI tools over MCP servers as primary extension pattern
+## DR-7: Reactive CLI tools over MCP servers as primary extension pattern
 
 **Status:** accepted | **Tags:** architecture,tooling
-**Recorded:** 2026-03-12
+**Recorded:** 2026-03-25
 
 ### Context
 Needed a standard pattern for adding features (memory, tasks, reminders, decisions). MCP servers require persistent connections and async code; CLI tools are simpler, support preprocessing in skills, and have no process overhead.
@@ -42,10 +127,10 @@ All features follow the mc-tool-* convention with argparse subcommands, SQLite s
 
 ---
 
-## DR-3: Watermark table for reflection idempotency over reflected_at column
+## DR-8: Watermark table for reflection idempotency over reflected_at column
 
 **Status:** accepted | **Tags:** memory,architecture,idempotency
-**Recorded:** 2026-03-12
+**Recorded:** 2026-03-25
 
 ### Context
 The reflect command re-consumed observations on every run because there was no tracking of which entries had already been reflected on. Needed a mechanism to make reflection incremental and idempotent.

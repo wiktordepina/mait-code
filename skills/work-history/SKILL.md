@@ -16,7 +16,7 @@ Show work history for the current project.
    - `yesterday` — last 24-48 hours
    - `week` — last 7 days
 2. Run the following via Bash, adjusting `--since` accordingly:
-   - `git log --since="<period>" --oneline --all`
+   - `git log --since="<period>" --oneline --all --author="$(git config user.name)"`
    - `mc-tool-memory list --since <period> --limit 30` (use `24h`, `48h`, or `7d`)
    - `mc-tool-tasks list --all` to show tasks completed in the period
 3. Present a formatted work history grouped by day if spanning multiple days.

@@ -20,7 +20,7 @@ Reminders:
 
 Recent commits (current project):
 
-!`git log --since="24 hours ago" --oneline 2>/dev/null || echo "No recent commits."`
+!`git log --since="24 hours ago" --oneline --all --author="$(git config user.name)" 2>/dev/null || echo "No recent commits."`
 
 Recent memories (last 24h):
 
