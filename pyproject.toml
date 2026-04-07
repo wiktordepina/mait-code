@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mait-code"
-version = "0.13.0"
+version = "0.14.0"
 description = "Companion framework extending Claude Code with persistent memory, identity, and skills"
 requires-python = ">=3.13"
 dependencies = [
@@ -13,6 +13,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "fastembed>=0.4.0",
     "truststore>=0.9",
+    "markdownify>=0.14",
 ]
 
 [project.scripts]
@@ -23,6 +24,7 @@ mc-tool-memory = "mait_code.tools.memory.cli:main"
 mc-tool-reminders = "mait_code.tools.reminders.cli:main"
 mc-tool-tasks = "mait_code.tools.tasks.cli:main"
 mc-tool-decisions = "mait_code.tools.decisions.cli:main"
+mc-tool-web-fetch = "mait_code.tools.web_fetch.cli:main"
 
 [project.optional-dependencies]
 bedrock = ["boto3>=1.34"]
