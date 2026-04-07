@@ -20,7 +20,7 @@ Reminders:
 
 Recent commits (last 7 days):
 
-!`git log --since="7 days ago" --oneline --all --author="$(git config user.name)" 2>/dev/null || echo "No recent commits."`
+!`git config user.name | xargs -I{} git log --since="7 days ago" --oneline --all --author="{}" 2>/dev/null || echo "No recent commits."`
 
 Recent memories (last 7 days):
 
@@ -29,7 +29,7 @@ Recent memories (last 7 days):
 ## Instructions
 
 1. Read the existing STATUS.md if present (for continuity), and README.md or CLAUDE.md for project context.
-2. For project info, run `git remote get-url origin` and `basename $(git rev-parse --show-toplevel)` via Bash to get the project name and GitHub URL.
+2. For project info, run `git remote get-url origin` and `git rev-parse --show-toplevel | xargs basename` via Bash to get the project name and GitHub URL.
 3. Generate a STATUS.md with these sections:
    - **Project** — name, path, github URL (from git info above)
    - **Open Tasks** — current tasks by priority

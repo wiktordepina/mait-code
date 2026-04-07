@@ -12,7 +12,7 @@ Generate a standup summary.
 
 Recent commits (current project):
 
-!`git log --since="24 hours ago" --oneline --all --author="$(git config user.name)" 2>/dev/null || echo "No recent commits."`
+!`git config user.name | xargs -I{} git log --since="24 hours ago" --oneline --all --author="{}" 2>/dev/null || echo "No recent commits."`
 
 Open tasks (all projects):
 
