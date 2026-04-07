@@ -1,5 +1,6 @@
 """Tests for the embeddings module."""
 
+import os
 import struct
 from unittest.mock import MagicMock, patch
 
@@ -28,11 +29,38 @@ class TestSerializeF32:
 
 
 class TestConstants:
+    """Module-level constants are computed at import time from env vars.
+
+    EMBEDDING_MODEL and EMBEDDING_DIM reflect whichever provider is configured
+    when the module is first imported, so tests must accept both local and
+    bedrock defaults.
+    """
+
     def test_default_model_name(self):
-        assert "nomic" in EMBEDDING_MODEL
+        provider = os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
+        if provider == "bedrock":
+            assert "titan" in EMBEDDING_MODEL or "cohere" in EMBEDDING_MODEL
+        else:
+            assert "nomic" in EMBEDDING_MODEL
 
     def test_default_dimension(self):
-        assert EMBEDDING_DIM == 768
+        provider = os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
+        if provider == "bedrock":
+            assert EMBEDDING_DIM in (1024, 1536)
+        else:
+            assert EMBEDDING_DIM == 768
+
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
+    def test_local_default_dimension(self):
+        from mait_code.tools.memory.embeddings import _get_embedding_dim
+
+        assert _get_embedding_dim() == 768
+
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
+    def test_local_model_name(self):
+        from mait_code.tools.memory.embeddings import _get_embedding_model
+
+        assert "nomic" in _get_embedding_model()
 
     @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"})
     def test_bedrock_default_dimension(self):
@@ -60,6 +88,12 @@ class TestConstants:
 
 
 class TestGracefulDegradation:
+    @staticmethod
+    def _provider_dep_module() -> str:
+        """Return the dependency module name for the active provider."""
+        provider = os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
+        return "boto3" if provider == "bedrock" else "fastembed"
+
     def test_embed_text_returns_none_when_unavailable(self):
         """embed_text should return None if provider fails to load."""
         import mait_code.tools.memory.embeddings as mod
@@ -69,8 +103,9 @@ class TestGracefulDegradation:
         mod._provider = None
         mod._provider_failed = False
 
+        dep = self._provider_dep_module()
         try:
-            with patch.dict("sys.modules", {"fastembed": None}):
+            with patch.dict("sys.modules", {dep: None}):
                 mod._provider_failed = False  # Reset so it tries again
                 result = mod.embed_text("test text")
                 assert result is None
@@ -290,10 +325,15 @@ class TestBedrockProvider:
 
 
 class TestDimensionCheck:
-    """Test check_dimension_match function."""
+    """Test check_dimension_match function.
 
-    def test_empty_table_matching_declaration(self):
-        """Empty vec table with matching declared dimension."""
+    Each test pins the provider explicitly so results are deterministic
+    regardless of environment configuration.
+    """
+
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
+    def test_empty_table_matching_declaration_local(self):
+        """Empty vec table with dimension matching local provider (768)."""
         from mait_code.tools.memory.embeddings import check_dimension_match
 
         conn = MagicMock()
@@ -314,9 +354,36 @@ class TestDimensionCheck:
         matches, table_dim, expected = check_dimension_match(conn)
         assert matches is True
         assert table_dim == 768
+        assert expected == 768
 
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}, clear=False)
+    def test_empty_table_matching_declaration_bedrock(self):
+        """Empty vec table with dimension matching bedrock provider (1024)."""
+        from mait_code.tools.memory.embeddings import check_dimension_match
+
+        conn = MagicMock()
+
+        def _execute(sql, *args):
+            result = MagicMock()
+            if "sqlite_master" in sql:
+                result.fetchone.return_value = (
+                    "CREATE VIRTUAL TABLE memory_vec "
+                    "USING vec0(embedding float[1024] distance_metric=cosine)",
+                )
+            else:
+                result.fetchone.return_value = None
+            return result
+
+        conn.execute = _execute
+
+        matches, table_dim, expected = check_dimension_match(conn)
+        assert matches is True
+        assert table_dim == 1024
+        assert expected == 1024
+
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
     def test_empty_table_mismatched_declaration(self):
-        """Empty vec table with mismatched declared dimension."""
+        """Empty vec table with 1024 dim but local provider expects 768."""
         from mait_code.tools.memory.embeddings import check_dimension_match
 
         conn = MagicMock()
@@ -339,6 +406,7 @@ class TestDimensionCheck:
         assert table_dim == 1024
         assert expected == 768
 
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
     def test_matching_dimension(self):
         from mait_code.tools.memory.embeddings import check_dimension_match
 
@@ -350,17 +418,30 @@ class TestDimensionCheck:
         assert matches is True
         assert table_dim == 768
 
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
     def test_mismatched_dimension(self):
         from mait_code.tools.memory.embeddings import check_dimension_match
 
         conn = MagicMock()
-        # 1024 floats * 4 bytes = 4096 bytes — mismatch with default 768
+        # 1024 floats * 4 bytes = 4096 bytes — mismatch with local 768
         conn.execute.return_value.fetchone.return_value = (b"\x00" * (1024 * 4),)
 
         matches, table_dim, expected = check_dimension_match(conn)
         assert matches is False
         assert table_dim == 1024
         assert expected == 768
+
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}, clear=False)
+    def test_matching_dimension_bedrock(self):
+        from mait_code.tools.memory.embeddings import check_dimension_match
+
+        conn = MagicMock()
+        # 1024 floats * 4 bytes = 4096 bytes — matches bedrock default
+        conn.execute.return_value.fetchone.return_value = (b"\x00" * (1024 * 4),)
+
+        matches, table_dim, expected = check_dimension_match(conn)
+        assert matches is True
+        assert table_dim == 1024
 
     def test_exception_returns_match(self):
         """If the table doesn't exist, assume it matches."""

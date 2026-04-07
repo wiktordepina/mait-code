@@ -21,6 +21,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Tasks | `/tasks` | Show open tasks for the current project | **Implemented** |
 | Decision | `/decision [--status ...] [--tags ...] <title>` | Record a technical decision | **Implemented** |
 | Decisions | `/decisions` | Browse and search decision records | **Implemented** |
+| Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
 
 ## Implemented Skills
 
@@ -260,6 +261,26 @@ Browse and search decision records for the current project.
 1. Preprocesses results via `mc-tool-decisions list` (injected before Claude sees the skill)
 2. Supports show (`mc-tool-decisions show <id>`), search (`mc-tool-decisions search <query>`), amend, supersede, and remove via follow-up commands
 
+### /web-fetch
+
+Fetch web page content directly from the local machine, bypassing the claude.ai proxy. Works behind corporate firewalls and proxies.
+
+**Usage:**
+```
+/web-fetch https://example.com              # Fetch and convert to markdown
+/web-fetch https://api.example.com/data     # Fetch JSON, pretty-printed
+```
+
+**How it works:**
+1. Preprocesses via `mc-tool-web-fetch <url>` (injected before Claude sees the skill)
+2. Returns HTML as markdown, JSON as pretty-printed text, or raw text for other content types
+3. SSRF protection blocks private/loopback IPs by default
+
+**Options** (via Bash):
+- `mc-tool-web-fetch <url> --raw` — skip HTML-to-markdown conversion
+- `mc-tool-web-fetch <url> --timeout 60` — increase timeout (default 30s)
+- `mc-tool-web-fetch <url> --allow-private` — allow private/loopback IPs
+
 ## Skill Architecture
 
 Each skill is a directory in `skills/` containing:
@@ -296,8 +317,10 @@ skills/
 │   └── SKILL.md     # Cross-project PR listing
 ├── decision/
 │   └── SKILL.md     # Record a technical decision
-└── decisions/
-    └── SKILL.md     # Browse/search decision records
+├── decisions/
+│   └── SKILL.md     # Browse/search decision records
+└── web-fetch/
+    └── SKILL.md     # Fetch web page content (bypasses claude.ai proxy)
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.

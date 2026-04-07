@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /decision, /decisions<br/>memory-store"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /decision, /decisions<br/>/web-fetch<br/>memory-store"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -30,6 +30,7 @@ graph TD
             reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
             tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
             decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
+            web_fetch_tool["web_fetch/ <i>(CLI)</i><br/>cli, fetch, convert"]
         end
         shared["llm.py + logging.py + ssl.py <i>(shared)</i>"]
     end
@@ -289,6 +290,21 @@ Every mutation auto-regenerates `docs/decisions.md` at the project's git root wi
 | `dismiss` | id | Dismiss a reminder by ID |
 | `check` | — | Check for overdue reminders (used by session_start hook) |
 
+## Web Fetch CLI Tool (`mc-tool-web-fetch`)
+
+Local web fetcher that bypasses the claude.ai proxy. Works behind corporate firewalls via `truststore` SSL injection.
+
+| Argument/Flag | Default | Description |
+|----------------|---------|-------------|
+| `url` (positional) | — | URL to fetch |
+| `--timeout` | `30` | Request timeout in seconds |
+| `--max-size` | `524288` | Maximum response body in bytes (512KB) |
+| `--max-chars` | `100000` | Maximum output characters (~25K tokens) |
+| `--raw` | `false` | Skip HTML-to-markdown conversion |
+| `--allow-private` | `false` | Allow fetching private/loopback IPs |
+
+Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.
+
 ## Hooks
 
 | Hook | Trigger | Mode | Purpose |
@@ -415,3 +431,5 @@ Adding a new migration:
 | File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `RotatingFileHandler` keeps log size bounded |
 | Watermark table for reflection idempotency | Separate table over `reflected_at` column — atomic batch tracking, no feedback loops, clean separation of concerns |
 | Decisions in SQLite + FTS5 | Consistent with existing tool patterns; full-text search across decision fields; auto-rendered to `docs/decisions.md` for git-friendly visibility |
+| urllib.request over httpx/requests for web fetch | Zero new HTTP dependency tree; `truststore.inject_into_ssl()` patches the stdlib SSL context that `urllib.request` uses; system proxy env vars (`HTTP_PROXY`/`HTTPS_PROXY`) respected automatically |
+| markdownify for HTML-to-markdown | Lightweight (~600 lines), single purpose, only brings `beautifulsoup4`; full readability extraction (trafilatura) is overkill — Claude can ignore boilerplate itself |

@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.14.0 — Web fetch tool and embedding test fixes (2026-04-07)
+
+Local web fetch tool that bypasses the claude.ai proxy, working behind corporate firewalls and proxies. Also fixes embedding tests to work with both local and Bedrock providers.
+
+### Web fetch tool
+- **`mc-tool-web-fetch` CLI tool:** Fetches a URL and returns content as markdown (HTML) or formatted text (JSON, plain text). Uses stdlib `urllib.request` with `truststore` for corporate proxy compatibility.
+- **HTML-to-markdown conversion:** Strips noise tags (`<script>`, `<style>`, `<nav>`, `<footer>`, `<header>`, `<aside>`) then converts via `markdownify`. Collapses excessive blank lines.
+- **Content-type routing:** HTML→markdown, JSON→pretty-printed, text→passthrough, binary→descriptive message.
+- **SSRF protection:** Resolves hostnames and blocks private/loopback/link-local/reserved IPs by default. Overridable with `--allow-private`.
+- **HTTPS upgrade:** Automatically upgrades `http://` to `https://`, adds scheme to bare domains.
+- **Size and length limits:** `--max-size` (default 512KB response body), `--max-chars` (default 100K output characters, ~25K tokens).
+- **`/web-fetch` skill:** Slash command wrapping the CLI tool with preprocessing for convenient invocation.
+- **New dependency:** `markdownify>=0.14` (brings `beautifulsoup4`).
+
+### Embedding test fixes
+- **Provider-aware constant tests:** `test_default_model_name` and `test_default_dimension` now accept both local (nomic/768) and Bedrock (Titan/1024) values depending on environment configuration.
+- **Provider-aware graceful degradation:** `test_embed_text_returns_none_when_unavailable` now blocks the correct dependency (`fastembed` or `boto3`) based on the active provider.
+- **Provider-pinned dimension checks:** All `TestDimensionCheck` tests explicitly pin the provider via `patch.dict` so they pass regardless of environment. Added bedrock-specific matching tests.
+- **New tests:** `test_local_default_dimension`, `test_local_model_name`, `test_empty_table_matching_declaration_bedrock`, `test_matching_dimension_bedrock`.
+
+### Test coverage
+- 35 tests for web fetch (URL validation, SSRF protection, HTTP errors, timeouts, HTML conversion, JSON formatting, charset handling, truncation, binary content).
+- 27 tests for embeddings (up from 23), all passing with both local and Bedrock providers.
+
 ## v0.13.0 — Configurable embedding providers (2026-03-24)
 
 Support for multiple embedding providers — local (fastembed/HuggingFace) and AWS Bedrock — configurable via environment variables. Designed for corporate environments where HuggingFace may be blocked.

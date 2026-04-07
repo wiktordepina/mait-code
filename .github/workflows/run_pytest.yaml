@@ -1,0 +1,22 @@
+name: Run Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - main
+
+concurrency: run-tests-${{ github.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run PyTest
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv run pytest -v --color=yes
