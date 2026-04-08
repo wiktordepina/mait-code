@@ -18,19 +18,16 @@ Reminders:
 
 !`mc-tool-reminders list 2>/dev/null || echo "No reminders."`
 
-Recent commits (current project):
-
-!`git config user.name | xargs -I{} git log --since="24 hours ago" --oneline --all --author="{}" 2>/dev/null || echo "No recent commits."`
-
 Recent memories (last 24h):
 
 !`mc-tool-memory list --since 24h --limit 10 --scope all 2>/dev/null || echo "No recent memories."`
 
 ## Instructions
 
-1. Present a daily overview with these sections:
+1. Fetch recent commits by running `git log --since="24 hours ago" --oneline --all --author="$(git config user.name)"` via Bash.
+2. Present a daily overview with these sections:
    - **Tasks** — open tasks grouped by project
    - **Reminders** — any active reminders
    - **Recent Activity** — summary of recent commits and memory events
    - **Open PRs** — run `gh search prs --author=@me --state=open --limit 20` via Bash to check for open PRs
-2. Keep formatting clean and scannable — use bullet points.
+3. Keep formatting clean and scannable — use bullet points.

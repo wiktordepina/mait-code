@@ -18,10 +18,6 @@ Reminders:
 
 !`mc-tool-reminders list 2>/dev/null || echo "No reminders."`
 
-Recent commits (last 7 days):
-
-!`git config user.name | xargs -I{} git log --since="7 days ago" --oneline --all --author="{}" 2>/dev/null || echo "No recent commits."`
-
 Recent memories (last 7 days):
 
 !`mc-tool-memory list --since 7d --limit 20 2>/dev/null || echo "No recent memories."`
@@ -29,12 +25,13 @@ Recent memories (last 7 days):
 ## Instructions
 
 1. Read the existing STATUS.md if present (for continuity), and README.md or CLAUDE.md for project context.
-2. For project info, run `git remote get-url origin` and `git rev-parse --show-toplevel | xargs basename` via Bash to get the project name and GitHub URL.
-3. Generate a STATUS.md with these sections:
+2. For project info, run `git remote get-url origin` and `basename $(git rev-parse --show-toplevel)` via Bash to get the project name and GitHub URL.
+3. Fetch recent commits by running `git log --since="7 days ago" --oneline --all --author="$(git config user.name)"` via Bash.
+4. Generate a STATUS.md with these sections:
    - **Project** — name, path, github URL (from git info above)
    - **Open Tasks** — current tasks by priority
    - **Recent Work** — summary of last week's activity from git log and memories
    - **Completed Tasks** — recently completed tasks
    - **Reminders** — any active reminders
-4. Write the file to the project root as STATUS.md.
-5. Show a brief summary of what was written.
+5. Write the file to the project root as STATUS.md.
+6. Show a brief summary of what was written.
