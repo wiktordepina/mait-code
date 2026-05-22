@@ -10,7 +10,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mait-code.git
+git clone https://github.com/wiktordepina/mait-code.git
 cd mait-code
 
 # Install Python dependencies and create lockfile
@@ -21,10 +21,15 @@ uv sync
 ```
 
 The install script:
-1. Creates `~/.claude/mait-code-data/` with memory subdirectories
-2. Copies identity templates (won't overwrite existing files)
-3. Symlinks `CLAUDE.md` into `~/.claude/`
-4. Registers hooks in `~/.claude/settings.json`
+1. Creates `~/.claude/mait-code-data/` with memory subdirectories (`observations/`, `reflections/`)
+2. Copies identity templates (`soul_document.md`, `user_context.md`) — never overwrites existing files
+3. Bootstraps `memory/MEMORY.md` with a placeholder if missing
+4. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file first)
+5. Symlinks every `skills/*` directory into `~/.claude/skills/`
+6. Symlinks any `agents/*` files into `~/.claude/agents/` (currently empty)
+7. Prompts for the embedding provider (`local` fastembed, default — or `bedrock` for AWS)
+8. Runs `uv tool install` so the `mc-*` entry points are on `PATH`
+9. Merges hook registrations into `~/.claude/settings.json` (preserving existing keys)
 
 ## Personalisation
 

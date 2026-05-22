@@ -3,25 +3,23 @@
 ## Setup
 
 ```bash
-git clone https://github.com/yourusername/mait-code.git
+git clone https://github.com/wiktordepina/mait-code.git
 cd mait-code
 uv sync
 ```
 
-## Running Tests
+## Tests
 
-```bash
-uv run pytest                  # All tests
-uv run pytest tests/ -x        # Stop on first failure
-uv run pytest -k "test_name"   # Run specific test
-uv run pytest -v                # Verbose output
-```
+There is no test suite yet. `pytest>=8.0` is listed under `[dependency-groups].dev` in
+`pyproject.toml` ready for one, and the "Writing Tests for Memory Components" section
+below documents the intended fixtures and patterns — but `tests/` doesn't exist on
+disk. Bootstrapping it (or removing the unused dep + docs) is tracked as a follow-up.
 
 ## Linting and Formatting
 
 ```bash
-uv run ruff check src/ tests/  # Lint
-uv run ruff format src/ tests/ # Format
+uv run ruff check src/         # Lint
+uv run ruff format src/        # Format
 ```
 
 ## Project Conventions
@@ -112,7 +110,7 @@ This injects the OS trust store into Python's `ssl` module via the `truststore` 
 3. Choose the appropriate memory class:
    - `episodic` — Short-lived, 3-day half-life (events, tasks)
    - `semantic` — Long-lived, 90-day half-life (facts, preferences, insights)
-4. Add tests in `tests/tools/memory/test_writer.py`
+4. Add tests once `tests/` exists (see the Tests section above)
 
 ## Writing Tests for Memory Components
 
@@ -229,6 +227,8 @@ def mem_db(tmp_path):
 5. Skills can invoke the tool via preprocessing (`!`mc-tool-<name> ...``) or `Bash(mc-tool-<name> *)`
 
 ## Adding a New MCP Server
+
+> There are no MCP servers in mait-code today. This section documents the pattern in case one is added later — `src/mait_code/mcp/` does not yet exist.
 
 Only use MCP when you need a persistent connection or streaming. Prefer CLI tools + skills for simpler cases.
 

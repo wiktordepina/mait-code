@@ -76,7 +76,20 @@ The core table stores every observation with metadata:
 | `entry_type` | `fact`, `preference`, `event`, `insight`, `task`, `relationship` |
 | `importance` | 1-10 scale |
 | `memory_class` | `episodic` (fast decay) or `semantic` (slow decay) |
+| `scope` | `global`, `project`, or `branch` (controls visibility) |
+| `project` | Project identifier (null for global scope) |
+| `branch` | Git branch (set only for branch scope) |
 | `created_at` | Timestamp, refreshed on deduplication |
+
+### Scoping
+
+Memories are scoped so that branch-local context (e.g. "we're spiking foo on this branch") doesn't leak into other projects.
+
+- **global** — visible everywhere (e.g. "user prefers tabs over spaces")
+- **project** — visible across all branches of one project
+- **branch** — visible only on one branch of one project
+
+At write time the default is: `branch` if both project and branch are detected, `project` if only project is detected, otherwise `global`. Override with `--scope`. At query time, the CLI filters to the current context by default; pass `--scope all` to disable filtering, or `--project`/`--branch` to override the auto-detection.
 
 ### Keyword search (FTS5)
 
@@ -268,7 +281,7 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `list --since 24h` | Filter by time period (`24h`, `7d`, `1w`, etc.) |
 | `list --type event` | Filter by type |
 | `delete <id>` | Delete an entry (embedding cleaned up by trigger) |
-| `stats` | Entry counts, class distribution, embedding coverage, and provider info |
+| `stats` | Entry counts, class/scope/project distribution, embedding coverage, provider info |
 | `entities [query]` | Search or list knowledge graph entities |
 | `relationships <entity>` | Show relationships for an entity |
 | `reindex` | Recompute all vector embeddings from scratch |
@@ -279,6 +292,15 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `reflect --min-new 0` | Force reflection (skip novelty gate) |
 | `reflect --batch-size 20` | Limit entries per batch (default 50) |
 | `reflect --drain` | Loop until all unreflected entries are processed |
+
+**Scope flags** apply to `search`, `store`, `list`, and `reflect`:
+
+| Flag | Effect |
+|------|--------|
+| `--project <name>` | Override auto-detected project |
+| `--branch <name>` | Override auto-detected branch |
+| `--scope global\|project\|branch` | Filter (or set, on `store`) to a specific scope |
+| `--scope all` | Query-time: disable scope filtering entirely |
 
 ### Tasks tool (`mc-tool-tasks`)
 
@@ -300,6 +322,11 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `/reflect` | Synthesise observations into insights, propose MEMORY.md updates |
 | `/remind <when> <what>` | Set a reminder |
 | `/reminders` | Show active and overdue reminders |
+| `/task <title>` | Add a task for the current project |
+| `/tasks` | Show open tasks for the current project |
+| `/decision <title>` | Record a technical decision |
+| `/decisions` | Browse and search decision records |
+| `/web-fetch <url>` | Fetch a web page as markdown (bypasses claude.ai proxy) |
 | `/commit` | Detect changes, generate conventional commit, confirm and commit |
 | `/standup` | Standup summary from git, tasks, memory, and PRs |
 | `/work-history [period]` | Project work history (today/yesterday/week) |

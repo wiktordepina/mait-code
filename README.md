@@ -4,19 +4,19 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 
 ## Key Features
 
-- **Persistent Memory** — Three-tier memory system (raw observations, curated facts, hybrid FTS5 + vector search) that accumulates knowledge across sessions
+- **Persistent Memory** — Three-tier memory system (raw observations, curated facts, hybrid FTS5 + vector search) with global/project/branch scoping
 - **Knowledge Graph** — Entity and relationship tracking extracted automatically from conversations
 - **Companion Identity** — Customisable soul document and user context that shape how the companion communicates and makes decisions
-- **Reactive Hooks** — Session start, pre-compact, and session end hooks that automatically extract and inject knowledge
+- **Reactive Hooks** — `SessionStart` injects companion context, `PreCompact` and `SessionEnd` extract observations asynchronously
 - **Observation Pipeline** — Automatic extraction of facts, preferences, decisions, entities, and relationships via Claude Haiku
-- **CLI Tools** — Memory search/store and reminder management via sync CLI tools
-- **Skills** — Slash commands for memory recall, reminders, and more (`/recall`, `/remember`, `/remind`, `/reminders`)
+- **CLI Tools** — Memory, reminders, tasks, decision records, and web fetch (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-tasks`, `mc-tool-decisions`, `mc-tool-web-fetch`)
+- **Skills** — Slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), tasks (`/task`, `/tasks`), decisions (`/decision`, `/decisions`), web fetch (`/web-fetch`), and workflow (`/commit`, `/standup`, `/today`, `/work-history`, `/status`, `/prs`)
 
 ## Quick Start
 
 ```bash
 # Clone and install dependencies
-git clone https://github.com/yourusername/mait-code.git
+git clone https://github.com/wiktordepina/mait-code.git
 cd mait-code
 uv sync
 
@@ -42,13 +42,13 @@ claude
 ```
 mait-code/
 ├── src/mait_code/        # Python package
-│   ├── hooks/            #   Session hooks (session_start, observe, auto_format)
-│   └── tools/            #   CLI tools (memory, reminders)
+│   ├── hooks/            #   Hooks: session_start, observe, auto_format
+│   └── tools/            #   CLI tools: memory, reminders, tasks, decisions, web_fetch
 ├── config/               # CLAUDE.md and settings.json templates
 ├── templates/            # Identity templates
 ├── scripts/              # Install/uninstall scripts
 ├── skills/               # Skill definitions
-├── agents/               # Agent definitions
+├── agents/               # Agent definitions (currently empty)
 └── docs/                 # Documentation
 ```
 

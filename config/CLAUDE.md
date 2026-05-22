@@ -26,5 +26,7 @@
 Skills are auto-discovered from `~/.claude/skills/`. Use `/help` to see the full list. Key ones to know about:
 
 - **Memory:** `/recall`, `/remember`, `/reflect`, `memory-store` (auto-invoked)
-- **Workflow:** `/commit`, `/standup`, `/today`, `/status`, `/work-history`, `/prs`, `/projects`
+- **Workflow:** `/commit`, `/standup`, `/today`, `/status`, `/work-history`, `/prs`
 - **Tasks & reminders:** `/task`, `/tasks`, `/remind`, `/reminders`
+- **Decisions:** `/decision`, `/decisions`
+- **Web:** `/web-fetch`

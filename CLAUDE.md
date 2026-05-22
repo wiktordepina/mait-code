@@ -14,32 +14,56 @@ Companion framework extending Claude Code with persistent memory, identity, and 
 - **No background services** — everything is reactive (hooks, skill invocations, CLI tools)
 - **Prefer CLI tools + skills over MCP** — simpler, no process overhead, supports preprocessing
 
-## Testing
+## Working notes — `.wip/`
+
+Temporary and interim documents (plans, research notes, reports, scratch work) live in `.wip/` at the repo root, organised by kind into subfolders:
+
+- `.wip/plan/` — implementation plans
+- `.wip/research/` — research notes, investigations
+- `.wip/report/` — audits, retrospectives, status reports
+- add new subfolders as the kind of work calls for them
+
+Rules:
+
+- **`.wip/` is always gitignored.** These are local-only working documents, never committed.
+- **Never mention `.wip/` in commits, PR descriptions, or user-facing documentation** (READMEs, `docs/`, `CHANGELOG.md`, code comments). It is invisible to the outside world — outputs should read as if it didn't exist.
+- **Format**: documents in `.wip/` are rich HTML, built from `.wip/template.html` as the starting point. Copy the template, replace the body, keep the inline CSS.
+- **Naming**: `YYYY-MM-DD-<short-slug>.html` (matches the existing pattern under `.wip/report/`).
+- **Don't create planning/analysis `.md` files at the repo root or under `docs/`** — if you're about to, stop: it belongs in `.wip/`.
+
+The point is a strict separation between polished, shipped artefacts (committed, public-facing) and scratchpad working notes (rich, exploratory, local).
+
+## Lint & format
 
 ```bash
-uv run pytest                  # Run all tests
-uv run pytest tests/ -x        # Stop on first failure
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
 ```
+
+> No test suite yet (`pytest` is listed as a dev dep but `tests/` doesn't exist).
+> Tracked as a follow-up — see the audit's P3 items.
 
 ## Directory Structure
 
 ```
 src/mait_code/
+├── context.py       # Project/branch detection (get_context, get_project)
 ├── llm.py           # Shared LLM invocation (call_claude)
 ├── logging.py       # Shared logging (setup_logging, @log_invocation)
 ├── ssl.py           # OS trust store injection (setup_ssl, for corporate proxies)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
-├── mcp/             # MCP servers
-└── tools/           # CLI tools
+└── tools/           # CLI tools (memory, reminders, tasks, decisions, web_fetch)
 config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh
 skills/              # Skill definitions (loaded by Claude Code)
-agents/              # Agent definitions
+agents/              # Agent definitions (currently empty)
 docs/                # Documentation
 ```
+
+> No MCP servers currently. The "Adding New Components" section keeps the pattern
+> documented in case one is added later — at that point a `src/mait_code/mcp/` package
+> would join the layout above.
 
 ## Adding New Components
 
