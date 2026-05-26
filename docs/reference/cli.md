@@ -33,6 +33,10 @@
 
 ::: mait_code.cli.InstallSummary
 
+## Update flow
+
+::: mait_code.cli.UpdateSummary
+
 ## Symlinks
 
 ::: mait_code.cli.SymlinkResult

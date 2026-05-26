@@ -35,6 +35,10 @@ from mait_code.cli._install import (
     InstallSummary,
     install as _install_impl,
 )
+from mait_code.cli._update import (
+    UpdateSummary,
+    update as _update_impl,
+)
 from mait_code.cli._paths import (
     claude_dir,
     data_dir,
@@ -81,6 +85,8 @@ __all__ = [
     # Install flow
     "EMBEDDING_PROVIDERS",
     "InstallSummary",
+    # Update flow
+    "UpdateSummary",
     # Symlinks
     "SymlinkResult",
     "remove_agent_symlinks",
@@ -201,6 +207,64 @@ def _render_install_summary(summary: InstallSummary) -> None:
     typer.echo(f"  Settings merged into {summary.settings_path}")
     typer.echo("")
     typer.echo("Next: personalise the soul_document and user_context.")
+
+
+@app.command(name="update")
+def update_cmd(
+    no_pull: Annotated[
+        bool,
+        typer.Option(
+            "--no-pull",
+            help="Skip `git pull` (useful if you pull manually).",
+        ),
+    ] = False,
+    ref: Annotated[
+        str | None,
+        typer.Option(
+            "--ref",
+            help="Checkout this ref (tag/branch/sha) before reinstalling.",
+        ),
+    ] = None,
+    claude_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--claude-dir",
+            help="Override the Claude Code config directory.",
+        ),
+    ] = None,
+) -> None:
+    """Pull latest source, reinstall via uv tool, refresh symlinks and settings."""
+    try:
+        summary = _update_impl(
+            no_pull=no_pull,
+            ref=ref,
+            claude_dir=claude_dir_override,
+        )
+    except RecordError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+    except ValueError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+
+    _render_update_summary(summary)
+
+
+def _render_update_summary(summary: UpdateSummary) -> None:
+    record = summary.record
+    pieces = []
+    if summary.ref:
+        pieces.append(f"checked out {summary.ref}")
+    if summary.pulled:
+        pieces.append("pulled latest")
+    pieces.append(f"reinstalled {record.version}")
+    typer.echo(f"Updated mait-code: {', '.join(pieces)}.")
+    typer.echo(f"  Source: {record.source_dir}")
+    typer.echo(
+        f"  Symlinks refreshed: {len(summary.skills.created) + len(summary.skills.updated)} new, "
+        f"{len(summary.skills.already_linked)} unchanged"
+    )
+    typer.echo(f"  Settings: {summary.settings_path}")
 
 
 def main() -> None:
