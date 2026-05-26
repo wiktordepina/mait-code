@@ -8,19 +8,54 @@
 
 ## Installation
 
+The fastest path is the one-liner:
+
 ```bash
-# Clone the repository
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash
+```
+
+This installs `uv` if missing, clones the latest release tag to `~/.local/share/mait-code/source/`, runs `uv tool install`, then `exec`s `mait-code install` to set up symlinks, settings, and data directories. Idempotent — re-run any time to upgrade.
+
+### Flags
+
+Pass flags via `bash -s --`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh \
+    | bash -s -- --embedding-provider bedrock --ref v0.15.0
+```
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `--embedding-provider local\|bedrock` | `local` | Forwarded to `mait-code install`. |
+| `--ref <tag\|branch\|sha>` | latest `v*` tag | Checkout this ref after cloning. `main` for bleeding edge. |
+| `--dir <path>` | `~/.local/share/mait-code` | Install root. Source goes in `<dir>/source`. |
+| `--no-uv` | off | Don't try to install `uv` (fail if not on PATH). |
+| `--help` | — | Print usage. |
+
+### Inspect before running
+
+`curl … \| bash` requires trusting the URL. To audit the script first:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh \
+    -o /tmp/mait-code-bootstrap.sh
+less /tmp/mait-code-bootstrap.sh
+bash /tmp/mait-code-bootstrap.sh
+```
+
+### From a local clone
+
+If you're developing mait-code itself or want the source in a specific location:
+
+```bash
 git clone https://github.com/wiktordepina/mait-code.git
 cd mait-code
-
-# Install Python dependencies and create lockfile
 uv sync
-
-# Deploy companion configuration to ~/.claude/
 ./scripts/install.sh
 ```
 
-`./scripts/install.sh` is a thin shim. It prompts for an embedding provider (`local`/`bedrock`), runs `uv tool install` so the `mait-code` and `mc-*` binaries land on `PATH`, then hands off to `mait-code install` for the rest. For non-interactive installs (e.g. CI, automation), invoke the CLI directly:
+`./scripts/install.sh` is a thin shim around `mait-code install`. For non-interactive installs (e.g. CI, automation), invoke the CLI directly:
 
 ```bash
 uv tool install . --force --reinstall --python 3.13
