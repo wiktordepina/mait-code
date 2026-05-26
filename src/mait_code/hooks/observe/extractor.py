@@ -167,4 +167,6 @@ def extract_observations(
     """
     prompt = build_extraction_prompt(conversation_text, project=project, branch=branch)
     raw = call_haiku(prompt)
+    if raw is None:
+        return None
     return parse_extraction(raw)

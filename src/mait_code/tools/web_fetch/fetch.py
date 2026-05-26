@@ -107,6 +107,9 @@ def fetch_url(
     url = _validate_url(url)
     parsed = urlparse(url)
 
+    if parsed.hostname is None:
+        raise FetchError(f"URL has no hostname: {url}")
+
     if not allow_private:
         _check_ssrf(parsed.hostname)
 

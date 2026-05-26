@@ -70,7 +70,7 @@ def recency_score(
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=UTC)
 
-    half_life = HALF_LIFE_DAYS.get(memory_class, DEFAULT_HALF_LIFE)
+    half_life = HALF_LIFE_DAYS.get(memory_class or "", DEFAULT_HALF_LIFE)
     age_days = max(0, (now - created_at).total_seconds() / 86400)
     return math.exp(-math.log(2) * age_days / half_life)
 

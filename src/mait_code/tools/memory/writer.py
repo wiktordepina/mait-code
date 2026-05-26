@@ -248,6 +248,7 @@ def store_memory(
     conn.commit()
 
     entry_id = cursor.lastrowid
+    assert entry_id is not None  # lastrowid is populated after a successful INSERT
     _store_embedding(conn, entry_id, content)
 
     return {
