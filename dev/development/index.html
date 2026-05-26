@@ -1701,10 +1701,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#linting-and-formatting" class="md-nav__link">
+  <a href="#linting-formatting-typechecking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linting and Formatting
+        Linting, formatting, typechecking
       
     </span>
   </a>
@@ -1981,10 +1981,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#linting-and-formatting" class="md-nav__link">
+  <a href="#linting-formatting-typechecking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linting and Formatting
+        Linting, formatting, typechecking
       
     </span>
   </a>
@@ -2211,10 +2211,15 @@ Memory Components" section below for the established patterns.</p>
 <p><code>tests/test_imports.py</code> is the smoke test that asserts every reference-surface
 module declares a non-empty <code>__all__</code>. CI's <code>ci.yml</code> runs the full suite on
 every PR and push to <code>main</code>.</p>
-<h2 id="linting-and-formatting">Linting and Formatting<a class="headerlink" href="#linting-and-formatting" title="Permanent link">&para;</a></h2>
+<h2 id="linting-formatting-typechecking">Linting, formatting, typechecking<a class="headerlink" href="#linting-formatting-typechecking" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w">         </span><span class="c1"># Lint</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src/<span class="w">        </span><span class="c1"># Format</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pyright<span class="w">                 </span><span class="c1"># Typecheck (basic mode, src/ only)</span>
 </span></code></pre></div>
+<p>Pyright reads the optional <code>boto3</code> import in <code>tools/memory/embeddings.py</code>,
+so the bedrock extra must be installed for typechecking: run
+<code>uv sync --extra bedrock</code> once before invoking <code>uv run pyright</code>.
+The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 <h2 id="project-conventions">Project Conventions<a class="headerlink" href="#project-conventions" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Use <code>uv run</code> everywhere</strong> — Never activate venvs manually</li>
