@@ -1,0 +1,3383 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Companion framework extending Claude Code with persistent memory, identity, and skills.">
+      
+      
+        <meta name="author" content="Wiktor de Pina">
+      
+      
+        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/0.15.0/architecture/">
+      
+      
+        <link rel="prev" href="../memory/">
+      
+      
+        <link rel="next" href="../reference/skills/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Overview - mait-code</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="mait-code" class="md-header__button md-logo" aria-label="mait-code" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mait-code
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Overview
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wiktordepina/mait-code" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wiktordepina/mait-code
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../philosophy/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../reference/skills/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../decisions/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Decisions
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../development/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="mait-code" class="md-nav__button md-logo" aria-label="mait-code" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    mait-code
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wiktordepina/mait-code" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wiktordepina/mait-code
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-machine sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../philosophy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Philosophy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How memory works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#composite-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composite Scoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deduplication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deduplication
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-observations-raw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1: Observations (raw)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-reflections-synthesised" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2: Reflections (synthesised)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-memorymd-curated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3: MEMORY.md (curated)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-cli-tool-mc-tool-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory CLI Tool (mc-tool-memory)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tasks Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks-cli-tool-mc-tool-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tasks CLI Tool (mc-tool-tasks)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-cli-tool-mc-tool-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions CLI Tool (mc-tool-decisions)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reminders-cli-tool-mc-tool-reminders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reminders CLI Tool (mc-tool-reminders)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#web-fetch-cli-tool-mc-tool-web-fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web Fetch CLI Tool (mc-tool-web-fetch)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#observation-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observation Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity System
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration System
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Directory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-technical-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Technical Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/mait-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/llm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/ssl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3_7" id="__nav_5_3_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/reminders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reminders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/web_fetch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web fetch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/hooks/observe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/hooks/session_start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/hooks/auto_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auto-format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decision records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing to docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#composite-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composite Scoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deduplication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deduplication
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-observations-raw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1: Observations (raw)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-reflections-synthesised" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2: Reflections (synthesised)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-memorymd-curated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3: MEMORY.md (curated)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-cli-tool-mc-tool-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory CLI Tool (mc-tool-memory)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tasks Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks-cli-tool-mc-tool-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tasks CLI Tool (mc-tool-tasks)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions Database
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-cli-tool-mc-tool-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions CLI Tool (mc-tool-decisions)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reminders-cli-tool-mc-tool-reminders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reminders CLI Tool (mc-tool-reminders)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#web-fetch-cli-tool-mc-tool-web-fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web Fetch CLI Tool (mc-tool-web-fetch)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#observation-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observation Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity System
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration System
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Directory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-technical-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Technical Decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/architecture.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
+<h2 id="design-principles">Design Principles<a class="headerlink" href="#design-principles" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>No background services</strong> — Everything runs reactively in response to Claude Code events (hooks, CLI invocations). No daemons, no cron jobs.</li>
+<li><strong>Standalone project</strong> — Self-contained Python package managed by <code>uv</code>. No system-wide installation required.</li>
+<li><strong>Memory-first</strong> — The memory system is the core differentiator. All other features feed into or read from memory.</li>
+<li><strong>Companion identity</strong> — Not a generic assistant. The soul document and user context create a consistent personality.</li>
+<li><strong>uv-managed</strong> — All Python execution goes through <code>uv run --project</code>. No manual venv activation.</li>
+<li><strong>CLI tools + skills over MCP</strong> — Simpler, no process overhead, preprocessing injects results before Claude sees the prompt.</li>
+</ol>
+<h2 id="system-architecture">System Architecture<a class="headerlink" href="#system-architecture" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>graph TD
+    subgraph claude_code ["Claude Code"]
+        CLAUDE_MD["CLAUDE.md&lt;br/&gt;&lt;i&gt;identity + rules&lt;/i&gt;&lt;br/&gt;@soul_doc, @user_ctx, @MEMORY"]
+        HOOKS["Hooks&lt;br/&gt;SessionStart, PreCompact, SessionEnd"]
+        SKILLS["Skills&lt;br/&gt;/recall, /remember, /reflect&lt;br/&gt;/remind, /reminders&lt;br/&gt;/task, /tasks, /decision, /decisions&lt;br/&gt;/web-fetch&lt;br/&gt;memory-store"]
+    end
+
+    subgraph mait_code ["mait-code (Python)"]
+        subgraph hooks_pkg ["hooks/"]
+            session_start["session_start/ &lt;i&gt;(SessionStart)&lt;/i&gt;"]
+            observe["observe/ &lt;i&gt;(PreCompact, SessionEnd)&lt;/i&gt;&lt;br/&gt;cli, extractor, transcript&lt;br/&gt;cursor, storage, scope"]
+            auto_format["auto_format/ &lt;i&gt;(placeholder, not registered)&lt;/i&gt;"]
+        end
+        subgraph tools_pkg ["tools/"]
+            memory_tool["memory/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, writer&lt;br/&gt;search, scoring, entities&lt;br/&gt;embeddings, reflect"]
+            reminders_tool["reminders/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate"]
+            tasks_tool["tasks/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate"]
+            decisions_tool["decisions/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, render"]
+            web_fetch_tool["web_fetch/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, fetch, convert"]
+        end
+        shared["llm.py + logging.py + ssl.py &lt;i&gt;(shared)&lt;/i&gt;"]
+    end
+
+    subgraph data_dir ["~/.claude/mait-code-data/"]
+        identity["soul_document.md&lt;br/&gt;user_context.md"]
+        memory_store["memory/&lt;br/&gt;MEMORY.md &lt;i&gt;(curated)&lt;/i&gt;&lt;br/&gt;memory.db &lt;i&gt;(SQLite)&lt;/i&gt;&lt;br/&gt;observations/ &lt;i&gt;(raw JSONL)&lt;/i&gt;&lt;br/&gt;reflections/ &lt;i&gt;(synthesised)&lt;/i&gt;"]
+        other_dbs["reminders.db&lt;br/&gt;tasks.db&lt;br/&gt;decisions.db"]
+    end
+
+    HOOKS --&gt; mait_code
+    SKILLS --&gt; mait_code
+    mait_code --&gt; data_dir</code></pre>
+<h2 id="memory-architecture">Memory Architecture<a class="headerlink" href="#memory-architecture" title="Permanent link">&para;</a></h2>
+<h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h3>
+<p>The memory system combines three tiers of storage with a SQLite database for structured search. Raw observations flow in from hooks, get indexed in the database, and the highest-confidence facts are promoted to MEMORY.md for always-on context.</p>
+<h3 id="database-schema">Database Schema<a class="headerlink" href="#database-schema" title="Permanent link">&para;</a></h3>
+<p>The memory database (<code>memory.db</code>) uses SQLite with two extensions:</p>
+<p><strong>Core table: <code>memory_entries</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER PK</td>
+<td>Auto-incrementing identifier</td>
+</tr>
+<tr>
+<td><code>content</code></td>
+<td>TEXT</td>
+<td>The memory content</td>
+</tr>
+<tr>
+<td><code>entry_type</code></td>
+<td>TEXT</td>
+<td>fact, preference, event, insight, task, relationship</td>
+</tr>
+<tr>
+<td><code>importance</code></td>
+<td>INTEGER</td>
+<td>1-10 scale (default 5)</td>
+</tr>
+<tr>
+<td><code>memory_class</code></td>
+<td>TEXT</td>
+<td>episodic or semantic (controls decay rate)</td>
+</tr>
+<tr>
+<td><code>scope</code></td>
+<td>TEXT</td>
+<td><code>global</code>, <code>project</code>, or <code>branch</code> (default <code>global</code>)</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td>TEXT</td>
+<td>Project identifier (null for global scope)</td>
+</tr>
+<tr>
+<td><code>branch</code></td>
+<td>TEXT</td>
+<td>Git branch (set only for branch scope)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>Timestamp of creation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scope semantics:</strong></p>
+<ul>
+<li><strong>global</strong> — visible everywhere, <code>project</code> and <code>branch</code> are null</li>
+<li><strong>project</strong> — visible across all branches of one project, <code>project</code> set, <code>branch</code> null</li>
+<li><strong>branch</strong> — visible only on one branch of one project, both set</li>
+<li>Default at write time: <code>branch</code> if both project+branch detected, else <code>project</code> if project detected, else <code>global</code>. Override with <code>--scope</code>.</li>
+<li>Query-time default: filter by current context; <code>--scope all</code> disables filtering.</li>
+</ul>
+<p><strong>Entry type to memory class mapping:</strong></p>
+<ul>
+<li><strong>Episodic</strong> (fast decay, 3-day half-life): <code>event</code>, <code>task</code></li>
+<li><strong>Semantic</strong> (slow decay, 90-day half-life): <code>fact</code>, <code>preference</code>, <code>insight</code>, <code>relationship</code></li>
+</ul>
+<p><strong>FTS5 virtual table: <code>memory_entries_fts</code></strong>
+- Full-text search with BM25 ranking
+- Kept in sync via triggers on insert/update/delete</p>
+<p><strong>Vec0 virtual table: <code>memory_vec</code></strong>
+- Cosine distance vectors via <code>sqlite-vec</code> (768d for local/nomic, 1024d for Bedrock/Titan)
+- Populated by the configured embedding provider (local fastembed or AWS Bedrock)
+- Embeddings are computed and stored automatically when new memory entries are created
+- Delete trigger (<code>memory_entries_vec_ad</code>) keeps vec table in sync when entries are removed
+- Dimension is a deployment-time decision; <code>mc-tool-memory reindex</code> handles migration</p>
+<p><strong>Entity table: <code>memory_entities</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER PK</td>
+<td>Auto-incrementing identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT UNIQUE NOCASE</td>
+<td>Entity name (case-insensitive)</td>
+</tr>
+<tr>
+<td><code>entity_type</code></td>
+<td>TEXT</td>
+<td>person, project, tool, service, concept, org, unknown</td>
+</tr>
+<tr>
+<td><code>first_seen</code></td>
+<td>DATETIME</td>
+<td>When the entity was first observed</td>
+</tr>
+<tr>
+<td><code>last_seen</code></td>
+<td>DATETIME</td>
+<td>When the entity was last mentioned</td>
+</tr>
+<tr>
+<td><code>mention_count</code></td>
+<td>INTEGER</td>
+<td>How many times the entity has been seen</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Relationship table: <code>memory_relationships</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER PK</td>
+<td>Auto-incrementing identifier</td>
+</tr>
+<tr>
+<td><code>source_entity_id</code></td>
+<td>INTEGER FK</td>
+<td>References memory_entities</td>
+</tr>
+<tr>
+<td><code>target_entity_id</code></td>
+<td>INTEGER FK</td>
+<td>References memory_entities</td>
+</tr>
+<tr>
+<td><code>relationship_type</code></td>
+<td>TEXT</td>
+<td>uses, owns, contributes_to, depends_on, manages, related_to</td>
+</tr>
+<tr>
+<td><code>context</code></td>
+<td>TEXT</td>
+<td>Description of the relationship</td>
+</tr>
+<tr>
+<td><code>first_seen</code></td>
+<td>DATETIME</td>
+<td>When the relationship was first observed</td>
+</tr>
+<tr>
+<td><code>last_seen</code></td>
+<td>DATETIME</td>
+<td>When the relationship was last seen</td>
+</tr>
+</tbody>
+</table>
+<p>Unique constraint on <code>(source_entity_id, target_entity_id, relationship_type)</code>.</p>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>idx_memory_entries_created_at</code> — temporal queries</li>
+<li><code>idx_memory_entries_type</code> — type filtering</li>
+<li><code>idx_memory_entries_importance</code> — importance ranking</li>
+<li><code>idx_memory_entries_class</code> — class filtering</li>
+<li><code>idx_memory_entries_scope</code> — scope filtering</li>
+<li><code>idx_memory_entries_project</code> — project filtering</li>
+<li><code>idx_memory_entries_project_scope</code> — combined project + scope lookups</li>
+<li><code>idx_entities_name</code> — entity name lookup</li>
+<li><code>idx_entities_type</code> — entity type filtering</li>
+<li><code>idx_rel_unique</code> — relationship deduplication</li>
+<li><code>idx_rel_source</code>, <code>idx_rel_target</code> — relationship traversal</li>
+</ul>
+<p><strong>Reflection state: <code>reflection_watermark</code></strong></p>
+<p>Tracks the last <code>memory_entries.id</code> reflected on per project, so <code>/reflect</code> is idempotent across runs. Primary key on <code>project</code> (empty string for global). Columns: <code>project</code>, <code>last_reflected_id</code>, <code>last_reflected_at</code>.</p>
+<h3 id="composite-scoring">Composite Scoring<a class="headerlink" href="#composite-scoring" title="Permanent link">&para;</a></h3>
+<p>Memory retrieval results are ranked by a composite score:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+</span></code></pre></div>
+<p><strong>Recency</strong> uses exponential decay:</p>
+<ul>
+<li><code>recency = exp(-ln(2) × age_days / half_life)</code></li>
+<li>Episodic half-life: 3 days (events decay fast)</li>
+<li>Semantic half-life: 90 days (facts persist)</li>
+<li>Default half-life: 7 days (unknown class)</li>
+</ul>
+<p><strong>Importance</strong> is normalized from 1-10 to 0.0-1.0:</p>
+<ul>
+<li><code>importance_norm = (importance - 1) / 9</code></li>
+</ul>
+<p><strong>Relevance</strong> is provided by the search method:</p>
+<ul>
+<li><strong>Hybrid mode</strong> (default): combines FTS5 BM25 with vector cosine similarity</li>
+<li><strong>FTS mode</strong>: keyword-only BM25 ranking</li>
+<li><strong>Vector mode</strong>: semantic similarity only via the configured embedding provider</li>
+</ul>
+<h3 id="deduplication">Deduplication<a class="headerlink" href="#deduplication" title="Permanent link">&para;</a></h3>
+<p>Before storing a new memory, the writer checks for near-duplicates:</p>
+<ol>
+<li>Extract first 8 significant words (length &gt; 2) from new content</li>
+<li>Query FTS5 for candidate matches (up to 20)</li>
+<li>Compare each candidate using <code>SequenceMatcher</code></li>
+<li>If similarity &gt;= 0.90: update existing entry's timestamp and keep max importance</li>
+<li>If no match: insert as new entry</li>
+</ol>
+<h3 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>flowchart TD
+    A["store_memory()"] --&gt; B["find_duplicate()"]
+    B --&gt; C["FTS5 candidates"]
+    C --&gt; D["SequenceMatcher&lt;br/&gt;similarity &gt;= 0.90?"]
+    D --&gt;|Yes| E["UPDATE timestamp"]
+    D --&gt;|No| F["INSERT new entry"]
+    F --&gt; G["embed_text()&lt;br/&gt;&lt;i&gt;configured provider&lt;/i&gt;"]
+    G --&gt; H["INSERT into memory_vec"]</code></pre>
+<pre class="mermaid"><code>flowchart TD
+    A["search_memory()"] --&gt; B["hybrid_search()"]
+    B --&gt; C["FTS5 BM25&lt;br/&gt;&lt;i&gt;keywords&lt;/i&gt;"]
+    B --&gt; D["vector_search&lt;br/&gt;&lt;i&gt;cosine similarity&lt;/i&gt;"]
+    C --&gt; E["Merge by entry ID&lt;br/&gt;&lt;i&gt;both: use vector similarity&lt;/i&gt;&lt;br/&gt;&lt;i&gt;one only: default 0.3&lt;/i&gt;"]
+    D --&gt; E
+    E --&gt; F["composite_score()&lt;br/&gt;&lt;i&gt;recency + importance + relevance&lt;/i&gt;"]
+    F --&gt; G["Sort by score, return top N"]</code></pre>
+<h3 id="tier-1-observations-raw">Tier 1: Observations (raw)<a class="headerlink" href="#tier-1-observations-raw" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Extracted automatically by the <code>observe</code> hook at PreCompact and SessionEnd</li>
+<li>Stored as JSONL files in <code>memory/observations/YYYY-MM-DD.jsonl</code></li>
+<li>Contains facts, decisions, code patterns, user preferences, entities, and relationships</li>
+<li>Indexed into <code>memory.db</code> for structured search</li>
+<li>Entities and relationships stored in the knowledge graph tables</li>
+</ul>
+<h3 id="tier-2-reflections-synthesised">Tier 2: Reflections (synthesised)<a class="headerlink" href="#tier-2-reflections-synthesised" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Generated by <code>/reflect</code> skill or <code>mc-tool-memory reflect</code> CLI</li>
+<li>Reads unreflected memory entries (tracked by per-project watermark)</li>
+<li>Calls Claude Haiku to identify patterns, themes, recurring issues</li>
+<li>Stores insights as <code>type=insight</code> (importance=6) in memory.db</li>
+<li>Proposes MEMORY.md additions for user approval</li>
+<li>Idempotent: watermark advances after each reflection; same entries never processed twice</li>
+<li>Batched: configurable batch size (default 50), <code>--drain</code> for full backlog processing</li>
+</ul>
+<h3 id="tier-3-memorymd-curated">Tier 3: MEMORY.md (curated)<a class="headerlink" href="#tier-3-memorymd-curated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The highest-confidence facts, loaded into every session via CLAUDE.md</li>
+<li>Manually edited or updated by the reflection system</li>
+<li>Kept under ~150 lines for context budget</li>
+</ul>
+<h2 id="memory-cli-tool-mc-tool-memory">Memory CLI Tool (<code>mc-tool-memory</code>)<a class="headerlink" href="#memory-cli-tool-mc-tool-memory" title="Permanent link">&para;</a></h2>
+<p>Sync CLI tool invoked via Bash. Skills use preprocessing (<code>!</code>command``) or direct Bash calls.</p>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Args</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>search</code></td>
+<td>query, --limit?, --type?, --mode?, --project?, --branch?, --scope?</td>
+<td>Hybrid (FTS5 + vector) search with composite score re-ranking</td>
+</tr>
+<tr>
+<td><code>store</code></td>
+<td>content, --type?, --importance?, --project?, --branch?, --scope?</td>
+<td>Store with deduplication, auto-computes embedding</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td>--limit?, --type?, --since?, --project?, --branch?, --scope?</td>
+<td>List recent entries, optionally filtered by type and time period (e.g. <code>24h</code>, <code>7d</code>, <code>1w</code>)</td>
+</tr>
+<tr>
+<td><code>delete</code></td>
+<td>id</td>
+<td>Delete by ID (vec cleanup via trigger)</td>
+</tr>
+<tr>
+<td><code>stats</code></td>
+<td>—</td>
+<td>Counts by type, class, scope, project, embedding coverage, and provider info</td>
+</tr>
+<tr>
+<td><code>entities</code></td>
+<td>query?, --limit?</td>
+<td>Search or list knowledge graph entities</td>
+</tr>
+<tr>
+<td><code>relationships</code></td>
+<td>entity_name</td>
+<td>Show relationships for an entity</td>
+</tr>
+<tr>
+<td><code>reindex</code></td>
+<td>—</td>
+<td>Recompute vector embeddings for all entries</td>
+</tr>
+<tr>
+<td><code>restore</code></td>
+<td>--dry-run?</td>
+<td>Restore memory database from observation JSONL log files, then reindex</td>
+</tr>
+<tr>
+<td><code>reflect</code></td>
+<td>--days?, --min-new?, --batch-size?, --drain?, --project?, --branch?, --scope?</td>
+<td>Synthesise observations into insights, propose MEMORY.md updates</td>
+</tr>
+</tbody>
+</table>
+<p>Scope flags apply to every command that touches <code>memory_entries</code>: <code>--project</code> and <code>--branch</code> override the auto-detected context; <code>--scope</code> filters or sets the entry scope (<code>global</code>, <code>project</code>, <code>branch</code>, or <code>all</code> — the last disables filtering at query time).</p>
+<h2 id="tasks-database">Tasks Database<a class="headerlink" href="#tasks-database" title="Permanent link">&para;</a></h2>
+<p>The tasks database (<code>tasks.db</code>) stores per-project tasks.</p>
+<p><strong>Tasks table: <code>tasks</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER PK</td>
+<td>Auto-incrementing identifier</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td>TEXT</td>
+<td>Project identifier (basename of git root or cwd)</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>TEXT</td>
+<td>Task description</td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>TEXT</td>
+<td><code>low</code>, <code>medium</code>, or <code>high</code> (default: <code>medium</code>)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td><code>open</code> or <code>done</code> (default: <code>open</code>)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>Timestamp of creation</td>
+</tr>
+<tr>
+<td><code>completed_at</code></td>
+<td>DATETIME</td>
+<td>Timestamp of completion (null if open)</td>
+</tr>
+</tbody>
+</table>
+<p>Project detection uses <code>mait_code.context.get_project()</code> — the basename of the git root or current working directory.</p>
+<h2 id="tasks-cli-tool-mc-tool-tasks">Tasks CLI Tool (<code>mc-tool-tasks</code>)<a class="headerlink" href="#tasks-cli-tool-mc-tool-tasks" title="Permanent link">&para;</a></h2>
+<p>Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared <code>tasks.db</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Args</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add</code></td>
+<td>title, --priority?</td>
+<td>Add a task (low/medium/high, default: medium)</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td>--all?</td>
+<td>List open tasks (or all including completed)</td>
+</tr>
+<tr>
+<td><code>done</code></td>
+<td>id</td>
+<td>Mark a task as completed</td>
+</tr>
+<tr>
+<td><code>remove</code></td>
+<td>id</td>
+<td>Remove a task</td>
+</tr>
+<tr>
+<td><code>check</code></td>
+<td>--project?</td>
+<td>List open tasks for current project (used by session_start hook)</td>
+</tr>
+<tr>
+<td><code>list-all</code></td>
+<td>—</td>
+<td>List open tasks across all projects</td>
+</tr>
+</tbody>
+</table>
+<h2 id="decisions-database">Decisions Database<a class="headerlink" href="#decisions-database" title="Permanent link">&para;</a></h2>
+<p>The decisions database (<code>decisions.db</code>) stores project-scoped technical decision records (ADR-lite).</p>
+<p><strong>Decisions table: <code>decisions</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER PK</td>
+<td>Auto-incrementing identifier</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td>TEXT</td>
+<td>Project identifier (basename of git root or cwd)</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>TEXT</td>
+<td>Decision title</td>
+</tr>
+<tr>
+<td><code>context</code></td>
+<td>TEXT</td>
+<td>Problem or situation that prompted this</td>
+</tr>
+<tr>
+<td><code>alternatives</code></td>
+<td>TEXT</td>
+<td>Other options considered</td>
+</tr>
+<tr>
+<td><code>consequences</code></td>
+<td>TEXT</td>
+<td>Known trade-offs</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td><code>accepted</code>, <code>proposed</code>, <code>deprecated</code>, or <code>superseded</code> (default: <code>accepted</code>)</td>
+</tr>
+<tr>
+<td><code>superseded_by</code></td>
+<td>INTEGER FK</td>
+<td>References decisions(id)</td>
+</tr>
+<tr>
+<td><code>tags</code></td>
+<td>TEXT</td>
+<td>Comma-separated tags</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>DATETIME</td>
+<td>Timestamp of creation</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>DATETIME</td>
+<td>Timestamp of last update</td>
+</tr>
+</tbody>
+</table>
+<p><strong>FTS5 virtual table: <code>decisions_fts</code></strong> — full-text search across title, context, alternatives, and consequences. Kept in sync via insert/update/delete triggers.</p>
+<h2 id="decisions-cli-tool-mc-tool-decisions">Decisions CLI Tool (<code>mc-tool-decisions</code>)<a class="headerlink" href="#decisions-cli-tool-mc-tool-decisions" title="Permanent link">&para;</a></h2>
+<p>Project-scoped decision records with full-text search and automatic markdown rendering.</p>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Args</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>record</code></td>
+<td>title, --context?, --alternatives?, --consequences?, --status?, --tags?</td>
+<td>Record a new decision</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td>--all?, --tag?, --status?</td>
+<td>List decisions (default: accepted + proposed only)</td>
+</tr>
+<tr>
+<td><code>show</code></td>
+<td>id</td>
+<td>Show full decision details</td>
+</tr>
+<tr>
+<td><code>amend</code></td>
+<td>id, --context?, --alternatives?, --consequences?, --status?, --tags?</td>
+<td>Update specific fields</td>
+</tr>
+<tr>
+<td><code>supersede</code></td>
+<td>old_id, new_id</td>
+<td>Mark old decision as superseded by new</td>
+</tr>
+<tr>
+<td><code>search</code></td>
+<td>query</td>
+<td>FTS5 full-text search across all fields</td>
+</tr>
+<tr>
+<td><code>remove</code></td>
+<td>id</td>
+<td>Delete a decision (clears superseded_by references)</td>
+</tr>
+<tr>
+<td><code>sync</code></td>
+<td>—</td>
+<td>Manually regenerate <code>docs/decisions.md</code></td>
+</tr>
+</tbody>
+</table>
+<p>Every mutation auto-regenerates <code>docs/decisions.md</code> at the project's git root with a summary table and full decision sections.</p>
+<h2 id="reminders-cli-tool-mc-tool-reminders">Reminders CLI Tool (<code>mc-tool-reminders</code>)<a class="headerlink" href="#reminders-cli-tool-mc-tool-reminders" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Args</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set</code></td>
+<td>when, what</td>
+<td>Schedule a reminder with natural language time parsing</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td>--all?</td>
+<td>List active (or all) reminders</td>
+</tr>
+<tr>
+<td><code>dismiss</code></td>
+<td>id</td>
+<td>Dismiss a reminder by ID</td>
+</tr>
+<tr>
+<td><code>check</code></td>
+<td>—</td>
+<td>Check for overdue reminders (used by session_start hook)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="web-fetch-cli-tool-mc-tool-web-fetch">Web Fetch CLI Tool (<code>mc-tool-web-fetch</code>)<a class="headerlink" href="#web-fetch-cli-tool-mc-tool-web-fetch" title="Permanent link">&para;</a></h2>
+<p>Local web fetcher that bypasses the claude.ai proxy. Works behind corporate firewalls via <code>truststore</code> SSL injection.</p>
+<table>
+<thead>
+<tr>
+<th>Argument/Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code> (positional)</td>
+<td>—</td>
+<td>URL to fetch</td>
+</tr>
+<tr>
+<td><code>--timeout</code></td>
+<td><code>30</code></td>
+<td>Request timeout in seconds</td>
+</tr>
+<tr>
+<td><code>--max-size</code></td>
+<td><code>524288</code></td>
+<td>Maximum response body in bytes (512KB)</td>
+</tr>
+<tr>
+<td><code>--max-chars</code></td>
+<td><code>100000</code></td>
+<td>Maximum output characters (~25K tokens)</td>
+</tr>
+<tr>
+<td><code>--raw</code></td>
+<td><code>false</code></td>
+<td>Skip HTML-to-markdown conversion</td>
+</tr>
+<tr>
+<td><code>--allow-private</code></td>
+<td><code>false</code></td>
+<td>Allow fetching private/loopback IPs</td>
+</tr>
+</tbody>
+</table>
+<p>Content-type routing: HTML→markdown (via <code>markdownify</code>), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.</p>
+<h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Hook</th>
+<th>Trigger</th>
+<th>Mode</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session_start</code></td>
+<td>SessionStart</td>
+<td>sync</td>
+<td>Inject companion context (reminders, project tasks)</td>
+</tr>
+<tr>
+<td><code>observe</code></td>
+<td>PreCompact</td>
+<td>async</td>
+<td>Extract observations before context compaction</td>
+</tr>
+<tr>
+<td><code>observe</code></td>
+<td>SessionEnd</td>
+<td>async</td>
+<td>Final observation extraction</td>
+</tr>
+<tr>
+<td><code>auto_format</code></td>
+<td><em>not registered</em></td>
+<td>—</td>
+<td>Placeholder package — entry point exists (<code>mc-hook-format</code>) but no settings.json registration and no implementation</td>
+</tr>
+</tbody>
+</table>
+<p>Both observe hooks run asynchronously (<code>"async": true</code>) to avoid blocking the main conversation. They call Claude Haiku to extract structured observations (facts, preferences, decisions, bugs, entities, relationships) from new transcript lines.</p>
+<p><strong>macOS caveat:</strong> Async hooks on macOS may receive empty stdin due to a Claude Code bug (<a href="https://github.com/anthropics/claude-code/issues/38162">#38162</a>). The observe hook handles this by falling back to transcript discovery from the filesystem — it derives the Claude Code project slug from cwd and finds the most recently modified <code>.jsonl</code> transcript.</p>
+<h2 id="observation-pipeline">Observation Pipeline<a class="headerlink" href="#observation-pipeline" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart TD
+    A["PreCompact / SessionEnd"] --&gt; B["cursor.py&lt;br/&gt;get byte offset for transcript"]
+    B --&gt; C["transcript.py&lt;br/&gt;read new JSONL lines,&lt;br/&gt;filter user/assistant messages"]
+    C --&gt; D["extractor.py&lt;br/&gt;call Claude Haiku for&lt;br/&gt;structured extraction"]
+    D --&gt; E["storage.py&lt;br/&gt;store to memory.db +&lt;br/&gt;daily JSONL logs"]
+    E --&gt; F["cursor.py&lt;br/&gt;save new byte offset"]</code></pre>
+<h2 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h2>
+<p>All entry points use a shared logging module (<code>src/mait_code/logging.py</code>) that writes to rotating log files. Logs never go to stdout/stderr to avoid interfering with hook JSON output.</p>
+<p><strong>Configuration</strong> (via <code>settings.json</code> <code>env</code> block or shell environment):</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MAIT_CODE_LOG_LEVEL</code></td>
+<td><code>INFO</code></td>
+<td><code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>, <code>ERROR</code></td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_LOG_FILE</code></td>
+<td><code>~/.claude/mait-code-data/logs/mait-code.log</code></td>
+<td>Override log file path</td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_EMBEDDING_PROVIDER</code></td>
+<td><code>local</code></td>
+<td>Embedding provider: <code>local</code> (fastembed) or <code>bedrock</code> (AWS)</td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_EMBEDDING_MODEL</code></td>
+<td><code>nomic-ai/nomic-embed-text-v1.5</code></td>
+<td>Model for local embedding provider</td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_BEDROCK_REGION</code></td>
+<td><code>eu-west-2</code></td>
+<td>AWS region for Bedrock embedding provider</td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_BEDROCK_MODEL_ID</code></td>
+<td><code>amazon.titan-embed-text-v2:0</code></td>
+<td>Model ID for Bedrock embedding provider</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Features:</strong></p>
+<ul>
+<li><code>setup_logging()</code> — call once per entry point; idempotent, configures the <code>mait_code</code> logger hierarchy</li>
+<li><code>@log_invocation(name=...)</code> — decorator that logs command name, parsed arguments, duration, and exit status</li>
+<li>Sensitive parameters (<code>content</code>, <code>query</code>, <code>what</code>, <code>prompt</code>, <code>message</code>) are automatically truncated to 80 chars</li>
+<li><code>RotatingFileHandler</code> — 5 MB max, 3 backups</li>
+</ul>
+<p><strong>Log format:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>2026-03-08T14:23:01 INFO  mait_code.tools.memory.cli — invoked: mc-tool-memory query=&quot;dark mo...&quot; limit=10 mode=&#39;hybrid&#39;
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>2026-03-08T14:23:01 DEBUG mait_code.tools.memory.search — Vector search: 3 results
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>2026-03-08T14:23:01 INFO  mait_code.invocation — completed: mc-tool-memory (0.42s)
+</span></code></pre></div></p>
+<h2 id="identity-system">Identity System<a class="headerlink" href="#identity-system" title="Permanent link">&para;</a></h2>
+<p>Three files compose the companion's identity:</p>
+<ol>
+<li><strong>Soul Document</strong> — Values, personality, communication style (stable, rarely changes)</li>
+<li><strong>User Context</strong> — Who the user is, their stack, preferences (updates occasionally)</li>
+<li><strong>MEMORY.md</strong> — Accumulated knowledge (updates frequently)</li>
+</ol>
+<p>All three are referenced via <code>@</code> imports in <code>config/CLAUDE.md</code> and loaded into every Claude Code session.</p>
+<h2 id="migration-system">Migration System<a class="headerlink" href="#migration-system" title="Permanent link">&para;</a></h2>
+<p>Schema changes are managed via forward-only migrations in <code>src/mait_code/tools/memory/migrate.py</code>. Each migration has a version number, description, and body (SQL list or callable). The <code>schema_version</code> table tracks which migrations have been applied.</p>
+<p>Current migrations:</p>
+<ol>
+<li><code>memory_entries</code> table with indexes</li>
+<li>FTS5 virtual table for full-text search</li>
+<li>FTS sync triggers (insert/update/delete)</li>
+<li>Vec0 virtual table for vector search (1536-dim, superseded by migration 7)</li>
+<li><code>memory_entities</code> table for entity tracking</li>
+<li><code>memory_relationships</code> table for entity relationships</li>
+<li>Recreate vec0 with 768 dimensions (default for local provider), add vec delete trigger</li>
+<li>Add <code>scope</code>, <code>project</code>, <code>branch</code> columns to <code>memory_entries</code>; rebuild FTS with new columns; add scope/project indexes</li>
+<li>Create <code>reflection_watermark</code> table for idempotent reflection</li>
+</ol>
+<p>Adding a new migration:</p>
+<ol>
+<li>Append a tuple to <code>MIGRATIONS</code> with the next version number</li>
+<li>Include SQL statements or a callable that receives <code>conn</code></li>
+<li><code>ensure_schema()</code> runs automatically on every connection open</li>
+</ol>
+<h2 id="data-directory">Data Directory<a class="headerlink" href="#data-directory" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>~/.claude/mait-code-data/
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── soul_document.md          # Companion identity
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── user_context.md           # User profile
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── memory/
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│   ├── MEMORY.md             # Curated facts (loaded every session)
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│   ├── memory.db             # SQLite FTS5 + vec0 + entities database
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── observations/         # Raw JSONL session extractions
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   │   ├── YYYY-MM-DD.jsonl
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   └── reflections/          # Synthesised insights
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│       └── YYYY-MM.md
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── models/                   # Cached embedding models (local provider only)
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── logs/                     # Rotating log files
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>│   ├── mait-code.log         # Current log
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>│   ├── mait-code.log.1       # Rotated backups
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>│   └── ...
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>├── reminders.db              # Reminder database
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>├── tasks.db                  # Per-project tasks database
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>└── decisions.db              # Decision records database
+</span></code></pre></div>
+<h2 id="key-technical-decisions">Key Technical Decisions<a class="headerlink" href="#key-technical-decisions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>uv over pip/poetry</td>
+<td>Fastest resolver, built-in project management, <code>uv run</code> eliminates venv activation</td>
+</tr>
+<tr>
+<td>SQLite + FTS5 + sqlite-vec</td>
+<td>Zero infrastructure, single file, portable, keyword + vector search in one DB</td>
+</tr>
+<tr>
+<td>JSONL for observations</td>
+<td>Append-only, merge-friendly for git sync, one object per line</td>
+</tr>
+<tr>
+<td>Hooks over background services</td>
+<td>No daemons to manage, reactive model fits Claude Code's architecture</td>
+</tr>
+<tr>
+<td>CLI tools + skills over MCP</td>
+<td>No process overhead, preprocessing injects results before Claude sees the skill, simpler debugging</td>
+</tr>
+<tr>
+<td>Symlinks over file copying</td>
+<td>Updates propagate automatically via <code>git pull</code>, no re-install needed</td>
+</tr>
+<tr>
+<td>Exponential decay scoring</td>
+<td>Recent memories surface naturally, old ones fade unless high importance</td>
+</tr>
+<tr>
+<td>Dedup via FTS5 + SequenceMatcher</td>
+<td>Fast candidate narrowing, precise similarity comparison, no duplicates</td>
+</tr>
+<tr>
+<td>Async observation hook</td>
+<td>PreCompact extraction runs in background, no conversation latency</td>
+</tr>
+<tr>
+<td>Entity tables over separate graph DB</td>
+<td>Entities live in memory.db alongside memories — single file, recursive CTEs for future traversal</td>
+</tr>
+<tr>
+<td>truststore for SSL</td>
+<td>Injects OS trust store into Python's ssl module — corporate proxy CAs (e.g. Netskope) are trusted automatically without manual cert management</td>
+</tr>
+<tr>
+<td>fastembed over sentence-transformers</td>
+<td>ONNX Runtime only (~80 MB), no PyTorch (~2 GB); ~300 MB RAM at runtime</td>
+</tr>
+<tr>
+<td>nomic-embed-text-v1.5 @ 768 dims</td>
+<td>Full-quality representation; 8192 token context; MTEB ~62.4; negligible storage cost at expected scale</td>
+</tr>
+<tr>
+<td>Configurable embedding providers</td>
+<td>Local (fastembed) for personal use, AWS Bedrock for corporate environments where HuggingFace is blocked; deployment-time decision, reindex to migrate</td>
+</tr>
+<tr>
+<td>Hybrid search (FTS5 + vector)</td>
+<td>Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable</td>
+</tr>
+<tr>
+<td>File-based rotating logs</td>
+<td>No stdout/stderr interference with hook JSON; configurable via env vars; <code>RotatingFileHandler</code> keeps log size bounded</td>
+</tr>
+<tr>
+<td>Watermark table for reflection idempotency</td>
+<td>Separate table over <code>reflected_at</code> column — atomic batch tracking, no feedback loops, clean separation of concerns</td>
+</tr>
+<tr>
+<td>Decisions in SQLite + FTS5</td>
+<td>Consistent with existing tool patterns; full-text search across decision fields; auto-rendered to <code>docs/decisions.md</code> for git-friendly visibility</td>
+</tr>
+<tr>
+<td>urllib.request over httpx/requests for web fetch</td>
+<td>Zero new HTTP dependency tree; <code>truststore.inject_into_ssl()</code> patches the stdlib SSL context that <code>urllib.request</code> uses; system proxy env vars (<code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code>) respected automatically</td>
+</tr>
+<tr>
+<td>markdownify for HTML-to-markdown</td>
+<td>Lightweight (~600 lines), single purpose, only brings <code>beautifulsoup4</code>; full readability extraction (trafilatura) is overkill — Claude can ignore boilerplate itself</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Wiktor de Pina
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/wiktordepina/mait-code" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.tracking", "navigation.top", "navigation.indexes", "toc.follow", "content.code.copy", "content.code.annotate", "content.action.edit", "search.suggest", "search.share", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"alias": true, "default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
