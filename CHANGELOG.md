@@ -1,7 +1,56 @@
 # Changelog
 
-## v0.14.0 — Web fetch tool and embedding test fixes (2026-04-07)
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+While the project is pre-1.0, minor version bumps track meaningful additions
+of functionality; patch bumps cover docs, internal tidy-ups, and fixes that
+don't change the public surface. Everything is still in flux.
+
+## [Unreleased]
+
+### Added
+
+- **Docs site.** `mkdocs-material` + `mkdocstrings` with auto-generated Python
+  API reference driven by each surface module's `__all__`. Twelve modules
+  surface — four core (`context`, `llm`, `logging`, `ssl`), five tool
+  packages, three hook packages. Nested layout under `Tools/` and `Hooks/`
+  mirrors the dotted module hierarchy. Hand-authored `docs/reference/skills.md`
+  catalogues every slash command.
+- **GitHub Pages deploy.** `docs.yml` workflow ports cairn's deploy pattern
+  — `dev` alias from `main`, version pin + `latest` alias from tags, managed
+  by `mike`. Published at <https://wiktordepina.github.io/mait-code/>.
+- **`docs/contributing-docs.md`.** Convention note covering the `__all__`
+  contract, Google docstring style, the regeneration workflow, and the
+  seven-tab nav layout.
+- **Release pipeline.** `ci.yml` (lint, smoke test, dependency audit) and
+  `release.yml` (version-bump-triggered, dispatches docs.yml on tag). The
+  `tests/test_imports.py` smoke test imports every surface module and
+  asserts `__all__` is non-empty.
+- **CI badges and hosted-docs link** in root `README.md`.
+
+### Changed
+
+- **Codebase-wide docstrings** migrated to Google style for consistent
+  rendering by `mkdocstrings`. Surface modules declare `__all__` with
+  `# Section` comments grouping symbols by topic.
+- **Docs nav** restructured into seven tabs (Home, Guide, Concepts,
+  Architecture, Reference, Decisions, Contributing) replacing the earlier
+  four-tab layout. Home page rewritten as a proper landing experience
+  rather than a link list.
+- **Drive-by type annotations** on `log_invocation` (return type) and
+  `check_dimension_match` (`conn` parameter), surfaced by `mkdocs build
+  --strict` complaining about docstrings referencing untyped signatures.
+
+### Removed
+
+- **`run_pytest.yaml` workflow.** Broken since creation (no `tests/`
+  directory existed); superseded by `ci.yml`.
+
+## [0.14.0] — 2026-04-07
+
+**Web fetch tool and embedding test fixes.**
 Local web fetch tool that bypasses the claude.ai proxy, working behind corporate firewalls and proxies. Also fixes embedding tests to work with both local and Bedrock providers.
 
 ### Web fetch tool
@@ -24,8 +73,9 @@ Local web fetch tool that bypasses the claude.ai proxy, working behind corporate
 - 35 tests for web fetch (URL validation, SSRF protection, HTTP errors, timeouts, HTML conversion, JSON formatting, charset handling, truncation, binary content).
 - 27 tests for embeddings (up from 23), all passing with both local and Bedrock providers.
 
-## v0.13.0 — Configurable embedding providers (2026-03-24)
+## [0.13.0] — 2026-03-24
 
+**Configurable embedding providers.**
 Support for multiple embedding providers — local (fastembed/HuggingFace) and AWS Bedrock — configurable via environment variables. Designed for corporate environments where HuggingFace may be blocked.
 
 ### Embedding provider abstraction
@@ -48,8 +98,9 @@ Support for multiple embedding providers — local (fastembed/HuggingFace) and A
 ### Test coverage
 - Rewrote `test_embeddings.py` for provider abstraction: mock provider tests for prefix handling (local vs bedrock), bedrock dimension config, bedrock invoke_model mock, dimension check (empty, matching, mismatch, error), graceful degradation.
 
-## v0.12.1 — macOS compatibility fixes (2026-03-24)
+## [0.12.1] — 2026-03-24
 
+**macOS compatibility fixes.**
 Workarounds for macOS-specific issues: async hook stdin bug and corporate proxy SSL.
 
 ### Async hook stdin fix
@@ -67,8 +118,9 @@ Workarounds for macOS-specific issues: async hook stdin bug and corporate proxy 
 - 10 tests for stdin parsing and transcript fallback (including dot-in-path slug derivation).
 - 4 tests for SSL setup (injection, idempotency, missing package, injection failure).
 
-## v0.12.0 — Decision log (2026-03-12)
+## [0.12.0] — 2026-03-12
 
+**Decision log.**
 ADR-lite decision records for capturing why technical choices were made.
 
 - **`mc-tool-decisions` CLI tool:** 8 subcommands — `record`, `list`, `show`, `amend`, `supersede`, `search`, `remove`, `sync`. SQLite-backed with FTS5 full-text search across title, context, alternatives, and consequences.
@@ -79,8 +131,9 @@ ADR-lite decision records for capturing why technical choices were made.
 - **Test coverage:** 39 tests covering migrations, FTS sync triggers, all CLI commands, rendering (strikethrough, field omission, superseded links), and file writing.
 - **3 initial decisions recorded** from project memory: SQLite as DB engine (DR-1), CLI tools over MCP (DR-2), watermark-based reflection idempotency (DR-3).
 
-## v0.11.0 — Idempotent reflection with batching (2026-03-12)
+## [0.11.0] — 2026-03-12
 
+**Idempotent reflection with batching.**
 Reflection is now idempotent and supports batched processing of large backlogs.
 
 - **Watermark tracking:** New `reflection_watermark` table (migration 9) tracks the highest entry ID reflected per project. Running `/reflect` twice without new observations is a no-op.
@@ -91,8 +144,9 @@ Reflection is now idempotent and supports batched processing of large backlogs.
 - **New functions:** `get_watermark()`, `update_watermark()`, `check_novelty_gate_v2()`, `get_unreflected_entries()`.
 - **Test coverage:** 60 tests for the reflection system including idempotency, incremental processing, batch limiting, and failure safety.
 
-## v0.10.0 — Scoped memory and tasks alignment (2026-03-11)
+## [0.10.0] — 2026-03-11
 
+**Scoped memory and tasks alignment.**
 Three-tier memory scoping (global/project/branch) and removal of the projects registry from tasks.
 
 ### Scoped memory
@@ -116,29 +170,33 @@ Three-tier memory scoping (global/project/branch) and removal of the projects re
 - `/recall`, `/remember`, `memory-store`, `/reflect` — updated instructions for scope-aware behaviour.
 - `/standup`, `/today` — use `--scope all` for cross-project memory queries.
 
-## v0.9.0 — Database hardening and LLM resilience (2026-03-11)
+## [0.9.0] — 2026-03-11
 
+**Database hardening and LLM resilience.**
 - **Database context managers:** New `connection()` context manager in all three `db.py` modules (`memory`, `reminders`, `tasks`) — guarantees connection cleanup on exit. All CLI commands and hooks migrated from manual `try/finally/conn.close()`.
 - **LLM retry/backoff:** `call_claude()` now accepts `retries` and `backoff_base` parameters with exponential backoff on transient failures (timeouts, non-zero exits). `FileNotFoundError` is not retried (permanent). Default `retries=0` preserves existing fail-fast behaviour for interactive tools.
 - **Observe hook resilience:** Extraction calls now retry twice (3 total attempts) with 1s/2s backoff, reducing silent data loss from transient LLM failures.
 - **Python 3.13:** Downgrade minimum Python from 3.14 to 3.13 for broader compatibility.
 - **Docs:** Convert architecture diagrams from ASCII to Mermaid, update setup and memory docs.
 
-## v0.8.2 — Maintenance updates (2026-03-10)
+## [0.8.2] — 2026-03-10
 
+**Maintenance updates.**
 - **Docs:** Convert architecture diagrams from ASCII to Mermaid
 - **Install:** Pin Python 3.13 in uv tool install
 - **Uninstall:** Use `uv run python` instead of `python3` for consistency
 
-## v0.8.1 — Fix observe hook recursion (2026-03-10)
+## [0.8.1] — 2026-03-10
 
+**Fix observe hook recursion.**
 Prevent recursive hook invocations when `call_claude()` spawns nested CLI sessions.
 
 - **Recursion guard:** Set `MAIT_CODE_NESTED=1` env var in `call_claude()` subprocess environment
 - **Early exit:** Observe hook checks for `MAIT_CODE_NESTED` and skips execution in nested invocations
 
-## v0.8.0 — Projects registry and workflow skills (2026-03-09)
+## [0.8.0] — 2026-03-09
 
+**Projects registry and workflow skills.**
 Cross-project awareness via a projects registry, 7 new skills for daily workflow, and time-filtered memory queries.
 
 - **Projects table:** New `projects` table in `tasks.db` storing project name, full disk path, GitHub remote URL, and registration date; foreign key from `tasks.project` to `projects.name` with `PRAGMA foreign_keys=ON` enforcement
@@ -155,8 +213,9 @@ Cross-project awareness via a projects registry, 7 new skills for daily workflow
 - **`/projects` skill:** List all registered projects
 - **Documentation:** Updated architecture (projects table schema, new CLI subcommands), skills reference (7 new skill sections), memory docs (tasks CLI reference, `--since` flag), and config CLAUDE.md (replaced explicit skills list with categorised summary — skills are auto-discovered)
 
-## v0.7.0 — Project tasks (2026-03-08)
+## [0.7.0] — 2026-03-08
 
+**Project tasks.**
 Per-project task tracking with CLI tool, skills, and session start integration.
 
 - **`mc-tool-tasks` CLI tool:** Subcommands `add`, `list`, `done`, `remove`, `check` with SQLite storage, project scoping by git root basename (falls back to cwd basename)
@@ -166,8 +225,9 @@ Per-project task tracking with CLI tool, skills, and session start integration.
 - **SQLite storage:** Dedicated `tasks.db` with `tasks` table indexed on `(project, status)`, priority ordering (high → medium → low), connection factory and migration system matching existing patterns
 - **Test coverage:** 18 tests covering schema migrations, all CLI commands, project scoping, and priority ordering
 
-## v0.6.0 — Reflection system (2026-03-08)
+## [0.6.0] — 2026-03-08
 
+**Reflection system.**
 Synthesise observations into durable insights with the new `/reflect` skill and reflection engine.
 
 - **Reflection engine:** `mc-tool-memory reflect` reads last 7 days of memory entries + observation JSONL logs, calls Claude Haiku to identify patterns and themes, stores insights as `type=insight` (importance=6) in memory.db
@@ -178,8 +238,9 @@ Synthesise observations into durable insights with the new `/reflect` skill and 
 - **Refactored extractor:** `call_haiku` now delegates to shared `call_claude` with `model="haiku"`, `timeout=45`
 - **Test coverage:** 15 new tests covering reflection logic, `_format_extraction`, `read_memory_md`, observation log edge cases, CLI output, and `call_haiku` delegation
 
-## v0.5.0 — Vector embeddings and shared logging (2026-03-08)
+## [0.5.0] — 2026-03-08
 
+**Vector embeddings and shared logging.**
 Added semantic search via vector embeddings and a shared logging system across all entry points.
 
 - **Vector embeddings:** `nomic-ai/nomic-embed-text-v1.5` via `fastembed` (ONNX Runtime, no PyTorch) — 768-dimensional embeddings stored in sqlite-vec, auto-computed on memory write
@@ -194,8 +255,9 @@ Added semantic search via vector embeddings and a shared logging system across a
 - **New dependency:** `fastembed>=0.4.0`
 - **Bug fix:** Fixed Python 2 exception syntax in session_start hook (`except A, B:` → `except (A, B):`)
 
-## v0.4.0 — Entity system, observation hooks, and hooks reorganisation (2026-03-08)
+## [0.4.0] — 2026-03-08
 
+**Entity system, observation hooks, and hooks reorganisation.**
 Added knowledge graph entity tracking, automatic observation extraction from conversations, and reorganised hooks to follow the same package convention as tools.
 
 - **Entity system:** `memory_entities` and `memory_relationships` tables (migrations 5–6) with CRUD operations — upsert, case-insensitive lookup, relationship tracking with mention counts
@@ -206,8 +268,9 @@ Added knowledge graph entity tracking, automatic observation extraction from con
 - **Cursor-based incremental extraction:** Only processes new transcript lines since last invocation, with automatic pruning of stale cursors (>30 days)
 - **Updated conventions:** CLAUDE.md, docs, and pyproject.toml entry points updated to reflect new package structure
 
-## v0.3.1 — Replace reminders MCP server with CLI tool (2026-03-07)
+## [0.3.1] — 2026-03-07
 
+**Replace reminders MCP server with CLI tool.**
 Replaced the last MCP server (`mait-reminders`) with a sync CLI tool and skills, eliminating the `mcp` dependency entirely.
 
 - **`mc-tool-reminders` CLI tool:** Subcommands `set`, `list`, `dismiss`, `check` with SQLite storage, dateparser for flexible time input, UTC normalization
@@ -218,8 +281,9 @@ Replaced the last MCP server (`mait-reminders`) with a sync CLI tool and skills,
 - **Removed** `mait-reminders` MCP server, `src/mait_code/mcp/` directory, and `mcp[cli]` dependency
 - **Restructured tests:** Mirror `src/mait_code/` directory structure (`tests/tools/memory/`, `tests/tools/reminders/`) with per-tool conftest fixtures
 
-## v0.3.0 — Replace memory MCP server with CLI tools + skills (2026-03-06)
+## [0.3.0] — 2026-03-06
 
+**Replace memory MCP server with CLI tools + skills.**
 Replaced the `mait-memory` MCP server with a sync CLI tool (`mc-tool-memory`) and three skills, eliminating process overhead and simplifying the architecture.
 
 - **`mc-tool-memory` CLI tool:** Subcommands `search`, `store`, `list`, `delete`, `stats` — same functionality as the former MCP server, now invoked via Bash
@@ -230,8 +294,9 @@ Replaced the `mait-memory` MCP server with a sync CLI tool (`mc-tool-memory`) an
 - **Renamed** all entry points to `mc-{hook|tool|mcp}-*` convention (e.g. `mc-hook-session-start`, `mc-tool-reflect`)
 - **Updated** all documentation to reflect the new architecture
 
-## v0.2.0 — Phase 1: Memory Core (2026-03-05)
+## [0.2.0] — 2026-03-05
 
+**Phase 1: Memory Core.**
 Persistent memory system — the defining feature that makes this a companion, not a tool.
 
 - **Database schema:** `memory_entries` table with FTS5 full-text search, vec0 virtual table (ready for vector search in Phase 2), automatic schema migrations via `ensure_schema()`
@@ -244,8 +309,9 @@ Persistent memory system — the defining feature that makes this a companion, n
 - **Test suite:** 70 tests covering migrations, scoring, writer, search, and MCP server
 - **Docs:** Updated architecture (schema, scoring formula, dedup algorithm, MCP tool reference), development guide (memory module structure, migration guide, test patterns), skills reference, setup verification steps
 
-## v0.1.0 — Phase 0: Foundation (2026-03-04)
+## [0.1.0] — 2026-03-04
 
+**Phase 0: Foundation.**
 Initial project scaffold establishing the core structure and tooling.
 
 - **Packaging:** uv/hatchling build system with Python 3.13+, dependencies on `mcp`, `sqlite-vec`, `dateparser`, `pyyaml`
@@ -257,6 +323,29 @@ Initial project scaffold establishing the core structure and tooling.
 - **Scripts:** `install.sh` and `uninstall.sh` for automated setup/teardown
 - **Docs:** Architecture overview, philosophy, setup guide, skills reference, multi-machine sync guide, and development guide
 
-## v0.0.0 — Init (2026-03-04)
+## [0.0.0] — 2026-03-04
 
+**Init.**
 Repository initialised with README.
+
+
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.0
+[0.13.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.13.0
+[0.12.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.12.1
+[0.12.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.12.0
+[0.11.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.11.0
+[0.10.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.10.0
+[0.9.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.9.0
+[0.8.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.8.2
+[0.8.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.8.1
+[0.8.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.8.0
+[0.7.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.7.0
+[0.6.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.6.0
+[0.5.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.5.0
+[0.4.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.4.0
+[0.3.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.3.1
+[0.3.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.3.0
+[0.2.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.2.0
+[0.1.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.1.0
+[0.0.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.0.0

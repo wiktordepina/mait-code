@@ -1,6 +1,11 @@
 # mait-code
 
+[![CI](https://github.com/wiktordepina/mait-code/actions/workflows/ci.yml/badge.svg)](https://github.com/wiktordepina/mait-code/actions/workflows/ci.yml)
+[![Docs](https://github.com/wiktordepina/mait-code/actions/workflows/docs.yml/badge.svg)](https://wiktordepina.github.io/mait-code/)
+
 A companion framework that extends [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with persistent memory, a customisable identity, and reusable skills. It transforms Claude Code from a stateless coding assistant into a coding companion that remembers your projects, preferences, and patterns across sessions.
+
+**Documentation:** <https://wiktordepina.github.io/mait-code/>
 
 ## Key Features
 

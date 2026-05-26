@@ -405,9 +405,7 @@ def test_cmd_remove(mock_conn, capsys):
 
     cmd_remove(argparse.Namespace(id=did))
 
-    row = mock_conn.execute(
-        "SELECT id FROM decisions WHERE id = ?", (did,)
-    ).fetchone()
+    row = mock_conn.execute("SELECT id FROM decisions WHERE id = ?", (did,)).fetchone()
     assert row is None
 
     output = capsys.readouterr().out
@@ -480,7 +478,7 @@ def test_render_omits_empty_fields(decisions_db: sqlite3.Connection):
 
 
 def test_render_superseded_strikethrough(decisions_db: sqlite3.Connection):
-    old_id = _insert_decision(decisions_db, "Old approach", status="superseded")
+    _insert_decision(decisions_db, "Old approach", status="superseded")
     md = render_decisions_md(decisions_db)
     assert "~~Old approach~~" in md
 
@@ -515,9 +513,7 @@ def test_write_decisions_md_creates_file(decisions_db, tmp_path):
     from mait_code.tools.decisions.render import write_decisions_md
 
     _insert_decision(decisions_db, "Test decision")
-    with patch(
-        "mait_code.tools.decisions.render._get_git_root", return_value=tmp_path
-    ):
+    with patch("mait_code.tools.decisions.render._get_git_root", return_value=tmp_path):
         write_decisions_md(decisions_db)
 
     docs_file = tmp_path / "docs" / "decisions.md"
@@ -530,9 +526,7 @@ def test_write_decisions_md_skips_outside_git(decisions_db, tmp_path):
     """write_decisions_md does nothing when not in a git repo."""
     from mait_code.tools.decisions.render import write_decisions_md
 
-    with patch(
-        "mait_code.tools.decisions.render._get_git_root", return_value=None
-    ):
+    with patch("mait_code.tools.decisions.render._get_git_root", return_value=None):
         write_decisions_md(decisions_db)
 
     assert not (tmp_path / "docs" / "decisions.md").exists()

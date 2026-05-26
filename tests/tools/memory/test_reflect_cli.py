@@ -188,9 +188,7 @@ def test_cmd_reflect_drain_multiple_batches(tmp_path):
 
     with (
         patch("mait_code.tools.memory.cli.connection"),
-        patch(
-            "mait_code.tools.memory.reflect.reflect", side_effect=mock_reflect
-        ),
+        patch("mait_code.tools.memory.reflect.reflect", side_effect=mock_reflect),
     ):
         captured = StringIO()
         sys.stdout = captured

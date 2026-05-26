@@ -10,10 +10,20 @@ uv sync
 
 ## Tests
 
-There is no test suite yet. `pytest>=8.0` is listed under `[dependency-groups].dev` in
-`pyproject.toml` ready for one, and the "Writing Tests for Memory Components" section
-below documents the intended fixtures and patterns — but `tests/` doesn't exist on
-disk. Bootstrapping it (or removing the unused dep + docs) is tracked as a follow-up.
+```bash
+uv run pytest          # run the full suite
+uv run pytest -v       # verbose
+uv run pytest tests/tools/memory/   # narrow to a package
+```
+
+The suite covers every package under `src/mait_code/` (~460 tests at the time of
+writing). Fixtures live in tool-specific `tests/<area>/conftest.py` files; the
+root `tests/conftest.py` keeps cross-cutting setup. See the "Writing Tests for
+Memory Components" section below for the established patterns.
+
+`tests/test_imports.py` is the smoke test that asserts every reference-surface
+module declares a non-empty `__all__`. CI's `ci.yml` runs the full suite on
+every PR and push to `main`.
 
 ## Linting and Formatting
 

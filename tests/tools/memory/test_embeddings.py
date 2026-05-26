@@ -186,9 +186,7 @@ class TestEmbedWithMockProvider:
         try:
             with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}):
                 mod.embed_text("hello world")
-                mock.embed.assert_called_once_with(
-                    ["search_document: hello world"]
-                )
+                mock.embed.assert_called_once_with(["search_document: hello world"])
         finally:
             mod._provider = old_provider
             mod._provider_failed = old_failed
@@ -205,9 +203,7 @@ class TestEmbedWithMockProvider:
         mod._provider_failed = False
 
         try:
-            with patch.dict(
-                "os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}
-            ):
+            with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}):
                 result = mod.embed_text("hello world", prefix="search_query")
                 assert result is not None
                 assert len(result) == 1024
@@ -250,9 +246,7 @@ class TestEmbedWithMockProvider:
         mod._provider_failed = False
 
         try:
-            with patch.dict(
-                "os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}
-            ):
+            with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}):
                 result = mod.embed_texts(["a", "b"])
                 assert result is not None
                 mock.embed.assert_called_once_with(["a", "b"])
@@ -274,9 +268,7 @@ class TestBedrockProvider:
         mod._provider_failed = False
 
         try:
-            with patch.dict(
-                "os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}
-            ):
+            with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}):
                 with patch.dict("sys.modules", {"boto3": None}):
                     result = mod.get_provider()
                     assert result is None
@@ -298,9 +290,7 @@ class TestBedrockProvider:
 
         # Mock invoke_model response for Titan
         mock_body = MagicMock()
-        mock_body.read.return_value = json.dumps(
-            {"embedding": [0.1] * 1024}
-        ).encode()
+        mock_body.read.return_value = json.dumps({"embedding": [0.1] * 1024}).encode()
         mock_client.invoke_model.return_value = {"body": mock_body}
 
         with patch.dict(
