@@ -2214,7 +2214,7 @@ every PR and push to <code>main</code>.</p>
 <h2 id="linting-formatting-typechecking">Linting, formatting, typechecking<a class="headerlink" href="#linting-formatting-typechecking" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w">         </span><span class="c1"># Lint</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src/<span class="w">        </span><span class="c1"># Format</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pyright<span class="w">                 </span><span class="c1"># Typecheck (basic mode, src/ only)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pyright<span class="w">                 </span><span class="c1"># Typecheck (standard mode, src/ only)</span>
 </span></code></pre></div>
 <p>Pyright reads the optional <code>boto3</code> import in <code>tools/memory/embeddings.py</code>,
 so the bedrock extra must be installed for typechecking: run
