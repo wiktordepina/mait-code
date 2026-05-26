@@ -18,8 +18,10 @@ import logging
 import os
 import sys
 import time
+from collections.abc import Callable
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any
 
 __all__ = [
     "log_invocation",
@@ -108,7 +110,7 @@ def log_invocation(
     *,
     name: str | None = None,
     truncate_params: set[str] | None = None,
-):
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorate CLI tool/hook entry points so invocations are logged.
 
     Logs the command name and parsed arguments on entry, and status plus

@@ -13,6 +13,7 @@ callers always receive ``None`` instead of exceptions.
 import json
 import logging
 import os
+import sqlite3
 import struct
 from abc import ABC, abstractmethod
 
@@ -309,7 +310,7 @@ def _parse_vec_table_dim(conn) -> int | None:
     return None
 
 
-def check_dimension_match(conn) -> tuple[bool, int | None, int]:
+def check_dimension_match(conn: sqlite3.Connection) -> tuple[bool, int | None, int]:
     """Check whether the vec table dimension matches the configured provider.
 
     Args:
