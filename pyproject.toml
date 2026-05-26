@@ -14,9 +14,11 @@ dependencies = [
     "fastembed>=0.4.0",
     "truststore>=0.9",
     "markdownify>=0.14",
+    "typer>=0.12,<1",
 ]
 
 [project.scripts]
+mait-code = "mait_code.cli:main"
 mc-hook-session-start = "mait_code.hooks.session_start.cli:main"
 mc-hook-observe = "mait_code.hooks.observe.cli:main"
 mc-hook-format = "mait_code.hooks.auto_format.cli:main"

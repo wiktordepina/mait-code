@@ -1,0 +1,123 @@
+"""Tests for ``mait-code version`` and adjacent scaffolding."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from typer.testing import CliRunner
+
+import mait_code
+from mait_code.cli import (
+    InstallRecord,
+    RecordError,
+    app,
+    install_record_path,
+    mait_code_state_dir,
+    read_record,
+    write_record,
+    xdg_data_home,
+)
+
+runner = CliRunner()
+
+
+def test_version_prints_package_version() -> None:
+    result = runner.invoke(app, ["version"])
+    assert result.exit_code == 0
+    assert result.stdout.strip() == mait_code.__version__
+
+
+def test_no_args_shows_help() -> None:
+    result = runner.invoke(app, [])
+    # Typer's no_args_is_help shows help and exits 2 (missing command).
+    assert result.exit_code in (0, 2)
+    assert "mait-code" in result.stdout.lower() or "mait-code" in result.output.lower()
+
+
+class TestPaths:
+    def test_xdg_data_home_default(self, fake_home: Path) -> None:
+        assert xdg_data_home() == fake_home / ".local" / "share"
+
+    def test_xdg_data_home_honours_override(self, monkeypatch, fake_home: Path) -> None:
+        custom = fake_home / "custom-data"
+        monkeypatch.setenv("XDG_DATA_HOME", str(custom))
+        assert xdg_data_home() == custom
+
+    def test_mait_code_state_dir(self, fake_home: Path) -> None:
+        assert mait_code_state_dir() == fake_home / ".local" / "share" / "mait-code"
+
+    def test_install_record_path(self, fake_home: Path) -> None:
+        expected = fake_home / ".local" / "share" / "mait-code" / "install.json"
+        assert install_record_path() == expected
+
+
+class TestInstallRecord:
+    def test_new_stamps_timestamp_and_resolves_source(self, tmp_path: Path) -> None:
+        source = tmp_path / "src"
+        source.mkdir()
+        record = InstallRecord.new(
+            source_dir=source,
+            version="0.14.1",
+            embedding_provider="local",
+        )
+        assert record.source_dir == str(source.resolve())
+        assert record.version == "0.14.1"
+        assert record.embedding_provider == "local"
+        assert "T" in record.installed_at  # ISO 8601
+        assert record.schema_version == 1
+
+    def test_round_trip(self, fake_home: Path) -> None:
+        record = InstallRecord(
+            source_dir="/some/path",
+            version="0.14.1",
+            embedding_provider="bedrock",
+            installed_at="2026-05-27T10:00:00+00:00",
+        )
+        path = write_record(record)
+        assert path.exists()
+        loaded = read_record()
+        assert loaded == record
+
+    def test_read_missing_raises(self, fake_home: Path) -> None:
+        try:
+            read_record()
+        except RecordError as exc:
+            assert "No install record" in str(exc)
+        else:
+            raise AssertionError("Expected RecordError")
+
+    def test_read_malformed_json_raises(self, fake_home: Path) -> None:
+        path = install_record_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{not json")
+        try:
+            read_record()
+        except RecordError as exc:
+            assert "not valid JSON" in str(exc)
+        else:
+            raise AssertionError("Expected RecordError")
+
+    def test_future_schema_version_raises(self, fake_home: Path) -> None:
+        path = install_record_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            '{"source_dir":"/","version":"x","embedding_provider":"local",'
+            '"installed_at":"2026-05-27T00:00:00+00:00","schema_version":999}'
+        )
+        try:
+            read_record()
+        except RecordError as exc:
+            assert "schema_version=999" in str(exc)
+        else:
+            raise AssertionError("Expected RecordError")
+
+    def test_missing_fields_raises(self, fake_home: Path) -> None:
+        path = install_record_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('{"source_dir":"/"}')
+        try:
+            read_record()
+        except RecordError as exc:
+            assert "missing required fields" in str(exc)
+        else:
+            raise AssertionError("Expected RecordError")
