@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: ["pyproject.toml"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to (re-)release, e.g. 0.14.1. Defaults to the version in pyproject.toml on the dispatched ref."
+        required: false
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Create GitHub release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # actions: write is required so the final step can call
+      # `gh workflow run docs.yml`. Without it the dispatch fails
+      # with HTTP 403 "Resource not accessible by integration",
+      # leaving the release tagged but the docs site frozen at
+      # the previous version.
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect version bump
+        id: detect
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${INPUT_VERSION:-}" ]]; then
+            current="$INPUT_VERSION"
+            echo "Manual dispatch: forcing version $current."
+            echo "current=$current" >> "$GITHUB_OUTPUT"
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          current=$(awk -F'"' '/^version[[:space:]]*=/ { print $2; exit }' pyproject.toml)
+          if [[ -z "$current" ]]; then
+            echo "::error::Could not parse version from pyproject.toml"
+            exit 1
+          fi
+          previous=$(git show HEAD~1:pyproject.toml 2>/dev/null \
+            | awk -F'"' '/^version[[:space:]]*=/ { print $2; exit }' \
+            || true)
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+          if [[ "$current" == "$previous" ]]; then
+            echo "Version unchanged ($current); nothing to release."
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version bumped: ${previous:-<none>} -> $current"
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check tag does not already exist
+        if: steps.detect.outputs.bumped == 'true'
+        id: tagcheck
+        env:
+          VERSION: ${{ steps.detect.outputs.current }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists on origin; skipping release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract changelog section
+        if: steps.detect.outputs.bumped == 'true' && steps.tagcheck.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.detect.outputs.current }}
+        run: |
+          set -euo pipefail
+          awk -v ver="$VERSION" '
+            index($0, "## [" ver "]") == 1 { capture = 1; next }
+            capture && index($0, "## [") == 1 { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+          if [[ ! -s release-notes.md ]]; then
+            echo "No changelog entry for $VERSION; using a stub."
+            printf 'Release %s.\n\nSee [CHANGELOG.md](CHANGELOG.md) for details.\n' "$VERSION" > release-notes.md
+          fi
+          echo "--- release notes ---"
+          cat release-notes.md
+
+      - name: Create release
+        if: steps.detect.outputs.bumped == 'true' && steps.tagcheck.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.detect.outputs.current }}
+        run: |
+          set -euo pipefail
+          gh release create "v$VERSION" \
+            --target "$GITHUB_SHA" \
+            --title "v$VERSION" \
+            --notes-file release-notes.md
+
+      # The release above is created with the default GITHUB_TOKEN,
+      # which does NOT fire downstream workflows (GitHub's anti-loop
+      # rule). Without this step the `release: published` trigger on
+      # docs.yml never runs and `mike` never cuts the release alias.
+      # Manually dispatch the docs workflow against the newly-created
+      # tag to keep the published docs in lock-step with releases.
+      #
+      # Note: this step runs even when the tag already existed (e.g.
+      # because a prior attempt created the tag but died before
+      # dispatching docs). A redundant dispatch against an existing
+      # tag is harmless; a missed one leaves the docs site frozen.
+      - name: Trigger docs deploy for the new tag
+        if: steps.detect.outputs.bumped == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.detect.outputs.current }}
+        run: |
+          set -euo pipefail
+          gh workflow run docs.yml --ref "v$VERSION"
