@@ -122,6 +122,7 @@ nav:
       - Overview: architecture.md
   - Reference:
       - Skills: reference/skills.md
+      - CLI: reference/mait-code.md
       - Python API:
           - Overview: reference/index.md
           - Context: reference/context.md

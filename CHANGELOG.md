@@ -10,6 +10,46 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **`mait-code` CLI binary** (`uv tool install` entry point) that owns the
+  install lifecycle. Six subcommands:
+  - `mait-code install --from <path>` — set up data directories, symlinks
+    (`CLAUDE.md`, `skills/*`, `agents/*`), merge `settings.json`, and write
+    an install record at `~/.local/share/mait-code/install.json`. Non-
+    interactive by default.
+  - `mait-code update` — read the install record, `git pull` (or
+    `--no-pull`, plus optional `--ref <tag|branch|sha>`),
+    `uv tool install --force --reinstall`, refresh symlinks and settings,
+    bump the install record.
+  - `mait-code uninstall` — reverse the install footprint. Default
+    preserves the data directory (memories, personalised identity files);
+    `--purge-data` removes it. `--keep-uv-tool` skips
+    `uv tool uninstall`.
+  - `mait-code status` — read-only summary with `--json` for
+    machine-readable output.
+  - `mait-code doctor` — diagnostic checks (install record, source dir,
+    settings parses, hook commands on PATH, no dangling symlinks, data
+    dir writable, uv on PATH). `--fix` applies safe fixes (removes
+    dangling symlinks, recreates a missing data dir).
+  - `mait-code version` — prints the installed version.
+- **Install record schema** (`schema_version: 1`) with versioned format
+  for forward-compatible evolution.
+
+### Changed
+
+- **`scripts/install.sh`** shrunk to a ~40-line shim: prompts for the
+  embedding provider (or honours `$MAIT_CODE_EMBEDDING_PROVIDER` and
+  non-TTY environments), `uv tool install`s from the local source, then
+  `exec`s `mait-code install`.
+- **`scripts/uninstall.sh`** shrunk to a 10-line shim that forwards all
+  arguments to `mait-code uninstall`.
+- **`docs/setup.md`** documents the new CLI lifecycle commands alongside
+  the bash shims, with a link to the full reference.
+- **`docs/reference/mait-code.md`** — comprehensive per-subcommand
+  reference (synopsis, flags, behaviour, examples, exit codes) under
+  Reference / CLI. Sits alongside the existing Skills catalogue.
+
 ## [0.14.1] — 2026-05-26
 
 **Documentation site, release pipeline, and type-checking infrastructure.**

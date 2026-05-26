@@ -20,17 +20,39 @@ uv sync
 ./scripts/install.sh
 ```
 
-The install script:
+`./scripts/install.sh` is a thin shim. It prompts for an embedding provider (`local`/`bedrock`), runs `uv tool install` so the `mait-code` and `mc-*` binaries land on `PATH`, then hands off to `mait-code install` for the rest. For non-interactive installs (e.g. CI, automation), invoke the CLI directly:
 
-1. Creates `~/.claude/mait-code-data/` with memory subdirectories (`observations/`, `reflections/`)
-2. Copies identity templates (`soul_document.md`, `user_context.md`) — never overwrites existing files
-3. Bootstraps `memory/MEMORY.md` with a placeholder if missing
-4. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file first)
-5. Symlinks every `skills/*` directory into `~/.claude/skills/`
-6. Symlinks any `agents/*` files into `~/.claude/agents/` (currently empty)
-7. Prompts for the embedding provider (`local` fastembed, default — or `bedrock` for AWS)
-8. Runs `uv tool install` so the `mc-*` entry points are on `PATH`
-9. Merges hook registrations into `~/.claude/settings.json` (preserving existing keys)
+```bash
+uv tool install . --force --reinstall --python 3.13
+mait-code install --from "$PWD" --embedding-provider local
+```
+
+`mait-code install` performs:
+
+1. Validates the source path is a mait-code clone.
+2. Creates `~/.claude/mait-code-data/` with memory subdirectories (`observations/`, `reflections/`).
+3. Copies identity templates (`soul_document.md`, `user_context.md`) — never overwrites existing files.
+4. Bootstraps `memory/MEMORY.md` with a placeholder if missing.
+5. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file to `CLAUDE.md.backup`).
+6. Symlinks every `skills/*` directory into `~/.claude/skills/`.
+7. Symlinks any `agents/*` files into `~/.claude/agents/`.
+8. Merges hook registrations and the `MAIT_CODE_EMBEDDING_PROVIDER` env entry into `~/.claude/settings.json` (preserving any pre-existing keys).
+9. Writes the install record at `~/.local/share/mait-code/install.json`.
+
+## Lifecycle
+
+Once installed, the `mait-code` binary owns the full install lifecycle. Six subcommands cover the common cases:
+
+```bash
+mait-code status            # read-only summary (use --json for machine-readable)
+mait-code doctor            # surface silent breakage; --fix applies safe fixes
+mait-code update            # git pull + reinstall + refresh symlinks/settings
+mait-code uninstall         # remove symlinks, strip settings; preserves data by default
+mait-code uninstall --purge-data   # also delete the data directory
+mait-code version           # print the installed version
+```
+
+Every command accepts `--claude-dir` and (where relevant) `--data-dir` overrides for non-default layouts. See the **[CLI reference](reference/mait-code.md)** for full per-command flag tables, behaviour notes, and exit codes.
 
 ## Personalisation
 

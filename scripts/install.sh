@@ -1,175 +1,47 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Mait Code — Install Script
-# Deploys companion configuration into ~/.claude/
+# mait-code install shim.
+#
+# Resolves the chicken-and-egg of a first-time install: the `mait-code`
+# binary needs to be on PATH before `mait-code install` can run, so we
+# `uv tool install` from the local source first, then exec into the CLI
+# for everything else (symlinks, settings merge, data dir, install
+# record).
+#
+# Once the CLI is installed, all subsequent operations should be invoked
+# directly: `mait-code update`, `mait-code uninstall`, `mait-code status`,
+# `mait-code doctor`. This shim exists so existing muscle memory
+# (./scripts/install.sh) keeps working.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CLAUDE_DIR="$HOME/.claude"
-DATA_DIR="$CLAUDE_DIR/mait-code-data"
 
-echo "Installing mait-code from: $PROJECT_DIR"
-echo ""
-
-# --- 1. Create data directory structure ---
-echo "Creating data directories..."
-mkdir -p "$DATA_DIR/memory/observations"
-mkdir -p "$DATA_DIR/memory/reflections"
-mkdir -p "$DATA_DIR/memory/graph"
-
-# --- 2. Copy templates (never overwrite user's personalised files) ---
-echo "Copying templates..."
-if [ ! -f "$DATA_DIR/soul_document.md" ]; then
-    cp "$PROJECT_DIR/templates/soul_document.md" "$DATA_DIR/soul_document.md"
-    echo "  Created soul_document.md (personalise this!)"
-else
-    echo "  soul_document.md already exists, skipping"
+# Pick an embedding provider (interactive only when stdin is a TTY).
+EMBED="${MAIT_CODE_EMBEDDING_PROVIDER:-}"
+if [[ -z "$EMBED" ]]; then
+    if [[ -t 0 ]]; then
+        echo "Embedding provider:"
+        echo "  1) local    — fastembed/HuggingFace (runs locally, ~550 MB)"
+        echo "  2) bedrock  — AWS Bedrock (requires AWS credentials)"
+        read -rp "Choose [1/2] (default: 1): " EMBED_CHOICE
+        case "$EMBED_CHOICE" in
+            2|bedrock) EMBED="bedrock" ;;
+            *)         EMBED="local"   ;;
+        esac
+    else
+        EMBED="local"
+    fi
 fi
 
-if [ ! -f "$DATA_DIR/user_context.md" ]; then
-    cp "$PROJECT_DIR/templates/user_context.md" "$DATA_DIR/user_context.md"
-    echo "  Created user_context.md (personalise this!)"
-else
-    echo "  user_context.md already exists, skipping"
+EXTRA=""
+if [[ "$EMBED" == "bedrock" ]]; then
+    EXTRA="[bedrock]"
 fi
 
-# --- 3. Create initial MEMORY.md ---
-if [ ! -f "$DATA_DIR/memory/MEMORY.md" ]; then
-    cat > "$DATA_DIR/memory/MEMORY.md" << 'MEMEOF'
-# Memory
+# 1. Install the `mait-code` binary from the local source.
+echo "Installing mait-code CLI from: $PROJECT_DIR"
+uv tool install "${PROJECT_DIR}${EXTRA}" --force --reinstall --python 3.13
 
-<!-- Curated facts about the user, their projects, and preferences. -->
-<!-- Updated by the reflection system and manual editing. -->
-<!-- Keep under ~150 lines for context budget. -->
-MEMEOF
-    echo "  Created MEMORY.md"
-else
-    echo "  MEMORY.md already exists, skipping"
-fi
-
-# --- 4. Symlink CLAUDE.md ---
-echo "Setting up CLAUDE.md symlink..."
-if [ -f "$CLAUDE_DIR/CLAUDE.md" ] && [ ! -L "$CLAUDE_DIR/CLAUDE.md" ]; then
-    cp "$CLAUDE_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md.backup"
-    echo "  Backed up existing CLAUDE.md to CLAUDE.md.backup"
-fi
-ln -sf "$PROJECT_DIR/config/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
-echo "  Linked CLAUDE.md"
-
-# --- 5. Symlink skills ---
-if [ -d "$PROJECT_DIR/skills" ]; then
-    mkdir -p "$CLAUDE_DIR/skills"
-    for skill_dir in "$PROJECT_DIR/skills"/*/; do
-        [ -d "$skill_dir" ] || continue
-        skill_name="$(basename "$skill_dir")"
-        target="$CLAUDE_DIR/skills/$skill_name"
-        if [ -L "$target" ] && [ "$(readlink "$target")" = "$skill_dir" ]; then
-            echo "  Skill $skill_name already linked"
-        else
-            ln -sf "$skill_dir" "$target"
-            echo "  Linked skill: $skill_name"
-        fi
-    done
-fi
-
-# --- 6. Symlink agents ---
-if [ -d "$PROJECT_DIR/agents" ]; then
-    mkdir -p "$CLAUDE_DIR/agents"
-    for agent_file in "$PROJECT_DIR/agents"/*; do
-        [ -f "$agent_file" ] || continue
-        agent_name="$(basename "$agent_file")"
-        [ "$agent_name" = ".gitkeep" ] && continue
-        target="$CLAUDE_DIR/agents/$agent_name"
-        if [ -L "$target" ] && [ "$(readlink "$target")" = "$agent_file" ]; then
-            echo "  Agent $agent_name already linked"
-        else
-            ln -sf "$agent_file" "$target"
-            echo "  Linked agent: $agent_name"
-        fi
-    done
-fi
-
-# --- 7. Choose embedding provider ---
-echo ""
-echo "Embedding provider:"
-echo "  1) local    — fastembed/HuggingFace (runs locally, ~550 MB model download)"
-echo "  2) bedrock  — AWS Bedrock (requires AWS credentials, no local model)"
-echo ""
-read -rp "Choose embedding provider [1/2] (default: 1): " EMBED_CHOICE
-case "$EMBED_CHOICE" in
-    2|bedrock)
-        EMBEDDING_PROVIDER="bedrock"
-        INSTALL_EXTRAS="[bedrock]"
-        echo "  Selected: bedrock (AWS Bedrock)"
-        ;;
-    *)
-        EMBEDDING_PROVIDER="local"
-        INSTALL_EXTRAS=""
-        echo "  Selected: local (fastembed)"
-        ;;
-esac
-echo ""
-
-# --- 8. Install CLI tools via uv tool ---
-echo "Installing CLI tools..."
-uv tool install "$PROJECT_DIR$INSTALL_EXTRAS" --force --reinstall --python 3.13
-echo "  CLI tools installed to ~/.local/bin/"
-
-# --- 9. Merge settings.json ---
-echo "Merging settings.json..."
-SETTINGS_SRC="$PROJECT_DIR/config/settings.json"
-SETTINGS_DST="$CLAUDE_DIR/settings.json"
-
-uv run python -c "
-import json
-
-# Read source settings
-with open('$SETTINGS_SRC') as f:
-    src = json.load(f)
-
-# Read or create destination settings
-try:
-    with open('$SETTINGS_DST') as f:
-        dst = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-    dst = {}
-
-# Merge hooks
-if 'hooks' not in dst:
-    dst['hooks'] = {}
-for hook_name, hook_config in src.get('hooks', {}).items():
-    dst['hooks'][hook_name] = hook_config
-
-# Merge MCP servers
-if 'mcpServers' not in dst:
-    dst['mcpServers'] = {}
-for server_name, server_config in src.get('mcpServers', {}).items():
-    dst['mcpServers'][server_name] = server_config
-
-# Set embedding provider
-if 'env' not in dst:
-    dst['env'] = {}
-dst['env']['MAIT_CODE_EMBEDDING_PROVIDER'] = '$EMBEDDING_PROVIDER'
-
-with open('$SETTINGS_DST', 'w') as f:
-    json.dump(dst, f, indent=2)
-    f.write('\n')
-
-print('  Settings merged successfully')
-"
-
-# --- 10. Summary ---
-echo ""
-echo "=== Installation complete ==="
-echo ""
-echo "Installed:"
-echo "  CLAUDE.md    → $CLAUDE_DIR/CLAUDE.md"
-echo "  Data dir     → $DATA_DIR/"
-echo "  Settings     → $SETTINGS_DST"
-echo "  Embeddings   → $EMBEDDING_PROVIDER"
-echo ""
-echo "Next steps:"
-echo "  1. Personalise $DATA_DIR/soul_document.md"
-echo "  2. Fill in $DATA_DIR/user_context.md"
-echo "  3. Start Claude Code in any project — the companion will load automatically"
+# 2. Hand off to the CLI for the rest of the install lifecycle.
+exec mait-code install --from "$PROJECT_DIR" --embedding-provider "$EMBED" "$@"
