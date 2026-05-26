@@ -43,6 +43,17 @@ uv run ruff format src/        # Format
 > No test suite yet (`pytest` is listed as a dev dep but `tests/` doesn't exist).
 > Tracked as a follow-up — see the audit's P3 items.
 
+## Docs
+
+Docstrings follow **Google style** and modules that surface in the API reference declare `__all__` with `# Section` comments. See [`docs/contributing-docs.md`](docs/contributing-docs.md) for the conventions and the regeneration workflow.
+
+```bash
+uv sync --group docs                                # install mkdocs deps
+uv run python docs/gen_ref_pages.py                 # regenerate docs/reference/*
+uv run mkdocs serve                                 # local preview
+uv run mkdocs build --strict                        # CI-equivalent build
+```
+
 ## Directory Structure
 
 ```

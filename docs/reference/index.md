@@ -8,8 +8,9 @@ by the ``# Section`` comments inside ``__all__``, so editorial
 structure lives next to the code rather than in hand-curated
 reference pages.
 
-Contributors: see `docs/gen_ref_pages.py` for the regeneration
-workflow.
+Contributors: see the
+[contributing-docs guide](../contributing-docs.md) and
+`docs/gen_ref_pages.py` for the regeneration workflow.
 
 ## Modules
 

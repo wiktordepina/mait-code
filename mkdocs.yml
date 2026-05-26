@@ -120,6 +120,7 @@ nav:
       - Decisions: decisions.md
       - Sync: sync.md
       - Philosophy: philosophy.md
+      - Contributing to docs: contributing-docs.md
   - Architecture:
       - Overview: architecture.md
   - Reference:
