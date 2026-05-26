@@ -10,6 +10,14 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-05-27
+
+**`mait-code` install-lifecycle CLI.** A new top-level binary replaces
+the ad-hoc bash install/uninstall scripts with a Python CLI that owns
+the full lifecycle: install, update, uninstall, status, doctor,
+version. The bash shims shrink to ~10–40 lines each, handling only the
+chicken-and-egg bootstrap before delegating to the CLI.
+
 ### Added
 
 - **`mait-code` CLI binary** (`uv tool install` entry point) that owns the
@@ -384,7 +392,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.0
 [0.14.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.1
 [0.14.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.0
 [0.13.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.13.0
