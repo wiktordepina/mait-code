@@ -21,6 +21,11 @@ import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+__all__ = [
+    "log_invocation",
+    "setup_logging",
+]
+
 # Parameters to truncate in invocation logs (prompt/message content)
 _SENSITIVE_PARAMS = {"content", "query", "what", "description", "prompt", "message"}
 

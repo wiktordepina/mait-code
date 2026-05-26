@@ -10,6 +10,8 @@ import os
 import subprocess
 import time
 
+__all__ = ["call_claude"]
+
 logger = logging.getLogger(__name__)
 
 

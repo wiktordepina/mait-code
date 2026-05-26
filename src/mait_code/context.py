@@ -7,6 +7,13 @@ used by memory, tasks, and hooks for scope-aware operations.
 import subprocess
 from pathlib import Path
 
+__all__ = [
+    "DEFAULT_BRANCHES",
+    "get_branch",
+    "get_context",
+    "get_project",
+]
+
 # Branches that are considered "default" — work on these is project-scoped, not branch-scoped.
 DEFAULT_BRANCHES = {"main", "master"}
 
