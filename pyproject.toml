@@ -48,7 +48,7 @@ addopts = "-ra --strict-markers"
 
 [tool.pyright]
 pythonVersion = "3.13"
-typeCheckingMode = "basic"
+typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"
 include = ["src"]

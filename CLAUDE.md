@@ -38,7 +38,7 @@ The point is a strict separation between polished, shipped artefacts (committed,
 ```bash
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
-uv run pyright                 # Typecheck (basic mode, src/ only)
+uv run pyright                 # Typecheck (standard mode, src/ only)
 uv run pytest                  # Test suite (~460 tests)
 ```
 
