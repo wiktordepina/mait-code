@@ -71,6 +71,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 | `created_at` | DATETIME | Timestamp of creation |
 
 **Scope semantics:**
+
 - **global** — visible everywhere, `project` and `branch` are null
 - **project** — visible across all branches of one project, `project` set, `branch` null
 - **branch** — visible only on one branch of one project, both set
@@ -78,6 +79,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 - Query-time default: filter by current context; `--scope all` disables filtering.
 
 **Entry type to memory class mapping:**
+
 - **Episodic** (fast decay, 3-day half-life): `event`, `task`
 - **Semantic** (slow decay, 90-day half-life): `fact`, `preference`, `insight`, `relationship`
 
@@ -118,6 +120,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 Unique constraint on `(source_entity_id, target_entity_id, relationship_type)`.
 
 **Indexes:**
+
 - `idx_memory_entries_created_at` — temporal queries
 - `idx_memory_entries_type` — type filtering
 - `idx_memory_entries_importance` — importance ranking
@@ -143,15 +146,18 @@ score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 ```
 
 **Recency** uses exponential decay:
+
 - `recency = exp(-ln(2) × age_days / half_life)`
 - Episodic half-life: 3 days (events decay fast)
 - Semantic half-life: 90 days (facts persist)
 - Default half-life: 7 days (unknown class)
 
 **Importance** is normalized from 1-10 to 0.0-1.0:
+
 - `importance_norm = (importance - 1) / 9`
 
 **Relevance** is provided by the search method:
+
 - **Hybrid mode** (default): combines FTS5 BM25 with vector cosine similarity
 - **FTS mode**: keyword-only BM25 ranking
 - **Vector mode**: semantic similarity only via the configured embedding provider
@@ -364,6 +370,7 @@ All entry points use a shared logging module (`src/mait_code/logging.py`) that w
 | `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Model ID for Bedrock embedding provider |
 
 **Features:**
+
 - `setup_logging()` — call once per entry point; idempotent, configures the `mait_code` logger hierarchy
 - `@log_invocation(name=...)` — decorator that logs command name, parsed arguments, duration, and exit status
 - Sensitive parameters (`content`, `query`, `what`, `prompt`, `message`) are automatically truncated to 80 chars
@@ -391,6 +398,7 @@ All three are referenced via `@` imports in `config/CLAUDE.md` and loaded into e
 Schema changes are managed via forward-only migrations in `src/mait_code/tools/memory/migrate.py`. Each migration has a version number, description, and body (SQL list or callable). The `schema_version` table tracks which migrations have been applied.
 
 Current migrations:
+
 1. `memory_entries` table with indexes
 2. FTS5 virtual table for full-text search
 3. FTS sync triggers (insert/update/delete)
@@ -402,6 +410,7 @@ Current migrations:
 9. Create `reflection_watermark` table for idempotent reflection
 
 Adding a new migration:
+
 1. Append a tuple to `MIGRATIONS` with the next version number
 2. Include SQL statements or a callable that receives `conn`
 3. `ensure_schema()` runs automatically on every connection open

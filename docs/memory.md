@@ -194,6 +194,7 @@ Normalized from the 1-10 scale to 0.0-1.0: `(importance - 1) / 9`
 ### Relevance
 
 Depends on search mode:
+
 - **Hybrid:** cosine similarity from vector search (for entries found by both methods)
 - **FTS:** hardcoded 0.7 (BM25 already filtered for relevance)
 - **Vector:** cosine similarity converted from distance
@@ -252,16 +253,19 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 `~/.claude/mait-code-data/memory/MEMORY.md` is loaded into every Claude Code session via the `@MEMORY.md` reference in CLAUDE.md. It contains the highest-confidence, most stable facts — things the companion should always know.
 
 **Constraints:**
+
 - ~150 lines maximum (context budget)
 - Organised by topic, not chronologically
 - Updated by the reflection system (`/reflect`) which proposes additions for user approval
 
 **Examples of what belongs here:**
+
 - "User works with Kubernetes on GKE"
 - "Preferred test runner: pytest with -x flag"
 - "Auth service: JWT with RS256, token refresh every 15 minutes"
 
 **What does NOT belong here:**
+
 - Temporary tasks or in-progress work
 - Session-specific details
 - Anything that changes frequently
