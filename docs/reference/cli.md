@@ -41,6 +41,14 @@
 
 ::: mait_code.cli.UninstallSummary
 
+## Status & doctor
+
+::: mait_code.cli.Check
+
+::: mait_code.cli.DoctorReport
+
+::: mait_code.cli.Status
+
 ## Symlinks
 
 ::: mait_code.cli.SymlinkResult

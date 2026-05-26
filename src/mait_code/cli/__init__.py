@@ -30,10 +30,23 @@ from typing import Annotated
 
 import typer
 
+from mait_code.cli._doctor import (
+    Check,
+    DoctorReport,
+    render_json as _doctor_render_json,
+    render_text as _doctor_render_text,
+    run_doctor as _doctor_impl,
+)
 from mait_code.cli._install import (
     EMBEDDING_PROVIDERS,
     InstallSummary,
     install as _install_impl,
+)
+from mait_code.cli._status import (
+    Status,
+    collect_status as _status_impl,
+    render_json as _status_render_json,
+    render_text as _status_render_text,
 )
 from mait_code.cli._uninstall import (
     UninstallSummary,
@@ -93,6 +106,10 @@ __all__ = [
     "UpdateSummary",
     # Uninstall flow
     "UninstallSummary",
+    # Status & doctor
+    "Check",
+    "DoctorReport",
+    "Status",
     # Symlinks
     "SymlinkResult",
     "remove_agent_symlinks",
@@ -334,6 +351,83 @@ def _render_uninstall_summary(summary: UninstallSummary) -> None:
         typer.echo("  Data directory preserved (use --purge-data to remove)")
     for warning in summary.warnings:
         typer.echo(f"  warning: {warning}", err=True)
+
+
+@app.command(name="status")
+def status_cmd(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Emit a machine-readable JSON document instead of text.",
+        ),
+    ] = False,
+    claude_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--claude-dir",
+            help="Override the Claude Code config directory.",
+        ),
+    ] = None,
+    data_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--data-dir",
+            help="Override the mait-code data directory.",
+        ),
+    ] = None,
+) -> None:
+    """Print a read-only summary of the current install."""
+    status = _status_impl(
+        claude_dir=claude_dir_override,
+        data_dir=data_dir_override,
+    )
+    if as_json:
+        typer.echo(_status_render_json(status))
+    else:
+        typer.echo(_status_render_text(status))
+
+
+@app.command(name="doctor")
+def doctor_cmd(
+    fix: Annotated[
+        bool,
+        typer.Option("--fix", help="Apply safe fixes for findings that support it."),
+    ] = False,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Emit a machine-readable JSON document instead of text.",
+        ),
+    ] = False,
+    claude_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--claude-dir",
+            help="Override the Claude Code config directory.",
+        ),
+    ] = None,
+    data_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--data-dir",
+            help="Override the mait-code data directory.",
+        ),
+    ] = None,
+) -> None:
+    """Diagnose silent breakage in the install; exits 1 on any failure."""
+    report = _doctor_impl(
+        fix=fix,
+        claude_dir=claude_dir_override,
+        data_dir=data_dir_override,
+    )
+    if as_json:
+        typer.echo(_doctor_render_json(report))
+    else:
+        typer.echo(_doctor_render_text(report))
+    if report.has_fail:
+        raise typer.Exit(code=1)
 
 
 def main() -> None:
