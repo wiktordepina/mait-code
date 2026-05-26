@@ -122,9 +122,11 @@ nav:
       - Overview: architecture.md
   - Reference:
       - Skills: reference/skills.md
+      - CLI: reference/mait-code.md
       - Python API:
           - Overview: reference/index.md
           - Context: reference/context.md
+          - CLI: reference/cli.md
           - LLM: reference/llm.md
           - Logging: reference/logging.md
           - SSL: reference/ssl.md

@@ -50,6 +50,7 @@ OUT_ROOT = REPO_ROOT / "docs" / "reference"
 REFERENCE_MODULES: dict[str, list[tuple[str, str]]] = {
     "Core": [
         ("context", "Context"),
+        ("cli", "CLI"),
         ("llm", "LLM"),
         ("logging", "Logging"),
         ("ssl", "SSL"),
