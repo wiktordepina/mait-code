@@ -37,6 +37,10 @@
 
 ::: mait_code.cli.UpdateSummary
 
+## Uninstall flow
+
+::: mait_code.cli.UninstallSummary
+
 ## Symlinks
 
 ::: mait_code.cli.SymlinkResult

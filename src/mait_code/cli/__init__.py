@@ -35,6 +35,10 @@ from mait_code.cli._install import (
     InstallSummary,
     install as _install_impl,
 )
+from mait_code.cli._uninstall import (
+    UninstallSummary,
+    uninstall as _uninstall_impl,
+)
 from mait_code.cli._update import (
     UpdateSummary,
     update as _update_impl,
@@ -87,6 +91,8 @@ __all__ = [
     "InstallSummary",
     # Update flow
     "UpdateSummary",
+    # Uninstall flow
+    "UninstallSummary",
     # Symlinks
     "SymlinkResult",
     "remove_agent_symlinks",
@@ -265,6 +271,69 @@ def _render_update_summary(summary: UpdateSummary) -> None:
         f"{len(summary.skills.already_linked)} unchanged"
     )
     typer.echo(f"  Settings: {summary.settings_path}")
+
+
+@app.command(name="uninstall")
+def uninstall_cmd(
+    purge_data: Annotated[
+        bool,
+        typer.Option(
+            "--purge-data",
+            help="Also delete the data directory (memories + personalised files).",
+        ),
+    ] = False,
+    keep_uv_tool: Annotated[
+        bool,
+        typer.Option(
+            "--keep-uv-tool",
+            help="Skip `uv tool uninstall mait-code` (useful when downgrading).",
+        ),
+    ] = False,
+    claude_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--claude-dir",
+            help="Override the Claude Code config directory.",
+        ),
+    ] = None,
+    data_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--data-dir",
+            help="Override the mait-code data directory.",
+        ),
+    ] = None,
+) -> None:
+    """Remove symlinks, strip settings entries, optionally purge data."""
+    summary = _uninstall_impl(
+        purge_data=purge_data,
+        keep_uv_tool=keep_uv_tool,
+        claude_dir=claude_dir_override,
+        data_dir=data_dir_override,
+    )
+    _render_uninstall_summary(summary)
+
+
+def _render_uninstall_summary(summary: UninstallSummary) -> None:
+    typer.echo("Uninstalled mait-code.")
+    if not summary.had_record:
+        typer.echo("  (No install record was present.)")
+    if summary.claude_md_removed:
+        typer.echo("  Removed CLAUDE.md symlink (restored backup if any)")
+    if summary.skills_removed:
+        typer.echo(f"  Removed {len(summary.skills_removed)} skill symlinks")
+    if summary.agents_removed:
+        typer.echo(f"  Removed {len(summary.agents_removed)} agent symlinks")
+    if summary.settings_cleaned:
+        typer.echo("  Cleaned mait-code entries from settings.json")
+    if summary.uv_tool_uninstalled:
+        typer.echo("  Uninstalled `mait-code` from uv tool")
+    if summary.data_dir_removed:
+        typer.echo("  Removed data directory")
+    elif not summary.warnings:
+        typer.echo("  Data directory preserved (use --purge-data to remove)")
+    for warning in summary.warnings:
+        typer.echo(f"  warning: {warning}", err=True)
 
 
 def main() -> None:
