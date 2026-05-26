@@ -10,6 +10,14 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-05-26
+
+**Documentation site, release pipeline, and type-checking infrastructure.**
+No runtime behaviour changes — this patch release ships the project's first
+hosted documentation site at <https://wiktordepina.github.io/mait-code/>,
+encodes the release process in CI, and adopts pyright type-checking up to
+standard mode.
+
 ### Added
 
 - **Docs site.** `mkdocs-material` + `mkdocstrings` with auto-generated Python
@@ -18,35 +26,42 @@ don't change the public surface. Everything is still in flux.
   packages, three hook packages. Nested layout under `Tools/` and `Hooks/`
   mirrors the dotted module hierarchy. Hand-authored `docs/reference/skills.md`
   catalogues every slash command.
-- **GitHub Pages deploy.** `docs.yml` workflow ports cairn's deploy pattern
-  — `dev` alias from `main`, version pin + `latest` alias from tags, managed
-  by `mike`. Published at <https://wiktordepina.github.io/mait-code/>.
+- **GitHub Pages deploy.** `docs.yml` workflow with cairn's deploy pattern —
+  `dev` alias from `main`, version pin + `latest` alias from tags, managed by
+  `mike`.
 - **`docs/contributing-docs.md`.** Convention note covering the `__all__`
   contract, Google docstring style, the regeneration workflow, and the
   seven-tab nav layout.
-- **Release pipeline.** `ci.yml` (lint, smoke test, dependency audit) and
-  `release.yml` (version-bump-triggered, dispatches docs.yml on tag). The
-  `tests/test_imports.py` smoke test imports every surface module and
-  asserts `__all__` is non-empty.
-- **CI badges and hosted-docs link** in root `README.md`.
+- **Release pipeline.** `ci.yml` (lint, test, audit, typecheck) and
+  `release.yml` (version-bump-triggered, dispatches `docs.yml` on tag).
+  `tests/test_imports.py` is a parametrised smoke test asserting every
+  surface module declares a non-empty `__all__`.
+- **Pyright type-checking** in standard mode over `src/`. Added as a fourth
+  job in `ci.yml` alongside lint / test / audit. Configured via
+  `[tool.pyright]` in `pyproject.toml`.
+- **CI and Docs badges plus a hosted-docs link** in root `README.md`.
 
 ### Changed
 
 - **Codebase-wide docstrings** migrated to Google style for consistent
   rendering by `mkdocstrings`. Surface modules declare `__all__` with
   `# Section` comments grouping symbols by topic.
-- **Docs nav** restructured into seven tabs (Home, Guide, Concepts,
-  Architecture, Reference, Decisions, Contributing) replacing the earlier
-  four-tab layout. Home page rewritten as a proper landing experience
-  rather than a link list.
-- **Drive-by type annotations** on `log_invocation` (return type) and
-  `check_dimension_match` (`conn` parameter), surfaced by `mkdocs build
-  --strict` complaining about docstrings referencing untyped signatures.
+- **Docs nav** organised into seven tabs (Home, Guide, Concepts, Architecture,
+  Reference, Decisions, Contributing). Home page rewritten as a proper landing
+  experience rather than a link list.
+- **`Optional` narrowing tightened** across ten sites in
+  `tools/memory/cli.py`, `hooks/observe/extractor.py`,
+  `tools/memory/scoring.py`, `tools/memory/writer.py`, and
+  `tools/web_fetch/fetch.py`. Drive-by return / parameter annotations on
+  `log_invocation` and `check_dimension_match` surfaced by
+  `mkdocs build --strict`.
+- **CHANGELOG** reformatted to
+  [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) conventions while
+  preserving all prior history.
 
 ### Removed
 
-- **`run_pytest.yaml` workflow.** Broken since creation (no `tests/`
-  directory existed); superseded by `ci.yml`.
+- **`run_pytest.yaml` workflow.** Superseded by the broader `ci.yml`.
 
 ## [0.14.0] — 2026-04-07
 
@@ -329,7 +344,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.14.1...HEAD
+[0.14.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.1
 [0.14.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.0
 [0.13.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.13.0
 [0.12.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.12.1
