@@ -599,9 +599,7 @@ INSIGHT: Testing and iteration speed are prioritised over comprehensive coverage
 ## Memory Updates
 MEMORY_UPDATE: Primary testing approach: pytest with -x flag"""
 
-    with patch(
-        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
-    ):
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
         result = reflect(db_with_entries, days=7, min_new=0)
 
     assert result["skipped"] is False
@@ -643,9 +641,7 @@ def test_reflect_llm_failure(db_with_entries):
 def test_reflect_no_memory_updates(db_with_entries):
     llm_response = "INSIGHT: Just one insight with no memory updates"
 
-    with patch(
-        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
-    ):
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
         result = reflect(db_with_entries, days=7, min_new=0)
 
     assert result["skipped"] is False
@@ -688,17 +684,13 @@ def test_reflect_idempotent(db_with_entries):
     """Running reflect twice with no new entries — second call should skip."""
     llm_response = "INSIGHT: Some insight"
 
-    with patch(
-        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
-    ):
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
         result1 = reflect(db_with_entries, days=7, min_new=0)
 
     assert result1["skipped"] is False
 
     # Second call — same data, watermark set
-    with patch(
-        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
-    ):
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
         result2 = reflect(db_with_entries, days=7, min_new=0)
 
     assert result2["skipped"] is True
@@ -708,9 +700,7 @@ def test_reflect_incremental(db_with_entries):
     """After reflection, adding new entries allows a second reflection."""
     llm_response = "INSIGHT: First insight"
 
-    with patch(
-        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
-    ):
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
         result1 = reflect(db_with_entries, days=7, min_new=0)
 
     assert result1["skipped"] is False
@@ -743,9 +733,7 @@ def test_reflect_batch_size_limits_entries(db_with_entries):
     """With batch_size=2, only 2 entries should be processed."""
     llm_response = "INSIGHT: Batch insight"
 
-    with patch(
-        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
-    ):
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
         result = reflect(db_with_entries, days=7, min_new=0, batch_size=2)
 
     assert result["batch_info"]["processed"] == 2

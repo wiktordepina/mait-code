@@ -80,7 +80,12 @@ class TestCheckSsrf:
             _check_ssrf("nonexistent.invalid")
 
 
-def _mock_response(body: bytes, content_type: str = "text/html; charset=utf-8", status: int = 200, url: str = "https://example.com"):
+def _mock_response(
+    body: bytes,
+    content_type: str = "text/html; charset=utf-8",
+    status: int = 200,
+    url: str = "https://example.com",
+):
     """Create a mock urllib response."""
     mock = MagicMock()
     mock.read.return_value = body
@@ -147,7 +152,9 @@ class TestFetchUrl:
     @patch("mait_code.tools.web_fetch.fetch._check_ssrf")
     def test_allow_private_skips_ssrf(self, mock_ssrf):
         """Verify that _check_ssrf is not called when allow_private=True."""
-        with patch("mait_code.tools.web_fetch.fetch.urllib.request.urlopen") as mock_urlopen:
+        with patch(
+            "mait_code.tools.web_fetch.fetch.urllib.request.urlopen"
+        ) as mock_urlopen:
             mock_urlopen.return_value = _mock_response(b"ok", "text/plain")
             fetch_url("https://10.0.0.1/internal", allow_private=True)
             mock_ssrf.assert_not_called()
