@@ -22,8 +22,8 @@ graph TD
     subgraph mait_code ["mait-code (Python)"]
         subgraph hooks_pkg ["hooks/"]
             session_start["session_start/ <i>(SessionStart)</i>"]
-            observe["observe/ <i>(PreCompact, SessionEnd)</i><br/>cli, extractor, transcript<br/>cursor, storage"]
-            auto_format["auto_format/ <i>(PostToolUse)</i>"]
+            observe["observe/ <i>(PreCompact, SessionEnd)</i><br/>cli, extractor, transcript<br/>cursor, storage, scope"]
+            auto_format["auto_format/ <i>(placeholder, not registered)</i>"]
         end
         subgraph tools_pkg ["tools/"]
             memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect"]
@@ -65,7 +65,17 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 | `entry_type` | TEXT | fact, preference, event, insight, task, relationship |
 | `importance` | INTEGER | 1-10 scale (default 5) |
 | `memory_class` | TEXT | episodic or semantic (controls decay rate) |
+| `scope` | TEXT | `global`, `project`, or `branch` (default `global`) |
+| `project` | TEXT | Project identifier (null for global scope) |
+| `branch` | TEXT | Git branch (set only for branch scope) |
 | `created_at` | DATETIME | Timestamp of creation |
+
+**Scope semantics:**
+- **global** — visible everywhere, `project` and `branch` are null
+- **project** — visible across all branches of one project, `project` set, `branch` null
+- **branch** — visible only on one branch of one project, both set
+- Default at write time: `branch` if both project+branch detected, else `project` if project detected, else `global`. Override with `--scope`.
+- Query-time default: filter by current context; `--scope all` disables filtering.
 
 **Entry type to memory class mapping:**
 - **Episodic** (fast decay, 3-day half-life): `event`, `task`
@@ -112,10 +122,17 @@ Unique constraint on `(source_entity_id, target_entity_id, relationship_type)`.
 - `idx_memory_entries_type` — type filtering
 - `idx_memory_entries_importance` — importance ranking
 - `idx_memory_entries_class` — class filtering
+- `idx_memory_entries_scope` — scope filtering
+- `idx_memory_entries_project` — project filtering
+- `idx_memory_entries_project_scope` — combined project + scope lookups
 - `idx_entities_name` — entity name lookup
 - `idx_entities_type` — entity type filtering
 - `idx_rel_unique` — relationship deduplication
 - `idx_rel_source`, `idx_rel_target` — relationship traversal
+
+**Reflection state: `reflection_watermark`**
+
+Tracks the last `memory_entries.id` reflected on per project, so `/reflect` is idempotent across runs. Primary key on `project` (empty string for global). Columns: `project`, `last_reflected_id`, `last_reflected_at`.
 
 ### Composite Scoring
 
@@ -200,16 +217,18 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 
 | Subcommand | Args | Description |
 |------------|------|-------------|
-| `search` | query, --limit?, --type?, --mode? | Hybrid (FTS5 + vector) search with composite score re-ranking |
-| `store` | content, --type?, --importance? | Store with deduplication, auto-computes embedding |
-| `list` | --limit?, --type?, --since? | List recent entries, optionally filtered by type and time period (e.g. `24h`, `7d`, `1w`) |
+| `search` | query, --limit?, --type?, --mode?, --project?, --branch?, --scope? | Hybrid (FTS5 + vector) search with composite score re-ranking |
+| `store` | content, --type?, --importance?, --project?, --branch?, --scope? | Store with deduplication, auto-computes embedding |
+| `list` | --limit?, --type?, --since?, --project?, --branch?, --scope? | List recent entries, optionally filtered by type and time period (e.g. `24h`, `7d`, `1w`) |
 | `delete` | id | Delete by ID (vec cleanup via trigger) |
-| `stats` | — | Counts by type, class, embedding coverage, and provider info |
+| `stats` | — | Counts by type, class, scope, project, embedding coverage, and provider info |
 | `entities` | query?, --limit? | Search or list knowledge graph entities |
 | `relationships` | entity_name | Show relationships for an entity |
 | `reindex` | — | Recompute vector embeddings for all entries |
 | `restore` | --dry-run? | Restore memory database from observation JSONL log files, then reindex |
-| `reflect` | --days?, --min-new?, --batch-size?, --drain? | Synthesise observations into insights, propose MEMORY.md updates |
+| `reflect` | --days?, --min-new?, --batch-size?, --drain?, --project?, --branch?, --scope? | Synthesise observations into insights, propose MEMORY.md updates |
+
+Scope flags apply to every command that touches `memory_entries`: `--project` and `--branch` override the auto-detected context; `--scope` filters or sets the entry scope (`global`, `project`, `branch`, or `all` — the last disables filtering at query time).
 
 ## Tasks Database
 
@@ -312,7 +331,7 @@ Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed
 | `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks) |
 | `observe` | PreCompact | async | Extract observations before context compaction |
 | `observe` | SessionEnd | async | Final observation extraction |
-| `auto_format` | — | — | Format code after edits (placeholder) |
+| `auto_format` | *not registered* | — | Placeholder package — entry point exists (`mc-hook-format`) but no settings.json registration and no implementation |
 
 Both observe hooks run asynchronously (`"async": true`) to avoid blocking the main conversation. They call Claude Haiku to extract structured observations (facts, preferences, decisions, bugs, entities, relationships) from new transcript lines.
 
@@ -379,6 +398,8 @@ Current migrations:
 5. `memory_entities` table for entity tracking
 6. `memory_relationships` table for entity relationships
 7. Recreate vec0 with 768 dimensions (default for local provider), add vec delete trigger
+8. Add `scope`, `project`, `branch` columns to `memory_entries`; rebuild FTS with new columns; add scope/project indexes
+9. Create `reflection_watermark` table for idempotent reflection
 
 Adding a new migration:
 1. Append a tuple to `MIGRATIONS` with the next version number
