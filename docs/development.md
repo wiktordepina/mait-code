@@ -30,7 +30,7 @@ every PR and push to `main`.
 ```bash
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
-uv run pyright                 # Typecheck (basic mode, src/ only)
+uv run pyright                 # Typecheck (standard mode, src/ only)
 ```
 
 Pyright reads the optional `boto3` import in `tools/memory/embeddings.py`,
