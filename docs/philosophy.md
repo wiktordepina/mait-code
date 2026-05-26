@@ -6,7 +6,7 @@
 
 ```
 m · AI · t
-  ^^^^
+   ^^^^
 ```
 
 The AI sits inside the word, not in front of it. The companionship is the noun; the intelligence is the mechanism. It's a mate that happens to be AI under the hood — not an AI that's been dressed up to seem friendly.
