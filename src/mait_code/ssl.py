@@ -6,6 +6,8 @@ corporate proxy CA certificates are trusted automatically.
 
 import logging
 
+__all__ = ["setup_ssl"]
+
 logger = logging.getLogger(__name__)
 
 _injected = False

@@ -121,7 +121,7 @@ def cmd_remove(args):
 
 
 def cmd_check(args):
-    """List open tasks for current project. Used by session_start hook."""
+    """List open tasks for the current project (used by the session-start hook)."""
     project = args.project if args.project else get_project()
     with connection() as conn:
         rows = conn.execute(
@@ -140,7 +140,7 @@ def cmd_check(args):
 
 
 def cmd_list_all(_args):
-    """List open tasks across all projects."""
+    """List open tasks across all projects, grouped by project."""
     with connection() as conn:
         rows = conn.execute(
             "SELECT t.id, t.project, t.title, t.priority FROM tasks t "

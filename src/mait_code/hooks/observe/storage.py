@@ -26,7 +26,14 @@ def write_raw_extraction(
     project: str | None = None,
     branch: str | None = None,
 ) -> None:
-    """Append extraction to daily JSONL log file."""
+    """Append an extraction record to the day's JSONL log file.
+
+    Args:
+        extraction: Parsed extraction dict returned by the LLM.
+        trigger: The hook trigger name (e.g. ``"precompact"``).
+        project: Project identifier captured from the transcript.
+        branch: Branch name captured from the transcript.
+    """
     data_dir = get_data_dir()
     obs_dir = data_dir / "memory" / "observations"
     obs_dir.mkdir(parents=True, exist_ok=True)
@@ -51,7 +58,13 @@ def store_extraction(
     project: str | None = None,
     branch: str | None = None,
 ) -> None:
-    """Store extracted facts, preferences, decisions, bugs to memory.db."""
+    """Store extracted facts, preferences, decisions, and bugs to ``memory.db``.
+
+    Args:
+        extraction: Parsed extraction dict with category keys.
+        project: Project identifier used to resolve scope and assign entries.
+        branch: Branch name used to resolve scope and assign entries.
+    """
     with connection() as conn:
         for category, entry_type in CATEGORY_TO_TYPE.items():
             for item in extraction.get(category, []):
@@ -75,7 +88,15 @@ def store_extraction(
 
 
 def store_entities_and_relationships(extraction: dict) -> None:
-    """Upsert entities and relationships from extraction."""
+    """Upsert entities and relationships from an extraction dict.
+
+    Entities referenced by relationships but absent from the ``entities``
+    list are auto-created with type ``"unknown"``.
+
+    Args:
+        extraction: Parsed extraction dict with ``entities`` and
+            ``relationships`` keys.
+    """
     with connection() as conn:
         # Upsert entities and build name->id map
         entity_ids: dict[str, int] = {}

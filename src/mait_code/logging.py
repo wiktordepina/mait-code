@@ -1,13 +1,13 @@
-"""
-Shared logging configuration for mait-code.
+"""Shared logging configuration for mait-code.
 
-Call setup_logging() once in each entry point's main() to configure
-file-based logging for the mait_code namespace. Uses RotatingFileHandler
-to keep logs bounded.
+Call ``setup_logging()`` once in each entry point's ``main()`` to configure
+file-based logging for the ``mait_code`` namespace. Uses a
+``RotatingFileHandler`` to keep logs bounded.
 
 Configuration via environment variables (settable in settings.json env):
-    MAIT_CODE_LOG_LEVEL  — DEBUG, INFO, WARNING, ERROR (default: INFO)
-    MAIT_CODE_LOG_FILE   — override log file path
+
+* ``MAIT_CODE_LOG_LEVEL`` — DEBUG, INFO, WARNING, ERROR (default: INFO)
+* ``MAIT_CODE_LOG_FILE``  — override log file path
 
 Log output goes to file only — never stdout/stderr — so it cannot
 interfere with hook JSON output or tool results.
@@ -18,8 +18,15 @@ import logging
 import os
 import sys
 import time
+from collections.abc import Callable
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any
+
+__all__ = [
+    "log_invocation",
+    "setup_logging",
+]
 
 # Parameters to truncate in invocation logs (prompt/message content)
 _SENSITIVE_PARAMS = {"content", "query", "what", "description", "prompt", "message"}
@@ -47,8 +54,7 @@ def _get_log_path() -> Path:
 
 
 def setup_logging() -> None:
-    """
-    Configure the mait_code logger hierarchy with a rotating file handler.
+    """Configure the ``mait_code`` logger hierarchy with a rotating file handler.
 
     Safe to call multiple times — subsequent calls are no-ops.
     """
@@ -85,7 +91,7 @@ def setup_logging() -> None:
 
 
 def _truncate(value: str) -> str:
-    """Truncate a string for logging, adding ellipsis."""
+    """Truncate a string for logging, appending an ellipsis when shortened."""
     if len(value) <= _TRUNCATE_LEN:
         return value
     return value[:_TRUNCATE_LEN] + "..."
@@ -104,17 +110,20 @@ def log_invocation(
     *,
     name: str | None = None,
     truncate_params: set[str] | None = None,
-):
-    """
-    Decorator that logs CLI tool/hook invocations.
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Decorate CLI tool/hook entry points so invocations are logged.
 
-    Logs the command name and all parsed arguments on entry,
-    and status + duration on exit.
+    Logs the command name and parsed arguments on entry, and status plus
+    duration on exit.
 
     Args:
-        name: Override the logged command name (default: function name).
+        name: Override the logged command name (default: the wrapped
+            function's name).
         truncate_params: Extra parameter names to truncate beyond the
-                         built-in sensitive set.
+            built-in sensitive set.
+
+    Returns:
+        A decorator that wraps the entry-point function.
     """
     extra_sensitive = truncate_params or set()
 

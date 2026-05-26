@@ -4,7 +4,20 @@ import sqlite3
 
 
 def upsert_entity(conn: sqlite3.Connection, name: str, entity_type: str) -> int:
-    """Insert or update an entity. Returns the entity id."""
+    """Insert or update an entity by name and return its id.
+
+    On conflict, increments ``mention_count``, refreshes ``last_seen``, and
+    upgrades ``entity_type`` from ``"unknown"`` if a more specific type is
+    provided.
+
+    Args:
+        conn: Open memory database connection.
+        name: Entity name (case-insensitive unique key).
+        entity_type: Entity type (e.g. ``"person"``, ``"project"``).
+
+    Returns:
+        The entity's primary-key id.
+    """
     cursor = conn.execute(
         """INSERT INTO memory_entities (name, entity_type)
            VALUES (?, ?)
@@ -30,7 +43,21 @@ def upsert_relationship(
     relationship_type: str,
     context: str,
 ) -> int:
-    """Insert or update a relationship. Returns the relationship id."""
+    """Insert or update a relationship and return its id.
+
+    On conflict (same source/target/type), refreshes ``last_seen`` and
+    updates ``context`` when the new value differs from the stored one.
+
+    Args:
+        conn: Open memory database connection.
+        source_entity_id: Source entity id.
+        target_entity_id: Target entity id.
+        relationship_type: Relationship label (e.g. ``"uses"``).
+        context: Free-text context describing the relationship.
+
+    Returns:
+        The relationship's primary-key id.
+    """
     cursor = conn.execute(
         """INSERT INTO memory_relationships
                (source_entity_id, target_entity_id, relationship_type, context)
@@ -51,7 +78,15 @@ def upsert_relationship(
 
 
 def find_entity_by_name(conn: sqlite3.Connection, name: str) -> dict | None:
-    """Look up an entity by name (case-insensitive)."""
+    """Look up an entity by name (case-insensitive).
+
+    Args:
+        conn: Open memory database connection.
+        name: Entity name to find.
+
+    Returns:
+        A dict with entity fields, or ``None`` if no match.
+    """
     cursor = conn.execute(
         """SELECT id, name, entity_type, first_seen, last_seen, mention_count
            FROM memory_entities WHERE name = ? COLLATE NOCASE""",
@@ -71,7 +106,16 @@ def find_entity_by_name(conn: sqlite3.Connection, name: str) -> dict | None:
 
 
 def get_entity_relationships(conn: sqlite3.Connection, entity_id: int) -> list[dict]:
-    """Get all relationships involving an entity (as source or target)."""
+    """Return all relationships involving an entity (as source or target).
+
+    Args:
+        conn: Open memory database connection.
+        entity_id: Entity id to look up.
+
+    Returns:
+        A list of relationship dicts, each including the source and target
+        entity names.
+    """
     cursor = conn.execute(
         """SELECT r.id, r.source_entity_id, s.name AS source_name,
                   r.target_entity_id, t.name AS target_name,
@@ -101,7 +145,17 @@ def get_entity_relationships(conn: sqlite3.Connection, entity_id: int) -> list[d
 def search_entities(
     conn: sqlite3.Connection, query: str, limit: int = 20
 ) -> list[dict]:
-    """Search entities by name using LIKE."""
+    """Search entities by name using a ``LIKE`` substring match.
+
+    Args:
+        conn: Open memory database connection.
+        query: Substring to match against entity names.
+        limit: Maximum number of results to return.
+
+    Returns:
+        A list of entity dicts ordered by ``mention_count`` descending,
+        then ``last_seen`` descending.
+    """
     cursor = conn.execute(
         """SELECT id, name, entity_type, first_seen, last_seen, mention_count
            FROM memory_entities

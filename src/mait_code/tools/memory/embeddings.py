@@ -1,18 +1,19 @@
-"""
-Vector embeddings for semantic search.
+"""Vector embeddings for semantic search.
 
 Supports two providers:
-- local: fastembed with HuggingFace models (default, for personal use)
-- bedrock: AWS Bedrock Titan/Cohere models (for corporate environments)
 
-Provider is configured via MAIT_CODE_EMBEDDING_PROVIDER env var.
-Degrades gracefully if the provider fails to load — callers always
-get None instead of exceptions.
+* ``local``: fastembed with HuggingFace models (default, for personal use).
+* ``bedrock``: AWS Bedrock Titan/Cohere models (for corporate environments).
+
+The provider is configured via the ``MAIT_CODE_EMBEDDING_PROVIDER``
+environment variable. Degrades gracefully if the provider fails to load —
+callers always receive ``None`` instead of exceptions.
 """
 
 import json
 import logging
 import os
+import sqlite3
 import struct
 from abc import ABC, abstractmethod
 
@@ -31,7 +32,7 @@ class EmbeddingProvider(ABC):
 
     @abstractmethod
     def embed(self, texts: list[str]) -> list[list[float]]:
-        """Embed a batch of texts. Returns list of float vectors."""
+        """Embed a batch of texts and return one float vector per input."""
         ...
 
     @property
@@ -43,7 +44,7 @@ class EmbeddingProvider(ABC):
     @property
     @abstractmethod
     def model_name(self) -> str:
-        """Human-readable model identifier."""
+        """Return the human-readable model identifier."""
         ...
 
 
@@ -136,12 +137,12 @@ class BedrockProvider(EmbeddingProvider):
 
 
 def _get_provider_name() -> str:
-    """Read the configured provider from env. Default: local."""
+    """Return the configured provider name from env (default: ``local``)."""
     return os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
 
 
 def _get_embedding_dim() -> int:
-    """Compute expected embedding dimension from config."""
+    """Return the expected embedding dimension derived from configuration."""
     provider_name = _get_provider_name()
     if provider_name == "bedrock":
         model_id = os.environ.get(
@@ -153,7 +154,7 @@ def _get_embedding_dim() -> int:
 
 
 def _get_embedding_model() -> str:
-    """Get the configured model name."""
+    """Return the configured embedding model name."""
     provider_name = _get_provider_name()
     if provider_name == "bedrock":
         return os.environ.get(
@@ -176,11 +177,14 @@ _provider_failed: bool = False
 
 
 def get_provider() -> EmbeddingProvider | None:
-    """Return the lazily-initialised embedding provider, or None.
+    """Return the lazily-initialised embedding provider, or ``None``.
 
     On first call, instantiates the provider configured by
-    MAIT_CODE_EMBEDDING_PROVIDER. If instantiation fails, returns
-    None on this and all subsequent calls.
+    ``MAIT_CODE_EMBEDDING_PROVIDER``. If instantiation fails, returns
+    ``None`` on this and all subsequent calls.
+
+    Returns:
+        The provider instance, or ``None`` if initialisation failed.
     """
     global _provider, _provider_failed
 
@@ -214,7 +218,11 @@ def get_provider() -> EmbeddingProvider | None:
 
 
 def _needs_prefix() -> bool:
-    """Whether the current provider uses text prefixes (nomic does, Bedrock doesn't)."""
+    """Return whether the current provider uses text prefixes.
+
+    nomic-style models require ``search_document:`` / ``search_query:``
+    prefixes; Bedrock providers do not.
+    """
     return _get_provider_name() != "bedrock"
 
 
@@ -224,17 +232,16 @@ def _needs_prefix() -> bool:
 
 
 def embed_text(text: str, *, prefix: str = "search_document") -> list[float] | None:
-    """
-    Embed a single text string.
+    """Embed a single text string.
 
     Args:
         text: The text to embed.
-        prefix: Task prefix for nomic-embed. Use "search_document" when
-                storing/indexing, "search_query" when searching.
-                Ignored for Bedrock providers.
+        prefix: Task prefix for nomic-embed. Use ``"search_document"`` when
+            storing/indexing, ``"search_query"`` when searching. Ignored for
+            Bedrock providers.
 
     Returns:
-        List of floats, or None if embeddings are unavailable.
+        The embedding vector, or ``None`` if embeddings are unavailable.
     """
     provider = get_provider()
     if provider is None:
@@ -252,15 +259,14 @@ def embed_text(text: str, *, prefix: str = "search_document") -> list[float] | N
 def embed_texts(
     texts: list[str], *, prefix: str = "search_document"
 ) -> list[list[float]] | None:
-    """
-    Embed a batch of texts.
+    """Embed a batch of texts.
 
     Args:
-        texts: List of texts to embed.
+        texts: The texts to embed.
         prefix: Task prefix for nomic-embed. Ignored for Bedrock providers.
 
     Returns:
-        List of embedding vectors, or None if unavailable.
+        The list of embedding vectors, or ``None`` if unavailable.
     """
     provider = get_provider()
     if provider is None:
@@ -278,17 +284,17 @@ def embed_texts(
 
 
 def serialize_f32(vec: list[float]) -> bytes:
-    """Serialize a float vector to raw bytes for sqlite-vec."""
+    """Serialise a float vector to raw bytes for sqlite-vec."""
     return struct.pack(f"{len(vec)}f", *vec)
 
 
 def is_available() -> bool:
-    """Check whether the embedding provider can be loaded."""
+    """Return ``True`` if the embedding provider can be loaded."""
     return get_provider() is not None
 
 
 def _parse_vec_table_dim(conn) -> int | None:
-    """Parse the declared dimension from the memory_vec CREATE statement."""
+    """Return the declared dimension from the ``memory_vec`` CREATE statement."""
     try:
         row = conn.execute(
             "SELECT sql FROM sqlite_master WHERE name='memory_vec'"
@@ -304,11 +310,15 @@ def _parse_vec_table_dim(conn) -> int | None:
     return None
 
 
-def check_dimension_match(conn) -> tuple[bool, int | None, int]:
-    """Check if the vec table dimension matches the configured provider.
+def check_dimension_match(conn: sqlite3.Connection) -> tuple[bool, int | None, int]:
+    """Check whether the vec table dimension matches the configured provider.
 
-    Returns (matches, table_dim, expected_dim).
-    table_dim is None if the vec table doesn't exist.
+    Args:
+        conn: Open memory database connection.
+
+    Returns:
+        A tuple ``(matches, table_dim, expected_dim)``. ``table_dim`` is
+        ``None`` if the vec table doesn't exist.
     """
     expected = _get_embedding_dim()
     try:

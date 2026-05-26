@@ -30,14 +30,14 @@ class FetchResult:
 
 
 def _parse_content_type(headers: Message) -> tuple[str, str]:
-    """Extract content type and charset from response headers."""
+    """Extract the content type and charset from response headers."""
     ct = headers.get_content_type() or "application/octet-stream"
     charset = headers.get_content_charset() or "utf-8"
     return ct, charset
 
 
 def _validate_url(url: str) -> str:
-    """Validate and normalise the URL. Returns the normalised URL."""
+    """Validate and normalise a URL, returning the normalised form."""
     if not url:
         raise FetchError("URL cannot be empty")
 
@@ -62,7 +62,12 @@ def _validate_url(url: str) -> str:
 
 
 def _check_ssrf(hostname: str) -> None:
-    """Block requests to private/loopback/link-local addresses."""
+    """Block requests to private, loopback, or link-local addresses.
+
+    Raises:
+        FetchError: If the hostname cannot be resolved or resolves to a
+            non-public address.
+    """
     try:
         addrinfos = socket.getaddrinfo(hostname, None)
     except socket.gaierror as e:

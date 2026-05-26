@@ -1,0 +1,139 @@
+site_name: mait-code
+site_description: Companion framework extending Claude Code with persistent memory, identity, and skills.
+site_author: Wiktor de Pina
+site_url: https://wiktordepina.github.io/mait-code/
+repo_url: https://github.com/wiktordepina/mait-code
+repo_name: wiktordepina/mait-code
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Wiktor de Pina
+
+docs_dir: docs
+strict: true
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.tracking
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - search.suggest
+    - search.share
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+extra:
+  version:
+    provider: mike
+    default: latest
+    alias: true
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/wiktordepina/mait-code
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            filters:
+              - "!^_"
+
+nav:
+  - Home: README.md
+  - Guide:
+      - Setup: setup.md
+      - Development: development.md
+      - Skills: skills.md
+      - Memory: memory.md
+      - Decisions: decisions.md
+      - Sync: sync.md
+      - Philosophy: philosophy.md
+      - Contributing to docs: contributing-docs.md
+  - Architecture:
+      - Overview: architecture.md
+  - Reference:
+      - Overview: reference/index.md
+      - Context: reference/context.md
+      - LLM: reference/llm.md
+      - Logging: reference/logging.md
+      - SSL: reference/ssl.md
+      - "Tools — Memory": reference/tools-memory.md
+      - "Tools — Reminders": reference/tools-reminders.md
+      - "Tools — Tasks": reference/tools-tasks.md
+      - "Tools — Decisions": reference/tools-decisions.md
+      - "Tools — Web fetch": reference/tools-web_fetch.md
+      - "Hooks — Observe": reference/hooks-observe.md
+      - "Hooks — Session start": reference/hooks-session_start.md
+      - "Hooks — Auto-format": reference/hooks-auto_format.md

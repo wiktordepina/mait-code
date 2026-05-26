@@ -1,11 +1,50 @@
-"""Memory system for mait-code."""
+"""Memory tool — persistent, scope-aware memory storage with embeddings and search.
 
-from mait_code.tools.memory.db import get_connection, get_data_dir, get_db_path
-from mait_code.tools.memory.embeddings import embed_text, is_available
+The mait-code memory store is a SQLite-backed log of observations, decisions,
+and other facts that survive across sessions. Entries are scoped by project
+and branch, scored by a recency/importance composite, and queryable via
+keyword, vector, or hybrid search.
+
+This package exposes the CLI entry point (``main``) plus the library surface
+that contributors call when extending the tool: connection helpers, embedding
+providers, search functions, scoring helpers, entity-graph operations, the
+write/dedup path, and the reflection pipeline.
+"""
+
+from mait_code.tools.memory.cli import main
+from mait_code.tools.memory.db import (
+    connection,
+    get_connection,
+    get_data_dir,
+    get_db_path,
+)
+from mait_code.tools.memory.embeddings import (
+    EMBEDDING_DIM,
+    EMBEDDING_MODEL,
+    BedrockProvider,
+    EmbeddingProvider,
+    LocalProvider,
+    check_dimension_match,
+    embed_text,
+    embed_texts,
+    get_provider,
+    is_available,
+    serialize_f32,
+)
+from mait_code.tools.memory.entities import (
+    find_entity_by_name,
+    get_entity_relationships,
+    search_entities,
+    upsert_entity,
+    upsert_relationship,
+)
+from mait_code.tools.memory.migrate import ensure_schema
+from mait_code.tools.memory.reflect import reflect
 from mait_code.tools.memory.scoring import (
     composite_score,
     importance_score,
     recency_score,
+    scope_boost,
 )
 from mait_code.tools.memory.search import (
     delete_entry,
@@ -14,21 +53,49 @@ from mait_code.tools.memory.search import (
     search_entries,
     vector_search_entries,
 )
-from mait_code.tools.memory.writer import store_memory
+from mait_code.tools.memory.writer import find_duplicate, store_memory
 
 __all__ = [
-    "composite_score",
-    "delete_entry",
-    "embed_text",
+    # CLI
+    "main",
+    # Storage
+    "connection",
+    "ensure_schema",
     "get_connection",
     "get_data_dir",
     "get_db_path",
-    "hybrid_search",
-    "importance_score",
+    # Embeddings
+    "BedrockProvider",
+    "EMBEDDING_DIM",
+    "EMBEDDING_MODEL",
+    "EmbeddingProvider",
+    "LocalProvider",
+    "check_dimension_match",
+    "embed_text",
+    "embed_texts",
+    "get_provider",
     "is_available",
+    "serialize_f32",
+    # Search
+    "delete_entry",
+    "hybrid_search",
     "list_entries",
-    "recency_score",
     "search_entries",
-    "store_memory",
     "vector_search_entries",
+    # Scoring
+    "composite_score",
+    "importance_score",
+    "recency_score",
+    "scope_boost",
+    # Entities
+    "find_entity_by_name",
+    "get_entity_relationships",
+    "search_entities",
+    "upsert_entity",
+    "upsert_relationship",
+    # Writer
+    "find_duplicate",
+    "store_memory",
+    # Reflection
+    "reflect",
 ]

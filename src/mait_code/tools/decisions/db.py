@@ -1,8 +1,7 @@
-"""
-Shared database connection factory for decisions.
+"""Shared database connection factory for decisions.
 
-All decisions modules should import connection() from here
-instead of creating their own connections.
+All decisions modules should import ``connection()`` from here instead of
+creating their own connections.
 """
 
 import os
@@ -35,12 +34,18 @@ def get_project() -> str:
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
-    """
-    Open a decisions database connection.
+    """Open a decisions database connection.
 
-    - Enables WAL mode for concurrent reads
-    - Enables foreign key enforcement
-    - Runs schema migrations to ensure current schema
+    The connection has WAL journal mode enabled (for concurrent reads),
+    foreign-key enforcement enabled, and the current schema applied via
+    migrations.
+
+    Args:
+        db_path: Override the database path (defaults to
+            ``{data_dir}/decisions.db``).
+
+    Returns:
+        A ``sqlite3.Connection`` ready for use. The caller must close it.
     """
     path = db_path or get_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)

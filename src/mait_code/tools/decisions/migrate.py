@@ -1,9 +1,8 @@
-"""
-Schema migration for decisions database.
+"""Schema migration for the decisions database.
 
-Forward-only, idempotent migrations for decisions.db.
-Call ensure_schema(conn) after opening any connection to guarantee
-the schema is current.
+Forward-only, idempotent migrations for ``decisions.db``. Call
+``ensure_schema(conn)`` after opening any connection to guarantee the
+schema is current.
 """
 
 import logging
@@ -54,11 +53,13 @@ MIGRATIONS: list[tuple[int, str, list[str]]] = [
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
-    """
-    Apply any pending migrations to the database.
+    """Apply any pending migrations to the database.
 
-    Safe to call on every connection open — checks a single integer
-    and returns immediately if the schema is current.
+    Safe to call on every connection open — checks a single integer and
+    returns immediately if the schema is current.
+
+    Args:
+        conn: Open decisions database connection.
     """
     conn.execute(
         """CREATE TABLE IF NOT EXISTS schema_version (

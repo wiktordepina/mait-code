@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def _get_git_root() -> Path | None:
-    """Return the git root directory, or None if not in a git repo."""
+    """Return the git root directory, or ``None`` if not in a git repo."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
@@ -20,7 +20,7 @@ def _get_git_root() -> Path | None:
 
 
 def render_decisions_md(conn: sqlite3.Connection) -> str:
-    """Generate markdown string from all decisions in the database."""
+    """Generate a markdown string from all decisions in the database."""
     rows = conn.execute(
         "SELECT id, title, status, tags, created_at, updated_at, "
         "context, alternatives, consequences, superseded_by "
@@ -106,7 +106,10 @@ def render_decisions_md(conn: sqlite3.Connection) -> str:
 
 
 def write_decisions_md(conn: sqlite3.Connection) -> None:
-    """Write docs/decisions.md at the git root. Skips silently if not in a git repo."""
+    """Write ``docs/decisions.md`` at the git root.
+
+    Skips silently if the current directory isn't inside a git repo.
+    """
     git_root = _get_git_root()
     if git_root is None:
         return
