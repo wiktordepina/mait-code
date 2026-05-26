@@ -10,17 +10,6 @@ copyright: Copyright &copy; 2026 Wiktor de Pina
 docs_dir: docs
 strict: true
 
-# Until the explicit nav lands (Brick C5), let mkdocs auto-discover from docs/.
-# `omitted_files: info` downgrades the "file not in nav" warning from a strict-mode
-# build failure to an info-level log line, so this brick's incremental commits build
-# cleanly while the nav is still being assembled.
-validation:
-  nav:
-    omitted_files: info
-    not_found: warn
-  links:
-    not_found: warn
-
 theme:
   name: material
   language: en
@@ -120,3 +109,30 @@ plugins:
             docstring_section_style: spacy
             filters:
               - "!^_"
+
+nav:
+  - Home: README.md
+  - Guide:
+      - Setup: setup.md
+      - Development: development.md
+      - Skills: skills.md
+      - Memory: memory.md
+      - Decisions: decisions.md
+      - Sync: sync.md
+      - Philosophy: philosophy.md
+  - Architecture:
+      - Overview: architecture.md
+  - Reference:
+      - Overview: reference/index.md
+      - Context: reference/context.md
+      - LLM: reference/llm.md
+      - Logging: reference/logging.md
+      - SSL: reference/ssl.md
+      - "Tools — Memory": reference/tools-memory.md
+      - "Tools — Reminders": reference/tools-reminders.md
+      - "Tools — Tasks": reference/tools-tasks.md
+      - "Tools — Decisions": reference/tools-decisions.md
+      - "Tools — Web fetch": reference/tools-web_fetch.md
+      - "Hooks — Observe": reference/hooks-observe.md
+      - "Hooks — Session start": reference/hooks-session_start.md
+      - "Hooks — Auto-format": reference/hooks-auto_format.md
