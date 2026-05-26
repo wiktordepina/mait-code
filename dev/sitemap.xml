@@ -33,10 +33,6 @@
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/skills/</loc>
-         <lastmod>2026-05-26</lastmod>
-    </url>
-    <url>
          <loc>https://wiktordepina.github.io/mait-code/dev/sync/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
@@ -49,18 +45,6 @@
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/hooks-auto_format/</loc>
-         <lastmod>2026-05-26</lastmod>
-    </url>
-    <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/hooks-observe/</loc>
-         <lastmod>2026-05-26</lastmod>
-    </url>
-    <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/hooks-session_start/</loc>
-         <lastmod>2026-05-26</lastmod>
-    </url>
-    <url>
          <loc>https://wiktordepina.github.io/mait-code/dev/reference/llm/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
@@ -69,27 +53,43 @@
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/skills/</loc>
+         <lastmod>2026-05-26</lastmod>
+    </url>
+    <url>
          <loc>https://wiktordepina.github.io/mait-code/dev/reference/ssl/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools-decisions/</loc>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/hooks/auto_format/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools-memory/</loc>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/hooks/observe/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools-reminders/</loc>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/hooks/session_start/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools-tasks/</loc>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools/decisions/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
     <url>
-         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools-web_fetch/</loc>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools/memory/</loc>
+         <lastmod>2026-05-26</lastmod>
+    </url>
+    <url>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools/reminders/</loc>
+         <lastmod>2026-05-26</lastmod>
+    </url>
+    <url>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools/tasks/</loc>
+         <lastmod>2026-05-26</lastmod>
+    </url>
+    <url>
+         <loc>https://wiktordepina.github.io/mait-code/dev/reference/tools/web_fetch/</loc>
          <lastmod>2026-05-26</lastmod>
     </url>
 </urlset>
