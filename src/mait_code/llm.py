@@ -1,8 +1,7 @@
-"""
-Shared LLM invocation for mait-code.
+"""Shared LLM invocation for mait-code.
 
-Wraps the `claude` CLI for subprocess-based LLM calls.
-Used by both the observe hook (extraction) and the reflect tool (synthesis).
+Wraps the ``claude`` CLI for subprocess-based LLM calls. Used by both the
+observe hook (extraction) and the reflect tool (synthesis).
 """
 
 import logging
@@ -24,19 +23,18 @@ def call_claude(
     retries: int = 0,
     backoff_base: float = 2.0,
 ) -> str | None:
-    """
-    Call `claude -p --model <model>` with prompt via stdin.
+    """Invoke ``claude -p --model <model>`` with the prompt via stdin.
 
     Args:
         prompt: The user prompt to send.
-        system_prompt: Optional system prompt (prepended with [S]: prefix).
-        model: Model name for --model flag (default: haiku).
+        system_prompt: Optional system prompt prepended with a marker.
+        model: Model name passed to ``--model`` (default: haiku).
         timeout: Subprocess timeout in seconds.
         retries: Number of retries on transient failure (default: 0).
         backoff_base: Base for exponential backoff in seconds (default: 2.0).
 
     Returns:
-        Stripped stdout on success, None on failure.
+        Stripped stdout on success, or ``None`` on failure.
     """
     full_prompt = prompt
     if system_prompt:

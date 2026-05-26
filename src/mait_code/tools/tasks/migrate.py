@@ -1,9 +1,8 @@
-"""
-Schema migration for tasks database.
+"""Schema migration for the tasks database.
 
-Forward-only, idempotent migrations for tasks.db.
-Call ensure_schema(conn) after opening any connection to guarantee
-the schema is current.
+Forward-only, idempotent migrations for ``tasks.db``. Call
+``ensure_schema(conn)`` after opening any connection to guarantee the
+schema is current.
 """
 
 import logging
@@ -16,7 +15,7 @@ type MigrationBody = list[str] | Callable[[sqlite3.Connection], None]
 
 
 def _migrate_3_drop_projects(conn: sqlite3.Connection) -> None:
-    """Remove projects table and FK constraint from tasks."""
+    """Remove the projects table and its FK constraint from ``tasks``."""
     conn.execute("ALTER TABLE tasks RENAME TO tasks_old")
     conn.execute(
         """CREATE TABLE tasks (
@@ -89,11 +88,13 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
-    """
-    Apply any pending migrations to the database.
+    """Apply any pending migrations to the database.
 
-    Safe to call on every connection open — checks a single integer
-    and returns immediately if the schema is current.
+    Safe to call on every connection open — checks a single integer and
+    returns immediately if the schema is current.
+
+    Args:
+        conn: Open tasks database connection.
     """
     conn.execute(
         """CREATE TABLE IF NOT EXISTS schema_version (

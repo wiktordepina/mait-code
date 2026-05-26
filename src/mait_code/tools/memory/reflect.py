@@ -1,9 +1,8 @@
-"""
-Reflection system — synthesise recent observations into durable insights.
+"""Reflection system — synthesise recent observations into durable insights.
 
 Reads recent memory entries and observation logs, calls Claude to identify
-patterns and themes, stores insights back to memory.db, and proposes
-updates to MEMORY.md.
+patterns and themes, stores insights back to ``memory.db``, and proposes
+updates to ``MEMORY.md``.
 """
 
 import json
@@ -51,9 +50,15 @@ def get_watermark(
     *,
     project: str | None = None,
 ) -> int | None:
-    """Get the last reflected entry ID for a project (or global).
+    """Return the last reflected entry ID for a project (or global scope).
 
-    Returns None if no reflection has ever been done for this scope.
+    Args:
+        conn: Open memory database connection.
+        project: Project identifier, or ``None`` for the global watermark.
+
+    Returns:
+        The watermark, or ``None`` if no reflection has ever been done for
+        this scope.
     """
     project_key = project or ""
     row = conn.execute(
@@ -69,7 +74,13 @@ def update_watermark(
     *,
     project: str | None = None,
 ) -> None:
-    """Set the watermark to the given entry ID."""
+    """Set the watermark for a project (or global) to ``last_id``.
+
+    Args:
+        conn: Open memory database connection.
+        last_id: The new high-water-mark entry ID.
+        project: Project identifier, or ``None`` for the global watermark.
+    """
     project_key = project or ""
     conn.execute(
         """INSERT INTO reflection_watermark (project, last_reflected_id, last_reflected_at)
@@ -93,7 +104,13 @@ def check_novelty_gate_v2(
     *,
     project: str | None = None,
 ) -> bool:
-    """Check if there are enough unreflected entries to justify reflection."""
+    """Return ``True`` if there are enough unreflected entries to justify reflection.
+
+    Args:
+        conn: Open memory database connection.
+        min_new: Minimum number of new non-insight entries required.
+        project: Project identifier to scope the check; ``None`` for global.
+    """
     watermark = get_watermark(conn, project=project)
 
     conditions = ["entry_type != 'insight'"]
@@ -126,13 +143,23 @@ def get_unreflected_entries(
     project: str | None = None,
     watermark: int | None = None,
 ) -> list[tuple]:
-    """
-    Get entries that haven't been reflected on yet.
+    """Return entries that haven't been reflected on yet.
 
-    Uses watermark (last reflected ID) for idempotency.
-    If no watermark exists and days is provided, uses days as a bootstrap window.
+    Uses ``watermark`` (last reflected ID) for idempotency. If no watermark
+    exists and ``days`` is provided, uses ``days`` as a bootstrap window.
 
-    Returns tuples of (id, content, entry_type, importance, created_at).
+    Args:
+        conn: Open memory database connection.
+        batch_size: Maximum number of entries to return.
+        days: Bootstrap window in days when no watermark exists.
+        exclude_types: Entry types to exclude (e.g. ``"insight"``).
+        project: Project identifier; when set, includes global plus
+            project-scoped entries.
+        watermark: High-water-mark entry ID; only entries above this are
+            returned.
+
+    Returns:
+        Tuples of ``(id, content, entry_type, importance, created_at)``.
     """
     conditions: list[str] = []
     params: list = []
@@ -175,9 +202,16 @@ def get_last_reflection_date(
     *,
     project: str | None = None,
 ) -> datetime | None:
-    """Get the timestamp of the most recent insight entry.
+    """Return the timestamp of the most recent insight entry.
 
-    Deprecated: replaced by get_watermark(). Kept for backward compat.
+    Deprecated: replaced by ``get_watermark()``; kept for backward compat.
+
+    Args:
+        conn: Open memory database connection.
+        project: Project identifier, or ``None`` for any scope.
+
+    Returns:
+        The parsed timestamp, or ``None`` if there is no insight entry.
     """
     if project is not None:
         cursor = conn.execute(
@@ -211,7 +245,14 @@ def count_entries_since(
 ) -> int:
     """Count non-insight memory entries added since a given timestamp.
 
-    Deprecated: replaced by check_novelty_gate_v2(). Kept for backward compat.
+    Deprecated: replaced by ``check_novelty_gate_v2()``; kept for backward
+    compat.
+
+    Args:
+        conn: Open memory database connection.
+        since: Lower bound timestamp.
+        exclude_types: Entry types to exclude from the count.
+        project: Project identifier, or ``None`` to count all scopes.
     """
     conditions = ["created_at >= ?"]
     params: list = [since.strftime("%Y-%m-%d %H:%M:%S")]
@@ -235,9 +276,15 @@ def check_novelty_gate(
     *,
     project: str | None = None,
 ) -> bool:
-    """Check whether there are enough new observations to justify reflection.
+    """Return ``True`` if there are enough new observations to justify reflection.
 
-    Deprecated: replaced by check_novelty_gate_v2(). Kept for backward compat.
+    Deprecated: replaced by ``check_novelty_gate_v2()``; kept for backward
+    compat.
+
+    Args:
+        conn: Open memory database connection.
+        min_new: Minimum number of new non-insight entries required.
+        project: Project identifier, or ``None`` for any scope.
     """
     last_reflection = get_last_reflection_date(conn, project=project)
     if last_reflection is None:
@@ -255,9 +302,18 @@ def get_recent_entries(
     *,
     project: str | None = None,
 ) -> list[tuple]:
-    """Get memory entries from the last N days.
+    """Return memory entries from the last ``days`` days.
 
-    Deprecated: replaced by get_unreflected_entries(). Kept for backward compat.
+    Deprecated: replaced by ``get_unreflected_entries()``; kept for backward
+    compat.
+
+    Args:
+        conn: Open memory database connection.
+        days: Lookback window in days.
+        limit: Maximum number of entries to return.
+        exclude_types: Entry types to exclude.
+        project: Project identifier; when set, includes global plus
+            project-scoped entries.
     """
     conditions = ["created_at >= datetime('now', ?)"]
     params: list = [f"-{days} days"]
@@ -287,11 +343,16 @@ def get_recent_entries(
 
 
 def read_observation_logs(days: int = 7) -> str:
-    """
-    Read JSONL observation files from the last N days.
+    """Read JSONL observation files from the last ``days`` days.
 
-    Parses extraction dicts and formats them into readable text
-    for the reflection prompt.
+    Parses extraction dicts and formats them into readable text for the
+    reflection prompt.
+
+    Args:
+        days: Lookback window in days.
+
+    Returns:
+        A newline-joined string of formatted extraction items.
     """
     obs_dir = get_data_dir() / "memory" / "observations"
     if not obs_dir.exists():
@@ -331,7 +392,7 @@ def read_observation_logs(days: int = 7) -> str:
 
 
 def _format_extraction(extraction: dict) -> str:
-    """Format an extraction dict into readable text lines."""
+    """Format a single extraction dict as readable text lines."""
     lines = []
     for category in ("facts", "preferences", "decisions", "bugs_fixed"):
         for item in extraction.get(category, []):
@@ -356,10 +417,17 @@ def _format_extraction(extraction: dict) -> str:
 
 
 def format_entries_text(entries: list[tuple]) -> str:
-    """Format DB entries into text for the reflection prompt.
+    """Format DB entries as text for the reflection prompt.
 
-    Accepts both 4-tuples (legacy: content, type, importance, created_at)
-    and 5-tuples (new: id, content, type, importance, created_at).
+    Accepts both 4-tuples (legacy:
+    ``(content, type, importance, created_at)``) and 5-tuples
+    (``(id, content, type, importance, created_at)``).
+
+    Args:
+        entries: Rows fetched from ``memory_entries``.
+
+    Returns:
+        A newline-joined string of formatted entries.
     """
     lines = []
     for entry in entries:
@@ -374,11 +442,13 @@ def format_entries_text(entries: list[tuple]) -> str:
 
 
 def parse_reflection_response(response: str) -> dict:
-    """
-    Parse the LLM response into insights and memory update proposals.
+    """Parse the LLM response into insights and memory update proposals.
+
+    Args:
+        response: The raw LLM response text.
 
     Returns:
-        {"insights": [...], "memory_updates": [...]}
+        A dict ``{"insights": [...], "memory_updates": [...]}``.
     """
     insights = []
     memory_updates = []
@@ -403,7 +473,17 @@ def store_insights(
     *,
     project: str | None = None,
 ) -> int:
-    """Store insights in memory database with fixed importance=6."""
+    """Store insights in the memory database with fixed ``importance=6``.
+
+    Args:
+        conn: Open memory database connection.
+        insights: Insight strings to store.
+        project: Project identifier; when set, insights are project-scoped,
+            otherwise they are stored globally.
+
+    Returns:
+        The number of insights stored.
+    """
     stored = 0
     scope = "project" if project else "global"
     for insight in insights:
@@ -420,7 +500,7 @@ def store_insights(
 
 
 def read_memory_md() -> str | None:
-    """Read the current MEMORY.md content, or None if it doesn't exist."""
+    """Return the current ``MEMORY.md`` content, or ``None`` if missing."""
     memory_md = get_data_dir() / "memory" / "MEMORY.md"
     if memory_md.exists():
         return memory_md.read_text()
@@ -428,7 +508,7 @@ def read_memory_md() -> str | None:
 
 
 def generate_memory_diff(memory_updates: list[str]) -> str:
-    """Format proposed MEMORY.md additions as a readable diff."""
+    """Format proposed ``MEMORY.md`` additions as a readable diff."""
     lines = ["Proposed additions to MEMORY.md:", ""]
     for update in memory_updates:
         lines.append(f"+ {update}")
@@ -449,23 +529,24 @@ def reflect(
     project: str | None = None,
     branch: str | None = None,
 ) -> dict:
-    """
-    Main reflection orchestrator.
+    """Run the main reflection orchestrator.
 
-    Uses a watermark to track which entries have been reflected on,
-    ensuring idempotent operation. Processes entries in batches.
+    Uses a watermark to track which entries have been reflected on, ensuring
+    idempotent operation. Processes entries in batches. When ``project`` is
+    provided, reflects only on global plus project-scoped entries.
 
-    When project is provided, reflects only on global + project-scoped entries.
+    Args:
+        conn: Open memory database connection.
+        days: Bootstrap window in days when no watermark exists.
+        min_new: Minimum new non-insight entries required to proceed.
+        batch_size: Maximum entries processed per reflection.
+        project: Project identifier scoping the reflection.
+        branch: Branch name included in the prompt context only.
 
     Returns:
-        {
-            "skipped": bool,
-            "reason": str | None,
-            "insights": list[str],
-            "stored": int,
-            "memory_diff": str | None,
-            "batch_info": {"processed": int, "watermark": int} | None,
-        }
+        A dict with keys ``skipped``, ``reason``, ``insights``, ``stored``,
+        ``memory_diff``, and ``batch_info`` (the last containing
+        ``processed`` and ``watermark`` counts, or ``None`` when skipped).
     """
     # Novelty gate (watermark-based)
     if not check_novelty_gate_v2(conn, min_new, project=project):

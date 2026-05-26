@@ -1,18 +1,21 @@
-"""
-Composite scoring for memory entries.
+"""Composite scoring for memory entries.
 
-Combines recency, importance, and relevance into a single score
-for ranking memory retrieval results.
+Combines recency, importance, and relevance into a single score for ranking
+memory retrieval results::
 
     score = W_recency * recency + W_importance * importance + W_relevance * relevance
 
 Where:
-    recency:    exponential decay, half-life depends on memory_class
-                  - episodic (events, tasks): 3-day half-life (fast decay)
-                  - semantic (facts, preferences, insights): 90-day half-life (slow decay)
-                  - fallback: 7-day half-life
-    importance: normalized to 0.0-1.0 from the 1-10 scale
-    relevance:  0.0-1.0, from FTS5 BM25 or semantic similarity (caller provides)
+
+* ``recency`` — exponential decay; half-life depends on ``memory_class``:
+
+  - episodic (events, tasks): 3-day half-life (fast decay)
+  - semantic (facts, preferences, insights): 90-day half-life (slow decay)
+  - fallback: 7-day half-life
+
+* ``importance`` — normalised to 0.0-1.0 from the 1-10 scale.
+* ``relevance`` — 0.0-1.0, from FTS5 BM25 or semantic similarity (caller
+  provides).
 """
 
 import math
@@ -37,13 +40,22 @@ def recency_score(
     *,
     memory_class: str | None = None,
 ) -> float:
-    """
-    Compute recency score using exponential decay.
+    """Compute the recency score using exponential decay.
 
-    Half-life depends on memory_class:
-    - episodic: 3 days (events decay fast)
-    - semantic: 90 days (facts persist)
-    - None/unknown: 7 days (fallback)
+    Half-life depends on ``memory_class``:
+
+    * ``episodic``: 3 days (events decay fast).
+    * ``semantic``: 90 days (facts persist).
+    * ``None``/unknown: 7 days (fallback).
+
+    Args:
+        created_at: When the entry was created (ISO string or datetime).
+        now: Override current time (for testing); defaults to UTC now.
+        memory_class: Memory class controlling the decay rate.
+
+    Returns:
+        A score in ``[0.0, 1.0]``; returns ``0.0`` if ``created_at`` cannot
+        be parsed.
     """
     if now is None:
         now = datetime.now(UTC)
@@ -64,7 +76,7 @@ def recency_score(
 
 
 def importance_score(importance: int) -> float:
-    """Normalize importance (1-10) to 0.0-1.0."""
+    """Normalise an importance value (1-10) to ``[0.0, 1.0]``."""
     return max(0.0, min(1.0, (importance - 1) / 9.0))
 
 
@@ -78,9 +90,18 @@ def scope_boost(
 ) -> float:
     """Compute a multiplicative boost based on scope match.
 
+    Args:
+        entry_scope: The entry's scope (``"global"``, ``"project"``,
+            ``"branch"``).
+        entry_project: The entry's project, or ``None``.
+        entry_branch: The entry's branch, or ``None``.
+        query_project: Project context for the query, or ``None``.
+        query_branch: Branch context for the query, or ``None``.
+
     Returns:
-        1.0 for branch match, 0.85 for project match, 0.7 for global,
-        1.0 when no query context is provided (backward compat).
+        ``1.0`` for a branch match, ``0.85`` for a project match, ``0.7``
+        for global entries, and ``1.0`` when no query context is provided
+        (backward compat).
     """
     # No query context — no boost applied
     if query_project is None:
@@ -119,26 +140,26 @@ def composite_score(
     w_relevance: float = W_RELEVANCE,
     now: datetime | None = None,
 ) -> float:
-    """
-    Compute composite score for a memory entry.
+    """Compute the composite score for a memory entry.
 
     Args:
         created_at: When the entry was created (ISO string or datetime).
         importance: Importance level 1-10.
         relevance: Relevance score 0.0-1.0 (from search or default 0.5).
-        memory_class: 'episodic' or 'semantic' (controls decay rate).
-        entry_scope: Scope of the entry ('global', 'project', 'branch').
+        memory_class: ``"episodic"`` or ``"semantic"`` (controls decay rate).
+        entry_scope: Scope of the entry (``"global"``, ``"project"``,
+            ``"branch"``).
         entry_project: Project of the entry.
         entry_branch: Branch of the entry.
         query_project: Project context for the query.
         query_branch: Branch context for the query.
-        w_recency: Weight for recency component.
-        w_importance: Weight for importance component.
-        w_relevance: Weight for relevance component.
+        w_recency: Weight for the recency component.
+        w_importance: Weight for the importance component.
+        w_relevance: Weight for the relevance component.
         now: Override current time (for testing).
 
     Returns:
-        Composite score between 0.0 and 1.0.
+        Composite score, roughly in ``[0.0, 1.0]``.
     """
     r = recency_score(created_at, now, memory_class=memory_class)
     i = importance_score(importance)

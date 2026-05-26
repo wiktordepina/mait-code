@@ -1,8 +1,7 @@
-"""
-Shared database connection factory for memory system.
+"""Shared database connection factory for the memory system.
 
-All memory modules should import get_connection() from here
-instead of creating their own connections.
+All memory modules should import ``get_connection()`` from here instead of
+creating their own connections.
 """
 
 import os
@@ -30,18 +29,18 @@ def get_db_path() -> Path:
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
-    """
-    Open a memory database connection with sqlite-vec loaded.
+    """Open a memory database connection with sqlite-vec loaded.
 
-    - Loads sqlite-vec extension for vec0 support
-    - Enables WAL mode for concurrent reads
-    - Runs schema migrations to ensure current schema
+    The connection has the sqlite-vec extension loaded (for ``vec0``
+    support), WAL journal mode enabled (for concurrent reads), and the
+    current schema applied via migrations.
 
     Args:
-        db_path: Override path (defaults to {data_dir}/memory.db).
+        db_path: Override the database path (defaults to
+            ``{data_dir}/memory.db``).
 
     Returns:
-        sqlite3.Connection ready for use. Caller must close it.
+        A ``sqlite3.Connection`` ready for use. The caller must close it.
     """
     path = db_path or get_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)

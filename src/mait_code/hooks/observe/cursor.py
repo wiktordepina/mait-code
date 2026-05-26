@@ -1,7 +1,7 @@
 """Cursor-based incremental transcript reading.
 
-Tracks byte offsets per transcript file so the observation hook
-only processes new lines since the last invocation.
+Tracks byte offsets per transcript file so the observation hook only
+processes new lines since the last invocation.
 """
 
 import json
@@ -21,7 +21,7 @@ def _cursors_path() -> Path:
 
 
 def load_cursors() -> dict:
-    """Load cursor file. Returns {} on missing or corrupt file."""
+    """Load the cursor file, returning ``{}`` on missing or corrupt input."""
     path = _cursors_path()
     if not path.exists():
         return {}
@@ -32,7 +32,7 @@ def load_cursors() -> dict:
 
 
 def save_cursors(cursors: dict) -> None:
-    """Atomically write cursors dict, pruning stale entries."""
+    """Atomically write the cursors dict, pruning stale entries."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=PRUNE_AGE_DAYS)).isoformat()
     pruned = {k: v for k, v in cursors.items() if v.get("updated", "") >= cutoff}
 
@@ -53,7 +53,7 @@ def save_cursors(cursors: dict) -> None:
 
 
 def get_cursor(transcript_path: str) -> int:
-    """Get byte offset for a transcript path. Returns 0 if unseen."""
+    """Return the byte offset for a transcript path, or ``0`` if unseen."""
     cursors = load_cursors()
     entry = cursors.get(transcript_path)
     if entry is None:
@@ -62,7 +62,7 @@ def get_cursor(transcript_path: str) -> int:
 
 
 def set_cursor(transcript_path: str, offset: int) -> None:
-    """Update byte offset for a transcript path and save."""
+    """Update the byte offset for a transcript path and persist the cursors file."""
     cursors = load_cursors()
     cursors[transcript_path] = {
         "offset": offset,

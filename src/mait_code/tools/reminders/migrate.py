@@ -1,9 +1,8 @@
-"""
-Schema migration for reminders database.
+"""Schema migration for the reminders database.
 
-Forward-only, idempotent migrations for reminders.db.
-Call ensure_schema(conn) after opening any connection to guarantee
-the schema is current.
+Forward-only, idempotent migrations for ``reminders.db``. Call
+``ensure_schema(conn)`` after opening any connection to guarantee the
+schema is current.
 """
 
 import logging
@@ -35,11 +34,13 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
-    """
-    Apply any pending migrations to the database.
+    """Apply any pending migrations to the database.
 
-    Safe to call on every connection open — checks a single integer
-    and returns immediately if the schema is current.
+    Safe to call on every connection open — checks a single integer and
+    returns immediately if the schema is current.
+
+    Args:
+        conn: Open reminders database connection.
     """
     conn.execute(
         """CREATE TABLE IF NOT EXISTS schema_version (

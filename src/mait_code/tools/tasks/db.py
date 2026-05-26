@@ -1,8 +1,7 @@
-"""
-Shared database connection factory for tasks.
+"""Shared database connection factory for tasks.
 
-All tasks modules should import get_connection() from here
-instead of creating their own connections.
+All tasks modules should import ``get_connection()`` from here instead of
+creating their own connections.
 """
 
 import os
@@ -30,7 +29,8 @@ def get_db_path() -> Path:
 def get_project() -> str:
     """Return the current project identifier (basename of git root or cwd).
 
-    Delegates to mait_code.context.get_project() — kept here for backward compat.
+    Delegates to ``mait_code.context.get_project()``; kept here for backward
+    compat.
     """
     from mait_code.context import get_project as _get_project
 
@@ -38,18 +38,18 @@ def get_project() -> str:
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
-    """
-    Open a tasks database connection.
+    """Open a tasks database connection.
 
-    - Enables WAL mode for concurrent reads
-    - Enables foreign key enforcement
-    - Runs schema migrations to ensure current schema
+    The connection has WAL journal mode enabled (for concurrent reads),
+    foreign-key enforcement enabled, and the current schema applied via
+    migrations.
 
     Args:
-        db_path: Override path (defaults to {data_dir}/tasks.db).
+        db_path: Override the database path (defaults to
+            ``{data_dir}/tasks.db``).
 
     Returns:
-        sqlite3.Connection ready for use. Caller must close it.
+        A ``sqlite3.Connection`` ready for use. The caller must close it.
     """
     path = db_path or get_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)

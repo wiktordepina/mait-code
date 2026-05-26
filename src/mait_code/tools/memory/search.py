@@ -1,5 +1,4 @@
-"""
-Search operations: keyword (FTS5), vector (sqlite-vec), and hybrid.
+"""Search operations: keyword (FTS5), vector (sqlite-vec), and hybrid.
 
 Provides search, listing, and deletion operations on memory entries.
 """
@@ -16,14 +15,18 @@ _BASE_COLS = "m.id, m.content, m.entry_type, m.importance, m.memory_class, m.cre
 
 
 def _scope_filter(project: str | None, branch: str | None) -> tuple[str, list]:
-    """Build SQL WHERE fragment for scope-aware filtering.
+    """Build the SQL WHERE fragment for scope-aware filtering.
 
-    When project is provided, returns entries that are:
-    - global (always visible)
-    - project-scoped matching the project
-    - branch-scoped matching both project and branch
+    When ``project`` is provided, the returned fragment matches entries
+    that are global (always visible), project-scoped to ``project``, or
+    branch-scoped to both ``project`` and ``branch``.
 
-    Returns (sql_fragment, params). Fragment uses 'AND (...)'.
+    Args:
+        project: Project context, or ``None`` to disable filtering.
+        branch: Branch context, or ``None`` to omit branch matching.
+
+    Returns:
+        ``(sql_fragment, params)``. The fragment begins with ``"AND "``.
     """
     if project is None:
         return "", []
@@ -40,7 +43,7 @@ def _scope_filter(project: str | None, branch: str | None) -> tuple[str, list]:
 
 
 def _row_to_dict(r: tuple) -> dict:
-    """Convert a query row to a dict with standard fields."""
+    """Convert a query row to a dict with the standard memory entry fields."""
     return {
         "id": r[0],
         "content": r[1],
@@ -63,15 +66,21 @@ def search_entries(
     project: str | None = None,
     branch: str | None = None,
 ) -> list[dict]:
-    """
-    Search memory entries using FTS5 BM25 ranking.
+    """Search memory entries using FTS5 BM25 ranking.
 
-    Falls back to LIKE if FTS5 is not available.
-    When project is provided, filters to global + matching project/branch entries.
+    Falls back to ``LIKE`` if FTS5 is not available. When ``project`` is
+    provided, filters to global plus matching project/branch entries.
+
+    Args:
+        conn: Open memory database connection.
+        query: FTS5 query string (or substring for the fallback path).
+        limit: Maximum number of results.
+        entry_type: Optional entry-type filter.
+        project: Project context for scope filtering.
+        branch: Branch context for scope filtering.
 
     Returns:
-        List of dicts with id, content, entry_type, importance, memory_class,
-        created_at, scope, project, branch.
+        A list of dicts with the standard memory entry fields.
     """
     scope_cond, scope_params = _scope_filter(project, branch)
     type_cond = "AND m.entry_type = ?" if entry_type else ""
@@ -107,8 +116,12 @@ def search_entries(
 def _parse_since(since: str) -> str | None:
     """Parse a human-readable period into a SQLite datetime modifier.
 
-    Accepts formats like '24h', '48h', '7d', '1w'. Returns a modifier
-    string for datetime('now', modifier), or None if unparseable.
+    Args:
+        since: Period string like ``"24h"``, ``"48h"``, ``"7d"``, ``"1w"``.
+
+    Returns:
+        A modifier suitable for ``datetime('now', modifier)``, or ``None``
+        if the input cannot be parsed.
     """
     import re
 
@@ -138,10 +151,18 @@ def list_entries(
     """List recent memory entries, optionally filtered by type, time, and scope.
 
     Args:
-        since: Human-readable period like '24h', '7d', '1w'.
+        conn: Open memory database connection.
+        limit: Maximum number of results.
+        entry_type: Optional entry-type filter.
+        since: Human-readable period like ``"24h"``, ``"7d"``, ``"1w"``.
         project: Filter to this project context (includes global).
         branch: Filter to this branch context.
-        scope: Explicit scope filter ('global', 'project', 'branch').
+        scope: Explicit scope filter (``"global"``, ``"project"``,
+            ``"branch"``); overrides project-based filtering when set.
+
+    Returns:
+        A list of dicts with the standard memory entry fields, ordered by
+        ``created_at`` descending.
     """
     conditions: list[str] = []
     params: list = []
@@ -189,15 +210,22 @@ def vector_search_entries(
     project: str | None = None,
     branch: str | None = None,
 ) -> list[dict]:
-    """
-    Search memory entries using vector similarity via sqlite-vec.
+    """Search memory entries using vector similarity via sqlite-vec.
 
-    Over-fetches and post-filters by scope since sqlite-vec doesn't
-    support arbitrary WHERE clauses in k-NN queries.
+    Over-fetches and post-filters by scope, since sqlite-vec doesn't
+    support arbitrary ``WHERE`` clauses in k-NN queries.
+
+    Args:
+        conn: Open memory database connection.
+        query: Query text to embed and search.
+        limit: Maximum number of results.
+        entry_type: Optional entry-type filter.
+        project: Project context for scope filtering.
+        branch: Branch context for scope filtering.
 
     Returns:
-        List of dicts with standard fields plus similarity (0.0-1.0).
-        Empty list if embeddings are unavailable.
+        A list of dicts with the standard fields plus a ``"similarity"``
+        key in ``[0.0, 1.0]``. Empty list if embeddings are unavailable.
     """
     vec = embed_text(query, prefix="search_query")
     if vec is None:
@@ -260,19 +288,27 @@ def hybrid_search(
     project: str | None = None,
     branch: str | None = None,
 ) -> list[dict]:
-    """
-    Combined FTS5 + vector search with merged results.
+    """Run a combined FTS5 + vector search and return merged results.
 
-    Runs both search methods, merges by entry ID, and assigns a
-    relevance score suitable for composite_score():
-    - Entries found by both: use vector similarity as relevance
-    - FTS-only entries: default relevance 0.3
-    - Vector-only entries: default relevance 0.3
+    Runs both search methods, merges by entry ID, and assigns a relevance
+    score suitable for ``composite_score()``:
+
+    * Entries found by both: use vector similarity as relevance.
+    * FTS-only entries: default relevance ``0.3``.
+    * Vector-only entries: default relevance ``0.3``.
 
     Falls back to FTS-only if no embeddings are available.
 
+    Args:
+        conn: Open memory database connection.
+        query: Query text.
+        limit: Maximum number of results from each underlying search.
+        entry_type: Optional entry-type filter.
+        project: Project context for scope filtering.
+        branch: Branch context for scope filtering.
+
     Returns:
-        List of dicts with standard fields plus a "relevance" key.
+        A list of dicts with the standard fields plus a ``"relevance"`` key.
     """
     fetch_limit = limit * 2
 
@@ -316,10 +352,17 @@ def hybrid_search(
 
 
 def delete_entry(conn: sqlite3.Connection, entry_id: int) -> bool:
-    """Delete a memory entry by ID. Returns True if deleted.
+    """Delete a memory entry by ID.
 
-    The memory_vec cleanup is handled by the database trigger
-    (memory_entries_vec_ad), so no explicit vec deletion is needed.
+    The ``memory_vec`` cleanup is handled by the database trigger
+    (``memory_entries_vec_ad``), so no explicit vec deletion is needed.
+
+    Args:
+        conn: Open memory database connection.
+        entry_id: Primary-key id of the entry to delete.
+
+    Returns:
+        ``True`` if a row was deleted, ``False`` if no entry had that id.
     """
     cursor = conn.execute("SELECT id FROM memory_entries WHERE id = ?", (entry_id,))
     if not cursor.fetchone():

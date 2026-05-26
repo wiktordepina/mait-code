@@ -77,7 +77,16 @@ def build_extraction_prompt(
     project: str | None = None,
     branch: str | None = None,
 ) -> str:
-    """Wrap conversation text in the extraction system prompt."""
+    """Wrap conversation text in the extraction system prompt.
+
+    Args:
+        conversation_text: Formatted conversation transcript.
+        project: Project identifier to include in the context header.
+        branch: Branch name to include in the context header.
+
+    Returns:
+        The full extraction prompt ready to pass to the LLM.
+    """
     parts = [EXTRACTION_PROMPT]
     if project:
         parts.append(
@@ -90,12 +99,27 @@ def build_extraction_prompt(
 
 
 def call_haiku(prompt: str) -> str | None:
-    """Call Claude Haiku via shared LLM module. Returns stdout or None on failure."""
+    """Call Claude Haiku via the shared LLM module.
+
+    Args:
+        prompt: The full extraction prompt to send.
+
+    Returns:
+        Stripped stdout from Haiku, or ``None`` on failure.
+    """
     return call_claude(prompt, model="haiku", timeout=45, retries=2)
 
 
 def parse_extraction(raw_output: str) -> dict | None:
-    """Parse JSON from Haiku's response, handling code fences."""
+    """Parse JSON from Haiku's response, tolerating markdown code fences.
+
+    Args:
+        raw_output: The raw stdout returned by Haiku.
+
+    Returns:
+        The parsed extraction dict, or ``None`` if the response cannot be
+        parsed into a dict containing any of the expected keys.
+    """
     if not raw_output:
         return None
 
@@ -131,7 +155,16 @@ def extract_observations(
     project: str | None = None,
     branch: str | None = None,
 ) -> dict | None:
-    """Full pipeline: build prompt -> call haiku -> parse."""
+    """Run the full extraction pipeline: build prompt, call Haiku, parse.
+
+    Args:
+        conversation_text: Formatted conversation transcript.
+        project: Project identifier passed into the prompt header.
+        branch: Branch name passed into the prompt header.
+
+    Returns:
+        The parsed extraction dict, or ``None`` if the call or parse fails.
+    """
     prompt = build_extraction_prompt(conversation_text, project=project, branch=branch)
     raw = call_haiku(prompt)
     return parse_extraction(raw)

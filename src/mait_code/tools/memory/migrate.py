@@ -1,13 +1,13 @@
-"""
-Schema migration for memory database.
+"""Schema migration for the memory database.
 
-Forward-only, idempotent migrations for memory.db.
-Call ensure_schema(conn) after opening any connection to guarantee
-the schema is current.
+Forward-only, idempotent migrations for ``memory.db``. Call
+``ensure_schema(conn)`` after opening any connection to guarantee the
+schema is current.
 
 Migrations can be either:
-- SQL lists: list[str] of SQL statements
-- Callables: function(conn) for complex data migrations
+
+* SQL lists: ``list[str]`` of SQL statements.
+* Callables: ``function(conn)`` for data migrations beyond plain SQL.
 """
 
 import logging
@@ -20,7 +20,7 @@ type MigrationBody = list[str] | Callable[[sqlite3.Connection], None]
 
 
 def _migrate_8_scoped_memory(conn: sqlite3.Connection) -> None:
-    """Add scope/project/branch columns and rebuild FTS with new columns."""
+    """Add scope/project/branch columns and rebuild FTS with the new columns."""
     # 1. Add columns
     conn.execute(
         "ALTER TABLE memory_entries ADD COLUMN scope TEXT NOT NULL DEFAULT 'global'"
@@ -215,14 +215,14 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
-    """
-    Apply any pending migrations to the database.
+    """Apply any pending migrations to the database.
 
-    Safe to call on every connection open — checks a single integer
-    and returns immediately if the schema is current.
+    Safe to call on every connection open — checks a single integer and
+    returns immediately if the schema is current. Gracefully skips vec0
+    migrations if the sqlite-vec extension is not loaded.
 
-    Gracefully skips vec0 migrations if sqlite-vec extension
-    is not loaded.
+    Args:
+        conn: Open memory database connection.
     """
     conn.execute(
         """CREATE TABLE IF NOT EXISTS schema_version (

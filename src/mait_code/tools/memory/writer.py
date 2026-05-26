@@ -1,8 +1,7 @@
-"""
-Write to memory database with deduplication.
+"""Write to the memory database with deduplication.
 
-Uses FTS5 + vector similarity for candidate retrieval, then applies
-dual-threshold checking: SequenceMatcher for string-level duplicates
+Uses FTS5 plus vector similarity for candidate retrieval, then applies
+dual-threshold checking: ``SequenceMatcher`` for string-level duplicates
 and cosine similarity for semantic duplicates.
 """
 
@@ -31,9 +30,14 @@ VECTOR_SIMILARITY_THRESHOLD: float = 0.92
 
 
 def _project_condition(project: str | None) -> tuple[str, list]:
-    """Build SQL condition and params for project-scoped filtering.
+    """Build the SQL condition and params for project-scoped filtering.
 
-    Returns (sql_fragment, params) where sql_fragment uses 'AND m.project ...'
+    Args:
+        project: Project identifier; ``None`` matches entries with no project.
+
+    Returns:
+        ``(sql_fragment, params)`` where ``sql_fragment`` begins with
+        ``"AND m.project "``.
     """
     if project is None:
         return "AND m.project IS NULL", []
@@ -47,7 +51,10 @@ def _fts_candidates(
     *,
     project: str | None = None,
 ) -> list[tuple[int, str]]:
-    """Retrieve dedup candidates via FTS5 keyword matching."""
+    """Retrieve dedup candidates via FTS5 keyword matching.
+
+    Falls back to a ``LIKE`` search if the FTS table is unavailable.
+    """
     words = [w for w in content.split()[:8] if len(w) > 2]
     proj_cond, proj_params = _project_condition(project)
 
@@ -91,9 +98,11 @@ def _vector_candidates(
 ) -> list[tuple[int, str, float]]:
     """Retrieve dedup candidates via vector similarity.
 
-    Returns list of (id, content, similarity) tuples.
-    Over-fetches and post-filters by project since sqlite-vec
-    doesn't support arbitrary WHERE clauses in k-NN queries.
+    Over-fetches and post-filters by project since sqlite-vec doesn't
+    support arbitrary ``WHERE`` clauses in k-NN queries.
+
+    Returns:
+        Tuples of ``(id, content, similarity)``.
     """
     vec = embed_text(content, prefix="search_document")
     if vec is None:
@@ -129,17 +138,22 @@ def find_duplicate(
     *,
     project: str | None = None,
 ) -> int | None:
-    """
-    Check for near-duplicate content in the database.
+    """Check for near-duplicate content in the database.
 
-    Uses two candidate sources (FTS5 keywords + vector similarity) and
-    two similarity measures: SequenceMatcher >= 0.85 for string-level
-    duplicates, cosine similarity >= 0.92 for semantic duplicates.
+    Uses two candidate sources (FTS5 keywords plus vector similarity) and
+    two similarity measures: ``SequenceMatcher`` >= 0.85 for string-level
+    duplicates, cosine similarity >= 0.92 for semantic duplicates. Dedup is
+    project-scoped — identical content in different projects is treated as
+    separate entries.
 
-    Dedup is project-scoped: same content in different projects are
-    treated as separate entries.
+    Args:
+        conn: Open memory database connection.
+        content: The candidate memory content.
+        entry_type: Entry type used to scope the candidate search.
+        project: Project identifier; ``None`` matches global-only entries.
 
-    Returns the ID of the duplicate if found, or None.
+    Returns:
+        The id of the duplicate if found, otherwise ``None``.
     """
     # Gather candidates from FTS
     fts_hits = _fts_candidates(conn, content, entry_type, project=project)
@@ -180,23 +194,24 @@ def store_memory(
     project: str | None = None,
     branch: str | None = None,
 ) -> dict:
-    """
-    Store a memory entry, deduplicating near-identical content.
+    """Store a memory entry, deduplicating near-identical content.
 
-    On duplicate: updates timestamp and keeps max importance.
-    On new: inserts with memory_class derived from entry_type.
+    On duplicate, refreshes the timestamp and keeps the maximum importance.
+    On a new entry, inserts with ``memory_class`` derived from ``entry_type``.
 
     Args:
         conn: Database connection (with schema applied).
         content: The memory content to store.
-        entry_type: One of: fact, preference, event, insight, task, relationship.
-        importance: Importance level 1-10.
-        scope: Memory scope — 'global', 'project', or 'branch'.
+        entry_type: One of ``fact``, ``preference``, ``event``, ``insight``,
+            ``task``, ``relationship``. Invalid values fall back to ``fact``.
+        importance: Importance level 1-10 (clamped).
+        scope: Memory scope — ``"global"``, ``"project"``, or ``"branch"``.
         project: Project identifier (e.g. repo basename).
         branch: Branch name (for branch-scoped memories).
 
     Returns:
-        Dict with keys: action, id, content, scope, project, branch.
+        A dict with keys ``action`` (``"created"`` or ``"deduplicated"``),
+        ``id``, ``content``, ``scope``, ``project``, and ``branch``.
     """
     importance = max(1, min(10, importance))
     if entry_type not in VALID_ENTRY_TYPES:
@@ -246,7 +261,7 @@ def store_memory(
 
 
 def _store_embedding(conn: sqlite3.Connection, entry_id: int, content: str) -> None:
-    """Compute and store embedding for a memory entry. Never raises."""
+    """Compute and store the embedding for a memory entry; never raises."""
     try:
         vec = embed_text(content, prefix="search_document")
         if vec is not None:

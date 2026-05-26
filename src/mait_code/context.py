@@ -1,7 +1,7 @@
 """Shared project/branch context detection.
 
-Provides functions to detect the current git project and branch,
-used by memory, tasks, and hooks for scope-aware operations.
+Provides functions that detect the current git project and branch, used by
+memory, tasks, and hooks for scope-aware operations.
 """
 
 import subprocess
@@ -21,7 +21,9 @@ DEFAULT_BRANCHES = {"main", "master"}
 def get_project() -> str | None:
     """Return the current project identifier (basename of git root or cwd).
 
-    Returns None only if cwd resolution fails (extremely unlikely).
+    Returns:
+        The project identifier, or ``None`` only if cwd resolution fails
+        (extremely unlikely).
     """
     try:
         result = subprocess.run(
@@ -38,12 +40,12 @@ def get_project() -> str | None:
 
 
 def get_branch() -> str | None:
-    """Return the current git branch name, or None.
+    """Return the current git branch name, or ``None``.
 
-    Returns None if:
-    - Not in a git repo
-    - On a detached HEAD
-    - On a default branch (main/master) — work there is project-scoped
+    Returns:
+        The branch name, or ``None`` when not in a git repo, on a detached
+        HEAD, or on a default branch (``main``/``master``) — work on default
+        branches is treated as project-scoped rather than branch-scoped.
     """
     try:
         result = subprocess.run(
@@ -65,9 +67,10 @@ def get_branch() -> str | None:
 
 
 def get_context() -> dict:
-    """Return current project and branch context.
+    """Return the current project and branch context.
 
     Returns:
-        {"project": str|None, "branch": str|None}
+        A dict with keys ``"project"`` and ``"branch"``, each mapping to a
+        string or ``None``.
     """
     return {"project": get_project(), "branch": get_branch()}

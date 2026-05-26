@@ -9,14 +9,20 @@ from mait_code.context import DEFAULT_BRANCHES
 def read_new_lines(
     transcript_path: str, byte_offset: int
 ) -> tuple[list[dict], int, dict]:
-    """Read new JSONL lines from byte_offset to EOF.
+    """Read new JSONL transcript lines from ``byte_offset`` to EOF.
 
-    Returns (filtered_messages, new_byte_offset, metadata).
-    Only returns user and assistant messages, skipping tool_result content.
+    Only returns user and assistant messages, skipping ``tool_result`` and
+    ``tool_use`` blocks.
 
-    metadata contains ``project`` and ``branch`` extracted from the transcript
-    entries' ``cwd`` and ``gitBranch`` fields respectively.  The last non-empty
-    values encountered are used.
+    Args:
+        transcript_path: Filesystem path to the JSONL transcript.
+        byte_offset: Last-read offset; reading resumes from here.
+
+    Returns:
+        A tuple ``(filtered_messages, new_byte_offset, metadata)``.
+        ``metadata`` contains ``project`` and ``branch`` derived from the
+        transcript entries' ``cwd`` and ``gitBranch`` fields; the last
+        non-empty values encountered are used.
     """
     with open(transcript_path, "rb") as f:
         f.seek(byte_offset)
@@ -74,7 +80,9 @@ def read_new_lines(
     # Derive project name from cwd (basename of git root / working dir)
     project = Path(last_cwd).name if last_cwd else None
     # Treat default branches as None (project-scoped, not branch-scoped)
-    branch = last_branch if last_branch and last_branch not in DEFAULT_BRANCHES else None
+    branch = (
+        last_branch if last_branch and last_branch not in DEFAULT_BRANCHES else None
+    )
 
     metadata = {"project": project, "branch": branch}
     return messages, new_offset, metadata
@@ -108,7 +116,13 @@ def _extract_text(message: dict) -> str:
 def format_for_extraction(messages: list[dict], max_chars: int = 60_000) -> str:
     """Format filtered messages into readable text for the extraction prompt.
 
-    Truncates from the beginning if over max_chars (keeps most recent).
+    Args:
+        messages: Filtered transcript message dicts.
+        max_chars: Maximum length of the returned string. If exceeded, the
+            leading portion is dropped so the most recent content is kept.
+
+    Returns:
+        A single string with one ``ROLE: text`` line per message.
     """
     lines = []
     for msg in messages:

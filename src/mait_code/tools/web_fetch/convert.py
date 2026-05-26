@@ -12,7 +12,7 @@ _STRIP_TAGS = {"script", "style", "nav", "footer", "header", "aside", "noscript"
 
 
 def _html_to_markdown(html: str) -> str:
-    """Convert HTML to markdown, stripping noise tags first."""
+    """Convert HTML to markdown, stripping noise tags before conversion."""
     from bs4 import BeautifulSoup
     from markdownify import markdownify
 
@@ -40,7 +40,7 @@ def _html_to_markdown(html: str) -> str:
 
 
 def _pretty_json(raw: str) -> str:
-    """Pretty-print JSON, falling back to raw text on parse error."""
+    """Pretty-print JSON; fall back to the raw text on parse error."""
     try:
         data = json.loads(raw)
         return json.dumps(data, indent=2, ensure_ascii=False)
@@ -79,7 +79,9 @@ def convert_content(
 
     if not is_text:
         size_kb = len(body) / 1024
-        return f"Binary content ({content_type}, {size_kb:.0f}KB). Cannot display inline."
+        return (
+            f"Binary content ({content_type}, {size_kb:.0f}KB). Cannot display inline."
+        )
 
     # Decode to string
     try:
@@ -98,6 +100,8 @@ def convert_content(
 
     # Truncate if needed
     if len(result) > max_chars:
-        result = result[:max_chars] + f"\n\n[Content truncated at {max_chars} characters]"
+        result = (
+            result[:max_chars] + f"\n\n[Content truncated at {max_chars} characters]"
+        )
 
     return result

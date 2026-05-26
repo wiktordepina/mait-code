@@ -1,8 +1,7 @@
-"""
-Shared database connection factory for reminders.
+"""Shared database connection factory for reminders.
 
-All reminders modules should import get_connection() from here
-instead of creating their own connections.
+All reminders modules should import ``get_connection()`` from here instead
+of creating their own connections.
 """
 
 import os
@@ -28,17 +27,17 @@ def get_db_path() -> Path:
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
-    """
-    Open a reminders database connection.
+    """Open a reminders database connection.
 
-    - Enables WAL mode for concurrent reads
-    - Runs schema migrations to ensure current schema
+    The connection has WAL journal mode enabled (for concurrent reads) and
+    the current schema applied via migrations.
 
     Args:
-        db_path: Override path (defaults to {data_dir}/reminders.db).
+        db_path: Override the database path (defaults to
+            ``{data_dir}/reminders.db``).
 
     Returns:
-        sqlite3.Connection ready for use. Caller must close it.
+        A ``sqlite3.Connection`` ready for use. The caller must close it.
     """
     path = db_path or get_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)

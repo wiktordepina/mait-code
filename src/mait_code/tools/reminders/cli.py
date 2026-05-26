@@ -128,7 +128,7 @@ def cmd_dismiss(args):
 
 
 def cmd_check(_args):
-    """Check for overdue reminders. Used by session_start hook."""
+    """Print any overdue reminders (used by the session-start hook)."""
     with connection() as conn:
         rows = conn.execute(
             "SELECT id, what, due FROM reminders "

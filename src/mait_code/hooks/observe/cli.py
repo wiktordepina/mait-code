@@ -26,11 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 def _read_event() -> dict:
-    """Read hook event JSON from stdin.
+    """Read the hook event JSON from stdin.
 
-    Returns an empty dict if stdin is empty or contains invalid JSON.
-    This handles the macOS bug where async hooks receive no stdin data
-    (https://github.com/anthropics/claude-code/issues/38162).
+    Returns:
+        The decoded event dict, or an empty dict if stdin is empty or
+        contains invalid JSON. This handles the macOS bug where async hooks
+        receive no stdin data
+        (https://github.com/anthropics/claude-code/issues/38162).
     """
     raw = sys.stdin.read()
     if not raw.strip():
@@ -46,10 +48,17 @@ def _read_event() -> dict:
 def _find_transcript(cwd: str | None = None) -> str | None:
     """Find the most recently modified transcript for the current project.
 
-    Fallback for when stdin is empty (macOS async hook bug). First tries to
-    derive the Claude Code project slug from cwd. If that fails (e.g. async
-    hooks may not inherit the project's working directory), scans all project
-    directories for the most recently modified transcript.
+    Used as a fallback when stdin is empty (macOS async hook bug). First
+    tries to derive the Claude Code project slug from ``cwd``; if that fails
+    (e.g. async hooks may not inherit the project's working directory),
+    scans all project directories for the most recently modified transcript.
+
+    Args:
+        cwd: Working directory to derive the project slug from. Defaults to
+            the current process cwd.
+
+    Returns:
+        Path to the newest transcript file, or ``None`` if none can be found.
     """
     projects_root = Path.home() / ".claude" / "projects"
     if not projects_root.is_dir():
