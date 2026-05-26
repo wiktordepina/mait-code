@@ -27,6 +27,38 @@
 
 ::: mait_code.cli.write_record
 
+## Install flow
+
+::: mait_code.cli.EMBEDDING_PROVIDERS
+
+::: mait_code.cli.InstallSummary
+
+## Symlinks
+
+::: mait_code.cli.SymlinkResult
+
+::: mait_code.cli.remove_agent_symlinks
+
+::: mait_code.cli.remove_claude_md_symlink
+
+::: mait_code.cli.remove_skill_symlinks
+
+::: mait_code.cli.symlink_agents
+
+::: mait_code.cli.symlink_claude_md
+
+::: mait_code.cli.symlink_skills
+
+## Settings
+
+::: mait_code.cli.merge_settings
+
+::: mait_code.cli.read_settings_file
+
+::: mait_code.cli.unmerge_settings
+
+::: mait_code.cli.write_settings_file
+
 ## Entry point
 
 ::: mait_code.cli.app

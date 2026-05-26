@@ -25,9 +25,16 @@ Typer command callables themselves are private (their docs live in
 from __future__ import annotations
 
 import importlib.metadata
+from pathlib import Path
+from typing import Annotated
 
 import typer
 
+from mait_code.cli._install import (
+    EMBEDDING_PROVIDERS,
+    InstallSummary,
+    install as _install_impl,
+)
 from mait_code.cli._paths import (
     claude_dir,
     data_dir,
@@ -41,6 +48,21 @@ from mait_code.cli._record import (
     RecordError,
     read_record,
     write_record,
+)
+from mait_code.cli._settings import (
+    merge_settings,
+    read_settings_file,
+    unmerge_settings,
+    write_settings_file,
+)
+from mait_code.cli._symlinks import (
+    SymlinkResult,
+    remove_agent_symlinks,
+    remove_claude_md_symlink,
+    remove_skill_symlinks,
+    symlink_agents,
+    symlink_claude_md,
+    symlink_skills,
 )
 
 __all__ = [
@@ -56,6 +78,22 @@ __all__ = [
     "RecordError",
     "read_record",
     "write_record",
+    # Install flow
+    "EMBEDDING_PROVIDERS",
+    "InstallSummary",
+    # Symlinks
+    "SymlinkResult",
+    "remove_agent_symlinks",
+    "remove_claude_md_symlink",
+    "remove_skill_symlinks",
+    "symlink_agents",
+    "symlink_claude_md",
+    "symlink_skills",
+    # Settings
+    "merge_settings",
+    "read_settings_file",
+    "unmerge_settings",
+    "write_settings_file",
     # Entry point
     "app",
     "main",
@@ -95,6 +133,74 @@ def version() -> None:
         except ImportError:
             typer.echo("unknown")
             raise typer.Exit(code=1) from None
+
+
+@app.command(name="install")
+def install_cmd(
+    from_: Annotated[
+        Path,
+        typer.Option(
+            "--from",
+            help="Absolute path to the cloned mait-code source tree.",
+        ),
+    ],
+    embedding_provider: Annotated[
+        str,
+        typer.Option(
+            "--embedding-provider",
+            help="Which embedding backend to configure ('local' or 'bedrock').",
+        ),
+    ] = "local",
+    data_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--data-dir",
+            help="Override the mait-code data directory.",
+        ),
+    ] = None,
+    claude_dir_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--claude-dir",
+            help="Override the Claude Code config directory.",
+        ),
+    ] = None,
+) -> None:
+    """Set up data directories, symlinks, and settings for a mait-code clone."""
+    try:
+        summary = _install_impl(
+            source_dir=from_,
+            embedding_provider=embedding_provider,
+            data_dir=data_dir_override,
+            claude_dir=claude_dir_override,
+        )
+    except ValueError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+
+    _render_install_summary(summary)
+
+
+def _render_install_summary(summary: InstallSummary) -> None:
+    """Print a short human-readable summary of an install."""
+    record = summary.record
+    typer.echo(f"Installed mait-code {record.version} from {record.source_dir}.")
+    typer.echo(f"  Embedding provider: {record.embedding_provider}")
+    if summary.templates_copied:
+        typer.echo(f"  Templates copied: {', '.join(summary.templates_copied)}")
+    if summary.memory_md_created:
+        typer.echo("  Created MEMORY.md stub")
+    if summary.claude_md.backed_up:
+        typer.echo(
+            f"  Backed up existing CLAUDE.md to {summary.claude_md.backed_up[0]}"
+        )
+    typer.echo(
+        f"  Symlinks: {len(summary.skills.created) + len(summary.skills.already_linked)} skills, "
+        f"{len(summary.agents.created) + len(summary.agents.already_linked)} agents"
+    )
+    typer.echo(f"  Settings merged into {summary.settings_path}")
+    typer.echo("")
+    typer.echo("Next: personalise the soul_document and user_context.")
 
 
 def main() -> None:

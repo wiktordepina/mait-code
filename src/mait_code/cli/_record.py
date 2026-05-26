@@ -107,12 +107,16 @@ def read_record(*, path: Path | None = None) -> InstallRecord:
     """
     target = path if path is not None else install_record_path()
     if not target.exists():
-        raise RecordError(f"No install record at {target}. Run `mait-code install` first.")
+        raise RecordError(
+            f"No install record at {target}. Run `mait-code install` first."
+        )
 
     try:
         raw: Any = json.loads(target.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise RecordError(f"Install record at {target} is not valid JSON: {exc}") from exc
+        raise RecordError(
+            f"Install record at {target} is not valid JSON: {exc}"
+        ) from exc
 
     if not isinstance(raw, dict):
         raise RecordError(f"Install record at {target} is not a JSON object.")
