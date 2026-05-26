@@ -499,6 +499,7 @@ def cmd_restore(args):
                             if dry_run:
                                 total_memories += 1
                             else:
+                                assert conn is not None  # narrowed: not dry_run
                                 try:
                                     _store(
                                         conn,
@@ -530,6 +531,7 @@ def cmd_restore(args):
                         if dry_run:
                             total_entities += 1
                         else:
+                            assert conn is not None  # narrowed: not dry_run
                             try:
                                 entity_ids[name.lower()] = upsert_entity(
                                     conn, name, entity_type
@@ -556,6 +558,7 @@ def cmd_restore(args):
                             total_relationships += 1
                             continue
 
+                        assert conn is not None  # narrowed: not dry_run
                         source_id = entity_ids.get(source.lower())
                         target_id = entity_ids.get(target.lower())
                         if source_id is None:

@@ -31,6 +31,7 @@ bedrock = ["boto3>=1.34"]
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1",
     "pytest>=8.0",
     "ruff>=0.8",
 ]
@@ -44,3 +45,10 @@ docs = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"
+include = ["src"]

@@ -24,6 +24,19 @@ jobs:
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
 
+  typecheck:
+    name: Type check (pyright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      # Install the bedrock extra so boto3 resolves for the import in
+      # tools/memory/embeddings.py. Pyright runs over src/ only.
+      - run: uv sync --locked --extra bedrock
+      - run: uv run pyright
+
   test:
     name: Tests (pytest)
     runs-on: ubuntu-latest

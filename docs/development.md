@@ -25,12 +25,18 @@ Memory Components" section below for the established patterns.
 module declares a non-empty `__all__`. CI's `ci.yml` runs the full suite on
 every PR and push to `main`.
 
-## Linting and Formatting
+## Linting, formatting, typechecking
 
 ```bash
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
+uv run pyright                 # Typecheck (basic mode, src/ only)
 ```
+
+Pyright reads the optional `boto3` import in `tools/memory/embeddings.py`,
+so the bedrock extra must be installed for typechecking: run
+`uv sync --extra bedrock` once before invoking `uv run pyright`.
+The CI typecheck job (`ci.yml`) does this automatically.
 
 ## Project Conventions
 

@@ -33,13 +33,18 @@ Rules:
 
 The point is a strict separation between polished, shipped artefacts (committed, public-facing) and scratchpad working notes (rich, exploratory, local).
 
-## Lint, format, test
+## Lint, format, typecheck, test
 
 ```bash
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
+uv run pyright                 # Typecheck (basic mode, src/ only)
 uv run pytest                  # Test suite (~460 tests)
 ```
+
+`pyright` reads the optional `boto3` import in `tools/memory/embeddings.py`,
+so the bedrock extra must be installed: `uv sync --extra bedrock` once,
+then `uv run pyright` works.
 
 Tests live under `tests/` mirroring the `src/mait_code/` layout. Tool-specific
 fixtures in `tests/<area>/conftest.py`; cross-cutting setup in the root
