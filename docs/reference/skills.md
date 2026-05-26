@@ -38,6 +38,7 @@ Search memory for past facts, decisions, patterns, and preferences.
 ```
 
 **How it works:**
+
 1. Preprocesses search results via `mc-tool-memory search` (injected before Claude sees the skill)
 2. Results are ranked by composite score (recency + importance + relevance)
 3. If no query is provided, shows recent memories via `mc-tool-memory list`
@@ -55,6 +56,7 @@ Manually store a memory observation. This is a manual-only skill (`disable-model
 ```
 
 **How it works:**
+
 1. Determines the best entry type and importance for the content
 2. Stores via `mc-tool-memory store`
 
@@ -72,6 +74,7 @@ Synthesise recent observations into high-level insights and propose MEMORY.md up
 ```
 
 **How it works:**
+
 1. Preprocesses via `mc-tool-memory reflect` (injected before Claude sees the skill)
 2. Checks the novelty gate — skips if fewer than 3 unreflected entries exist
 3. Gathers unreflected memory entries (tracked by per-project watermark)
@@ -93,6 +96,7 @@ Set a reminder for a future time.
 ```
 
 **How it works:**
+
 1. Parses the time and content from the arguments
 2. Stores via `mc-tool-reminders set "<when>" <what>`
 3. Uses `dateparser` for flexible natural language time parsing with UTC normalization
@@ -107,6 +111,7 @@ Show active and overdue reminders.
 ```
 
 **How it works:**
+
 1. Preprocesses results via `mc-tool-reminders list` (injected before Claude sees the skill)
 2. Presents active and overdue reminders
 3. Supports dismissing reminders via `mc-tool-reminders dismiss <id>`
@@ -123,6 +128,7 @@ Add a task for the current project. Model-invocable — Claude can proactively s
 ```
 
 **How it works:**
+
 1. Parses the title and optional `--priority` flag
 2. Stores via `mc-tool-tasks add [--priority <priority>] <title>`
 3. Tasks are scoped to the current project (git root basename or cwd basename)
@@ -137,6 +143,7 @@ Show open tasks for the current project.
 ```
 
 **How it works:**
+
 1. Preprocesses results via `mc-tool-tasks list` (injected before Claude sees the skill)
 2. Presents open tasks sorted by priority (high → medium → low)
 3. Supports completing tasks via `mc-tool-tasks done <id>` or removing via `mc-tool-tasks remove <id>`
@@ -151,6 +158,7 @@ Detect changes, generate a conventional commit message, confirm with user, and c
 ```
 
 **How it works:**
+
 1. Preprocesses `git diff --cached --stat`, `git diff --stat`, and untracked files
 2. Analyses the changes and generates a conventional commit message (`type(scope): description`)
 3. Presents the proposed message for user confirmation or editing
@@ -166,6 +174,7 @@ Generate a standup summary from git history, tasks, memory, and open PRs.
 ```
 
 **How it works:**
+
 1. Preprocesses: git log (last 24h), all open tasks, recent memories, reminders
 2. Checks for open PRs via `gh search prs --author=@me --state=open`
 3. Formats as standup: Yesterday, Today, Blockers, Open PRs
@@ -183,6 +192,7 @@ Show recent work history for the current project.
 ```
 
 **How it works:**
+
 1. Parses the time period argument (defaults to "today")
 2. Runs `git log` and `mc-tool-memory list --since` with the appropriate time range
 3. Shows completed tasks from the period
@@ -198,6 +208,7 @@ Daily overview dashboard — open tasks, reminders, recent activity, and open PR
 ```
 
 **How it works:**
+
 1. Preprocesses: all open tasks, reminders, recent commits, recent memories
 2. Checks for open PRs via `gh search prs --author=@me --state=open`
 3. Presents sections: Tasks, Reminders, Recent Activity, Open PRs
@@ -212,6 +223,7 @@ Generate a STATUS.md for the current project.
 ```
 
 **How it works:**
+
 1. Preprocesses: project tasks, reminders, git log (7 days), recent memories
 2. Gets project info from git (name, remote URL)
 3. Reads existing STATUS.md (if present) for continuity
@@ -228,6 +240,7 @@ List open PRs across all projects.
 ```
 
 **How it works:**
+
 1. Preprocesses via `gh search prs --author=@me --state=open`
 2. Shows PR number, title, and review status grouped by repository
 
@@ -243,6 +256,7 @@ Record a technical decision for the current project. Model-invocable — Claude 
 ```
 
 **How it works:**
+
 1. Parses the title and optional flags (`--context`, `--alternatives`, `--consequences`, `--status`, `--tags`)
 2. If only a title is given, asks briefly about context and alternatives before recording
 3. Records via `mc-tool-decisions record [flags] <title>`
@@ -258,6 +272,7 @@ Browse and search decision records for the current project.
 ```
 
 **How it works:**
+
 1. Preprocesses results via `mc-tool-decisions list` (injected before Claude sees the skill)
 2. Supports show (`mc-tool-decisions show <id>`), search (`mc-tool-decisions search <query>`), amend, supersede, and remove via follow-up commands
 
@@ -272,11 +287,13 @@ Fetch web page content directly from the local machine, bypassing the claude.ai 
 ```
 
 **How it works:**
+
 1. Preprocesses via `mc-tool-web-fetch <url>` (injected before Claude sees the skill)
 2. Returns HTML as markdown, JSON as pretty-printed text, or raw text for other content types
 3. SSRF protection blocks private/loopback IPs by default
 
 **Options** (via Bash):
+
 - `mc-tool-web-fetch <url> --raw` — skip HTML-to-markdown conversion
 - `mc-tool-web-fetch <url> --timeout 60` — increase timeout (default 30s)
 - `mc-tool-web-fetch <url> --allow-private` — allow private/loopback IPs
@@ -343,6 +360,7 @@ Instructions for Claude when this skill is invoked.
 ```
 
 Key fields:
+
 - `user-invocable: true` — Makes it available as a slash command
 - `disable-model-invocation: true` — Prevents Claude from auto-invoking (for side-effect skills)
 - `allowed-tools` — Tools the skill is allowed to use (e.g. `Bash(mc-tool-memory *)`)

@@ -114,26 +114,32 @@ nav:
   - Home: README.md
   - Guide:
       - Setup: setup.md
-      - Development: development.md
-      - Skills: skills.md
-      - Memory: memory.md
-      - Decisions: decisions.md
-      - Sync: sync.md
+      - Multi-machine sync: sync.md
+  - Concepts:
       - Philosophy: philosophy.md
-      - Contributing to docs: contributing-docs.md
+      - How memory works: memory.md
   - Architecture:
       - Overview: architecture.md
   - Reference:
-      - Overview: reference/index.md
-      - Context: reference/context.md
-      - LLM: reference/llm.md
-      - Logging: reference/logging.md
-      - SSL: reference/ssl.md
-      - "Tools — Memory": reference/tools-memory.md
-      - "Tools — Reminders": reference/tools-reminders.md
-      - "Tools — Tasks": reference/tools-tasks.md
-      - "Tools — Decisions": reference/tools-decisions.md
-      - "Tools — Web fetch": reference/tools-web_fetch.md
-      - "Hooks — Observe": reference/hooks-observe.md
-      - "Hooks — Session start": reference/hooks-session_start.md
-      - "Hooks — Auto-format": reference/hooks-auto_format.md
+      - Skills: reference/skills.md
+      - Python API:
+          - Overview: reference/index.md
+          - Context: reference/context.md
+          - LLM: reference/llm.md
+          - Logging: reference/logging.md
+          - SSL: reference/ssl.md
+          - Tools:
+              - Memory: reference/tools/memory.md
+              - Reminders: reference/tools/reminders.md
+              - Tasks: reference/tools/tasks.md
+              - Decisions: reference/tools/decisions.md
+              - Web fetch: reference/tools/web_fetch.md
+          - Hooks:
+              - Observe: reference/hooks/observe.md
+              - Session start: reference/hooks/session_start.md
+              - Auto-format: reference/hooks/auto_format.md
+  - Decisions:
+      - Decision records: decisions.md
+  - Contributing:
+      - Development: development.md
+      - Contributing to docs: contributing-docs.md

@@ -12,17 +12,23 @@ Contributors: see the
 [contributing-docs guide](../contributing-docs.md) and
 `docs/gen_ref_pages.py` for the regeneration workflow.
 
-## Modules
+## Core
 
 - [Context](context.md) — `mait_code.context`
 - [LLM](llm.md) — `mait_code.llm`
 - [Logging](logging.md) — `mait_code.logging`
 - [SSL](ssl.md) — `mait_code.ssl`
-- [Tools — Memory](tools-memory.md) — `mait_code.tools.memory`
-- [Tools — Reminders](tools-reminders.md) — `mait_code.tools.reminders`
-- [Tools — Tasks](tools-tasks.md) — `mait_code.tools.tasks`
-- [Tools — Decisions](tools-decisions.md) — `mait_code.tools.decisions`
-- [Tools — Web fetch](tools-web_fetch.md) — `mait_code.tools.web_fetch`
-- [Hooks — Observe](hooks-observe.md) — `mait_code.hooks.observe`
-- [Hooks — Session start](hooks-session_start.md) — `mait_code.hooks.session_start`
-- [Hooks — Auto-format](hooks-auto_format.md) — `mait_code.hooks.auto_format`
+
+## Tools
+
+- [Memory](tools/memory.md) — `mait_code.tools.memory`
+- [Reminders](tools/reminders.md) — `mait_code.tools.reminders`
+- [Tasks](tools/tasks.md) — `mait_code.tools.tasks`
+- [Decisions](tools/decisions.md) — `mait_code.tools.decisions`
+- [Web fetch](tools/web_fetch.md) — `mait_code.tools.web_fetch`
+
+## Hooks
+
+- [Observe](hooks/observe.md) — `mait_code.hooks.observe`
+- [Session start](hooks/session_start.md) — `mait_code.hooks.session_start`
+- [Auto-format](hooks/auto_format.md) — `mait_code.hooks.auto_format`

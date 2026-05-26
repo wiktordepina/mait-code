@@ -21,6 +21,7 @@ uv sync
 ```
 
 The install script:
+
 1. Creates `~/.claude/mait-code-data/` with memory subdirectories (`observations/`, `reflections/`)
 2. Copies identity templates (`soul_document.md`, `user_context.md`) — never overwrites existing files
 3. Bootstraps `memory/MEMORY.md` with a placeholder if missing
