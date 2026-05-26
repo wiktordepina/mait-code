@@ -33,15 +33,18 @@ Rules:
 
 The point is a strict separation between polished, shipped artefacts (committed, public-facing) and scratchpad working notes (rich, exploratory, local).
 
-## Lint & format
+## Lint, format, test
 
 ```bash
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
+uv run pytest                  # Test suite (~460 tests)
 ```
 
-> No test suite yet (`pytest` is listed as a dev dep but `tests/` doesn't exist).
-> Tracked as a follow-up — see the audit's P3 items.
+Tests live under `tests/` mirroring the `src/mait_code/` layout. Tool-specific
+fixtures in `tests/<area>/conftest.py`; cross-cutting setup in the root
+`tests/conftest.py`. `tests/test_imports.py` is the smoke test that asserts every
+reference-surface module declares a non-empty `__all__`.
 
 ## Docs
 
