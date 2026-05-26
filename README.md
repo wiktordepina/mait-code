@@ -58,7 +58,7 @@ mait-code/
 - [Setup Guide](docs/setup.md) — Detailed installation and personalisation
 - [How Memory Works](docs/memory.md) — Observations, search, embeddings, reminders, and reflections
 - [Architecture](docs/architecture.md) — System design and technical decisions
-- [Skills Reference](docs/skills.md) — Available slash commands
+- [Skills Reference](docs/reference/skills.md) — Available slash commands
 - [Multi-Machine Sync](docs/sync.md) — Syncing data across machines
 - [Development Guide](docs/development.md) — Contributing and extending
 
