@@ -10,6 +10,10 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.4] — 2026-05-27
+
+**Extraction reliability fix.**
+
 ### Fixed
 
 - **Failed extractions no longer silently lose their transcript window.** When
