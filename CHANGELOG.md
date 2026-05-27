@@ -10,6 +10,10 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-05-27
+
+**First-class `decision` entry type.**
+
 ### Changed
 
 - **Extracted decisions get their own `decision` entry type.** The observe
