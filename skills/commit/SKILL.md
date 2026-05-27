@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Detect changes, generate conventional commit message, confirm with user, commit
+description: Commit changes with a generated conventional-commit message, after confirming with you. Use whenever you ask to commit, check in, or save changes — invoke this instead of running git commit directly, so messages stay conventional.
 allowed-tools: Bash(git *)
 ---
 

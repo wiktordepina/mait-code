@@ -1,6 +1,6 @@
 ---
 name: work-history
-description: Show recent work history for current project (git log + memory)
+description: Recap recent work on the current project from git log + memory. Use when you ask what you did (today/yesterday/this week), where you left off, or for a progress recap — invoke this instead of reading git log by hand.
 argument-hint: "[today|yesterday|week]"
 allowed-tools: Bash(git *), Bash(mc-tool-memory *), Bash(mc-tool-tasks *)
 ---
