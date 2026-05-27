@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.5] — 2026-05-27
+
+**Daily log rotation.**
+
+### Changed
+
+- **Logs now rotate daily instead of by size.** The file handler switched from
+  a 5 MB size-based rotation — which, at the actual log volume, effectively
+  never rotated — to a daily `TimedRotatingFileHandler` at midnight, keeping 14
+  days of date-stamped backups.
+
 ## [0.15.4] — 2026-05-27
 
 **Extraction reliability fix.**

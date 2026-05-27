@@ -48,6 +48,21 @@ class TestSetupLogging:
         content = log_file.read_text()
         assert "test message" in content
 
+    def test_uses_daily_rotating_handler(self, tmp_path):
+        log_file = tmp_path / "test.log"
+        with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+            setup_logging()
+
+        from logging.handlers import TimedRotatingFileHandler
+
+        logger = logging.getLogger("mait_code")
+        handlers = [
+            h for h in logger.handlers if isinstance(h, TimedRotatingFileHandler)
+        ]
+        assert len(handlers) == 1
+        assert handlers[0].when == "MIDNIGHT"
+        assert handlers[0].backupCount == 14
+
     def test_idempotent(self, tmp_path):
         log_file = tmp_path / "test.log"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):

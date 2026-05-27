@@ -2,7 +2,7 @@
 
 Call ``setup_logging()`` once in each entry point's ``main()`` to configure
 file-based logging for the ``mait_code`` namespace. Uses a
-``RotatingFileHandler`` to keep logs bounded.
+``TimedRotatingFileHandler`` to rotate logs daily.
 
 Configuration via environment variables (settable in settings.json env):
 
@@ -19,7 +19,7 @@ import os
 import sys
 import time
 from collections.abc import Callable
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
 
@@ -54,7 +54,7 @@ def _get_log_path() -> Path:
 
 
 def setup_logging() -> None:
-    """Configure the ``mait_code`` logger hierarchy with a rotating file handler.
+    """Configure the ``mait_code`` logger hierarchy with a daily-rotating file handler.
 
     Safe to call multiple times — subsequent calls are no-ops.
     """
@@ -68,10 +68,14 @@ def setup_logging() -> None:
 
     log_path = _get_log_path()
 
-    handler = RotatingFileHandler(
+    # Rotate at midnight rather than by size. In short-lived hook/CLI
+    # processes the rollover is checked on the first emit using the log file's
+    # mtime, so the previous day's file is rolled to mait-code.log.YYYY-MM-DD
+    # before the first write of a new day — no long-running process needed.
+    handler = TimedRotatingFileHandler(
         log_path,
-        maxBytes=5 * 1024 * 1024,  # 5 MB
-        backupCount=3,
+        when="midnight",
+        backupCount=14,
         encoding="utf-8",
     )
 
