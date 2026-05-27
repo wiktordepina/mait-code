@@ -9,6 +9,7 @@ The ``mait-code`` binary owns the install lifecycle:
   optionally purge data.
 * ``mait-code status`` &mdash; read-only summary of the current install.
 * ``mait-code doctor`` &mdash; diagnose silent breakage; ``--fix`` for safe fixes.
+* ``mait-code settings`` &mdash; read-only view of the active configuration.
 * ``mait-code version`` &mdash; print the installed version.
 
 The bash shims under ``scripts/`` handle the chicken-and-egg of
@@ -84,6 +85,11 @@ from mait_code.cli._symlinks import (
     symlink_agents,
     symlink_claude_md,
     symlink_skills,
+)
+from mait_code.config import (
+    collect_settings as _collect_settings,
+    render as _settings_render,
+    render_json as _settings_render_json,
 )
 from mait_code.console import console
 
@@ -437,6 +443,28 @@ def doctor_cmd(
         _doctor_render(report)
     if report.has_fail:
         raise typer.Exit(code=1)
+
+
+@app.command(name="settings")
+def settings_cmd(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Emit a machine-readable JSON document instead of text.",
+        ),
+    ] = False,
+) -> None:
+    """Show the active mait-code configuration (read-only)."""
+    try:
+        recorded_provider = read_record().embedding_provider
+    except RecordError:
+        recorded_provider = None
+    snapshot = _collect_settings(recorded_provider=recorded_provider)
+    if as_json:
+        typer.echo(_settings_render_json(snapshot))
+    else:
+        _settings_render(snapshot)
 
 
 def main() -> None:

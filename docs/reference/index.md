@@ -16,6 +16,7 @@ Contributors: see the
 
 - [Context](context.md) — `mait_code.context`
 - [CLI](cli.md) — `mait_code.cli`
+- [Configuration](config.md) — `mait_code.config`
 - [LLM](llm.md) — `mait_code.llm`
 - [Logging](logging.md) — `mait_code.logging`
 - [SSL](ssl.md) — `mait_code.ssl`

@@ -14,6 +14,7 @@ user-facing settings.
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,6 +26,12 @@ __all__ = [
     "resolve",
     # Resolvers
     "data_dir",
+    # Settings view
+    "ResolvedSetting",
+    "SettingsSnapshot",
+    "collect_settings",
+    "render",
+    "render_json",
     # Defaults
     "DEFAULT_DATA_DIR_DISPLAY",
     "DEFAULT_LOG_LEVEL",
@@ -141,3 +148,129 @@ def data_dir() -> Path:
     if override:
         return Path(override)
     return Path.home() / ".claude" / "mait-code-data"
+
+
+# ---------------------------------------------------------------------------
+# Settings view — read-only snapshot for `mait-code settings`.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ResolvedSetting:
+    """A setting with its resolved value and provenance, for display."""
+
+    key: str
+    value: str
+    source: str  # "env" or "default"
+    requires_migration: bool
+
+
+@dataclass(frozen=True)
+class SettingsSnapshot:
+    """All resolved settings, plus any detected configuration drift."""
+
+    settings: tuple[ResolvedSetting, ...]
+    drift: str | None = None
+
+
+def _mask(value: str) -> str:
+    """Mask a secret AWS-style: keep only the last four characters."""
+    if len(value) <= 4:
+        return "••••"
+    return "…" + value[-4:]
+
+
+def collect_settings(recorded_provider: str | None = None) -> SettingsSnapshot:
+    """Resolve every setting for display, and flag embedding-provider drift.
+
+    Args:
+        recorded_provider: The embedding provider stored in the install
+            record, if any. When it disagrees with the active provider the
+            snapshot carries a drift warning — memories embedded with one
+            provider can't be searched with another.
+
+    Returns:
+        A read-only :class:`SettingsSnapshot`.
+    """
+    rows: list[ResolvedSetting] = []
+    active_provider: str | None = None
+    for setting in SETTINGS:
+        value, source = resolve(setting)
+        if setting.key == "embedding-provider":
+            active_provider = value
+        if setting.secret and source == "env":
+            value = _mask(value)
+        rows.append(
+            ResolvedSetting(setting.key, value, source, setting.requires_migration)
+        )
+
+    drift: str | None = None
+    if recorded_provider and active_provider and recorded_provider != active_provider:
+        drift = (
+            f"active embedding-provider is '{active_provider}', but memories "
+            f"were embedded with '{recorded_provider}' — re-embed to switch"
+        )
+    return SettingsSnapshot(settings=tuple(rows), drift=drift)
+
+
+def render_json(snapshot: SettingsSnapshot) -> str:
+    """Render the snapshot as a JSON document."""
+    return json.dumps(
+        {
+            "settings": [
+                {
+                    "key": r.key,
+                    "value": r.value,
+                    "source": r.source,
+                    "requires_migration": r.requires_migration,
+                }
+                for r in snapshot.settings
+            ],
+            "drift": snapshot.drift,
+        },
+        indent=2,
+    )
+
+
+def render(snapshot: SettingsSnapshot) -> None:
+    """Print the snapshot to the shared console (read-only, provenance-aware).
+
+    Imports rich lazily so this module stays a light, stdlib-only leaf for
+    the hook/tool processes that import it only for :func:`data_dir`.
+    """
+    from rich.table import Table
+    from rich.text import Text
+
+    from mait_code.console import console
+
+    header = Text("mait-code settings", style="accent")
+    header.append("   (read-only)", style="muted")
+    console.print(header)
+    console.rule(style="muted")
+
+    table = Table(box=None, pad_edge=False, header_style="muted")
+    table.add_column("SETTING", style="bold", no_wrap=True)
+    table.add_column("VALUE")
+    table.add_column("SOURCE", no_wrap=True)
+    for row in snapshot.settings:
+        value = Text(row.value, style="muted" if row.source == "default" else "")
+        source = Text(row.source, style="warn" if row.source == "env" else "muted")
+        if row.requires_migration:
+            source.append("  ⚠", style="warn")
+        table.add_row(row.key, value, source)
+    console.print(table)
+
+    if any(r.requires_migration for r in snapshot.settings):
+        console.print()
+        note = Text("⚠ ", style="warn")
+        note.append(
+            "changing these needs a re-embed of stored memories; setting them "
+            "in place isn't supported yet.",
+            style="muted",
+        )
+        console.print(note, soft_wrap=True)
+    if snapshot.drift:
+        console.print()
+        drift = Text("⚠ ", style="warn")
+        drift.append(snapshot.drift, style="warn")
+        console.print(drift, soft_wrap=True)

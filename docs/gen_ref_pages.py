@@ -51,6 +51,7 @@ REFERENCE_MODULES: dict[str, list[tuple[str, str]]] = {
     "Core": [
         ("context", "Context"),
         ("cli", "CLI"),
+        ("config", "Configuration"),
         ("llm", "LLM"),
         ("logging", "Logging"),
         ("ssl", "SSL"),
