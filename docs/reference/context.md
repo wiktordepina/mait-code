@@ -5,8 +5,12 @@
 
 ::: mait_code.context.DEFAULT_BRANCHES
 
+::: mait_code.context.canonical_project
+
 ::: mait_code.context.get_branch
 
 ::: mait_code.context.get_context
 
 ::: mait_code.context.get_project
+
+::: mait_code.context.load_project_aliases
