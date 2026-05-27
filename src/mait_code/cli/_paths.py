@@ -15,6 +15,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from mait_code.config import data_dir as _config_data_dir
+
 __all__ = [
     "claude_dir",
     "data_dir",
@@ -59,10 +61,8 @@ def claude_dir() -> Path:
 def data_dir() -> Path:
     """Return the mait-code data directory.
 
-    Honours ``$MAIT_CODE_DATA_DIR`` when set; otherwise defaults to
-    ``~/.claude/mait-code-data`` to match the existing install layout.
+    Delegates to :func:`mait_code.config.data_dir`, the single source of
+    truth for this resolution (honours ``$MAIT_CODE_DATA_DIR``; otherwise
+    ``~/.claude/mait-code-data``).
     """
-    override = os.environ.get("MAIT_CODE_DATA_DIR", "").strip()
-    if override:
-        return Path(override)
-    return claude_dir() / "mait-code-data"
+    return _config_data_dir()

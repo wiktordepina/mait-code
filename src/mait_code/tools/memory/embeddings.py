@@ -17,6 +17,12 @@ import sqlite3
 import struct
 from abc import ABC, abstractmethod
 
+from mait_code.config import (
+    DEFAULT_BEDROCK_MODEL_ID,
+    DEFAULT_BEDROCK_REGION,
+    DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_EMBEDDING_PROVIDER,
+)
 from mait_code.tools.memory.db import get_data_dir
 
 logger = logging.getLogger(__name__)
@@ -54,7 +60,7 @@ class LocalProvider(EmbeddingProvider):
     KNOWN_MODELS = {
         "nomic-ai/nomic-embed-text-v1.5": 768,
     }
-    DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1.5"
+    DEFAULT_MODEL = DEFAULT_EMBEDDING_MODEL
 
     def __init__(self):
         from fastembed import TextEmbedding
@@ -87,8 +93,8 @@ class BedrockProvider(EmbeddingProvider):
         "cohere.embed-english-v3": 1024,
         "cohere.embed-multilingual-v3": 1024,
     }
-    DEFAULT_MODEL = "amazon.titan-embed-text-v2:0"
-    DEFAULT_REGION = "eu-west-2"
+    DEFAULT_MODEL = DEFAULT_BEDROCK_MODEL_ID
+    DEFAULT_REGION = DEFAULT_BEDROCK_REGION
 
     def __init__(self):
         from mait_code.ssl import setup_ssl
@@ -138,7 +144,9 @@ class BedrockProvider(EmbeddingProvider):
 
 def _get_provider_name() -> str:
     """Return the configured provider name from env (default: ``local``)."""
-    return os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
+    return os.environ.get(
+        "MAIT_CODE_EMBEDDING_PROVIDER", DEFAULT_EMBEDDING_PROVIDER
+    ).lower()
 
 
 def _get_embedding_dim() -> int:

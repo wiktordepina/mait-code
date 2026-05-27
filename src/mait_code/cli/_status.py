@@ -13,16 +13,20 @@ import json
 import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Literal
+
+from rich.text import Text
 
 from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._record import RecordError, read_record
+from mait_code.console import GLYPH, console
 
 __all__ = [
     "Status",
     "collect_status",
+    "render",
     "render_json",
-    "render_text",
 ]
 
 
@@ -167,56 +171,188 @@ def collect_status(
     return status
 
 
-def render_text(status: Status) -> str:
-    """Format ``status`` as a short multi-line text block."""
-    lines = []
-    if status.record_present:
-        lines.append(f"Installed: mait-code {status.version}")
-        lines.append(f"  Source:   {status.source_dir}")
-        lines.append(f"  Embedding: {status.embedding_provider}")
-        lines.append(f"  Installed at: {status.installed_at}")
+_SECTION_W = 12
+_KEY_W = 11
+
+_Health = Literal["ok", "warn", "fail"]
+
+
+def _tilde(path: str | None) -> str:
+    """Abbreviate the home-dir prefix to ``~`` for readability."""
+    if not path:
+        return "—"
+    home = str(Path.home())
+    if path == home:
+        return "~"
+    if path.startswith(home + "/"):
+        return "~" + path[len(home) :]
+    return path
+
+
+def _date_only(timestamp: str | None) -> str:
+    """Show just the calendar day of an ISO install timestamp."""
+    if not timestamp:
+        return "—"
+    return timestamp.split("T", 1)[0]
+
+
+def _human_size(num_bytes: int) -> str:
+    """Render a byte count as B / KB / MB / GB."""
+    size = float(num_bytes)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024:
+            return f"{int(size)} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} TB"
+
+
+def _health(status: Status) -> _Health:
+    """Derive an at-a-glance health level from the collected state.
+
+    Light-touch: ``fail`` only when nothing is installed, ``warn`` for
+    fixable oddities (unlinked CLAUDE.md, missing identity files, no
+    linked skills). Anything deeper is ``doctor``'s job.
+    """
+    if not status.record_present:
+        return "fail"
+    degraded = (
+        not status.claude_md_is_symlink
+        or (status.skills_total > 0 and status.skills_linked == 0)
+        or not status.has_soul_document
+        or not status.has_user_context
+        or not status.has_memory_md
+    )
+    return "warn" if degraded else "ok"
+
+
+def _health_badge(status: Status) -> Text:
+    level = _health(status)
+    label = {"ok": "healthy", "warn": "degraded", "fail": "not installed"}[level]
+    badge = Text("● ", style=level)
+    badge.append(label, style=level)
+    return badge
+
+
+def _line(section: str, key: str, value: Text) -> Text:
+    """One grouped row: bold section (first row only), dim key, then value."""
+    row = Text()
+    if section:
+        row.append(f"{section:<{_SECTION_W}}", style="bold")
     else:
-        lines.append("Installed: no install record found")
-        if status.record_error:
-            lines.append(f"  ({status.record_error})")
+        row.append(" " * _SECTION_W)
+    row.append(f"{key:<{_KEY_W}}", style="muted")
+    row.append_text(value)
+    return row
 
-    if status.binary_path:
-        lines.append(f"Binary:    {status.binary_path}")
 
-    lines.append("")
+def _hint(text: str) -> Text:
+    row = Text(" " * _SECTION_W)
+    row.append("↳ ", style="muted")
+    row.append(text, style="muted")
+    return row
+
+
+def _flag(present: bool) -> Text:
+    if present:
+        return Text(GLYPH["ok"], style="ok")
+    return Text(GLYPH["fail"], style="fail")
+
+
+def _claude_value(status: Status) -> Text:
     if status.claude_md_is_symlink:
-        lines.append(f"CLAUDE.md: {status.claude_md_path} → {status.claude_md_target}")
-    elif status.claude_md_path:
-        lines.append(f"CLAUDE.md: {status.claude_md_path} (not a symlink)")
+        value = Text("linked", style="ok")
+        if status.claude_md_target:
+            value.append(f"  → {_tilde(status.claude_md_target)}", style="muted")
+        return value
+    if status.claude_md_path:
+        return Text("present, not linked", style="warn")
+    return Text("missing", style="fail")
+
+
+def _identity_files(status: Status) -> Text:
+    value = Text()
+    items = (
+        ("soul", status.has_soul_document),
+        ("context", status.has_user_context),
+        ("memory", status.has_memory_md),
+    )
+    for index, (label, present) in enumerate(items):
+        if index:
+            value.append("   ")
+        value.append(f"{label} ", style="muted")
+        value.append_text(_flag(present))
+    return value
+
+
+def render(status: Status) -> None:
+    """Print a grouped, coloured summary to the shared console.
+
+    Prints rather than returning a string so colour handling stays with
+    the console; tests capture via ``console.capture()``. JSON callers
+    use :func:`render_json` instead.
+    """
+    header = Text("mait-code", style="accent")
+    if status.version:
+        header.append(f"  v{status.version}", style="bold")
+    header.append("   ")
+    header.append_text(_health_badge(status))
+    console.print(header, soft_wrap=True)
+    console.rule(style="muted")
+
+    # Install.
+    if status.record_present:
+        console.print(
+            _line("Install", "source", Text(_tilde(status.source_dir))),
+            soft_wrap=True,
+        )
+        if status.binary_path:
+            binary = Text(_tilde(status.binary_path))
+        else:
+            binary = Text("not on PATH", style="warn")
+        console.print(_line("", "binary", binary), soft_wrap=True)
+        console.print(
+            _line("", "since", Text(_date_only(status.installed_at))), soft_wrap=True
+        )
     else:
-        lines.append("CLAUDE.md: missing")
+        console.print(
+            _line("Install", "record", Text("no install record found", style="fail")),
+            soft_wrap=True,
+        )
+        if status.record_error:
+            console.print(_hint(status.record_error), soft_wrap=True)
 
-    lines.append(
-        f"Skills:    {status.skills_linked} linked / {status.skills_total} available"
-    )
-    lines.append(
-        f"Agents:    {status.agents_linked} linked / {status.agents_total} available"
-    )
+    # Identity.
+    console.print()
+    console.print(_line("Identity", "CLAUDE.md", _claude_value(status)), soft_wrap=True)
+    console.print(_line("", "files", _identity_files(status)), soft_wrap=True)
+    if status.record_present and not status.claude_md_is_symlink:
+        console.print(_hint("run mait-code install to link CLAUDE.md"), soft_wrap=True)
 
+    # Components.
+    console.print()
+    skills = Text(str(status.skills_linked))
+    skills.append(f" / {status.skills_total} linked", style="muted")
+    console.print(_line("Components", "skills", skills), soft_wrap=True)
+    agents = Text(str(status.agents_linked))
+    agents.append(f" / {status.agents_total}", style="muted")
+    console.print(_line("", "agents", agents), soft_wrap=True)
     if status.hooks_registered:
-        lines.append(f"Hooks:     {', '.join(status.hooks_registered)}")
+        hooks = Text(", ".join(status.hooks_registered))
     else:
-        lines.append("Hooks:     (none registered)")
+        hooks = Text("(none registered)", style="muted")
+    console.print(_line("", "hooks", hooks), soft_wrap=True)
 
-    lines.append("")
-    size_mb = status.data_dir_size_bytes / (1024 * 1024)
-    lines.append(f"Data dir:  {status.data_dir_path} ({size_mb:.1f} MB)")
-    lines.append(
-        f"  soul_document.md: {'present' if status.has_soul_document else 'missing'}"
+    # Memory.
+    console.print()
+    console.print(
+        _line("Memory", "embedding", Text(status.embedding_provider or "—")),
+        soft_wrap=True,
     )
-    lines.append(
-        f"  user_context.md:  {'present' if status.has_user_context else 'missing'}"
+    data_dir_value = Text(_tilde(status.data_dir_path))
+    data_dir_value.append(
+        f"   {_human_size(status.data_dir_size_bytes)}", style="muted"
     )
-    lines.append(
-        f"  MEMORY.md:        {'present' if status.has_memory_md else 'missing'}"
-    )
-
-    return "\n".join(lines)
+    console.print(_line("", "data dir", data_dir_value), soft_wrap=True)
 
 
 def render_json(status: Status) -> str:

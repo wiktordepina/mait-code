@@ -121,7 +121,7 @@ Two providers are supported, configured via the `MAIT_CODE_EMBEDDING_PROVIDER` e
 
 Set these in `settings.json` under `env` or in your shell environment.
 
-**Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table.
+**Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table. Run `mait-code settings` to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
 
 #### How it works
 

@@ -8,9 +8,14 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from mait_code.cli import app
-from mait_code.cli._doctor import run_doctor
+from mait_code.cli._doctor import (
+    render as doctor_render,
+    render_json as doctor_render_json,
+    run_doctor,
+)
 from mait_code.cli._install import install
-from mait_code.cli._status import collect_status, render_json, render_text
+from mait_code.cli._status import collect_status, render as status_render, render_json
+from mait_code.console import console
 
 runner = CliRunner()
 
@@ -49,10 +54,23 @@ class TestStatus:
 
     def test_text_rendering(self, fake_home: Path, fake_source: Path) -> None:
         install(source_dir=fake_source)
-        text = render_text(collect_status())
-        assert "Installed: mait-code" in text
+        with console.capture() as cap:
+            status_render(collect_status())
+        text = cap.get()
+        assert "mait-code" in text
+        # Section labels and a representative key.
+        assert "Install" in text
+        assert "Identity" in text
+        assert "Components" in text
+        assert "Memory" in text
         assert "CLAUDE.md" in text
-        assert "Data dir:" in text
+
+    def test_text_rendering_no_record_shows_badge(self, fake_home: Path) -> None:
+        with console.capture() as cap:
+            status_render(collect_status())
+        text = cap.get()
+        assert "not installed" in text  # health badge
+        assert "no install record found" in text
 
     def test_json_rendering(self, fake_home: Path, fake_source: Path) -> None:
         install(source_dir=fake_source)
@@ -95,7 +113,7 @@ class TestDoctor:
         assert levels["symlinks"] == "ok"
         assert levels["data-dir"] == "ok"
 
-    def test_dangling_symlink_fails_without_fix(
+    def test_dangling_symlink_warns_without_fix(
         self, fake_home: Path, fake_source: Path
     ) -> None:
         _populate_source(fake_source)
@@ -109,8 +127,10 @@ class TestDoctor:
 
         report = run_doctor()
         symlinks = next(c for c in report.checks if c.name == "symlinks")
-        assert symlinks.level == "fail"
+        # Dangling symlinks are auto-fixable, so this is a warning, not a fail.
+        assert symlinks.level == "warn"
         assert "dangling" in symlinks.message
+        assert symlinks.fix_hint == "mait-code doctor --fix"
 
     def test_fix_removes_dangling_symlinks(
         self, fake_home: Path, fake_source: Path
@@ -140,6 +160,23 @@ class TestDoctor:
         assert data.level == "ok"
         assert ddir.exists()
 
+    def test_json_includes_fix_hint(self, fake_home: Path) -> None:
+        # No install record -> install-record fails and carries a hint.
+        report = run_doctor()
+        payload = json.loads(doctor_render_json(report))
+        record = next(c for c in payload["checks"] if c["name"] == "install-record")
+        assert "fix_hint" in record
+        assert "mait-code install" in record["fix_hint"]
+
+    def test_render_prints_verdict_and_inline_hint(self, fake_home: Path) -> None:
+        report = run_doctor()  # no record present -> at least one failure
+        with console.capture() as cap:
+            doctor_render(report)
+        out = cap.get()
+        assert "install-record" in out
+        assert "passed" in out  # the closing verdict line
+        assert "mait-code install" in out  # the failing check's inline fix hint
+
 
 class TestDoctorCommand:
     def test_cli_exit_0_on_clean(self, fake_home: Path, fake_source: Path) -> None:
@@ -162,3 +199,11 @@ class TestDoctorCommand:
         result = runner.invoke(app, ["doctor"])
         # Missing record is a fail; doctor should exit 1.
         assert result.exit_code == 1
+
+    def test_cli_no_color_flag_accepted(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        result = runner.invoke(app, ["--no-color", "doctor"])
+        # uv-on-path may fail in a sandbox, so accept either clean or failing.
+        assert result.exit_code in (0, 1)

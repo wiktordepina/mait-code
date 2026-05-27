@@ -9,6 +9,7 @@ The ``mait-code`` binary owns the install lifecycle:
   optionally purge data.
 * ``mait-code status`` &mdash; read-only summary of the current install.
 * ``mait-code doctor`` &mdash; diagnose silent breakage; ``--fix`` for safe fixes.
+* ``mait-code settings`` &mdash; read-only view of the active configuration.
 * ``mait-code version`` &mdash; print the installed version.
 
 The bash shims under ``scripts/`` handle the chicken-and-egg of
@@ -33,8 +34,8 @@ import typer
 from mait_code.cli._doctor import (
     Check,
     DoctorReport,
+    render as _doctor_render,
     render_json as _doctor_render_json,
-    render_text as _doctor_render_text,
     run_doctor as _doctor_impl,
 )
 from mait_code.cli._install import (
@@ -45,8 +46,8 @@ from mait_code.cli._install import (
 from mait_code.cli._status import (
     Status,
     collect_status as _status_impl,
+    render as _status_render,
     render_json as _status_render_json,
-    render_text as _status_render_text,
 )
 from mait_code.cli._uninstall import (
     UninstallSummary,
@@ -85,6 +86,12 @@ from mait_code.cli._symlinks import (
     symlink_claude_md,
     symlink_skills,
 )
+from mait_code.config import (
+    collect_settings as _collect_settings,
+    render as _settings_render,
+    render_json as _settings_render_json,
+)
+from mait_code.console import console
 
 __all__ = [
     # State paths
@@ -143,8 +150,17 @@ app = typer.Typer(
 # Without this, `mait-code version` would be parsed as `mait-code` with
 # `version` as an unexpected positional argument.
 @app.callback()
-def _root() -> None:
+def _root(
+    no_color: Annotated[
+        bool,
+        typer.Option("--no-color", help="Disable coloured output."),
+    ] = False,
+) -> None:
     """mait-code install-lifecycle CLI."""
+    # rich already honours NO_COLOR / non-TTY / TERM=dumb; this is the
+    # explicit manual override. Assigning the bool each invocation keeps
+    # the process-wide console's state predictable.
+    console.no_color = no_color
 
 
 @app.command()
@@ -384,7 +400,7 @@ def status_cmd(
     if as_json:
         typer.echo(_status_render_json(status))
     else:
-        typer.echo(_status_render_text(status))
+        _status_render(status)
 
 
 @app.command(name="doctor")
@@ -424,9 +440,31 @@ def doctor_cmd(
     if as_json:
         typer.echo(_doctor_render_json(report))
     else:
-        typer.echo(_doctor_render_text(report))
+        _doctor_render(report)
     if report.has_fail:
         raise typer.Exit(code=1)
+
+
+@app.command(name="settings")
+def settings_cmd(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Emit a machine-readable JSON document instead of text.",
+        ),
+    ] = False,
+) -> None:
+    """Show the active mait-code configuration (read-only)."""
+    try:
+        recorded_provider = read_record().embedding_provider
+    except RecordError:
+        recorded_provider = None
+    snapshot = _collect_settings(recorded_provider=recorded_provider)
+    if as_json:
+        typer.echo(_settings_render_json(snapshot))
+    else:
+        _settings_render(snapshot)
 
 
 def main() -> None:

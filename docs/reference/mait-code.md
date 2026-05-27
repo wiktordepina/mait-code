@@ -14,8 +14,9 @@ examples, exit codes.
 |------------|---------|
 | `<value>` | Required positional or option argument the user supplies. |
 | `[--flag]` | Optional flag. |
-| `--claude-dir <path>` | Override `~/.claude` (useful for tests and non-default layouts). All subcommands accept it. |
-| `--data-dir <path>` | Override `~/.claude/mait-code-data`. Install / uninstall / status / doctor accept it. |
+| `--claude-dir <path>` | Override `~/.claude` (useful for tests and non-default layouts). Accepted by install / update / uninstall / status / doctor. |
+| `--data-dir <path>` | Override `~/.claude/mait-code-data`. Accepted by install / uninstall / status / doctor. |
+| `--no-color` | Disable coloured output. A global flag (`mait-code --no-color doctor`); colour is also dropped automatically off a TTY and under `NO_COLOR` / `TERM=dumb`. |
 
 Every subcommand also accepts `--help` and prints a one-screen summary.
 
@@ -26,7 +27,8 @@ The CLI persists state at `~/.local/share/mait-code/install.json`
 
 - Created by `install`.
 - Updated by `update` (version + timestamp).
-- Read by `update`, `uninstall`, `status`, `doctor`.
+- Read by `update`, `uninstall`, `status`, `doctor`, `settings` (the
+  recorded embedding provider drives `settings`' drift check).
 - Removed by `uninstall`.
 
 Schema (`schema_version: 1`):
@@ -244,27 +246,28 @@ mait-code status [--json] [--data-dir <path>] [--claude-dir <path>]
 **Description**
 
 Read-only summary of the current install. Always exits `0` — there's
-no diagnostic intent here, just a report.
+no diagnostic intent here, just a report. The text output is grouped
+into sections under a one-line health badge (`healthy` / `degraded` /
+`not installed`); `degraded` flags fixable oddities such as an unlinked
+`CLAUDE.md`, with a git-style hint on how to fix them.
 
 **Flags**
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--json` | off | Emit a machine-readable JSON document instead of human-readable text. |
+| `--json` | off | Emit a machine-readable JSON document instead of human-readable text. The JSON shape is stable and independent of the text grouping. |
 | `--data-dir <path>` | `$MAIT_CODE_DATA_DIR` or `~/.claude/mait-code-data` | Override the data directory location. |
 | `--claude-dir <path>` | `~/.claude` | Override the Claude Code config directory. |
 
 **Reports**
 
-| Section | Fields |
-|---------|--------|
-| Install record | `version`, `source_dir`, `embedding_provider`, `installed_at` |
-| Binary | Resolved path of the `mait-code` binary (`shutil.which`) |
-| CLAUDE.md | Symlink presence and target |
-| Skills | Count of linked / available |
-| Agents | Count of linked / available |
-| Hooks | Names of hook events with at least one registered mait-code handler |
-| Data dir | Path, size in MB, presence of `soul_document.md` / `user_context.md` / `memory/MEMORY.md` |
+| Group | Fields |
+|-------|--------|
+| Header | Version and a health badge: `healthy`, `degraded`, or `not installed`. |
+| Install | `source_dir`, the resolved `mait-code` binary path, install date |
+| Identity | `CLAUDE.md` symlink status, and presence of `soul_document.md` / `user_context.md` / `memory/MEMORY.md` |
+| Components | Linked / available skills and agents; registered hook events |
+| Memory | Embedding provider; data-dir path and humanised size |
 
 **Examples**
 
@@ -289,7 +292,10 @@ mait-code doctor [--fix] [--json] [--data-dir <path>] [--claude-dir <path>]
 
 Validate the install. Surfaces silent breakage — broken symlinks,
 unparseable settings, hook commands missing from PATH. Exits `1` if
-any check reports a `fail`-level finding, `0` otherwise.
+any check reports a `fail`-level finding, `0` otherwise. Each failing or
+warning check carries the exact command or URL to fix it, and the run
+ends with a one-line pass/fail verdict. The `--json` output includes a
+`fix_hint` field per check.
 
 **Flags**
 
@@ -308,7 +314,7 @@ any check reports a `fail`-level finding, `0` otherwise.
 | `source-dir` | ok / warn / fail | The recorded source still exists and looks like a mait-code clone. `warn` when there's no record to validate against. |
 | `settings` | ok / warn / fail | `<claude-dir>/settings.json` parses as JSON. `warn` if missing. |
 | `hooks-on-path` | ok / warn / fail | Every registered hook with the `mc-hook-` prefix resolves on `PATH`. |
-| `symlinks` | ok / fail | No dangling symlinks under `<claude-dir>/skills/` or `<claude-dir>/agents/`. With `--fix`, removes them. |
+| `symlinks` | ok / warn | No dangling symlinks under `<claude-dir>/skills/` or `<claude-dir>/agents/`. Dangling links are a **warning** (auto-fixable, so they don't fail the run); `--fix` removes them. |
 | `data-dir` | ok / fail | The data dir exists and is writable. With `--fix`, creates it (plus the `memory/observations` and `memory/reflections` subdirs) if missing. |
 | `uv-on-path` | ok / fail | `uv` is on `PATH` — required for `install` / `update`. |
 
@@ -326,6 +332,57 @@ mait-code doctor --json | jq '.checks[] | select(.level=="fail")'
 |------|---------|
 | `0` | No `fail`-level findings (warnings are allowed). |
 | `1` | One or more checks reported `fail`. |
+
+---
+
+## `mait-code settings`
+
+**Synopsis**
+
+```
+mait-code settings [--json]
+```
+
+**Description**
+
+Read-only view of the active configuration — every `MAIT_CODE_*` knob
+the framework reads, with its resolved value and *source* (`env` when
+set in the environment or `settings.json`, otherwise `default`).
+Modelled on `aws configure list`. Always exits `0`: it *reports*
+configuration, it doesn't validate it (that's `doctor`'s job).
+
+**Flags**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--json` | off | Emit a machine-readable JSON document instead of text. |
+
+**Reports**
+
+| Column | Meaning |
+|--------|---------|
+| `SETTING` | The knob: `data-dir`, `log-level`, `log-file`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`. |
+| `VALUE` | The resolved value (`default` values are dimmed). |
+| `SOURCE` | `env` or `default`. Migration-sensitive knobs are marked `⚠`. |
+
+**Changing a setting**
+
+`settings` never writes. The embedding knobs (`⚠`) are a deployment
+commitment — changing the provider or model re-embeds your memories. To
+change one, set its env var (in `settings.json` `env` or your shell),
+then run `mc-tool-memory reindex`: it detects the dimension change and
+rebuilds the vector table. If the active embedding provider no longer
+matches the one recorded at install time, `settings` flags the drift and
+points you at `reindex`.
+
+**Examples**
+
+```bash
+mait-code settings
+mait-code settings --json | jq '.settings[] | select(.source == "env")'
+```
+
+**Exit code:** always `0`.
 
 ---
 
