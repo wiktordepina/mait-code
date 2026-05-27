@@ -15,8 +15,8 @@ def resolve_scope(
 ) -> str:
     """Determine the scope for an extracted observation item.
 
-    Strategy: trust the LLM classification first, then apply heuristic
-    overrides for known patterns.
+    Strategy: trust the LLM's scope classification when it is valid, then fall
+    back to per-category heuristics.
 
     Args:
         item: Extracted item dict (may contain "scope" from LLM).
@@ -31,16 +31,17 @@ def resolve_scope(
     if project is None:
         return "global"
 
-    # Category-level overrides (applied before LLM classification)
-    if category == "preferences":
-        return "global"
-
     # Trust LLM classification if valid
     llm_scope = item.get("scope", "").strip().lower()
     if llm_scope in VALID_SCOPES:
         return llm_scope
 
-    # Heuristic defaults based on category and context
+    # Heuristic fallbacks when the LLM gave nothing usable
+    if category == "preferences":
+        # Preferences are usually global; only narrow when the LLM said so
+        # (handled above). This is the fallback, not an override.
+        return "global"
+
     if category == "decisions":
         return "project"
 

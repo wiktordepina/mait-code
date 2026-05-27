@@ -6,7 +6,12 @@ from datetime import datetime, timezone
 
 from mait_code.hooks.observe.scope import resolve_scope
 from mait_code.tools.memory.db import connection, get_data_dir
-from mait_code.tools.memory.entities import upsert_entity, upsert_relationship
+from mait_code.tools.memory.entities import (
+    DEFAULT_RELATIONSHIP_TYPE,
+    VALID_RELATIONSHIP_TYPES,
+    upsert_entity,
+    upsert_relationship,
+)
 from mait_code.tools.memory.writer import store_memory
 
 logger = logging.getLogger(__name__)
@@ -136,7 +141,14 @@ def store_entities_and_relationships(extraction: dict) -> None:
                     logger.warning("failed to create entity '%s': %s", target, e)
                     continue
 
-            rel_type = rel.get("relationship_type", "related_to")
+            rel_type = rel.get("relationship_type", DEFAULT_RELATIONSHIP_TYPE)
+            if rel_type not in VALID_RELATIONSHIP_TYPES:
+                logger.debug(
+                    "coercing unknown relationship type '%s' to '%s'",
+                    rel_type,
+                    DEFAULT_RELATIONSHIP_TYPE,
+                )
+                rel_type = DEFAULT_RELATIONSHIP_TYPE
             context = rel.get("context", "")
             try:
                 upsert_relationship(conn, source_id, target_id, rel_type, context)

@@ -10,6 +10,25 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.3] — 2026-05-27
+
+**Memory extraction data-quality fixes.**
+
+### Fixed
+
+- **Project- and branch-scoped preferences are no longer flattened to
+  global.** The observe hook hard-coded every extracted preference to
+  `scope=global`, discarding the scope the model classified. It now honours a
+  valid project/branch classification and only falls back to global when none
+  is given, so a preference learned in one project no longer leaks into
+  others.
+- **Extracted relationship types are constrained to a fixed vocabulary.**
+  Relationships are coerced on write to the canonical set (`uses`, `owns`,
+  `contributes_to`, `depends_on`, `manages`, `related_to`), and the extraction
+  prompt is generated from that same set so the two cannot drift. This stops
+  the long tail of one-off relationship labels; the edge is preserved, only an
+  out-of-set label is normalised to `related_to`.
+
 ## [0.15.2] — 2026-05-27
 
 **Fix `mait-code update` on tag-pinned installs.**
