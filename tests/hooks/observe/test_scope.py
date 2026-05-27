@@ -11,8 +11,8 @@ class TestResolveScope:
             resolve_scope({"content": "x"}, "bugs_fixed", None, "feature/a") == "global"
         )
 
-    def test_preferences_always_global(self):
-        """Preferences are always global regardless of context."""
+    def test_preferences_fallback_global(self):
+        """Preferences with no usable LLM scope fall back to global."""
         assert (
             resolve_scope({"content": "x"}, "preferences", "proj", "feature/a")
             == "global"
@@ -44,15 +44,8 @@ class TestResolveScope:
         )
         assert resolve_scope({"content": "x"}, "decisions", "proj", None) == "project"
 
-    def test_decisions_llm_override_not_applied(self):
-        """Decisions always use project — LLM is not consulted because the category override comes first.
-
-        Wait — actually the category override for decisions comes AFTER the preferences
-        check but BEFORE LLM trust. Let me re-check...
-
-        Actually looking at the code: preferences override comes first, then LLM trust,
-        then decisions heuristic. So decisions CAN be overridden by LLM.
-        """
+    def test_decisions_respect_llm_scope(self):
+        """Decisions honour a valid LLM scope; project is only the fallback default."""
         # LLM says branch for a decision — should be trusted
         item = {"content": "x", "scope": "branch"}
         assert resolve_scope(item, "decisions", "proj", "feature/a") == "branch"
@@ -80,7 +73,17 @@ class TestResolveScope:
         """Items without scope field should use heuristics."""
         assert resolve_scope({"content": "x"}, "facts", "proj", "feature/a") == "branch"
 
-    def test_preferences_override_llm(self):
-        """Preferences are always global even if LLM says otherwise."""
-        item = {"content": "x", "scope": "branch"}
-        assert resolve_scope(item, "preferences", "proj", "feature/a") == "global"
+    def test_preferences_respect_llm_scope(self):
+        """A preference the LLM scopes to project/branch is honoured (no override)."""
+        assert (
+            resolve_scope(
+                {"content": "x", "scope": "branch"}, "preferences", "proj", "feature/a"
+            )
+            == "branch"
+        )
+        assert (
+            resolve_scope(
+                {"content": "x", "scope": "project"}, "preferences", "proj", None
+            )
+            == "project"
+        )
