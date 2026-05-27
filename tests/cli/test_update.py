@@ -15,104 +15,170 @@ from mait_code.cli._update import update
 runner = CliRunner()
 
 
-class _RecordingRunner:
-    """Test stub for the subprocess runner used by `update`."""
+class _FakeGit:
+    """Stub for update's injected runner + capture.
 
-    def __init__(self) -> None:
-        self.calls: list[tuple[list[str], Path | None]] = []
+    Records mutating commands and answers the two read-only git queries
+    (`git branch --show-current` and the tag list) from a configured
+    state, so tests can simulate "on a branch" vs "detached HEAD at a
+    tag" without a real git repo.
+    """
 
-    def __call__(self, cmd: list[str], *, cwd: Path | None = None) -> None:
-        self.calls.append((cmd, cwd))
+    def __init__(self, *, branch: str = "", tags: list[str] | None = None) -> None:
+        self.branch = branch
+        self.tags = tags if tags is not None else []
+        self.run_calls: list[tuple[list[str], Path | None]] = []
+
+    def run(self, cmd: list[str], *, cwd: Path | None = None) -> None:
+        self.run_calls.append((cmd, cwd))
+
+    def capture(self, cmd: list[str], *, cwd: Path | None = None) -> str:
+        if cmd == ["git", "branch", "--show-current"]:
+            return self.branch
+        if cmd == ["git", "tag", "--list", "--sort=-v:refname", "v*"]:
+            return "\n".join(self.tags)
+        return ""
+
+    def ran(self, prefix: list[str]) -> bool:
+        return any(cmd[: len(prefix)] == prefix for cmd, _ in self.run_calls)
 
 
 def _install_first(fake_source: Path, provider: str = "local") -> None:
     install(source_dir=fake_source, embedding_provider=provider)
 
 
-class TestUpdate:
-    def test_default_runs_pull_and_reinstall(
+class TestUpdateDetachedHead:
+    """Regression tests for the bug where `git pull` ran in detached HEAD."""
+
+    def test_detached_head_checks_out_latest_tag(
         self, fake_home: Path, fake_source: Path
     ) -> None:
         _install_first(fake_source)
-        stub = _RecordingRunner()
+        git = _FakeGit(branch="", tags=["v0.15.1", "v0.15.0", "v0.14.1"])
 
-        summary = update(runner=stub)
+        summary = update(runner=git.run, capture=git.capture)
 
-        # Expect: git pull, then uv tool install.
-        assert stub.calls[0][0] == ["git", "pull"]
-        assert stub.calls[0][1] == fake_source.resolve()
-        assert stub.calls[1][0][:3] == ["uv", "tool", "install"]
-        assert summary.pulled is True
-        assert summary.ref is None
+        # Must NOT run a bare `git pull` (the original bug).
+        assert not git.ran(["git", "pull"])
+        # Should fetch then checkout the latest tag.
+        assert git.ran(["git", "fetch", "origin", "--tags"])
+        assert (["git", "checkout", "v0.15.1"], fake_source.resolve()) in git.run_calls
+        assert summary.landed_on == "v0.15.1"
 
-    def test_no_pull_skips_git(self, fake_home: Path, fake_source: Path) -> None:
+    def test_detached_head_no_tags_raises(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
         _install_first(fake_source)
-        stub = _RecordingRunner()
+        git = _FakeGit(branch="", tags=[])
 
-        summary = update(no_pull=True, runner=stub)
+        with pytest.raises(ValueError, match="detached HEAD and has no v\\* tags"):
+            update(runner=git.run, capture=git.capture)
 
-        assert all(call[0][0] != "git" or call[0][1] != "pull" for call in stub.calls)
-        assert summary.pulled is False
 
-    def test_ref_triggers_checkout(self, fake_home: Path, fake_source: Path) -> None:
+class TestUpdateOnBranch:
+    def test_branch_fast_forwards(self, fake_home: Path, fake_source: Path) -> None:
         _install_first(fake_source)
-        stub = _RecordingRunner()
+        git = _FakeGit(branch="main", tags=["v0.15.1"])
 
-        update(ref="v0.14.1", no_pull=True, runner=stub)
+        summary = update(runner=git.run, capture=git.capture)
 
-        assert stub.calls[0][0] == ["git", "checkout", "v0.14.1"]
+        assert git.ran(["git", "fetch", "origin", "--tags"])
+        assert git.ran(["git", "merge", "--ff-only"])
+        # No tag checkout when on a branch.
+        assert not git.ran(["git", "checkout"])
+        assert summary.landed_on == "branch main"
+
+    def test_no_pull_on_branch_skips_fetch_and_merge(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        git = _FakeGit(branch="main", tags=["v0.15.1"])
+
+        summary = update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert not git.ran(["git", "fetch"])
+        assert not git.ran(["git", "merge"])
+        assert summary.fetched is False
+        assert summary.landed_on == "branch main"
+
+
+class TestUpdateRef:
+    def test_ref_checks_out_after_fetch(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        git = _FakeGit(branch="", tags=["v0.15.1"])
+
+        summary = update(ref="v0.14.1", runner=git.run, capture=git.capture)
+
+        assert git.ran(["git", "fetch", "origin", "--tags"])
+        assert (["git", "checkout", "v0.14.1"], fake_source.resolve()) in git.run_calls
+        assert summary.landed_on == "v0.14.1"
+
+    def test_ref_with_no_pull_skips_fetch(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        git = _FakeGit(branch="", tags=["v0.15.1"])
+
+        update(ref="v0.14.1", no_pull=True, runner=git.run, capture=git.capture)
+
+        assert not git.ran(["git", "fetch"])
+        assert (["git", "checkout", "v0.14.1"], fake_source.resolve()) in git.run_calls
+
+
+class TestUpdateReinstall:
+    def test_uv_tool_install_invoked(self, fake_home: Path, fake_source: Path) -> None:
+        _install_first(fake_source)
+        git = _FakeGit(branch="main", tags=[])
+
+        update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert git.ran(["uv", "tool", "install"])
 
     def test_bedrock_provider_passes_extra(
         self, fake_home: Path, fake_source: Path
     ) -> None:
         _install_first(fake_source, provider="bedrock")
-        stub = _RecordingRunner()
+        git = _FakeGit(branch="main", tags=[])
 
-        update(no_pull=True, runner=stub)
+        update(no_pull=True, runner=git.run, capture=git.capture)
 
         uv_call = next(
-            call for call in stub.calls if call[0][:3] == ["uv", "tool", "install"]
+            cmd for cmd, _ in git.run_calls if cmd[:3] == ["uv", "tool", "install"]
         )
-        # The source-dir argument should have the [bedrock] extra appended.
-        assert uv_call[0][3].endswith("[bedrock]")
+        assert uv_call[3].endswith("[bedrock]")
 
-    def test_bumps_record_installed_at(
-        self, fake_home: Path, fake_source: Path
-    ) -> None:
+    def test_bumps_record(self, fake_home: Path, fake_source: Path) -> None:
         _install_first(fake_source)
         before = read_record()
-        stub = _RecordingRunner()
+        git = _FakeGit(branch="main", tags=[])
 
-        update(no_pull=True, runner=stub)
+        update(no_pull=True, runner=git.run, capture=git.capture)
 
         after = read_record()
         assert after.installed_at >= before.installed_at
-        # Provider preserved across update.
         assert after.embedding_provider == before.embedding_provider
 
-    def test_refreshes_symlinks_and_settings(
-        self, fake_home: Path, fake_source: Path
-    ) -> None:
-        # Plant a new skill that wasn't there at install time.
+    def test_refreshes_symlinks(self, fake_home: Path, fake_source: Path) -> None:
         _install_first(fake_source)
         new_skill = fake_source / "skills" / "fresh"
         new_skill.mkdir()
         (new_skill / "SKILL.md").write_text("fresh skill\n")
 
-        stub = _RecordingRunner()
-        summary = update(no_pull=True, runner=stub)
+        git = _FakeGit(branch="main", tags=[])
+        summary = update(no_pull=True, runner=git.run, capture=git.capture)
 
-        # The new skill should now be linked.
         link = fake_home / ".claude" / "skills" / "fresh"
         assert link.is_symlink()
-        # Either it was created or already_linked (depending on what install did).
         assert any(p.name == "fresh" for p in summary.skills.created)
 
     def test_no_record_raises(self, fake_home: Path) -> None:
         from mait_code.cli._record import RecordError
 
+        git = _FakeGit()
         with pytest.raises(RecordError, match="No install record"):
-            update(no_pull=True, runner=_RecordingRunner())
+            update(no_pull=True, runner=git.run, capture=git.capture)
 
 
 class TestUpdateCommand:
@@ -121,15 +187,9 @@ class TestUpdateCommand:
     ) -> None:
         _install_first(fake_source)
 
-        recorded: list[list[str]] = []
-
-        def fake_runner(cmd: list[str], *, cwd=None) -> None:
-            recorded.append(cmd)
-
-        monkeypatch.setattr(
-            "mait_code.cli._update.default_runner",
-            fake_runner,
-        )
+        git = _FakeGit(branch="main", tags=[])
+        monkeypatch.setattr("mait_code.cli._update.default_runner", git.run)
+        monkeypatch.setattr("mait_code.cli._update.default_capture", git.capture)
 
         result = runner.invoke(app, ["update", "--no-pull"])
         assert result.exit_code == 0, result.output

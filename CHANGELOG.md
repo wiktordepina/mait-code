@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`mait-code update` no longer fails on a tag-pinned install.** The
+  bootstrap installer checks out a release tag, leaving the source in
+  detached HEAD; `update` then ran `git pull` unconditionally, which
+  aborts with "You are not currently on a branch". `update` now fetches
+  and advances based on the source state: `--ref` checks out that ref,
+  a branch fast-forwards (`git merge --ff-only`), and a detached HEAD
+  moves to the latest `v*` tag. `--no-pull` reinstalls from the current
+  checkout without touching git.
+
 ## [0.15.1] — 2026-05-27
 
 **One-liner installer.** Adds `curl … | bash` as the primary install

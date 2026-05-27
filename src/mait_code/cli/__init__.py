@@ -276,10 +276,9 @@ def update_cmd(
 def _render_update_summary(summary: UpdateSummary) -> None:
     record = summary.record
     pieces = []
-    if summary.ref:
-        pieces.append(f"checked out {summary.ref}")
-    if summary.pulled:
-        pieces.append("pulled latest")
+    if summary.fetched:
+        pieces.append("fetched")
+    pieces.append(f"now on {summary.landed_on}")
     pieces.append(f"reinstalled {record.version}")
     typer.echo(f"Updated mait-code: {', '.join(pieces)}.")
     typer.echo(f"  Source: {record.source_dir}")

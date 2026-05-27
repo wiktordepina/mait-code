@@ -123,22 +123,31 @@ mait-code update [--no-pull] [--ref <tag|branch|sha>] [--claude-dir <path>]
 
 **Description**
 
-Pull the latest source, reinstall via `uv tool install --force --reinstall`, refresh symlinks and settings, bump the install record.
+Advance the source tree to the right ref, reinstall via `uv tool install --force --reinstall`, refresh symlinks and settings, bump the install record.
+
+How the source is advanced depends on its current state — a bootstrap install pins to a release **tag** (detached HEAD), while a local-clone dev install sits on a **branch**:
+
+- `--ref <X>` given → checkout `X`.
+- On a branch → fast-forward it (`git merge --ff-only`).
+- Detached HEAD (typical post-bootstrap) → checkout the latest `v*` tag.
 
 **Flags**
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--no-pull` | off | Skip `git pull` — useful if you pull manually beforehand. |
-| `--ref <ref>` | *(none)* | `git checkout <ref>` before reinstalling. Combine with `--no-pull` to pin to a specific release tag. |
+| `--no-pull` | off | Skip the network fetch and branch fast-forward; reinstall from whatever is currently checked out. `--ref` still checks out a local ref. |
+| `--ref <ref>` | *(none)* | `git checkout <ref>` (after a fetch unless `--no-pull`). Pins to a tag/branch/sha. |
 | `--claude-dir <path>` | `~/.claude` | Override the Claude Code config directory. |
 
 **Behaviour**
 
 1. Reads the install record. Aborts with exit `1` if missing.
 2. Verifies the recorded source dir still looks like a mait-code clone.
-3. If `--ref` given: `git checkout <ref>` in the source dir.
-4. If `--no-pull` not given: `git pull` in the source dir.
+3. Unless `--no-pull`: `git fetch origin --tags --prune`.
+4. Advance to the target ref:
+    - `--ref` given → `git checkout <ref>`.
+    - on a branch → `git merge --ff-only` (skipped under `--no-pull`).
+    - detached HEAD → `git checkout <latest v* tag>`. Aborts if there are no tags and no `--ref`.
 5. `uv tool install <source>[<extra>] --force --reinstall --python 3.13`. The `[bedrock]` extra is applied when the install record records the bedrock provider.
 6. Re-runs the symlink and settings-merge steps from `install` (picks up new skills, settings.json changes).
 7. Rewrites the install record with the new version and timestamp.
@@ -146,14 +155,14 @@ Pull the latest source, reinstall via `uv tool install --force --reinstall`, ref
 **Examples**
 
 ```bash
-# Standard update — pull, reinstall, refresh:
+# Standard update — fetch, advance to latest tag (or fast-forward
+# branch), reinstall, refresh:
 mait-code update
 
-# Pin to a specific release tag without pulling:
-mait-code update --no-pull --ref v0.14.1
+# Pin to a specific release tag:
+mait-code update --ref v0.14.1
 
-# Reinstall after a manual git pull (no extra pull):
-git -C ~/projects/mait-code pull
+# Reinstall from the current checkout without touching git:
 mait-code update --no-pull
 ```
 
@@ -162,7 +171,7 @@ mait-code update --no-pull
 | Code | Meaning |
 |------|---------|
 | `0` | Update succeeded. |
-| `1` | No install record, source dir no longer valid, or any subprocess (`git`, `uv`) failed. |
+| `1` | No install record, source dir no longer valid, detached HEAD with no `v*` tags (and no `--ref`), or any subprocess (`git`, `uv`) failed. |
 
 ---
 
