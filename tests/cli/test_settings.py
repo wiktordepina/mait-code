@@ -75,7 +75,8 @@ class TestRender:
         out = cap.get()
         assert "SETTING" in out and "VALUE" in out and "SOURCE" in out
         assert "embedding-provider" in out
-        assert "re-embed" in out  # the migration footnote
+        # The migration footnote names the actual re-embed command.
+        assert "mc-tool-memory reindex" in out
 
     def test_text_shows_drift_when_present(
         self, monkeypatch: pytest.MonkeyPatch
@@ -83,7 +84,9 @@ class TestRender:
         monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
         with console.capture() as cap:
             settings_render(collect_settings(recorded_provider="local"))
-        assert "re-embed to switch" in cap.get()
+        out = cap.get()
+        assert "mc-tool-memory reindex" in out  # the actionable fix
+        assert "bedrock" in out and "local" in out
 
     def test_json_shape(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _clear_env(monkeypatch)

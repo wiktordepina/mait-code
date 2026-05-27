@@ -208,7 +208,8 @@ def collect_settings(recorded_provider: str | None = None) -> SettingsSnapshot:
     if recorded_provider and active_provider and recorded_provider != active_provider:
         drift = (
             f"active embedding-provider is '{active_provider}', but memories "
-            f"were embedded with '{recorded_provider}' — re-embed to switch"
+            f"were embedded with '{recorded_provider}' — run "
+            f"mc-tool-memory reindex to re-embed"
         )
     return SettingsSnapshot(settings=tuple(rows), drift=drift)
 
@@ -264,8 +265,8 @@ def render(snapshot: SettingsSnapshot) -> None:
         console.print()
         note = Text("⚠ ", style="warn")
         note.append(
-            "changing these needs a re-embed of stored memories; setting them "
-            "in place isn't supported yet.",
+            "changing these re-embeds stored memories — set the env var, then "
+            "run mc-tool-memory reindex.",
             style="muted",
         )
         console.print(note, soft_wrap=True)

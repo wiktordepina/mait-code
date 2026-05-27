@@ -22,8 +22,9 @@ don't change the public surface. Everything is still in flux.
   answerable at a glance. Migration-sensitive knobs (the embedding
   provider/model) are flagged, and the command detects drift — when the active
   embedding provider differs from the one recorded at install time it warns
-  that stored memories need re-embedding. Read-only by design; changing those
-  knobs needs a re-embed that isn't built yet. Supports `--json`.
+  that stored memories need re-embedding. Read-only by design; to change an
+  embedding knob, set its env var and run `mc-tool-memory reindex` to re-embed
+  — an in-place setter isn't built yet. Supports `--json`.
 - **A global `--no-color` flag.** Disables coloured output explicitly; colour
   is also dropped automatically when output is not a terminal and under
   `NO_COLOR` / `TERM=dumb`.
