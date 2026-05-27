@@ -663,6 +663,46 @@ def cmd_reflect(args):
 
 
 @log_invocation(name="mc-tool-memory")
+def cmd_canonicalize_projects(args):
+    """Rewrite stored project slugs to their canonical form per the alias map.
+
+    Reads the project-alias map and, for each alias, rewrites matching
+    ``memory_entries.project`` values to the canonical slug. Idempotent. The
+    ``memory_entries_au`` trigger keeps the FTS shadow table in sync.
+    """
+    from mait_code.context import load_project_aliases
+    from mait_code.tools.memory.db import get_data_dir
+
+    aliases = {a: c for a, c in load_project_aliases().items() if a != c}
+    if not aliases:
+        path = get_data_dir() / "project-aliases.json"
+        print(
+            f"No project aliases configured. Create {path} with "
+            '{"old-slug": "canonical-slug"} entries first.'
+        )
+        return
+
+    dry_run = getattr(args, "dry_run", False)
+    total = 0
+    with connection() as conn:
+        for alias, canonical in aliases.items():
+            if dry_run:
+                n = conn.execute(
+                    "SELECT COUNT(*) FROM memory_entries WHERE project = ?", (alias,)
+                ).fetchone()[0]
+            else:
+                n = conn.execute(
+                    "UPDATE memory_entries SET project = ? WHERE project = ?",
+                    (canonical, alias),
+                ).rowcount
+            total += n
+            print(f"  {alias} -> {canonical}: {n} entr{'y' if n == 1 else 'ies'}")
+        if not dry_run:
+            conn.commit()
+    verb = "Would rewrite" if dry_run else "Rewrote"
+    print(f"{verb} {total} entr{'y' if total == 1 else 'ies'}.")
+
+
 def main():
     setup_logging()
 
@@ -785,6 +825,18 @@ def main():
     )
     _add_scope_args(p_reflect)
     p_reflect.set_defaults(func=cmd_reflect)
+
+    # canonicalize-projects
+    p_canon = sub.add_parser(
+        "canonicalize-projects",
+        help="Rewrite stored project slugs per the project-alias map",
+    )
+    p_canon.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing to the database",
+    )
+    p_canon.set_defaults(func=cmd_canonicalize_projects)
 
     args = parser.parse_args()
     args.func(args)

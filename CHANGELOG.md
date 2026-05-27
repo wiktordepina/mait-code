@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-05-27
+
+**Project-alias map.**
+
+### Added
+
+- **Project-alias map for unified project identity.** Renaming a working
+  directory changes its slug, which used to split a project's memories across
+  two names. A new `project-aliases.json` in the data directory maps old slugs
+  to canonical ones; slugs are now canonicalised on both read and write, and a
+  new `mc-tool-memory canonicalize-projects` command rewrites existing rows
+  under an old slug to the canonical one. Config-driven, so it generalises to
+  any rename.
+
 ## [0.16.0] — 2026-05-27
 
 **First-class `decision` entry type.**

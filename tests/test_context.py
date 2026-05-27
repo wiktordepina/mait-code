@@ -4,7 +4,26 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-from mait_code.context import DEFAULT_BRANCHES, get_branch, get_context, get_project
+import pytest
+
+import mait_code.context as context_mod
+from mait_code.context import (
+    DEFAULT_BRANCHES,
+    canonical_project,
+    get_branch,
+    get_context,
+    get_project,
+    load_project_aliases,
+)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_aliases(tmp_path, monkeypatch):
+    """Point the alias map at an empty temp data dir; clear the cache each test."""
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+    context_mod._alias_cache.clear()
+    yield
+    context_mod._alias_cache.clear()
 
 
 def _mock_run(returncode=0, stdout="", side_effect=None):
@@ -84,3 +103,30 @@ class TestDefaultBranches:
     def test_contains_main_and_master(self):
         assert "main" in DEFAULT_BRANCHES
         assert "master" in DEFAULT_BRANCHES
+
+
+class TestProjectAliases:
+    ALIASES = '{"h-cc-bridge": "hermes-cc-bridge"}'
+
+    def test_no_file_returns_empty(self):
+        assert load_project_aliases() == {}
+
+    def test_malformed_file_is_empty(self, tmp_path):
+        (tmp_path / "project-aliases.json").write_text("not json{{")
+        assert load_project_aliases() == {}
+
+    def test_canonical_resolves_alias(self, tmp_path):
+        (tmp_path / "project-aliases.json").write_text(self.ALIASES)
+        assert canonical_project("h-cc-bridge") == "hermes-cc-bridge"
+
+    def test_canonical_passes_through_unknown(self, tmp_path):
+        (tmp_path / "project-aliases.json").write_text(self.ALIASES)
+        assert canonical_project("cairn") == "cairn"
+
+    def test_canonical_none_passes_through(self):
+        assert canonical_project(None) is None
+
+    def test_get_project_canonicalises(self, tmp_path):
+        (tmp_path / "project-aliases.json").write_text(self.ALIASES)
+        with _mock_run(returncode=0, stdout="/home/user/projects/h-cc-bridge\n"):
+            assert get_project() == "hermes-cc-bridge"

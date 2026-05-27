@@ -91,6 +91,8 @@ Memories are scoped so that branch-local context (e.g. "we're spiking foo on thi
 
 At write time the default is: `branch` if both project and branch are detected, `project` if only project is detected, otherwise `global`. Override with `--scope`. At query time, the CLI filters to the current context by default; pass `--scope all` to disable filtering, or `--project`/`--branch` to override the auto-detection.
 
+The project is the basename of the git root (or working directory). If you rename a working directory, its slug changes and memories split across two names. A **project-alias map** keeps them unified: create `project-aliases.json` in the data directory mapping old slugs to canonical ones, e.g. `{"h-cc-bridge": "hermes-cc-bridge"}`. New writes are canonicalised automatically; run `mc-tool-memory canonicalize-projects` once to rewrite existing rows under the old slug.
+
 ### Keyword search (FTS5)
 
 Every entry is automatically indexed in a full-text search table using SQLite's FTS5 extension. This enables fast keyword matching with BM25 relevance ranking. Triggers keep the FTS index in sync on insert, update, and delete.
@@ -291,6 +293,8 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `reindex` | Recompute all vector embeddings from scratch |
 | `restore` | Replay observation JSONL logs into the database, then reindex |
 | `restore --dry-run` | Show what would be restored without writing |
+| `canonicalize-projects` | Rewrite stored project slugs per the project-alias map |
+| `canonicalize-projects --dry-run` | Show what would change without writing |
 | `reflect` | Synthesise unreflected observations into insights |
 | `reflect --days 14` | Bootstrap window for first reflection |
 | `reflect --min-new 0` | Force reflection (skip novelty gate) |
