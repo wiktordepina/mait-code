@@ -9,6 +9,7 @@ import logging
 import sqlite3
 from difflib import SequenceMatcher
 
+from mait_code.context import canonical_project
 from mait_code.tools.memory.embeddings import embed_text, serialize_f32
 
 logger = logging.getLogger(__name__)
@@ -221,6 +222,7 @@ def store_memory(
         entry_type = "fact"
     if scope not in ("global", "project", "branch"):
         scope = "global"
+    project = canonical_project(project)
 
     dup_id = find_duplicate(conn, content, entry_type, project=project)
     if dup_id is not None:

@@ -24,6 +24,27 @@ class TestStoreMemory:
         assert result["id"] is not None
         assert result["content"] == "User prefers dark mode"
 
+    def test_store_canonicalises_project(
+        self, memory_db: sqlite3.Connection, tmp_path, monkeypatch
+    ):
+        """An aliased project slug is rewritten to its canonical form on write."""
+        import mait_code.context as context_mod
+
+        monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+        context_mod._alias_cache.clear()
+        (tmp_path / "project-aliases.json").write_text('{"old-proj": "new-proj"}')
+
+        result = store_memory(
+            memory_db, "scoped content", "fact", scope="project", project="old-proj"
+        )
+        assert result["project"] == "new-proj"
+
+        row = memory_db.execute(
+            "SELECT project FROM memory_entries WHERE id = ?", (result["id"],)
+        ).fetchone()
+        assert row[0] == "new-proj"
+        context_mod._alias_cache.clear()
+
     def test_store_sets_memory_class(self, memory_db: sqlite3.Connection):
         """Memory class should be set from MEMORY_CLASS_MAP."""
         for entry_type, expected_class in MEMORY_CLASS_MAP.items():

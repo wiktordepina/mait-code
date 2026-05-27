@@ -349,3 +349,70 @@ class TestCmdRestore:
         # Verify data was written
         count = mem_db.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
         assert count == 2
+
+
+class TestCmdCanonicalizeProjects:
+    def _setup(
+        self, tmp_path, monkeypatch, aliases='{"h-cc-bridge": "hermes-cc-bridge"}'
+    ):
+        import mait_code.context as context_mod
+
+        monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+        context_mod._alias_cache.clear()
+        if aliases is not None:
+            (tmp_path / "project-aliases.json").write_text(aliases)
+
+    def test_rewrites_aliased_project_slugs(
+        self, mem_db, tmp_path, monkeypatch, capsys
+    ):
+        from mait_code.tools.memory.cli import cmd_canonicalize_projects
+
+        self._setup(tmp_path, monkeypatch)
+        # Seed under the old slug via raw SQL — store_memory would canonicalise
+        # it on the way in, which is not what we're exercising here.
+        mem_db.execute(
+            "INSERT INTO memory_entries (content, entry_type, project, scope) "
+            "VALUES (?, 'fact', 'h-cc-bridge', 'project')",
+            ("token stored in settings.json",),
+        )
+        mem_db.commit()
+
+        cmd_canonicalize_projects(_make_args(dry_run=False))
+
+        row = mem_db.execute(
+            "SELECT project FROM memory_entries WHERE content = ?",
+            ("token stored in settings.json",),
+        ).fetchone()
+        assert row[0] == "hermes-cc-bridge"
+
+        # The AU trigger keeps the FTS shadow in sync with the new slug.
+        hits = mem_db.execute(
+            "SELECT m.id FROM memory_entries_fts f JOIN memory_entries m ON m.id = f.rowid "
+            "WHERE memory_entries_fts MATCH '\"hermes-cc-bridge\"'"
+        ).fetchall()
+        assert len(hits) == 1
+
+    def test_dry_run_does_not_write(self, mem_db, tmp_path, monkeypatch, capsys):
+        from mait_code.tools.memory.cli import cmd_canonicalize_projects
+
+        self._setup(tmp_path, monkeypatch)
+        mem_db.execute(
+            "INSERT INTO memory_entries (content, entry_type, project, scope) "
+            "VALUES (?, 'fact', 'h-cc-bridge', 'project')",
+            ("token",),
+        )
+        mem_db.commit()
+
+        cmd_canonicalize_projects(_make_args(dry_run=True))
+
+        row = mem_db.execute(
+            "SELECT project FROM memory_entries WHERE content = ?", ("token",)
+        ).fetchone()
+        assert row[0] == "h-cc-bridge"  # unchanged
+
+    def test_no_aliases_is_noop(self, mem_db, tmp_path, monkeypatch, capsys):
+        from mait_code.tools.memory.cli import cmd_canonicalize_projects
+
+        self._setup(tmp_path, monkeypatch, aliases=None)
+        cmd_canonicalize_projects(_make_args(dry_run=False))
+        assert "No project aliases configured" in capsys.readouterr().out
