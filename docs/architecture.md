@@ -362,12 +362,15 @@ All entry points use a shared logging module (`src/mait_code/logging.py`) that w
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `MAIT_CODE_DATA_DIR` | `~/.claude/mait-code-data` | Data directory (memories, logs, personalised files) |
 | `MAIT_CODE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `MAIT_CODE_LOG_FILE` | `~/.claude/mait-code-data/logs/mait-code.log` | Override log file path |
 | `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | Embedding provider: `local` (fastembed) or `bedrock` (AWS) |
 | `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local embedding provider |
 | `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock embedding provider |
 | `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Model ID for Bedrock embedding provider |
+
+These knobs are defined once in `src/mait_code/config.py`; `mait-code settings` prints their resolved values and whether each came from the environment or the default.
 
 **Features:**
 

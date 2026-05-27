@@ -76,18 +76,19 @@ mait-code install --from "$PWD" --embedding-provider local
 
 ## Lifecycle
 
-Once installed, the `mait-code` binary owns the full install lifecycle. Six subcommands cover the common cases:
+Once installed, the `mait-code` binary owns the full install lifecycle. Its subcommands cover the common cases:
 
 ```bash
-mait-code status            # read-only summary (use --json for machine-readable)
+mait-code status            # read-only summary, with a health badge (use --json)
 mait-code doctor            # surface silent breakage; --fix applies safe fixes
+mait-code settings          # read-only view of the active config (use --json)
 mait-code update            # git pull + reinstall + refresh symlinks/settings
 mait-code uninstall         # remove symlinks, strip settings; preserves data by default
 mait-code uninstall --purge-data   # also delete the data directory
 mait-code version           # print the installed version
 ```
 
-Every command accepts `--claude-dir` and (where relevant) `--data-dir` overrides for non-default layouts. See the **[CLI reference](reference/mait-code.md)** for full per-command flag tables, behaviour notes, and exit codes.
+Most commands accept `--claude-dir` and (where relevant) `--data-dir` overrides for non-default layouts (`settings` and `version` take neither). Coloured output can be disabled with the global `--no-color` flag. See the **[CLI reference](reference/mait-code.md)** for full per-command flag tables, behaviour notes, and exit codes.
 
 ## Personalisation
 
