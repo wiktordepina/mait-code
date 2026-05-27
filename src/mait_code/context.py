@@ -5,9 +5,10 @@ memory, tasks, and hooks for scope-aware operations.
 """
 
 import json
-import os
 import subprocess
 from pathlib import Path
+
+from mait_code.config import data_dir
 
 __all__ = [
     "DEFAULT_BRANCHES",
@@ -100,13 +101,12 @@ def load_project_aliases() -> dict[str, str]:
     Returns:
         A mapping of alias slug to canonical slug (possibly empty).
     """
-    key = os.environ.get(
-        "MAIT_CODE_DATA_DIR", str(Path.home() / ".claude" / "mait-code-data")
-    )
+    data_path = data_dir()
+    key = str(data_path)
     cached = _alias_cache.get(key)
     if cached is None:
         try:
-            data = json.loads((Path(key) / _PROJECT_ALIASES_FILENAME).read_text())
+            data = json.loads((data_path / _PROJECT_ALIASES_FILENAME).read_text())
             cached = (
                 {str(k): str(v) for k, v in data.items()}
                 if isinstance(data, dict)

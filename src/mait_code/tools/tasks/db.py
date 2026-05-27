@@ -4,21 +4,19 @@ All tasks modules should import ``get_connection()`` from here instead of
 creating their own connections.
 """
 
-import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
+from mait_code.config import data_dir as _data_dir
 from mait_code.tools.tasks.migrate import ensure_schema
 
 
 def get_data_dir() -> Path:
     """Return the mait-code data directory, creating it if needed."""
-    data_dir = Path(
-        os.environ.get("MAIT_CODE_DATA_DIR", Path.home() / ".claude" / "mait-code-data")
-    )
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir
+    path = _data_dir()
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def get_db_path() -> Path:

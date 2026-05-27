@@ -23,6 +23,8 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
 
+from mait_code.config import DEFAULT_LOG_LEVEL, data_dir
+
 __all__ = [
     "log_invocation",
     "setup_logging",
@@ -42,12 +44,7 @@ def _get_log_path() -> Path:
     if override:
         path = Path(override)
     else:
-        data_dir = Path(
-            os.environ.get(
-                "MAIT_CODE_DATA_DIR", Path.home() / ".claude" / "mait-code-data"
-            )
-        )
-        path = data_dir / "logs" / "mait-code.log"
+        path = data_dir() / "logs" / "mait-code.log"
 
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -63,7 +60,7 @@ def setup_logging() -> None:
         return
     _setup_done = True
 
-    level_name = os.environ.get("MAIT_CODE_LOG_LEVEL", "INFO").upper()
+    level_name = os.environ.get("MAIT_CODE_LOG_LEVEL", DEFAULT_LOG_LEVEL).upper()
     level = getattr(logging, level_name, logging.INFO)
 
     log_path = _get_log_path()
