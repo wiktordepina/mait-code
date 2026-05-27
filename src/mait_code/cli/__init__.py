@@ -45,8 +45,8 @@ from mait_code.cli._install import (
 from mait_code.cli._status import (
     Status,
     collect_status as _status_impl,
+    render as _status_render,
     render_json as _status_render_json,
-    render_text as _status_render_text,
 )
 from mait_code.cli._uninstall import (
     UninstallSummary,
@@ -394,7 +394,7 @@ def status_cmd(
     if as_json:
         typer.echo(_status_render_json(status))
     else:
-        typer.echo(_status_render_text(status))
+        _status_render(status)
 
 
 @app.command(name="doctor")

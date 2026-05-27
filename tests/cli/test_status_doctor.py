@@ -14,7 +14,7 @@ from mait_code.cli._doctor import (
     run_doctor,
 )
 from mait_code.cli._install import install
-from mait_code.cli._status import collect_status, render_json, render_text
+from mait_code.cli._status import collect_status, render as status_render, render_json
 from mait_code.console import console
 
 runner = CliRunner()
@@ -54,10 +54,23 @@ class TestStatus:
 
     def test_text_rendering(self, fake_home: Path, fake_source: Path) -> None:
         install(source_dir=fake_source)
-        text = render_text(collect_status())
-        assert "Installed: mait-code" in text
+        with console.capture() as cap:
+            status_render(collect_status())
+        text = cap.get()
+        assert "mait-code" in text
+        # Section labels and a representative key.
+        assert "Install" in text
+        assert "Identity" in text
+        assert "Components" in text
+        assert "Memory" in text
         assert "CLAUDE.md" in text
-        assert "Data dir:" in text
+
+    def test_text_rendering_no_record_shows_badge(self, fake_home: Path) -> None:
+        with console.capture() as cap:
+            status_render(collect_status())
+        text = cap.get()
+        assert "not installed" in text  # health badge
+        assert "no install record found" in text
 
     def test_json_rendering(self, fake_home: Path, fake_source: Path) -> None:
         install(source_dir=fake_source)
