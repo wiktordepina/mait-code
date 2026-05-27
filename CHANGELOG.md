@@ -10,6 +10,10 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.3] — 2026-05-27
+
+**Memory extraction data-quality fixes.**
+
 ### Fixed
 
 - **Project- and branch-scoped preferences are no longer flattened to
