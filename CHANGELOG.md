@@ -10,6 +10,48 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-05-27
+
+**Coloured `status` and `doctor`, and a new read-only `settings` command.**
+
+### Added
+
+- **`mait-code settings` — a read-only view of the active configuration.**
+  Modelled on `aws configure list`: one row per `MAIT_CODE_*` knob showing its
+  value and *source* (`env` vs `default`), so "why is it this value?" is
+  answerable at a glance. Migration-sensitive knobs (the embedding
+  provider/model) are flagged, and the command detects drift — when the active
+  embedding provider differs from the one recorded at install time it warns
+  that stored memories need re-embedding. Read-only by design; changing those
+  knobs needs a re-embed that isn't built yet. Supports `--json`.
+- **A global `--no-color` flag.** Disables coloured output explicitly; colour
+  is also dropped automatically when output is not a terminal and under
+  `NO_COLOR` / `TERM=dumb`.
+
+### Changed
+
+- **`status` output is grouped and coloured.** It now reads as Install /
+  Identity / Components / Memory sections under a top-line health badge
+  (healthy / degraded / not installed), with humanised sizes, `~`-abbreviated
+  paths, the install date without the timestamp, and git-style hints for
+  fixable oddities such as a `CLAUDE.md` that isn't linked. The `--json` shape
+  is unchanged.
+- **`doctor` gains colour, per-finding fix hints, and a verdict line.** Each
+  finding now carries the exact command or URL to resolve it, the run ends with
+  a one-line pass/fail summary, and dangling skill/agent symlinks are reported
+  as a warning rather than a failure — they are auto-fixable, so they no longer
+  make `doctor` exit non-zero on their own. The `--json` output gains an
+  additive `fix_hint` field per check.
+
+### Fixed
+
+- **`MAIT_CODE_DATA_DIR` handling is now consistent.** An empty or
+  whitespace-only value previously resolved to the current directory in the
+  memory / tasks / decisions / reminders / logging code paths (only the install
+  CLI handled it safely); every path now falls back to the default data
+  directory. Configuration knobs are read through a single registry, so their
+  defaults are defined exactly once.
+
 ## [0.17.0] — 2026-05-27
 
 **Project-alias map.**
