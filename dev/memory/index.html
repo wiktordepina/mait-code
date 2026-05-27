@@ -1233,6 +1233,8 @@
       
         
       
+        
+      
     
     
     
@@ -1312,11 +1314,41 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../reference/mait-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
         
           
+        
+      
         
       
         
@@ -1344,7 +1376,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -1366,14 +1398,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1400,6 +1432,34 @@
     
   
     Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
   
 
     
@@ -1529,10 +1589,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_7" >
         
           
-          <label class="md-nav__link" for="__nav_5_2_6" id="__nav_5_2_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_7" id="__nav_5_3_7_label" tabindex="0">
             
   
   
@@ -1550,8 +1610,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2_6">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1737,10 +1797,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
         
           
-          <label class="md-nav__link" for="__nav_5_2_7" id="__nav_5_2_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
             
   
   
@@ -1758,8 +1818,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2_7">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2639,6 +2699,7 @@
 <li><strong>branch</strong> — visible only on one branch of one project</li>
 </ul>
 <p>At write time the default is: <code>branch</code> if both project and branch are detected, <code>project</code> if only project is detected, otherwise <code>global</code>. Override with <code>--scope</code>. At query time, the CLI filters to the current context by default; pass <code>--scope all</code> to disable filtering, or <code>--project</code>/<code>--branch</code> to override the auto-detection.</p>
+<p>The project is the basename of the git root (or working directory). If you rename a working directory, its slug changes and memories split across two names. A <strong>project-alias map</strong> keeps them unified: create <code>project-aliases.json</code> in the data directory mapping old slugs to canonical ones, e.g. <code>{"h-cc-bridge": "hermes-cc-bridge"}</code>. New writes are canonicalised automatically; run <code>mc-tool-memory canonicalize-projects</code> once to rewrite existing rows under the old slug.</p>
 <h3 id="keyword-search-fts5">Keyword search (FTS5)<a class="headerlink" href="#keyword-search-fts5" title="Permanent link">&para;</a></h3>
 <p>Every entry is automatically indexed in a full-text search table using SQLite's FTS5 extension. This enables fast keyword matching with BM25 relevance ranking. Triggers keep the FTS index in sync on insert, update, and delete.</p>
 <h3 id="vector-search-sqlite-vec">Vector search (sqlite-vec)<a class="headerlink" href="#vector-search-sqlite-vec" title="Permanent link">&para;</a></h3>
@@ -2939,6 +3000,14 @@
 <tr>
 <td><code>restore --dry-run</code></td>
 <td>Show what would be restored without writing</td>
+</tr>
+<tr>
+<td><code>canonicalize-projects</code></td>
+<td>Rewrite stored project slugs per the project-alias map</td>
+</tr>
+<tr>
+<td><code>canonicalize-projects --dry-run</code></td>
+<td>Show what would change without writing</td>
 </tr>
 <tr>
 <td><code>reflect</code></td>

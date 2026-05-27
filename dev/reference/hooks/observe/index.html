@@ -817,6 +817,8 @@
       
         
       
+        
+      
     
     
     
@@ -897,6 +899,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mait-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -906,6 +936,8 @@
       
         
           
+        
+      
         
       
         
@@ -936,7 +968,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -958,14 +990,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_5_2" id="__nav_5_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -992,6 +1024,34 @@
     
   
     Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
   
 
     
@@ -1121,10 +1181,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_7" >
         
           
-          <label class="md-nav__link" for="__nav_5_2_6" id="__nav_5_2_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_7" id="__nav_5_3_7_label" tabindex="0">
             
   
   
@@ -1142,8 +1202,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2_6">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1331,10 +1391,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_5_2_7" id="__nav_5_2_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
             
   
   
@@ -1352,8 +1412,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_2_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5_2_7">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2567,7 +2627,10 @@ leading portion is dropped so the most recent content is kept.</p>
 
     <div class="doc doc-contents first">
 
-        <p>Update the byte offset for a transcript path and persist the cursors file.</p>
+        <p>Advance the byte offset for a transcript path and persist the cursors file.</p>
+<p>Writing a fresh record also clears any extraction-failure state recorded by
+:func:<code>record_failure</code>, since advancing means moving past the window that
+was failing.</p>
 
 
     </div>
@@ -2869,7 +2932,55 @@ leading portion is dropped so the most recent content is kept.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>The parsed extraction dict, or <code>None</code> if the call or parse fails.</p>
+                <p><code>None</code> if the LLM call itself failed (timeout / non-zero exit) — a</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span> | None</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>transient failure the caller should retry by leaving the cursor put.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span> | None</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p><code>{}</code> if the model responded but its output could not be parsed (the</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span> | None</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>call succeeded, so treat the window as handled). The parsed extraction</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span> | None</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>dict on success — its arrays may be empty when nothing was notable.</p>
               </div>
             </td>
           </tr>
@@ -2985,8 +3096,8 @@ leading portion is dropped so the most recent content is kept.</p>
     <div class="doc doc-contents first">
 
         <p>Determine the scope for an extracted observation item.</p>
-<p>Strategy: trust the LLM classification first, then apply heuristic
-overrides for known patterns.</p>
+<p>Strategy: trust the LLM's scope classification when it is valid, then fall
+back to per-category heuristics.</p>
 
 
 <table>
