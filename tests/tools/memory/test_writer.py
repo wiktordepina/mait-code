@@ -351,7 +351,15 @@ class TestFindDuplicate:
 
     def test_valid_entry_types(self):
         """All expected types should be present."""
-        expected = {"fact", "preference", "event", "insight", "task", "relationship"}
+        expected = {
+            "fact",
+            "preference",
+            "decision",
+            "event",
+            "insight",
+            "task",
+            "relationship",
+        }
         assert VALID_ENTRY_TYPES == expected
 
     def test_similarity_thresholds(self):

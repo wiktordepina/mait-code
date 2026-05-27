@@ -63,7 +63,7 @@ def test_store_extraction_creates_memories(data_dir: Path):
         call_types = [call.args[2] for call in mock_store.call_args_list]
         assert "fact" in call_types
         assert "preference" in call_types
-        assert "insight" in call_types
+        assert "decision" in call_types
         assert "event" in call_types
 
 

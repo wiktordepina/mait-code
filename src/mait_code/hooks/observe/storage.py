@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 CATEGORY_TO_TYPE = {
     "facts": "fact",
     "preferences": "preference",
-    "decisions": "insight",
+    "decisions": "decision",
     "bugs_fixed": "event",
 }
 

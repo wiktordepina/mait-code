@@ -10,6 +10,18 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Changed
+
+- **Extracted decisions get their own `decision` entry type.** The observe
+  hook stored architectural decisions under `entry_type='insight'`, colliding
+  with reflection output (which also uses `insight`). Decisions are now a
+  first-class `decision` type, so reflection's synthesised insights stay
+  distinct from extracted ones — and decisions are now correctly included in
+  the reflection corpus instead of being excluded as if they were insights. A
+  schema migration relabels historical `insight` rows to `decision`, but only
+  on databases where reflection has never run (where the two are otherwise
+  indistinguishable), leaving reflective insights untouched.
+
 ## [0.15.5] — 2026-05-27
 
 **Daily log rotation.**
