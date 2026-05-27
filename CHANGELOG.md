@@ -10,6 +10,10 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.5] — 2026-05-27
+
+**Daily log rotation.**
+
 ### Changed
 
 - **Logs now rotate daily instead of by size.** The file handler switched from
