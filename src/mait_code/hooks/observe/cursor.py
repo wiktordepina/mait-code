@@ -62,10 +62,45 @@ def get_cursor(transcript_path: str) -> int:
 
 
 def set_cursor(transcript_path: str, offset: int) -> None:
-    """Update the byte offset for a transcript path and persist the cursors file."""
+    """Advance the byte offset for a transcript path and persist the cursors file.
+
+    Writing a fresh record also clears any extraction-failure state recorded by
+    :func:`record_failure`, since advancing means moving past the window that
+    was failing.
+    """
     cursors = load_cursors()
     cursors[transcript_path] = {
         "offset": offset,
         "updated": datetime.now(timezone.utc).isoformat(),
     }
     save_cursors(cursors)
+
+
+def record_failure(transcript_path: str, offset: int) -> int:
+    """Record an extraction failure at ``offset`` and return the running count.
+
+    The cursor offset is deliberately left unadvanced so the next invocation
+    re-reads the same window. Consecutive failures at the same offset
+    accumulate; a failure at a different offset resets the count to 1. The
+    count is cleared when :func:`set_cursor` advances past the window.
+
+    Args:
+        transcript_path: The transcript whose extraction failed.
+        offset: The byte offset the failed read started from.
+
+    Returns:
+        The number of consecutive failures now recorded at this offset.
+    """
+    cursors = load_cursors()
+    entry = cursors.get(transcript_path, {})
+    if entry.get("fail_offset") == offset:
+        count = entry.get("fail_count", 0) + 1
+    else:
+        count = 1
+    entry["fail_offset"] = offset
+    entry["fail_count"] = count
+    entry.setdefault("offset", offset)
+    entry["updated"] = datetime.now(timezone.utc).isoformat()
+    cursors[transcript_path] = entry
+    save_cursors(cursors)
+    return count

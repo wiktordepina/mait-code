@@ -112,7 +112,7 @@ def call_haiku(prompt: str) -> str | None:
     Returns:
         Stripped stdout from Haiku, or ``None`` on failure.
     """
-    return call_claude(prompt, model="haiku", timeout=45, retries=2)
+    return call_claude(prompt, model="haiku", timeout=90, retries=2)
 
 
 def parse_extraction(raw_output: str) -> dict | None:
@@ -168,10 +168,19 @@ def extract_observations(
         branch: Branch name passed into the prompt header.
 
     Returns:
-        The parsed extraction dict, or ``None`` if the call or parse fails.
+        ``None`` if the LLM call itself failed (timeout / non-zero exit) — a
+        transient failure the caller should retry by leaving the cursor put.
+        ``{}`` if the model responded but its output could not be parsed (the
+        call succeeded, so treat the window as handled). The parsed extraction
+        dict on success — its arrays may be empty when nothing was notable.
     """
     prompt = build_extraction_prompt(conversation_text, project=project, branch=branch)
     raw = call_haiku(prompt)
     if raw is None:
+        # Transport failure (timeout / non-zero exit) — signal "retry me".
         return None
-    return parse_extraction(raw)
+    parsed = parse_extraction(raw)
+    if parsed is None:
+        # Responded but unparseable; retrying is unlikely to help.
+        return {}
+    return parsed

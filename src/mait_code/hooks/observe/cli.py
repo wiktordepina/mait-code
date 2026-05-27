@@ -12,7 +12,7 @@ import os
 import sys
 from pathlib import Path
 
-from mait_code.hooks.observe.cursor import get_cursor, set_cursor
+from mait_code.hooks.observe.cursor import get_cursor, record_failure, set_cursor
 from mait_code.hooks.observe.extractor import extract_observations
 from mait_code.hooks.observe.storage import (
     store_entities_and_relationships,
@@ -23,6 +23,11 @@ from mait_code.hooks.observe.transcript import format_for_extraction, read_new_l
 from mait_code.logging import log_invocation, setup_logging
 
 logger = logging.getLogger(__name__)
+
+# Consecutive extraction failures at one offset before we advance past the
+# window anyway, so a single un-extractable transcript can't stall extraction
+# forever.
+MAX_EXTRACTION_FAILURES = 3
 
 
 def _read_event() -> dict:
@@ -149,11 +154,25 @@ def _run():
     branch = metadata.get("branch")
 
     extraction = extract_observations(conversation_text, project=project, branch=branch)
-    if not extraction:
-        set_cursor(transcript_path, new_offset)
+    if extraction is None:
+        # Transport failure (LLM timed out or errored). Leave the cursor where
+        # it is so the next session re-attempts this window — unless we've
+        # failed here repeatedly, in which case advance past the poison window.
+        failures = record_failure(transcript_path, byte_offset)
+        if failures >= MAX_EXTRACTION_FAILURES:
+            logger.error(
+                "observe: giving up on window at offset %d after %d consecutive failures",
+                byte_offset,
+                failures,
+            )
+            set_cursor(transcript_path, new_offset)
         return
 
-    write_raw_extraction(extraction, args.trigger, project=project, branch=branch)
-    store_extraction(extraction, project=project, branch=branch)
-    store_entities_and_relationships(extraction)
+    # The model responded. The dict may be empty (routine conversation, or an
+    # unparseable response) — either way the window is handled, so advance.
+    # set_cursor also clears any recorded failure state for this transcript.
+    if extraction:
+        write_raw_extraction(extraction, args.trigger, project=project, branch=branch)
+        store_extraction(extraction, project=project, branch=branch)
+        store_entities_and_relationships(extraction)
     set_cursor(transcript_path, new_offset)

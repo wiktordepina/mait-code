@@ -2,11 +2,14 @@
 
 import io
 import json
+import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
 
+from mait_code.hooks.observe import cli as observe_cli
 from mait_code.hooks.observe.cli import _find_transcript, _read_event
+from mait_code.hooks.observe.cursor import get_cursor
 
 
 class TestReadEvent:
@@ -154,3 +157,71 @@ class TestFindTranscript:
             result = _find_transcript()
 
         assert result == str(transcript)
+
+
+class TestRunCursorAdvance:
+    """_run advances the cursor only when a window is handled, never on failure."""
+
+    TPATH = "/fake/transcript.jsonl"
+    NEW_OFFSET = 100
+
+    def _run_once(self, monkeypatch, extraction):
+        """Drive _run once with a mocked transcript read and extraction result.
+
+        Cursor functions are left real (backed by the temp data dir) so the
+        persisted offset reflects the actual decision.
+        """
+        monkeypatch.setattr(
+            sys, "argv", ["mc-hook-observe", "--trigger", "session-end"]
+        )
+        with (
+            patch.object(
+                observe_cli,
+                "_read_event",
+                return_value={"transcript_path": self.TPATH},
+            ),
+            patch.object(
+                observe_cli,
+                "read_new_lines",
+                return_value=(
+                    ["m"],
+                    self.NEW_OFFSET,
+                    {"project": None, "branch": None},
+                ),
+            ),
+            patch.object(
+                observe_cli, "format_for_extraction", return_value="conversation text"
+            ),
+            patch.object(observe_cli, "extract_observations", return_value=extraction),
+            patch.object(observe_cli, "write_raw_extraction") as mock_raw,
+            patch.object(observe_cli, "store_extraction") as mock_store,
+            patch.object(observe_cli, "store_entities_and_relationships") as mock_ent,
+        ):
+            observe_cli._run()
+        return mock_raw, mock_store, mock_ent
+
+    def test_transport_failure_does_not_advance(self, data_dir: Path, monkeypatch):
+        self._run_once(monkeypatch, None)
+        # Cursor stays put so the next session re-attempts the same window.
+        assert get_cursor(self.TPATH) == 0
+
+    def test_advances_after_max_failures(self, data_dir: Path, monkeypatch):
+        for _ in range(observe_cli.MAX_EXTRACTION_FAILURES):
+            self._run_once(monkeypatch, None)
+        # The poison window is finally skipped rather than stalling forever.
+        assert get_cursor(self.TPATH) == self.NEW_OFFSET
+
+    def test_empty_result_advances_without_storing(self, data_dir: Path, monkeypatch):
+        mock_raw, mock_store, mock_ent = self._run_once(monkeypatch, {})
+        assert get_cursor(self.TPATH) == self.NEW_OFFSET
+        mock_raw.assert_not_called()
+        mock_store.assert_not_called()
+        mock_ent.assert_not_called()
+
+    def test_populated_result_advances_and_stores(self, data_dir: Path, monkeypatch):
+        extraction = {"facts": [{"content": "x", "importance": 5}]}
+        mock_raw, mock_store, mock_ent = self._run_once(monkeypatch, extraction)
+        assert get_cursor(self.TPATH) == self.NEW_OFFSET
+        mock_raw.assert_called_once()
+        mock_store.assert_called_once()
+        mock_ent.assert_called_once()
