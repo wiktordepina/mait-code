@@ -10,6 +10,12 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-05-27
+
+**One-liner installer.** Adds `curl … | bash` as the primary install
+path. Closes the master release-infra checklist — every brick (A
+through F) has now shipped.
+
 ### Added
 
 - **One-liner installer** (`scripts/bootstrap.sh`). Detects or installs
@@ -416,7 +422,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.1
 [0.15.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.0
 [0.14.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.1
 [0.14.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.0
