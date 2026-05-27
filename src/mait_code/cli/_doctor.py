@@ -16,17 +16,20 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
+from rich.text import Text
+
 from mait_code.cli._install import verify_source
 from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._record import RecordError, read_record
 from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
+from mait_code.console import GLYPH, console
 
 __all__ = [
     "Check",
     "DoctorReport",
+    "render",
     "render_json",
-    "render_text",
     "run_doctor",
 ]
 
@@ -40,6 +43,7 @@ class Check:
     name: str
     level: Level
     message: str
+    fix_hint: str | None = None
 
 
 @dataclass
@@ -59,7 +63,15 @@ def _check_record() -> tuple[Check, Path | None]:
     try:
         record = read_record()
     except RecordError as exc:
-        return Check("install-record", "fail", str(exc)), None
+        return (
+            Check(
+                "install-record",
+                "fail",
+                str(exc),
+                fix_hint="reinstall from your clone: mait-code install --from <path>",
+            ),
+            None,
+        )
     source = Path(record.source_dir)
     return (
         Check("install-record", "ok", f"present at schema version 1, source {source}"),
@@ -73,7 +85,12 @@ def _check_source(source: Path | None) -> Check:
     try:
         verify_source(source)
     except ValueError as exc:
-        return Check("source-dir", "fail", str(exc))
+        return Check(
+            "source-dir",
+            "fail",
+            str(exc),
+            fix_hint="re-run mait-code install --from <clone-path>",
+        )
     return Check(
         "source-dir", "ok", f"{source} exists and looks like a mait-code clone"
     )
@@ -86,7 +103,12 @@ def _check_settings(cdir: Path) -> Check:
     try:
         json.loads(settings_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
-        return Check("settings", "fail", f"{settings_path}: {exc}")
+        return Check(
+            "settings",
+            "fail",
+            f"{settings_path}: {exc}",
+            fix_hint="repair the JSON syntax in that file",
+        )
     return Check("settings", "ok", f"{settings_path} parses as JSON")
 
 
@@ -125,6 +147,7 @@ def _check_hook_commands(cdir: Path) -> Check:
             "hooks-on-path",
             "fail",
             f"hook commands not on PATH: {', '.join(missing)}",
+            fix_hint="refresh hooks: mait-code update",
         )
     if seen:
         return Check(
@@ -160,10 +183,12 @@ def _check_symlinks(cdir: Path, fix: bool, fixes: list[str]) -> Check:
             link.unlink(missing_ok=True)
             fixes.append(f"removed dangling symlink {link}")
         return Check("symlinks", "ok", f"removed {len(dangling)} dangling symlinks")
+    plural = "s" if len(dangling) != 1 else ""
     return Check(
         "symlinks",
-        "fail",
-        f"{len(dangling)} dangling symlinks (use --fix to remove)",
+        "warn",
+        f"{len(dangling)} dangling symlink{plural} under skills/ or agents/",
+        fix_hint="mait-code doctor --fix",
     )
 
 
@@ -175,9 +200,19 @@ def _check_data_dir(ddir: Path, fix: bool, fixes: list[str]) -> Check:
             (ddir / "memory" / "reflections").mkdir(parents=True, exist_ok=True)
             fixes.append(f"created {ddir} with memory subdirs")
             return Check("data-dir", "ok", f"created {ddir}")
-        return Check("data-dir", "fail", f"{ddir} does not exist (use --fix to create)")
+        return Check(
+            "data-dir",
+            "fail",
+            f"{ddir} does not exist",
+            fix_hint="mait-code doctor --fix",
+        )
     if not _is_writable(ddir):
-        return Check("data-dir", "fail", f"{ddir} is not writable")
+        return Check(
+            "data-dir",
+            "fail",
+            f"{ddir} is not writable",
+            fix_hint="check the directory permissions",
+        )
     return Check("data-dir", "ok", f"{ddir} exists and is writable")
 
 
@@ -194,7 +229,12 @@ def _is_writable(path: Path) -> bool:
 def _check_uv(_ddir: Path) -> Check:
     """``uv`` must be on PATH for install/update to work."""
     if shutil.which("uv") is None:
-        return Check("uv-on-path", "fail", "`uv` not found on PATH")
+        return Check(
+            "uv-on-path",
+            "fail",
+            "`uv` not found on PATH",
+            fix_hint="install uv — https://docs.astral.sh/uv/",
+        )
     return Check("uv-on-path", "ok", "`uv` is on PATH")
 
 
@@ -235,21 +275,61 @@ def run_doctor(
     return DoctorReport(checks=checks, fixes_applied=fixes)
 
 
-_LEVEL_GLYPH = {"ok": "✓", "warn": "!", "fail": "✗"}
+def _verdict(report: DoctorReport) -> Text:
+    """Build the closing one-line pass/fail summary."""
+    n_fail = sum(c.level == "fail" for c in report.checks)
+    n_warn = sum(c.level == "warn" for c in report.checks)
+    n_ok = sum(c.level == "ok" for c in report.checks)
+    overall: Level = "fail" if n_fail else "warn" if n_warn else "ok"
+
+    line = Text()
+    line.append(f"{GLYPH[overall]}  ", style=overall)
+    segments: list[tuple[str, str]] = []
+    if n_fail:
+        segments.append((f"{n_fail} failed", "fail"))
+    if n_warn:
+        segments.append((f"{n_warn} warning{'s' if n_warn != 1 else ''}", "warn"))
+    segments.append((f"{n_ok} passed", "ok"))
+    for i, (text, style) in enumerate(segments):
+        if i:
+            line.append(" · ", style="muted")
+        line.append(text, style=style)
+    return line
 
 
-def render_text(report: DoctorReport) -> str:
-    """Render the report as a short multi-line text block."""
-    lines = []
+def render(report: DoctorReport) -> None:
+    """Print the report to the shared console: colour, fix hints, verdict.
+
+    Prints rather than returning a string so colour handling stays with
+    the console (which disables colour off-TTY and under ``NO_COLOR``).
+    Tests capture via ``console.capture()``; JSON callers use
+    :func:`render_json` instead.
+    """
+    console.print(Text("mait-code doctor", style="accent"))
+    console.rule(style="muted")
     for check in report.checks:
-        glyph = _LEVEL_GLYPH[check.level]
-        lines.append(f"  {glyph} {check.name}: {check.message}")
+        line = Text("  ")
+        line.append(f"{GLYPH[check.level]}  ", style=check.level)
+        line.append(f"{check.name:<16}", style="bold")
+        line.append(check.message)
+        if check.fix_hint:
+            line.append(f"   → {check.fix_hint}", style="muted")
+        # soft_wrap keeps each finding on one logical line (long paths stay
+        # greppable) and lets the terminal handle wrapping, rather than rich
+        # hard-wrapping to its own width when piped.
+        console.print(line, soft_wrap=True)
+    console.rule(style="muted")
+    console.print(_verdict(report), soft_wrap=True)
+    if any(c.fix_hint and "--fix" in c.fix_hint for c in report.checks):
+        tail = Text("   run ", style="muted")
+        tail.append("mait-code doctor --fix", style="accent")
+        tail.append(" to clear fixable issues", style="muted")
+        console.print(tail, soft_wrap=True)
     if report.fixes_applied:
-        lines.append("")
-        lines.append("Fixes applied:")
+        console.print()
+        console.print(Text("Fixes applied:", style="muted"), soft_wrap=True)
         for fix in report.fixes_applied:
-            lines.append(f"  - {fix}")
-    return "\n".join(lines)
+            console.print(Text(f"  - {fix}", style="muted"), soft_wrap=True)
 
 
 def render_json(report: DoctorReport) -> str:

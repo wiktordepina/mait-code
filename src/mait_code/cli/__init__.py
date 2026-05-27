@@ -33,8 +33,8 @@ import typer
 from mait_code.cli._doctor import (
     Check,
     DoctorReport,
+    render as _doctor_render,
     render_json as _doctor_render_json,
-    render_text as _doctor_render_text,
     run_doctor as _doctor_impl,
 )
 from mait_code.cli._install import (
@@ -85,6 +85,7 @@ from mait_code.cli._symlinks import (
     symlink_claude_md,
     symlink_skills,
 )
+from mait_code.console import console
 
 __all__ = [
     # State paths
@@ -143,8 +144,17 @@ app = typer.Typer(
 # Without this, `mait-code version` would be parsed as `mait-code` with
 # `version` as an unexpected positional argument.
 @app.callback()
-def _root() -> None:
+def _root(
+    no_color: Annotated[
+        bool,
+        typer.Option("--no-color", help="Disable coloured output."),
+    ] = False,
+) -> None:
     """mait-code install-lifecycle CLI."""
+    # rich already honours NO_COLOR / non-TTY / TERM=dumb; this is the
+    # explicit manual override. Assigning the bool each invocation keeps
+    # the process-wide console's state predictable.
+    console.no_color = no_color
 
 
 @app.command()
@@ -424,7 +434,7 @@ def doctor_cmd(
     if as_json:
         typer.echo(_doctor_render_json(report))
     else:
-        typer.echo(_doctor_render_text(report))
+        _doctor_render(report)
     if report.has_fail:
         raise typer.Exit(code=1)
 
