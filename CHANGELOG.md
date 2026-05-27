@@ -10,6 +10,10 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-05-27
+
+**Project-alias map.**
+
 ### Added
 
 - **Project-alias map for unified project identity.** Renaming a working
