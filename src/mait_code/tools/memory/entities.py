@@ -2,6 +2,21 @@
 
 import sqlite3
 
+# Canonical relationship vocabulary. The extraction prompt is built from this
+# tuple, and extracted relationships are coerced to it on write (see
+# ``mait_code.hooks.observe.storage``). Keep the ordering stable — it is what
+# the prompt presents to the model.
+RELATIONSHIP_TYPES: tuple[str, ...] = (
+    "uses",
+    "owns",
+    "contributes_to",
+    "depends_on",
+    "manages",
+    "related_to",
+)
+VALID_RELATIONSHIP_TYPES: frozenset[str] = frozenset(RELATIONSHIP_TYPES)
+DEFAULT_RELATIONSHIP_TYPE: str = "related_to"
+
 
 def upsert_entity(conn: sqlite3.Connection, name: str, entity_type: str) -> int:
     """Insert or update an entity by name and return its id.

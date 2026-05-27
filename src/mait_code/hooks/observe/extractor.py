@@ -5,8 +5,13 @@ import logging
 import re
 
 from mait_code.llm import call_claude
+from mait_code.tools.memory.entities import RELATIONSHIP_TYPES
 
 logger = logging.getLogger(__name__)
+
+# Built from the canonical vocabulary so the prompt and the write-time
+# enforcement in storage.py can never drift apart.
+_RELATIONSHIP_TYPES_STR = "|".join(RELATIONSHIP_TYPES)
 
 EXTRACTION_PROMPT = """\
 You are an observation extraction system. Analyze the following conversation
@@ -31,7 +36,7 @@ Return ONLY a JSON object with these arrays (use empty arrays if none found):
     {"name": "...", "entity_type": "person|project|tool|service|concept|org", "context": "..."}
   ],
   "relationships": [
-    {"source": "entity name", "target": "entity name", "relationship_type": "uses|owns|contributes_to|depends_on|manages|related_to", "context": "..."}
+    {"source": "entity name", "target": "entity name", "relationship_type": "__RELATIONSHIP_TYPES__", "context": "..."}
   ]
 }
 
@@ -52,7 +57,7 @@ Guidelines:
 - Be specific and concise. Each item should stand alone without context.
 - Do NOT extract generic observations. Focus on project-specific, actionable knowledge.
 - If the conversation is routine with nothing notable, return all empty arrays.
-"""
+""".replace("__RELATIONSHIP_TYPES__", _RELATIONSHIP_TYPES_STR)
 
 CONTEXT_HEADER = """\
 PROJECT CONTEXT:

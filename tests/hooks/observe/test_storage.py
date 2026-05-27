@@ -154,3 +154,59 @@ def test_store_entities_auto_creates_for_relationships(data_dir: Path):
         # Both entities auto-created
         assert mock_entity.call_count == 2
         assert mock_rel.call_count == 1
+
+
+def test_store_relationship_keeps_valid_type(data_dir: Path):
+    extraction = {
+        "entities": [
+            {"name": "A", "entity_type": "tool"},
+            {"name": "B", "entity_type": "tool"},
+        ],
+        "relationships": [
+            {"source": "A", "target": "B", "relationship_type": "depends_on"},
+        ],
+    }
+
+    with (
+        patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
+        patch("mait_code.hooks.observe.storage.upsert_relationship") as mock_rel,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        mock_entity.side_effect = [1, 2]
+        mock_rel.return_value = 1
+
+        store_entities_and_relationships(extraction)
+
+        # relationship_type is the 4th positional arg to upsert_relationship
+        assert mock_rel.call_args.args[3] == "depends_on"
+
+
+def test_store_relationship_coerces_unknown_type(data_dir: Path):
+    """An out-of-enum relationship type is coerced to related_to (edge preserved)."""
+    extraction = {
+        "entities": [
+            {"name": "A", "entity_type": "tool"},
+            {"name": "B", "entity_type": "tool"},
+        ],
+        "relationships": [
+            {"source": "A", "target": "B", "relationship_type": "provides_lan_access"},
+        ],
+    }
+
+    with (
+        patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
+        patch("mait_code.hooks.observe.storage.upsert_relationship") as mock_rel,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        mock_entity.side_effect = [1, 2]
+        mock_rel.return_value = 1
+
+        store_entities_and_relationships(extraction)
+
+        # Edge still written, but the invented label is normalised.
+        assert mock_rel.call_count == 1
+        assert mock_rel.call_args.args[3] == "related_to"
