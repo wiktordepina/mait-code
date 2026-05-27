@@ -1,6 +1,6 @@
 ---
 name: standup
-description: Generate standup summary from git history, tasks, memory, and PRs across all projects
+description: Generate a cross-project standup summary from git history, tasks, memory, and PRs. Use when you ask what to report, what you worked on across projects, or are prepping for a standup or check-in.
 allowed-tools: Bash(git *), Bash(gh *), Bash(mc-tool-tasks *), Bash(mc-tool-memory *), Bash(mc-tool-reminders *)
 ---
 

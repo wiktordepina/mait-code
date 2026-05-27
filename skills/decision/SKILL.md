@@ -1,6 +1,6 @@
 ---
 name: decision
-description: Record a technical decision for the current project
+description: Record a technical decision (ADR-style) for the current project. Use proactively when you settle a non-obvious technical choice — pick an approach, reject an alternative, or say to go with something — to capture it before it is forgotten.
 argument-hint: "[--status accepted|proposed] [--tags <tags>] <title>"
 allowed-tools: Bash(mc-tool-decisions record *)
 ---
