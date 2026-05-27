@@ -82,13 +82,23 @@ def test_extract_observations_mocked():
 
 
 def test_extract_observations_haiku_failure():
+    """A transport failure (call_haiku returns None) propagates as None — retryable."""
     with patch("mait_code.hooks.observe.extractor.call_haiku", return_value=None):
         result = extract_observations("USER: hello")
     assert result is None
 
 
+def test_extract_observations_unparseable_returns_empty():
+    """A response that can't be parsed is handled ({}), not a transport failure (None)."""
+    with patch(
+        "mait_code.hooks.observe.extractor.call_haiku", return_value="not json at all"
+    ):
+        result = extract_observations("USER: hello")
+    assert result == {}
+
+
 def test_call_haiku_delegates_to_call_claude():
-    """Verify call_haiku passes model='haiku', timeout=45, and retries=2 to call_claude."""
+    """Verify call_haiku passes model='haiku', timeout=90, and retries=2 to call_claude."""
     from mait_code.hooks.observe.extractor import call_haiku
 
     with patch(
@@ -97,4 +107,4 @@ def test_call_haiku_delegates_to_call_claude():
         result = call_haiku("test prompt")
 
     assert result == "response"
-    mock.assert_called_once_with("test prompt", model="haiku", timeout=45, retries=2)
+    mock.assert_called_once_with("test prompt", model="haiku", timeout=90, retries=2)

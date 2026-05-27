@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.4] — 2026-05-27
+
+**Extraction reliability fix.**
+
+### Fixed
+
+- **Failed extractions no longer silently lose their transcript window.** When
+  the extraction LLM call timed out or errored, the observe hook still advanced
+  its read cursor, so that slice of conversation was skipped permanently. It
+  now leaves the cursor in place and re-attempts the window on the next
+  session, giving up only after three consecutive failures so a single
+  un-extractable transcript can't stall extraction forever. The extraction
+  timeout is also raised from 45s to 90s to accommodate longer transcripts.
+
 ## [0.15.3] — 2026-05-27
 
 **Memory extraction data-quality fixes.**
