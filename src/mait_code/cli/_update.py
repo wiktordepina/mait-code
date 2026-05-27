@@ -1,12 +1,24 @@
-"""``mait-code update`` &mdash; pull the latest source and reinstall.
+"""``mait-code update`` &mdash; fetch the latest source and reinstall.
 
-Reads the install record to find the source tree, optionally runs
-``git pull`` (and optionally checks out a specific ref), runs
-``uv tool install --force --reinstall`` against the source dir with the
-recorded embedding extra, then re-runs the symlink and settings-merge
-steps in case the new source ships changes (new skills, updated
-settings.json). Bumps the install record's ``version`` and
-``installed_at``.
+Reads the install record to find the source tree, advances it to the
+right ref, runs ``uv tool install --force --reinstall`` against the
+source dir with the recorded embedding extra, then re-runs the symlink
+and settings-merge steps in case the new source ships changes (new
+skills, updated settings.json). Bumps the install record's ``version``
+and ``installed_at``.
+
+How the source is advanced depends on its current state, because a
+bootstrap install pins to a release **tag** (detached HEAD) while a
+local-clone dev install sits on a **branch**:
+
+* ``--ref <X>`` given &rarr; checkout ``X`` (after a fetch).
+* On a branch &rarr; fast-forward it (``git merge --ff-only``).
+* Detached HEAD (typical post-bootstrap) &rarr; checkout the latest
+  ``v*`` tag.
+
+This is the fix for the bug where ``git pull`` was run unconditionally
+and failed on a tag-pinned (detached HEAD) install with "You are not
+currently on a branch".
 
 The subprocess calls are kept narrow and explicit so tests can replace
 them with stubs without having to patch the heavier orchestrator.
@@ -35,15 +47,17 @@ from mait_code.cli._symlinks import (
 )
 
 __all__ = [
+    "Capture",
     "Runner",
     "UpdateSummary",
+    "default_capture",
     "default_runner",
     "update",
 ]
 
 
 class Runner(Protocol):
-    """Protocol for a function that runs a subprocess and raises on failure.
+    """Protocol for a function that runs a mutating subprocess and raises on failure.
 
     The default implementation calls ``subprocess.run(..., check=True)``;
     tests replace this with a recording stub so they can exercise
@@ -53,9 +67,46 @@ class Runner(Protocol):
     def __call__(self, cmd: list[str], *, cwd: Path | None = None) -> None: ...
 
 
+class Capture(Protocol):
+    """Protocol for a function that runs a read-only command and returns stdout.
+
+    Used for the git queries (current branch, latest tag) that
+    :func:`update` needs to decide how to advance the source tree.
+    Tests replace this with a stub returning canned output.
+    """
+
+    def __call__(self, cmd: list[str], *, cwd: Path | None = None) -> str: ...
+
+
 def default_runner(cmd: list[str], *, cwd: Path | None = None) -> None:
     """Default :class:`Runner` &mdash; ``subprocess.run`` with ``check=True``."""
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def default_capture(cmd: list[str], *, cwd: Path | None = None) -> str:
+    """Default :class:`Capture` &mdash; return stripped stdout, raise on failure."""
+    result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def _current_branch(capture: Capture, source_dir: Path) -> str:
+    """Return the current branch name, or ``""`` if in detached HEAD.
+
+    ``git branch --show-current`` prints the branch name on a normal
+    checkout and an empty string (exit 0) when HEAD is detached, so it
+    doubles as a detached-HEAD probe.
+    """
+    return capture(["git", "branch", "--show-current"], cwd=source_dir).strip()
+
+
+def _latest_tag(capture: Capture, source_dir: Path) -> str | None:
+    """Return the highest ``v*`` tag by version sort, or ``None`` if none exist."""
+    out = capture(
+        ["git", "tag", "--list", "--sort=-v:refname", "v*"],
+        cwd=source_dir,
+    )
+    tags = [line.strip() for line in out.splitlines() if line.strip()]
+    return tags[0] if tags else None
 
 
 class UpdateSummary:
@@ -65,16 +116,16 @@ class UpdateSummary:
         self,
         *,
         record: InstallRecord,
-        pulled: bool,
-        ref: str | None,
+        fetched: bool,
+        landed_on: str,
         claude_md: SymlinkResult,
         skills: SymlinkResult,
         agents: SymlinkResult,
         settings_path: Path,
     ) -> None:
         self.record = record
-        self.pulled = pulled
-        self.ref = ref
+        self.fetched = fetched
+        self.landed_on = landed_on
         self.claude_md = claude_md
         self.skills = skills
         self.agents = agents
@@ -87,27 +138,34 @@ def update(
     ref: str | None = None,
     claude_dir: Path | None = None,
     runner: Runner | None = None,
+    capture: Capture | None = None,
 ) -> UpdateSummary:
     """Run the update flow.
 
     Args:
-        no_pull: Skip ``git pull`` (useful if the user pulls manually).
-        ref: If set, ``git checkout <ref>`` before reinstall.
+        no_pull: Skip the network fetch and any branch fast-forward;
+            reinstall from whatever is currently checked out. ``--ref``
+            still checks out (a local) ref.
+        ref: If set, ``git checkout <ref>`` (after a fetch unless
+            ``no_pull``). Pins to a tag/branch/sha.
         claude_dir: Override the Claude Code config dir (defaults to
             :func:`~mait_code.cli._paths.claude_dir`).
-        runner: Subprocess runner for tests to stub out.
+        runner: Mutating subprocess runner for tests to stub out.
+        capture: Read-only command runner for tests to stub out.
 
     Returns:
         An :class:`UpdateSummary`.
 
     Raises:
         ValueError: If the install record's source directory no longer
-            exists or doesn't look like a mait-code clone.
+            exists, doesn't look like a mait-code clone, or is in
+            detached HEAD with no ``v*`` tag to advance to.
     """
-    # Lazy resolution so tests can monkeypatch `default_runner` on the
-    # module after import.
+    # Lazy resolution so tests can monkeypatch the module attributes.
     if runner is None:
         runner = default_runner
+    if capture is None:
+        capture = default_capture
 
     record = read_record()
     source_dir = Path(record.source_dir)
@@ -119,13 +177,34 @@ def update(
             f"expected one of {EMBEDDING_PROVIDERS}"
         )
 
-    # 1. git pull (and optional checkout).
-    pulled = False
+    # 1. Advance the source tree to the right ref.
+    fetched = False
+    if not no_pull:
+        runner(["git", "fetch", "origin", "--tags", "--prune"], cwd=source_dir)
+        fetched = True
+
     if ref is not None:
         runner(["git", "checkout", ref], cwd=source_dir)
-    if not no_pull:
-        runner(["git", "pull"], cwd=source_dir)
-        pulled = True
+        landed_on = ref
+    else:
+        branch = _current_branch(capture, source_dir)
+        if branch:
+            # On a branch (e.g. local-clone dev install): fast-forward it.
+            if not no_pull:
+                runner(["git", "merge", "--ff-only"], cwd=source_dir)
+            landed_on = f"branch {branch}"
+        else:
+            # Detached HEAD (typical post-bootstrap tag install): move to
+            # the latest release tag rather than attempting a `git pull`,
+            # which can't work without a branch.
+            latest = _latest_tag(capture, source_dir)
+            if latest is None:
+                raise ValueError(
+                    f"{source_dir} is in detached HEAD and has no v* tags to "
+                    f"update to. Check out a branch, or pass --ref."
+                )
+            runner(["git", "checkout", latest], cwd=source_dir)
+            landed_on = latest
 
     # 2. uv tool install --force --reinstall.
     extra = "[bedrock]" if record.embedding_provider == "bedrock" else ""
@@ -168,8 +247,8 @@ def update(
 
     return UpdateSummary(
         record=refreshed,
-        pulled=pulled,
-        ref=ref,
+        fetched=fetched,
+        landed_on=landed_on,
         claude_md=claude_md_result,
         skills=skills_result,
         agents=agents_result,

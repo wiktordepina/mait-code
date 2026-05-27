@@ -10,6 +10,21 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.2] — 2026-05-27
+
+**Fix `mait-code update` on tag-pinned installs.**
+
+### Fixed
+
+- **`mait-code update` no longer fails on a tag-pinned install.** The
+  bootstrap installer checks out a release tag, leaving the source in
+  detached HEAD; `update` then ran `git pull` unconditionally, which
+  aborts with "You are not currently on a branch". `update` now fetches
+  and advances based on the source state: `--ref` checks out that ref,
+  a branch fast-forwards (`git merge --ff-only`), and a detached HEAD
+  moves to the latest `v*` tag. `--no-pull` reinstalls from the current
+  checkout without touching git.
+
 ## [0.15.1] — 2026-05-27
 
 **One-liner installer.** Adds `curl … | bash` as the primary install
@@ -422,7 +437,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.2...HEAD
+[0.15.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.2
 [0.15.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.1
 [0.15.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.0
 [0.14.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.1
