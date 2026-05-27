@@ -89,6 +89,39 @@ def _migrate_8_scoped_memory(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migrate_10_decision_entry_type(conn: sqlite3.Connection) -> None:
+    """Relabel extraction-sourced ``insight`` rows as ``decision``.
+
+    The observe hook used to store extracted architectural decisions under
+    ``entry_type='insight'``, colliding with reflection output (which also uses
+    ``insight``). New extractions use ``decision``; this migration relabels the
+    historical rows.
+
+    Guarded: only run when reflection has never run on this database. Once
+    reflection has produced genuine insights, the two are indistinguishable by
+    ``entry_type`` alone, so a blanket rename would corrupt them — in that case
+    leave existing rows untouched and rely on the forward-path fix. The
+    ``memory_entries_au`` trigger keeps the FTS shadow table in sync with the
+    relabelled ``entry_type`` automatically.
+    """
+    reflected = conn.execute("SELECT COUNT(*) FROM reflection_watermark").fetchone()[0]
+    if reflected:
+        logger.info(
+            "Migration 10: reflection has run (%d watermark row(s)); leaving "
+            "existing 'insight' rows untouched to avoid relabelling reflective "
+            "insights.",
+            reflected,
+        )
+        return
+    cursor = conn.execute(
+        "UPDATE memory_entries SET entry_type = 'decision' WHERE entry_type = 'insight'"
+    )
+    logger.info(
+        "Migration 10: relabelled %d extracted 'insight' row(s) to 'decision'.",
+        cursor.rowcount,
+    )
+
+
 MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
     (
         1,
@@ -210,6 +243,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
                 PRIMARY KEY (project)
             )""",
         ],
+    ),
+    (
+        10,
+        "Relabel extraction-sourced insight entries as decision",
+        _migrate_10_decision_entry_type,
     ),
 ]
 

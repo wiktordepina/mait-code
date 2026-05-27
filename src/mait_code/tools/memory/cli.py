@@ -427,6 +427,7 @@ def cmd_restore(args):
     import json
 
     from mait_code.hooks.observe.scope import resolve_scope
+    from mait_code.hooks.observe.storage import CATEGORY_TO_TYPE
     from mait_code.tools.memory.db import get_data_dir
     from mait_code.tools.memory.entities import upsert_entity, upsert_relationship
     from mait_code.tools.memory.writer import store_memory as _store
@@ -444,13 +445,6 @@ def cmd_restore(args):
         sys.exit(1)
 
     dry_run = getattr(args, "dry_run", False)
-
-    category_to_type = {
-        "facts": "fact",
-        "preferences": "preference",
-        "decisions": "insight",
-        "bugs_fixed": "event",
-    }
 
     total_records = 0
     total_memories = 0
@@ -485,7 +479,7 @@ def cmd_restore(args):
                     file_records += 1
 
                     # Replay memory entries
-                    for category, entry_type in category_to_type.items():
+                    for category, entry_type in CATEGORY_TO_TYPE.items():
                         for item in extraction.get(category, []):
                             content = item.get("content", "").strip()
                             if not content:

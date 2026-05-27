@@ -38,7 +38,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 9  # Exactly 9 migrations
+    assert versions == 10  # Exactly 10 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -47,9 +47,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 9
+    assert len(rows) == 10
     assert rows[0][0] == 1
-    assert rows[-1][0] == 9
+    assert rows[-1][0] == 10
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -213,6 +213,59 @@ def test_migration_8_fts_includes_project_scope(memory_db: sqlite3.Connection):
            WHERE memory_entries_fts MATCH '"my-project"'"""
     ).fetchall()
     assert len(results) == 1
+
+
+def test_migration_10_relabels_insight_to_decision(memory_db: sqlite3.Connection):
+    """With no reflection watermark, extracted 'insight' rows become 'decision'."""
+    from mait_code.tools.memory.migrate import _migrate_10_decision_entry_type
+
+    memory_db.execute(
+        "INSERT INTO memory_entries (content, entry_type, memory_class) "
+        "VALUES (?, 'insight', 'semantic')",
+        ("chose REST over GraphQL",),
+    )
+    memory_db.commit()
+
+    _migrate_10_decision_entry_type(memory_db)
+    memory_db.commit()
+
+    row = memory_db.execute(
+        "SELECT entry_type FROM memory_entries WHERE content = ?",
+        ("chose REST over GraphQL",),
+    ).fetchone()
+    assert row[0] == "decision"
+
+    # The AU trigger keeps the FTS shadow table in sync with the new type.
+    hits = memory_db.execute(
+        "SELECT rowid FROM memory_entries_fts "
+        "WHERE memory_entries_fts MATCH 'entry_type:decision'"
+    ).fetchall()
+    assert len(hits) == 1
+
+
+def test_migration_10_skips_when_reflection_has_run(memory_db: sqlite3.Connection):
+    """If reflection has run, existing 'insight' rows are left untouched."""
+    from mait_code.tools.memory.migrate import _migrate_10_decision_entry_type
+
+    memory_db.execute(
+        "INSERT INTO memory_entries (content, entry_type, memory_class) "
+        "VALUES (?, 'insight', 'semantic')",
+        ("a genuine reflective insight",),
+    )
+    # Simulate a prior reflection run.
+    memory_db.execute(
+        "INSERT INTO reflection_watermark (project, last_reflected_id) VALUES ('', 1)"
+    )
+    memory_db.commit()
+
+    _migrate_10_decision_entry_type(memory_db)
+    memory_db.commit()
+
+    row = memory_db.execute(
+        "SELECT entry_type FROM memory_entries WHERE content = ?",
+        ("a genuine reflective insight",),
+    ).fetchone()
+    assert row[0] == "insight"
 
 
 def test_vec_delete_trigger(memory_db: sqlite3.Connection):

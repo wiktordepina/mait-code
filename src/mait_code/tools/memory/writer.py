@@ -19,6 +19,7 @@ MEMORY_CLASS_MAP: dict[str, str] = {
     "task": "episodic",
     "fact": "semantic",
     "preference": "semantic",
+    "decision": "semantic",
     "insight": "semantic",
     "relationship": "semantic",
 }
@@ -202,8 +203,10 @@ def store_memory(
     Args:
         conn: Database connection (with schema applied).
         content: The memory content to store.
-        entry_type: One of ``fact``, ``preference``, ``event``, ``insight``,
-            ``task``, ``relationship``. Invalid values fall back to ``fact``.
+        entry_type: One of ``fact``, ``preference``, ``decision``, ``event``,
+            ``insight``, ``task``, ``relationship``. ``decision`` is an
+            extracted architectural decision; ``insight`` is reserved for
+            reflection output. Invalid values fall back to ``fact``.
         importance: Importance level 1-10 (clamped).
         scope: Memory scope — ``"global"``, ``"project"``, or ``"branch"``.
         project: Project identifier (e.g. repo basename).
