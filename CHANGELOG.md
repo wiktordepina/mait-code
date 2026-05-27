@@ -10,6 +10,36 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-05-27
+
+**One-liner installer.** Adds `curl … | bash` as the primary install
+path. Closes the master release-infra checklist — every brick (A
+through F) has now shipped.
+
+### Added
+
+- **One-liner installer** (`scripts/bootstrap.sh`). Detects or installs
+  `uv`, clones the repo to `~/.local/share/mait-code/source/`, runs
+  `uv tool install`, and execs `mait-code install` to wire up symlinks,
+  settings, and data directories. Idempotent. Served from
+  `raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh`:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash
+  ```
+
+  Flags: `--embedding-provider`, `--ref` (default: latest `v*` tag),
+  `--dir`, `--no-uv`, `--help`. Pass via `bash -s --` when curl-piping.
+- **`scripts/test-bootstrap.sh`** — Docker-based smoke test against
+  `ubuntu:24.04`. Invoke locally before merging changes to
+  `bootstrap.sh`. Not run by CI in v1.
+
+### Changed
+
+- **README, `docs/setup.md`, and the docs Home page** now lead with
+  the one-liner. The from-source path stays as a secondary
+  alternative for contributors.
+
 ## [0.15.0] — 2026-05-27
 
 **`mait-code` install-lifecycle CLI.** A new top-level binary replaces
@@ -392,7 +422,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.1
 [0.15.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.0
 [0.14.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.1
 [0.14.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.14.0

@@ -15,15 +15,14 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 ## Quick start
 
 ```bash
-# Clone and install dependencies
-git clone https://github.com/wiktordepina/mait-code.git
-cd mait-code
-uv sync
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash
+```
 
-# Deploy to ~/.claude/
-./scripts/install.sh
+This installs `uv` if missing, clones the latest release, runs `uv tool install`, then sets up symlinks, settings, and data directories.
 
-# Personalise your companion
+Then personalise:
+
+```bash
 $EDITOR ~/.claude/mait-code-data/soul_document.md
 $EDITOR ~/.claude/mait-code-data/user_context.md
 
@@ -33,11 +32,11 @@ claude
 
 ### Prerequisites
 
-- [uv](https://docs.astral.sh/uv/) — Python package manager
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
-- Python ≥ 3.13
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI — install separately
+- `uv` is installed automatically by the bootstrap; otherwise grab it from <https://docs.astral.sh/uv/>
+- Python ≥ 3.13 (managed by uv)
 
-See [Setup](setup.md) for the full walkthrough, including verification steps and personalisation tips.
+See [Setup](setup.md) for the full walkthrough, flag reference, and the from-source alternative.
 
 ## Where to go next
 

@@ -19,15 +19,35 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 
 ## Quick Start
 
+One-liner install (recommended):
+
 ```bash
-# Clone and install dependencies
-git clone https://github.com/wiktordepina/mait-code.git
-cd mait-code
-uv sync
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash
+```
 
-# Deploy to ~/.claude/
-./scripts/install.sh
+This installs [uv](https://docs.astral.sh/uv/) if missing, clones the latest release to `~/.local/share/mait-code/source/`, runs `uv tool install`, then runs `mait-code install` to wire up symlinks, settings, and data directories. Idempotent — re-running upgrades in place.
 
+Pass flags after `bash -s --`:
+
+```bash
+# AWS Bedrock embeddings instead of the local default:
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash -s -- --embedding-provider bedrock
+
+# Pin to a specific release:
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash -s -- --ref v0.15.0
+```
+
+Prefer to inspect before running:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh -o /tmp/mait-code-bootstrap.sh
+less /tmp/mait-code-bootstrap.sh   # review
+bash /tmp/mait-code-bootstrap.sh
+```
+
+After the install:
+
+```bash
 # Personalise your companion
 $EDITOR ~/.claude/mait-code-data/soul_document.md
 $EDITOR ~/.claude/mait-code-data/user_context.md
@@ -36,11 +56,22 @@ $EDITOR ~/.claude/mait-code-data/user_context.md
 claude
 ```
 
+### From a local clone
+
+If you're developing mait-code itself, or want a clone in a specific location:
+
+```bash
+git clone https://github.com/wiktordepina/mait-code.git
+cd mait-code
+uv sync
+./scripts/install.sh    # thin shim around `mait-code install`
+```
+
 ### Prerequisites
 
-- [uv](https://docs.astral.sh/uv/) (Python package manager)
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
-- Python >= 3.13
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI — install separately
+- `uv` is installed automatically by the bootstrap; otherwise grab it from <https://docs.astral.sh/uv/>
+- Python ≥ 3.13 (managed by uv)
 
 ## Project Structure
 
