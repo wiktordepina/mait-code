@@ -123,6 +123,13 @@ class TestInstallHappyPath:
         record = read_record()
         assert record.source_dir == str(fake_source.resolve())
 
+    def test_writes_settings_file(self, fake_home: Path, fake_source: Path) -> None:
+        from mait_code.config import read_settings_file
+
+        install(source_dir=fake_source, embedding_provider="bedrock")
+
+        assert read_settings_file()["embedding-provider"] == "bedrock"
+
     def test_rejects_invalid_provider(self, fake_home: Path, fake_source: Path) -> None:
         with pytest.raises(ValueError, match="--embedding-provider must be one of"):
             install(source_dir=fake_source, embedding_provider="invalid")

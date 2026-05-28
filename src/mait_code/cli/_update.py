@@ -2,10 +2,10 @@
 
 Reads the install record to find the source tree, advances it to the
 right ref, runs ``uv tool install --force --reinstall`` against the
-source dir with the recorded embedding extra, then re-runs the symlink
+source dir with the configured embedding extra, then re-runs the symlink
 and settings-merge steps in case the new source ships changes (new
-skills, updated settings.json). Bumps the install record's ``version``
-and ``installed_at``.
+skills, updated settings.json). Bumps the install record's
+``installed_at``.
 
 How the source is advanced depends on its current state, because a
 bootstrap install pins to a release **tag** (detached HEAD) while a
@@ -32,17 +32,13 @@ from typing import Protocol
 
 from mait_code.cli._install import EMBEDDING_PROVIDERS, verify_source
 from mait_code.cli._paths import claude_dir as default_claude_dir
-from mait_code.cli._paths import install_record_path
 from mait_code.cli._record import InstallRecord, read_record, write_record
 from mait_code.cli._settings import (
     merge_settings,
     read_settings_file as read_claude_settings,
     write_settings_file as write_claude_settings,
 )
-from mait_code.config import (
-    read_settings_file as read_mait_settings,
-    write_settings_file as write_mait_settings,
-)
+from mait_code.config import read_settings_file as read_mait_settings
 from mait_code.cli._symlinks import (
     SymlinkResult,
     symlink_agents,
@@ -162,8 +158,9 @@ def update(
 
     Raises:
         ValueError: If the install record's source directory no longer
-            exists, doesn't look like a mait-code clone, or is in
-            detached HEAD with no ``v*`` tag to advance to.
+            exists, doesn't look like a mait-code clone, is in detached
+            HEAD with no ``v*`` tag to advance to, or the settings file
+            has no ``embedding-provider`` (run ``mait-code install``).
     """
     # Lazy resolution so tests can monkeypatch the module attributes.
     if runner is None:
@@ -175,19 +172,18 @@ def update(
     source_dir = Path(record.source_dir)
     verify_source(source_dir)
 
-    # Read the centralised settings file; migrate from install record
-    # if no settings file exists yet (pre-0.19.0 install).
+    # The embedding provider is read from the centralised settings file,
+    # which `mait-code install` writes on every install (0.19.0+). A missing
+    # provider means the install predates centralised settings — fail with a
+    # pointer to `install` rather than silently defaulting, which would drop
+    # the bedrock extra from the reinstall below.
     user_settings = read_mait_settings()
-    if not user_settings:
-        import json
-
-        raw = json.loads(install_record_path().read_text(encoding="utf-8"))
-        provider = raw.get("embedding_provider")
-        if provider and provider in EMBEDDING_PROVIDERS:
-            user_settings = {"embedding-provider": provider}
-            write_mait_settings(user_settings)
-
-    embedding_provider = user_settings.get("embedding-provider", "local")
+    embedding_provider = user_settings.get("embedding-provider")
+    if embedding_provider is None:
+        raise ValueError(
+            "no embedding-provider in the mait-code settings file; "
+            "run `mait-code install` to create it."
+        )
     if embedding_provider not in EMBEDDING_PROVIDERS:
         raise ValueError(
             f"embedding-provider is {embedding_provider!r}; "
