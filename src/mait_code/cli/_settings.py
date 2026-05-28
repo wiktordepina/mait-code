@@ -44,24 +44,26 @@ def merge_settings(
     source: dict[str, Any],
     dest: dict[str, Any],
     *,
-    embedding_provider: str,
+    user_settings: dict[str, str],
 ) -> dict[str, Any]:
     """Merge mait-code's settings into a user's existing settings.
 
     Returns a new dict; does not mutate either input. The merge replaces
     mait-code-owned hook entries and MCP servers with the source's
-    versions, then sets ``env.MAIT_CODE_EMBEDDING_PROVIDER`` to the
-    configured provider. Other user keys are preserved verbatim.
+    versions, then propagates all user settings as ``MAIT_CODE_*``
+    environment variables. Other user keys are preserved verbatim.
 
     Args:
         source: The ``config/settings.json`` shipped in the source tree.
         dest: The user's existing ``~/.claude/settings.json`` content
             (or ``{}`` if the file didn't exist).
-        embedding_provider: Either ``"local"`` or ``"bedrock"``.
+        user_settings: Flat ``{key: value}`` from the settings file.
 
     Returns:
         The merged settings dict ready to write back.
     """
+    from mait_code.config import SETTINGS
+
     merged: dict[str, Any] = {k: v for k, v in dest.items()}
 
     src_hooks = source.get("hooks", {}) or {}
@@ -79,7 +81,9 @@ def merge_settings(
         merged["mcpServers"] = merged_servers
 
     env: dict[str, Any] = dict(merged.get("env", {}) or {})
-    env["MAIT_CODE_EMBEDDING_PROVIDER"] = embedding_provider
+    for setting in SETTINGS:
+        if setting.key in user_settings:
+            env[setting.env] = user_settings[setting.key]
     merged["env"] = env
 
     return merged
@@ -125,7 +129,9 @@ def unmerge_settings(settings: dict[str, Any]) -> dict[str, Any]:
         cleaned.pop("mcpServers", None)
 
     env = dict(cleaned.get("env", {}) or {})
-    env.pop("MAIT_CODE_EMBEDDING_PROVIDER", None)
+    for key in list(env):
+        if isinstance(key, str) and key.startswith("MAIT_CODE_"):
+            del env[key]
     if env:
         cleaned["env"] = env
     else:

@@ -71,8 +71,9 @@ mait-code install --from "$PWD" --embedding-provider local
 5. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file to `CLAUDE.md.backup`).
 6. Symlinks every `skills/*` directory into `~/.claude/skills/`.
 7. Symlinks any `agents/*` files into `~/.claude/agents/`.
-8. Merges hook registrations and the `MAIT_CODE_EMBEDDING_PROVIDER` env entry into `~/.claude/settings.json` (preserving any pre-existing keys).
-9. Writes the install record at `~/.local/share/mait-code/install.json`.
+8. Writes the centralised settings file at `$XDG_CONFIG_HOME/mait-code/settings.toml` with all configuration values (including the chosen embedding provider).
+9. Propagates settings as `MAIT_CODE_*` env vars and merges hook registrations into `~/.claude/settings.json` (preserving any pre-existing keys).
+10. Writes the install record at `~/.local/share/mait-code/install.json`.
 
 ## Lifecycle
 

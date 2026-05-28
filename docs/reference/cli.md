@@ -11,9 +11,19 @@
 
 ::: mait_code.cli.install_record_path
 
+::: mait_code.cli.mait_code_config_dir
+
+::: mait_code.cli.mait_code_log_dir
+
 ::: mait_code.cli.mait_code_state_dir
 
+::: mait_code.cli.settings_path
+
+::: mait_code.cli.xdg_config_home
+
 ::: mait_code.cli.xdg_data_home
+
+::: mait_code.cli.xdg_state_home
 
 ## Install record
 

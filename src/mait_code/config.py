@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,6 +26,10 @@ __all__ = [
     "Setting",
     "SETTINGS",
     "resolve",
+    "get",
+    # Settings file I/O
+    "read_settings_file",
+    "write_settings_file",
     # Resolvers
     "data_dir",
     # Settings view
@@ -91,7 +97,7 @@ SETTINGS: tuple[Setting, ...] = (
     Setting(
         "log-file",
         "MAIT_CODE_LOG_FILE",
-        "<data-dir>/logs/mait-code.log",
+        "<state-dir>/mait-code.log",
         help="Override the log file path.",
     ),
     Setting(
@@ -124,17 +130,47 @@ SETTINGS: tuple[Setting, ...] = (
 )
 
 
-def resolve(setting: Setting) -> tuple[str, str]:
-    """Return ``(value, source)`` for display.
+_settings_cache: dict[str, str] | None = None
 
-    ``source`` is ``"env"`` when the variable is set to a non-empty value,
-    otherwise ``"default"``. This *reports* configuration; it does not
-    validate it — that is ``doctor``'s job.
+
+def _load_settings() -> dict[str, str]:
+    """Return the cached settings-file contents, loading on first call."""
+    global _settings_cache
+    if _settings_cache is None:
+        _settings_cache = read_settings_file()
+    return _settings_cache
+
+
+def resolve(setting: Setting) -> tuple[str, str]:
+    """Return ``(value, source)`` for a setting.
+
+    Resolution order (highest priority wins):
+
+    1. **Environment variable** — ``source = "env"``
+    2. **Settings file** — ``source = "settings"``
+    3. **Hardcoded default** — ``source = "default"``
+
+    This *reports* configuration; it does not validate it — that is
+    ``doctor``'s job.
     """
     raw = os.environ.get(setting.env)
     if raw is not None and raw.strip() != "":
         return raw, "env"
+    file_values = _load_settings()
+    if setting.key in file_values:
+        return file_values[setting.key], "settings"
     return setting.default, "default"
+
+
+def get(key: str) -> str:
+    """Return the resolved value for a setting by its kebab-case key.
+
+    Convenience wrapper around :func:`resolve` that discards the source.
+
+    Raises:
+        KeyError: If *key* is not a registered setting.
+    """
+    return resolve(_by_key()[key])[0]
 
 
 def data_dir() -> Path:
@@ -151,6 +187,105 @@ def data_dir() -> Path:
 
 
 # ---------------------------------------------------------------------------
+# Settings file I/O (TOML)
+# ---------------------------------------------------------------------------
+
+_SETTINGS_BY_KEY: dict[str, Setting] = {}
+
+
+def _by_key() -> dict[str, Setting]:
+    """Lazy-init lookup from kebab-case key to Setting."""
+    if not _SETTINGS_BY_KEY:
+        _SETTINGS_BY_KEY.update({s.key: s for s in SETTINGS})
+    return _SETTINGS_BY_KEY
+
+
+def read_settings_file(path: Path | None = None) -> dict[str, str]:
+    """Read the settings TOML file.
+
+    Args:
+        path: Override the settings file path (defaults to
+            :func:`~mait_code.cli._paths.settings_path`).
+
+    Returns:
+        A flat ``{key: value}`` dict with kebab-case keys and string
+        values. Returns ``{}`` if the file is missing or malformed.
+    """
+    if path is None:
+        from mait_code.cli._paths import settings_path
+
+        path = settings_path()
+    if not path.exists():
+        return {}
+    try:
+        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {k: str(v) for k, v in raw.items() if isinstance(v, str)}
+
+
+def _render_settings_toml(values: dict[str, str]) -> str:
+    """Generate a commented TOML string with all settings.
+
+    Every registered setting appears with its ``help`` text as a comment.
+    Settings whose default is a placeholder (contains ``<``) are
+    commented out unless an explicit value is provided.
+    """
+    lines = [
+        "# mait-code settings",
+        "# Written by mait-code install/update. Safe to edit by hand.",
+        "# Environment variables (MAIT_CODE_*) override these values when set.",
+        "",
+    ]
+    for setting in SETTINGS:
+        lines.append(f"# {setting.help}")
+        has_value = setting.key in values
+        value = values.get(setting.key, setting.default)
+        is_placeholder = "<" in setting.default and not has_value
+        if is_placeholder:
+            lines.append(f'# {setting.key} = "{value}"')
+        else:
+            lines.append(f'{setting.key} = "{value}"')
+        lines.append("")
+    return "\n".join(lines)
+
+
+def write_settings_file(values: dict[str, str], *, path: Path | None = None) -> Path:
+    """Write the settings TOML file atomically.
+
+    Generates a fully commented TOML with all registered settings.
+    Values not in *values* are written with their defaults.
+
+    Args:
+        values: Setting values to write (kebab-case keys).
+        path: Override the settings file path (defaults to
+            :func:`~mait_code.cli._paths.settings_path`).
+
+    Returns:
+        The path the file was written to.
+    """
+    if path is None:
+        from mait_code.cli._paths import settings_path
+
+        path = settings_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = _render_settings_toml(values)
+    fd, tmp = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=str(path.parent)
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(content)
+        os.replace(tmp, path)
+    except Exception:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+    return path
+
+
+# ---------------------------------------------------------------------------
 # Settings view — read-only snapshot for `mait-code settings`.
 # ---------------------------------------------------------------------------
 
@@ -161,7 +296,7 @@ class ResolvedSetting:
 
     key: str
     value: str
-    source: str  # "env" or "default"
+    source: str  # "env", "settings", or "default"
     requires_migration: bool
 
 
@@ -180,24 +315,27 @@ def _mask(value: str) -> str:
     return "…" + value[-4:]
 
 
-def collect_settings(recorded_provider: str | None = None) -> SettingsSnapshot:
+def collect_settings() -> SettingsSnapshot:
     """Resolve every setting for display, and flag embedding-provider drift.
 
-    Args:
-        recorded_provider: The embedding provider stored in the install
-            record, if any. When it disagrees with the active provider the
-            snapshot carries a drift warning — memories embedded with one
-            provider can't be searched with another.
+    Drift is detected when the env var overrides the settings file value
+    for ``embedding-provider`` — this means the runtime provider differs
+    from what was configured, and memories may need re-embedding.
 
     Returns:
         A read-only :class:`SettingsSnapshot`.
     """
     rows: list[ResolvedSetting] = []
-    active_provider: str | None = None
+    env_provider: str | None = None
+    file_provider: str | None = None
     for setting in SETTINGS:
         value, source = resolve(setting)
         if setting.key == "embedding-provider":
-            active_provider = value
+            raw_env = os.environ.get(setting.env)
+            if raw_env and raw_env.strip():
+                env_provider = raw_env
+            file_values = _load_settings()
+            file_provider = file_values.get(setting.key)
         if setting.secret and source == "env":
             value = _mask(value)
         rows.append(
@@ -205,11 +343,11 @@ def collect_settings(recorded_provider: str | None = None) -> SettingsSnapshot:
         )
 
     drift: str | None = None
-    if recorded_provider and active_provider and recorded_provider != active_provider:
+    if env_provider and file_provider and env_provider != file_provider:
         drift = (
-            f"active embedding-provider is '{active_provider}', but memories "
-            f"were embedded with '{recorded_provider}' — run "
-            f"mc-tool-memory reindex to re-embed"
+            f"env var overrides embedding-provider to '{env_provider}', "
+            f"but settings file says '{file_provider}' — run "
+            f"mc-tool-memory reindex to re-embed if intentional"
         )
     return SettingsSnapshot(settings=tuple(rows), drift=drift)
 
@@ -244,9 +382,18 @@ def render(snapshot: SettingsSnapshot) -> None:
 
     from mait_code.console import console
 
+    from mait_code.cli._paths import settings_path
+
     header = Text("mait-code settings", style="accent")
     header.append("   (read-only)", style="muted")
     console.print(header)
+    sp = settings_path()
+    sp_display = str(sp).replace(str(Path.home()), "~")
+    file_line = Text("settings file: ", style="muted")
+    file_line.append(sp_display, style="")
+    if not sp.exists():
+        file_line.append("  (not found)", style="warn")
+    console.print(file_line)
     console.rule(style="muted")
 
     table = Table(box=None, pad_edge=False, header_style="muted")
@@ -254,8 +401,18 @@ def render(snapshot: SettingsSnapshot) -> None:
     table.add_column("VALUE")
     table.add_column("SOURCE", no_wrap=True)
     for row in snapshot.settings:
-        value = Text(row.value, style="muted" if row.source == "default" else "")
-        source = Text(row.source, style="warn" if row.source == "env" else "muted")
+        if row.source == "default":
+            value_style = "muted"
+        else:
+            value_style = ""
+        value = Text(row.value, style=value_style)
+        if row.source == "env":
+            source_style = "warn"
+        elif row.source == "settings":
+            source_style = ""
+        else:
+            source_style = "muted"
+        source = Text(row.source, style=source_style)
         if row.requires_migration:
             source.append("  ⚠", style="warn")
         table.add_row(row.key, value, source)

@@ -15,7 +15,6 @@ interfere with hook JSON output or tool results.
 
 import functools
 import logging
-import os
 import sys
 import time
 from collections.abc import Callable
@@ -23,7 +22,8 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
 
-from mait_code.config import DEFAULT_LOG_LEVEL, data_dir
+from mait_code.cli._paths import mait_code_log_dir
+from mait_code.config import get as config_get
 
 __all__ = [
     "log_invocation",
@@ -40,11 +40,11 @@ _setup_done = False
 
 def _get_log_path() -> Path:
     """Return the log file path, creating the directory if needed."""
-    override = os.environ.get("MAIT_CODE_LOG_FILE")
-    if override:
-        path = Path(override)
+    value = config_get("log-file")
+    if "<" not in value:
+        path = Path(value)
     else:
-        path = data_dir() / "logs" / "mait-code.log"
+        path = mait_code_log_dir() / "mait-code.log"
 
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -60,7 +60,7 @@ def setup_logging() -> None:
         return
     _setup_done = True
 
-    level_name = os.environ.get("MAIT_CODE_LOG_LEVEL", DEFAULT_LOG_LEVEL).upper()
+    level_name = config_get("log-level").upper()
     level = getattr(logging, level_name, logging.INFO)
 
     log_path = _get_log_path()

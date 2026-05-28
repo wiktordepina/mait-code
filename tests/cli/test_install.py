@@ -122,7 +122,6 @@ class TestInstallHappyPath:
         install(source_dir=fake_source, embedding_provider="local")
         record = read_record()
         assert record.source_dir == str(fake_source.resolve())
-        assert record.embedding_provider == "local"
 
     def test_rejects_invalid_provider(self, fake_home: Path, fake_source: Path) -> None:
         with pytest.raises(ValueError, match="--embedding-provider must be one of"):
@@ -228,7 +227,7 @@ class TestSettingsHelpers:
     def test_merge_preserves_user_keys(self) -> None:
         src = {"hooks": {"X": [{"hooks": [{"command": "mc-hook-x"}]}]}}
         dst = {"theme": "dark"}
-        result = merge_settings(src, dst, embedding_provider="local")
+        result = merge_settings(src, dst, user_settings={"embedding-provider": "local"})
         assert result["theme"] == "dark"
         assert "X" in result["hooks"]
         assert result["env"]["MAIT_CODE_EMBEDDING_PROVIDER"] == "local"

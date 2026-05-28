@@ -10,6 +10,62 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-05-28
+
+**Centralised settings file and XDG-compliant directory layout.**
+
+### Added
+
+- **Centralised settings file at `$XDG_CONFIG_HOME/mait-code/settings.toml`.**
+  All `MAIT_CODE_*` configuration knobs now resolve through a three-tier
+  chain: environment variable → settings file → hardcoded default. TOML
+  format with comments for human readability; all values written (including
+  defaults) for full transparency. Written by `mait-code install` and
+  `mait-code update`; values propagated into `~/.claude/settings.json` for
+  Claude Code session compatibility.
+
+- **`config.get(key)` convenience function.** Returns the resolved value
+  for a setting by its kebab-case key, without exposing provenance.
+
+- **XDG path helpers:** `xdg_config_home()`, `xdg_state_home()`,
+  `mait_code_config_dir()`, `mait_code_log_dir()`, `settings_path()`.
+
+### Changed
+
+- **Logs default to `$XDG_STATE_HOME/mait-code/`** (typically
+  `~/.local/state/mait-code/`) instead of `~/.claude/mait-code-data/logs/`.
+  The `MAIT_CODE_LOG_FILE` override still works. Old logs are left in place.
+
+- **`mait-code settings` output** now shows a `"settings"` source column
+  for values from the settings file, and displays the settings file path.
+  Drift detection compares the env var against the settings file (the install
+  record is no longer involved).
+
+- **`merge_settings()` propagates all settings**, not just
+  `embedding_provider`. Its signature changes from
+  `embedding_provider: str` to `user_settings: dict[str, str]`.
+
+- **`unmerge_settings()` strips all `MAIT_CODE_*` env vars**, not just
+  the embedding provider.
+
+- **Runtime consumers** (`logging.py`, `embeddings.py`) use
+  `config.get()` / `config.resolve()` instead of direct `os.environ` reads,
+  so they benefit from the settings file in all contexts.
+
+### Removed
+
+- **`embedding_provider` and `version` fields from the install record.**
+  Configuration now lives in the settings file; the installed package
+  version (`mait_code.__version__`) is the canonical version source.
+  Old records with these fields still parse correctly; `mait-code update`
+  migrates the embedding provider value on first run.
+
+### Fixed
+
+- **`mait-code settings` reported `local` instead of `bedrock` outside
+  Claude Code sessions.** The settings file provides the correct value
+  regardless of whether Claude Code's env injection is active.
+
 ## [0.18.0] — 2026-05-27
 
 **Coloured `status` and `doctor`, and a new read-only `settings` command.**

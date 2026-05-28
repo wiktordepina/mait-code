@@ -61,8 +61,13 @@ from mait_code.cli._paths import (
     claude_dir,
     data_dir,
     install_record_path,
+    mait_code_config_dir,
+    mait_code_log_dir,
     mait_code_state_dir,
+    settings_path,
+    xdg_config_home,
     xdg_data_home,
+    xdg_state_home,
 )
 from mait_code.cli._record import (
     SCHEMA_VERSION,
@@ -98,8 +103,13 @@ __all__ = [
     "claude_dir",
     "data_dir",
     "install_record_path",
+    "mait_code_config_dir",
+    "mait_code_log_dir",
     "mait_code_state_dir",
+    "settings_path",
+    "xdg_config_home",
     "xdg_data_home",
+    "xdg_state_home",
     # Install record
     "SCHEMA_VERSION",
     "InstallRecord",
@@ -228,9 +238,10 @@ def install_cmd(
 
 def _render_install_summary(summary: InstallSummary) -> None:
     """Print a short human-readable summary of an install."""
+    import mait_code
+
     record = summary.record
-    typer.echo(f"Installed mait-code {record.version} from {record.source_dir}.")
-    typer.echo(f"  Embedding provider: {record.embedding_provider}")
+    typer.echo(f"Installed mait-code {mait_code.__version__} from {record.source_dir}.")
     if summary.templates_copied:
         typer.echo(f"  Templates copied: {', '.join(summary.templates_copied)}")
     if summary.memory_md_created:
@@ -290,12 +301,14 @@ def update_cmd(
 
 
 def _render_update_summary(summary: UpdateSummary) -> None:
+    import mait_code
+
     record = summary.record
     pieces = []
     if summary.fetched:
         pieces.append("fetched")
     pieces.append(f"now on {summary.landed_on}")
-    pieces.append(f"reinstalled {record.version}")
+    pieces.append(f"reinstalled {mait_code.__version__}")
     typer.echo(f"Updated mait-code: {', '.join(pieces)}.")
     typer.echo(f"  Source: {record.source_dir}")
     typer.echo(
@@ -456,11 +469,7 @@ def settings_cmd(
     ] = False,
 ) -> None:
     """Show the active mait-code configuration (read-only)."""
-    try:
-        recorded_provider = read_record().embedding_provider
-    except RecordError:
-        recorded_provider = None
-    snapshot = _collect_settings(recorded_provider=recorded_provider)
+    snapshot = _collect_settings()
     if as_json:
         typer.echo(_settings_render_json(snapshot))
     else:

@@ -42,19 +42,42 @@ class TestCollect:
         assert by_key["embedding-provider"].source == "env"
         assert by_key["embedding-provider"].value == "bedrock"
 
-    def test_drift_when_active_provider_differs_from_record(
+    def test_drift_when_env_overrides_settings_file(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setattr(config, "_settings_cache", {"embedding-provider": "local"})
         monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
-        snap = collect_settings(recorded_provider="local")
+        snap = collect_settings()
         assert snap.drift is not None
         assert "bedrock" in snap.drift and "local" in snap.drift
 
-    def test_no_drift_when_provider_matches_record(
+    def test_no_drift_when_env_matches_settings_file(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _clear_env(monkeypatch)  # provider falls back to 'local'
-        assert collect_settings(recorded_provider="local").drift is None
+        monkeypatch.setattr(
+            config, "_settings_cache", {"embedding-provider": "bedrock"}
+        )
+        monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
+        assert collect_settings().drift is None
+
+    def test_no_drift_when_no_env_override(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _clear_env(monkeypatch)
+        monkeypatch.setattr(
+            config, "_settings_cache", {"embedding-provider": "bedrock"}
+        )
+        assert collect_settings().drift is None
+
+    def test_settings_source_shown(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _clear_env(monkeypatch)
+        monkeypatch.setattr(
+            config, "_settings_cache", {"embedding-provider": "bedrock"}
+        )
+        snap = collect_settings()
+        by_key = {r.key: r for r in snap.settings}
+        assert by_key["embedding-provider"].source == "settings"
+        assert by_key["embedding-provider"].value == "bedrock"
 
     def test_secret_value_is_masked(self, monkeypatch: pytest.MonkeyPatch) -> None:
         secret = Setting("token", "MAIT_CODE_FAKE_TOKEN", "", secret=True)
@@ -81,11 +104,12 @@ class TestRender:
     def test_text_shows_drift_when_present(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setattr(config, "_settings_cache", {"embedding-provider": "local"})
         monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
         with console.capture() as cap:
-            settings_render(collect_settings(recorded_provider="local"))
+            settings_render(collect_settings())
         out = cap.get()
-        assert "mc-tool-memory reindex" in out  # the actionable fix
+        assert "mc-tool-memory reindex" in out
         assert "bedrock" in out and "local" in out
 
     def test_json_shape(self, monkeypatch: pytest.MonkeyPatch) -> None:

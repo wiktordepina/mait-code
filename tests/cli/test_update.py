@@ -158,7 +158,6 @@ class TestUpdateReinstall:
 
         after = read_record()
         assert after.installed_at >= before.installed_at
-        assert after.embedding_provider == before.embedding_provider
 
     def test_refreshes_symlinks(self, fake_home: Path, fake_source: Path) -> None:
         _install_first(fake_source)

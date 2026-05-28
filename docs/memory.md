@@ -103,23 +103,25 @@ Every entry gets a vector embedding stored in a `vec0` virtual table for semanti
 
 #### Embedding providers
 
-Two providers are supported, configured via the `MAIT_CODE_EMBEDDING_PROVIDER` environment variable:
+Two providers are supported, configured via the `embedding-provider` setting in `$XDG_CONFIG_HOME/mait-code/settings.toml`:
 
 | Provider | Value | Model | Dimensions | Use case |
 |----------|-------|-------|-----------|----------|
 | **Local** (default) | `local` | `nomic-ai/nomic-embed-text-v1.5` via fastembed | 768 | Personal use — runs locally via ONNX Runtime |
 | **AWS Bedrock** | `bedrock` | `amazon.titan-embed-text-v2:0` (default) | 1024 | Corporate environments where HuggingFace is blocked |
 
-**Configuration (environment variables):**
+**Configuration:**
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | `local` (fastembed) or `bedrock` |
-| `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local provider |
-| `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock |
-| `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Bedrock model ID |
+All embedding settings live in `~/.config/mait-code/settings.toml` (or `$XDG_CONFIG_HOME/mait-code/settings.toml`). The file is written by `mait-code install` and `mait-code update`, and can also be edited by hand. Environment variables (`MAIT_CODE_*`) override settings file values when set.
 
-Set these in `settings.json` under `env` or in your shell environment.
+| Setting key | Env var override | Default | Description |
+|-------------|-----------------|---------|-------------|
+| `embedding-provider` | `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | `local` (fastembed) or `bedrock` |
+| `embedding-model` | `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local provider |
+| `bedrock-region` | `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock |
+| `bedrock-model-id` | `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Bedrock model ID |
+
+Run `mait-code settings` to see the active configuration and where each value comes from.
 
 **Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table. Run `mait-code settings` to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
 
@@ -136,18 +138,12 @@ Set these in `settings.json` under `env` or in your shell environment.
 
 If HuggingFace is blocked on your corporate network, use the Bedrock provider:
 
-1. Install the optional dependency: `uv pip install mait-code[bedrock]`
-2. Set environment variables in `settings.json`:
-   ```json
-   {
-     "env": {
-       "MAIT_CODE_EMBEDDING_PROVIDER": "bedrock",
-       "MAIT_CODE_BEDROCK_REGION": "eu-west-2"
-     }
-   }
-   ```
-3. Ensure AWS credentials are available (e.g. via `aws configure` or IAM role)
-4. If you have existing local embeddings, run `mc-tool-memory reindex` to migrate
+1. Install with the bedrock flag: `mait-code install --from <source> --embedding-provider bedrock`
+   (or re-install if already installed)
+2. Ensure AWS credentials are available (e.g. via `aws configure` or IAM role)
+3. If you have existing local embeddings, run `mc-tool-memory reindex` to migrate
+
+The install command writes `embedding-provider = "bedrock"` to `~/.config/mait-code/settings.toml` and propagates it to `~/.claude/settings.json` automatically.
 
 ### Hybrid search
 

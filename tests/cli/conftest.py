@@ -25,12 +25,20 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redirect HOME / XDG_DATA_HOME / MAIT_CODE_DATA_DIR into ``tmp_path``."""
+    """Redirect HOME / XDG dirs / MAIT_CODE env vars into ``tmp_path``."""
+    import mait_code.config as _config
+
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("XDG_DATA_HOME", str(home / ".local" / "share"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(home / ".config"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(home / ".local" / "state"))
     monkeypatch.delenv("MAIT_CODE_DATA_DIR", raising=False)
+    monkeypatch.delenv("MAIT_CODE_EMBEDDING_PROVIDER", raising=False)
+    monkeypatch.delenv("MAIT_CODE_LOG_LEVEL", raising=False)
+    monkeypatch.delenv("MAIT_CODE_LOG_FILE", raising=False)
+    monkeypatch.setattr(_config, "_settings_cache", None)
     return home
 
 
