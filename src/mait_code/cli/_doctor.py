@@ -99,19 +99,19 @@ def _check_source(source: Path | None) -> Check:
 
 
 def _check_settings(cdir: Path) -> Check:
-    settings_path = cdir / "settings.json"
-    if not settings_path.exists():
-        return Check("settings", "warn", f"{settings_path} does not exist")
+    claude_settings_path = cdir / "settings.json"
+    if not claude_settings_path.exists():
+        return Check("settings", "warn", f"{claude_settings_path} does not exist")
     try:
-        json.loads(settings_path.read_text(encoding="utf-8"))
+        json.loads(claude_settings_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         return Check(
             "settings",
             "fail",
-            f"{settings_path}: {exc}",
+            f"{claude_settings_path}: {exc}",
             fix_hint="repair the JSON syntax in that file",
         )
-    return Check("settings", "ok", f"{settings_path} parses as JSON")
+    return Check("settings", "ok", f"{claude_settings_path} parses as JSON")
 
 
 def _check_mait_settings() -> Check:
@@ -137,11 +137,11 @@ def _check_mait_settings() -> Check:
 
 def _check_hook_commands(cdir: Path) -> Check:
     """Every registered hook with the mait-code prefix should be on PATH."""
-    settings_path = cdir / "settings.json"
-    if not settings_path.exists():
+    claude_settings_path = cdir / "settings.json"
+    if not claude_settings_path.exists():
         return Check("hooks-on-path", "warn", "skipped (no settings.json)")
     try:
-        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        settings = json.loads(claude_settings_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return Check("hooks-on-path", "warn", "skipped (settings.json unparseable)")
     missing: list[str] = []
