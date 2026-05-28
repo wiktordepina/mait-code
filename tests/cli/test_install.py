@@ -227,9 +227,7 @@ class TestSettingsHelpers:
     def test_merge_preserves_user_keys(self) -> None:
         src = {"hooks": {"X": [{"hooks": [{"command": "mc-hook-x"}]}]}}
         dst = {"theme": "dark"}
-        result = merge_settings(
-            src, dst, user_settings={"embedding-provider": "local"}
-        )
+        result = merge_settings(src, dst, user_settings={"embedding-provider": "local"})
         assert result["theme"] == "dark"
         assert "X" in result["hooks"]
         assert result["env"]["MAIT_CODE_EMBEDDING_PROVIDER"] == "local"

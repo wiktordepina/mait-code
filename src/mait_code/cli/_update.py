@@ -181,9 +181,7 @@ def update(
     if not user_settings:
         import json
 
-        raw = json.loads(
-            install_record_path().read_text(encoding="utf-8")
-        )
+        raw = json.loads(install_record_path().read_text(encoding="utf-8"))
         provider = raw.get("embedding_provider")
         if provider and provider in EMBEDDING_PROVIDERS:
             user_settings = {"embedding-provider": provider}

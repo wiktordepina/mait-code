@@ -45,9 +45,7 @@ class TestCollect:
     def test_drift_when_env_overrides_settings_file(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(
-            config, "_settings_cache", {"embedding-provider": "local"}
-        )
+        monkeypatch.setattr(config, "_settings_cache", {"embedding-provider": "local"})
         monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
         snap = collect_settings()
         assert snap.drift is not None
@@ -71,9 +69,7 @@ class TestCollect:
         )
         assert collect_settings().drift is None
 
-    def test_settings_source_shown(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_settings_source_shown(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _clear_env(monkeypatch)
         monkeypatch.setattr(
             config, "_settings_cache", {"embedding-provider": "bedrock"}
@@ -108,9 +104,7 @@ class TestRender:
     def test_text_shows_drift_when_present(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(
-            config, "_settings_cache", {"embedding-provider": "local"}
-        )
+        monkeypatch.setattr(config, "_settings_cache", {"embedding-provider": "local"})
         monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
         with console.capture() as cap:
             settings_render(collect_settings())

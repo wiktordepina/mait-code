@@ -245,16 +245,14 @@ def _render_settings_toml(values: dict[str, str]) -> str:
         value = values.get(setting.key, setting.default)
         is_placeholder = "<" in setting.default and not has_value
         if is_placeholder:
-            lines.append(f"# {setting.key} = \"{value}\"")
+            lines.append(f'# {setting.key} = "{value}"')
         else:
             lines.append(f'{setting.key} = "{value}"')
         lines.append("")
     return "\n".join(lines)
 
 
-def write_settings_file(
-    values: dict[str, str], *, path: Path | None = None
-) -> Path:
+def write_settings_file(values: dict[str, str], *, path: Path | None = None) -> Path:
     """Write the settings TOML file atomically.
 
     Generates a fully commented TOML with all registered settings.
@@ -345,11 +343,7 @@ def collect_settings() -> SettingsSnapshot:
         )
 
     drift: str | None = None
-    if (
-        env_provider
-        and file_provider
-        and env_provider != file_provider
-    ):
+    if env_provider and file_provider and env_provider != file_provider:
         drift = (
             f"env var overrides embedding-provider to '{env_provider}', "
             f"but settings file says '{file_provider}' — run "

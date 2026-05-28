@@ -86,7 +86,9 @@ class TestThreeTierResolution:
         settings_file = tmp_path / "settings.toml"
         settings_file.write_text('embedding-provider = "local"\n')
         monkeypatch.setattr(
-            config, "read_settings_file", lambda path=None: {"embedding-provider": "local"}
+            config,
+            "read_settings_file",
+            lambda path=None: {"embedding-provider": "local"},
         )
         monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
         setting = next(s for s in config.SETTINGS if s.key == "embedding-provider")
