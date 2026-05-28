@@ -1039,6 +1039,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait-code-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait-code-version" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1080,6 +1091,8 @@
       
         
           
+        
+      
         
       
         
@@ -1216,6 +1229,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../llm/" class="md-nav__link">
         
   
@@ -1325,10 +1366,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_7" id="__nav_5_3_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
             
   
   
@@ -1346,8 +1387,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_7">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1533,10 +1574,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
             
   
   
@@ -1554,8 +1595,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_8">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1988,6 +2029,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait-code-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait-code-version" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2060,11 +2112,15 @@ examples, exit codes.</p>
 </tr>
 <tr>
 <td><code>--claude-dir &lt;path&gt;</code></td>
-<td>Override <code>~/.claude</code> (useful for tests and non-default layouts). All subcommands accept it.</td>
+<td>Override <code>~/.claude</code> (useful for tests and non-default layouts). Accepted by install / update / uninstall / status / doctor.</td>
 </tr>
 <tr>
 <td><code>--data-dir &lt;path&gt;</code></td>
-<td>Override <code>~/.claude/mait-code-data</code>. Install / uninstall / status / doctor accept it.</td>
+<td>Override <code>~/.claude/mait-code-data</code>. Accepted by install / uninstall / status / doctor.</td>
+</tr>
+<tr>
+<td><code>--no-color</code></td>
+<td>Disable coloured output. A global flag (<code>mait-code --no-color doctor</code>); colour is also dropped automatically off a TTY and under <code>NO_COLOR</code> / <code>TERM=dumb</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -2075,7 +2131,8 @@ examples, exit codes.</p>
 <ul>
 <li>Created by <code>install</code>.</li>
 <li>Updated by <code>update</code> (version + timestamp).</li>
-<li>Read by <code>update</code>, <code>uninstall</code>, <code>status</code>, <code>doctor</code>.</li>
+<li>Read by <code>update</code>, <code>uninstall</code>, <code>status</code>, <code>doctor</code>, <code>settings</code> (the
+  recorded embedding provider drives <code>settings</code>' drift check).</li>
 <li>Removed by <code>uninstall</code>.</li>
 </ul>
 <p>Schema (<code>schema_version: 1</code>):</p>
@@ -2342,7 +2399,10 @@ state, run <code>mait-code doctor</code> first.</p>
 </span></code></pre></div>
 <p><strong>Description</strong></p>
 <p>Read-only summary of the current install. Always exits <code>0</code> — there's
-no diagnostic intent here, just a report.</p>
+no diagnostic intent here, just a report. The text output is grouped
+into sections under a one-line health badge (<code>healthy</code> / <code>degraded</code> /
+<code>not installed</code>); <code>degraded</code> flags fixable oddities such as an unlinked
+<code>CLAUDE.md</code>, with a git-style hint on how to fix them.</p>
 <p><strong>Flags</strong></p>
 <table>
 <thead>
@@ -2356,7 +2416,7 @@ no diagnostic intent here, just a report.</p>
 <tr>
 <td><code>--json</code></td>
 <td>off</td>
-<td>Emit a machine-readable JSON document instead of human-readable text.</td>
+<td>Emit a machine-readable JSON document instead of human-readable text. The JSON shape is stable and independent of the text grouping.</td>
 </tr>
 <tr>
 <td><code>--data-dir &lt;path&gt;</code></td>
@@ -2374,38 +2434,30 @@ no diagnostic intent here, just a report.</p>
 <table>
 <thead>
 <tr>
-<th>Section</th>
+<th>Group</th>
 <th>Fields</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Install record</td>
-<td><code>version</code>, <code>source_dir</code>, <code>embedding_provider</code>, <code>installed_at</code></td>
+<td>Header</td>
+<td>Version and a health badge: <code>healthy</code>, <code>degraded</code>, or <code>not installed</code>.</td>
 </tr>
 <tr>
-<td>Binary</td>
-<td>Resolved path of the <code>mait-code</code> binary (<code>shutil.which</code>)</td>
+<td>Install</td>
+<td><code>source_dir</code>, the resolved <code>mait-code</code> binary path, install date</td>
 </tr>
 <tr>
-<td>CLAUDE.md</td>
-<td>Symlink presence and target</td>
+<td>Identity</td>
+<td><code>CLAUDE.md</code> symlink status, and presence of <code>soul_document.md</code> / <code>user_context.md</code> / <code>memory/MEMORY.md</code></td>
 </tr>
 <tr>
-<td>Skills</td>
-<td>Count of linked / available</td>
+<td>Components</td>
+<td>Linked / available skills and agents; registered hook events</td>
 </tr>
 <tr>
-<td>Agents</td>
-<td>Count of linked / available</td>
-</tr>
-<tr>
-<td>Hooks</td>
-<td>Names of hook events with at least one registered mait-code handler</td>
-</tr>
-<tr>
-<td>Data dir</td>
-<td>Path, size in MB, presence of <code>soul_document.md</code> / <code>user_context.md</code> / <code>memory/MEMORY.md</code></td>
+<td>Memory</td>
+<td>Embedding provider; data-dir path and humanised size</td>
 </tr>
 </tbody>
 </table>
@@ -2422,7 +2474,10 @@ no diagnostic intent here, just a report.</p>
 <p><strong>Description</strong></p>
 <p>Validate the install. Surfaces silent breakage — broken symlinks,
 unparseable settings, hook commands missing from PATH. Exits <code>1</code> if
-any check reports a <code>fail</code>-level finding, <code>0</code> otherwise.</p>
+any check reports a <code>fail</code>-level finding, <code>0</code> otherwise. Each failing or
+warning check carries the exact command or URL to fix it, and the run
+ends with a one-line pass/fail verdict. The <code>--json</code> output includes a
+<code>fix_hint</code> field per check.</p>
 <p><strong>Flags</strong></p>
 <table>
 <thead>
@@ -2487,8 +2542,8 @@ any check reports a <code>fail</code>-level finding, <code>0</code> otherwise.</
 </tr>
 <tr>
 <td><code>symlinks</code></td>
-<td>ok / fail</td>
-<td>No dangling symlinks under <code>&lt;claude-dir&gt;/skills/</code> or <code>&lt;claude-dir&gt;/agents/</code>. With <code>--fix</code>, removes them.</td>
+<td>ok / warn</td>
+<td>No dangling symlinks under <code>&lt;claude-dir&gt;/skills/</code> or <code>&lt;claude-dir&gt;/agents/</code>. Dangling links are a <strong>warning</strong> (auto-fixable, so they don't fail the run); <code>--fix</code> removes them.</td>
 </tr>
 <tr>
 <td><code>data-dir</code></td>
@@ -2527,9 +2582,73 @@ any check reports a <code>fail</code>-level finding, <code>0</code> otherwise.</
 </tbody>
 </table>
 <hr />
+<h2 id="mait-code-settings"><code>mait-code settings</code><a class="headerlink" href="#mait-code-settings" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mait-code settings [--json]
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Read-only view of the active configuration — every <code>MAIT_CODE_*</code> knob
+the framework reads, with its resolved value and <em>source</em> (<code>env</code> when
+set in the environment or <code>settings.json</code>, otherwise <code>default</code>).
+Modelled on <code>aws configure list</code>. Always exits <code>0</code>: it <em>reports</em>
+configuration, it doesn't validate it (that's <code>doctor</code>'s job).</p>
+<p><strong>Flags</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--json</code></td>
+<td>off</td>
+<td>Emit a machine-readable JSON document instead of text.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Reports</strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SETTING</code></td>
+<td>The knob: <code>data-dir</code>, <code>log-level</code>, <code>log-file</code>, <code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code>, <code>bedrock-region</code>.</td>
+</tr>
+<tr>
+<td><code>VALUE</code></td>
+<td>The resolved value (<code>default</code> values are dimmed).</td>
+</tr>
+<tr>
+<td><code>SOURCE</code></td>
+<td><code>env</code> or <code>default</code>. Migration-sensitive knobs are marked <code>⚠</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Changing a setting</strong></p>
+<p><code>settings</code> never writes. The embedding knobs (<code>⚠</code>) are a deployment
+commitment — changing the provider or model re-embeds your memories. To
+change one, set its env var (in <code>settings.json</code> <code>env</code> or your shell),
+then run <code>mc-tool-memory reindex</code>: it detects the dimension change and
+rebuilds the vector table. If the active embedding provider no longer
+matches the one recorded at install time, <code>settings</code> flags the drift and
+points you at <code>reindex</code>.</p>
+<p><strong>Examples</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mait-code<span class="w"> </span>settings
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>mait-code<span class="w"> </span>settings<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.settings[] | select(.source == &quot;env&quot;)&#39;</span>
+</span></code></pre></div>
+<p><strong>Exit code:</strong> always <code>0</code>.</p>
+<hr />
 <h2 id="mait-code-version"><code>mait-code version</code><a class="headerlink" href="#mait-code-version" title="Permanent link">&para;</a></h2>
 <p><strong>Synopsis</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mait-code version
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>mait-code version
 </span></code></pre></div>
 <p><strong>Description</strong></p>
 <p>Print the installed <code>mait-code</code> package version (from

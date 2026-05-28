@@ -1363,6 +1363,8 @@
       
         
       
+        
+      
     
     
     
@@ -1460,6 +1462,34 @@
     
   
     CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
   
 
     
@@ -1589,10 +1619,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_7" id="__nav_5_3_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
             
   
   
@@ -1610,8 +1640,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_7">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1797,10 +1827,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
             
   
   
@@ -1818,8 +1848,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_8">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2705,7 +2735,7 @@
 <h3 id="vector-search-sqlite-vec">Vector search (sqlite-vec)<a class="headerlink" href="#vector-search-sqlite-vec" title="Permanent link">&para;</a></h3>
 <p>Every entry gets a vector embedding stored in a <code>vec0</code> virtual table for semantic search via cosine distance.</p>
 <h4 id="embedding-providers">Embedding providers<a class="headerlink" href="#embedding-providers" title="Permanent link">&para;</a></h4>
-<p>Two providers are supported, configured via the <code>MAIT_CODE_EMBEDDING_PROVIDER</code> environment variable:</p>
+<p>Two providers are supported, configured via the <code>embedding-provider</code> setting in <code>$XDG_CONFIG_HOME/mait-code/settings.toml</code>:</p>
 <table>
 <thead>
 <tr>
@@ -2733,40 +2763,46 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Configuration (environment variables):</strong></p>
+<p><strong>Configuration:</strong></p>
+<p>All embedding settings live in <code>~/.config/mait-code/settings.toml</code> (or <code>$XDG_CONFIG_HOME/mait-code/settings.toml</code>). The file is written by <code>mait-code install</code> and <code>mait-code update</code>, and can also be edited by hand. Environment variables (<code>MAIT_CODE_*</code>) override settings file values when set.</p>
 <table>
 <thead>
 <tr>
-<th>Variable</th>
+<th>Setting key</th>
+<th>Env var override</th>
 <th>Default</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td><code>embedding-provider</code></td>
 <td><code>MAIT_CODE_EMBEDDING_PROVIDER</code></td>
 <td><code>local</code></td>
 <td><code>local</code> (fastembed) or <code>bedrock</code></td>
 </tr>
 <tr>
+<td><code>embedding-model</code></td>
 <td><code>MAIT_CODE_EMBEDDING_MODEL</code></td>
 <td><code>nomic-ai/nomic-embed-text-v1.5</code></td>
 <td>Model for local provider</td>
 </tr>
 <tr>
+<td><code>bedrock-region</code></td>
 <td><code>MAIT_CODE_BEDROCK_REGION</code></td>
 <td><code>eu-west-2</code></td>
 <td>AWS region for Bedrock</td>
 </tr>
 <tr>
+<td><code>bedrock-model-id</code></td>
 <td><code>MAIT_CODE_BEDROCK_MODEL_ID</code></td>
 <td><code>amazon.titan-embed-text-v2:0</code></td>
 <td>Bedrock model ID</td>
 </tr>
 </tbody>
 </table>
-<p>Set these in <code>settings.json</code> under <code>env</code> or in your shell environment.</p>
-<p><strong>Important:</strong> The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a <code>mc-tool-memory reindex</code> which detects the dimension mismatch and recreates the vec table.</p>
+<p>Run <code>mait-code settings</code> to see the active configuration and where each value comes from.</p>
+<p><strong>Important:</strong> The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a <code>mc-tool-memory reindex</code> which detects the dimension mismatch and recreates the vec table. Run <code>mait-code settings</code> to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at <code>reindex</code>.</p>
 <h4 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h4>
 <ul>
 <li><strong>On store:</strong> the content is embedded and the vector is stored in a <code>vec0</code> virtual table alongside the entry. For the local provider, content is prefixed with <code>"search_document: "</code> (nomic-embed requires this); Bedrock providers receive raw text.</li>
@@ -2779,18 +2815,12 @@
 <h4 id="corporate-setup-bedrock">Corporate setup (Bedrock)<a class="headerlink" href="#corporate-setup-bedrock" title="Permanent link">&para;</a></h4>
 <p>If HuggingFace is blocked on your corporate network, use the Bedrock provider:</p>
 <ol>
-<li>Install the optional dependency: <code>uv pip install mait-code[bedrock]</code></li>
-<li>Set environment variables in <code>settings.json</code>:
-   <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;env&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;MAIT_CODE_EMBEDDING_PROVIDER&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bedrock&quot;</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">&quot;MAIT_CODE_BEDROCK_REGION&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eu-west-2&quot;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
-</span></code></pre></div></li>
+<li>Install with the bedrock flag: <code>mait-code install --from &lt;source&gt; --embedding-provider bedrock</code>
+   (or re-install if already installed)</li>
 <li>Ensure AWS credentials are available (e.g. via <code>aws configure</code> or IAM role)</li>
 <li>If you have existing local embeddings, run <code>mc-tool-memory reindex</code> to migrate</li>
 </ol>
+<p>The install command writes <code>embedding-provider = "bedrock"</code> to <code>~/.config/mait-code/settings.toml</code> and propagates it to <code>~/.claude/settings.json</code> automatically.</p>
 <h3 id="hybrid-search">Hybrid search<a class="headerlink" href="#hybrid-search" title="Permanent link">&para;</a></h3>
 <p>The default search mode (<code>hybrid</code>) runs both FTS5 and vector search, then merges:</p>
 <ul>
@@ -2810,7 +2840,7 @@
 <p>Relationships between entities are typed (<code>uses</code>, <code>owns</code>, <code>contributes_to</code>, <code>depends_on</code>, <code>manages</code>, <code>related_to</code>) with a free-text context field explaining the connection.</p>
 <h2 id="scoring-how-results-are-ranked">Scoring: How Results Are Ranked<a class="headerlink" href="#scoring-how-results-are-ranked" title="Permanent link">&para;</a></h2>
 <p>Search results are ranked by a composite score:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 </span></code></pre></div>
 <h3 id="recency">Recency<a class="headerlink" href="#recency" title="Permanent link">&para;</a></h3>
 <p>Exponential decay based on memory class:</p>
@@ -2895,11 +2925,11 @@
 <li><strong>Batching:</strong> Processes entries in configurable batches (default 50), oldest first</li>
 </ul>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/reflect                                    # Standard reflection
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/reflect                                    # Standard reflection
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 </span></code></pre></div>
 <h3 id="how-it-works_1">How it works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
 <ol>

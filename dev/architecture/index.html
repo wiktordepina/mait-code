@@ -1278,6 +1278,8 @@
       
         
       
+        
+      
     
     
     
@@ -1375,6 +1377,34 @@
     
   
     CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
   
 
     
@@ -1504,10 +1534,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_7" id="__nav_5_3_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
             
   
   
@@ -1525,8 +1555,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_7">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1712,10 +1742,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
             
   
   
@@ -1733,8 +1763,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_8">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3115,6 +3145,11 @@
 </thead>
 <tbody>
 <tr>
+<td><code>MAIT_CODE_DATA_DIR</code></td>
+<td><code>~/.claude/mait-code-data</code></td>
+<td>Data directory (memories, logs, personalised files)</td>
+</tr>
+<tr>
 <td><code>MAIT_CODE_LOG_LEVEL</code></td>
 <td><code>INFO</code></td>
 <td><code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>, <code>ERROR</code></td>
@@ -3146,6 +3181,7 @@
 </tr>
 </tbody>
 </table>
+<p>These knobs are defined once in <code>src/mait_code/config.py</code>; <code>mait-code settings</code> prints their resolved values and whether each came from the environment or the default.</p>
 <p><strong>Features:</strong></p>
 <ul>
 <li><code>setup_logging()</code> — call once per entry point; idempotent, configures the <code>mait_code</code> logger hierarchy</li>
