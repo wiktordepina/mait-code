@@ -109,13 +109,18 @@ class TestSetupLogging:
         assert logger.propagate is False
 
     def test_default_log_path(self, tmp_path):
-        data_dir = tmp_path / "mait-data"
-        with patch.dict(os.environ, {"MAIT_CODE_DATA_DIR": str(data_dir)}):
-            # Remove override so default path is used
+        state_dir = tmp_path / "state"
+        with patch.dict(
+            os.environ,
+            {"XDG_STATE_HOME": str(state_dir)},
+        ):
             os.environ.pop("MAIT_CODE_LOG_FILE", None)
+            import mait_code.config as _config
+
+            _config._settings_cache = None
             setup_logging()
 
-        expected = data_dir / "logs" / "mait-code.log"
+        expected = state_dir / "mait-code" / "mait-code.log"
         assert expected.parent.exists()
 
     def test_log_format(self, tmp_path):

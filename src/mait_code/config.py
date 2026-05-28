@@ -97,7 +97,7 @@ SETTINGS: tuple[Setting, ...] = (
     Setting(
         "log-file",
         "MAIT_CODE_LOG_FILE",
-        "<data-dir>/logs/mait-code.log",
+        "<state-dir>/mait-code.log",
         help="Override the log file path.",
     ),
     Setting(

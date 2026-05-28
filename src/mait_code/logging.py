@@ -22,7 +22,8 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
 
-from mait_code.config import data_dir, get as config_get
+from mait_code.cli._paths import mait_code_log_dir
+from mait_code.config import get as config_get
 
 __all__ = [
     "log_invocation",
@@ -43,7 +44,7 @@ def _get_log_path() -> Path:
     if "<" not in value:
         path = Path(value)
     else:
-        path = data_dir() / "logs" / "mait-code.log"
+        path = mait_code_log_dir() / "mait-code.log"
 
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
