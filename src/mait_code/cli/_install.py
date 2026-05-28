@@ -23,9 +23,10 @@ from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._record import InstallRecord, write_record
 from mait_code.cli._settings import (
     merge_settings,
-    read_settings_file,
-    write_settings_file,
+    read_settings_file as read_claude_settings,
+    write_settings_file as write_claude_settings,
 )
+from mait_code.config import write_settings_file as write_mait_settings
 from mait_code.cli._symlinks import (
     SymlinkResult,
     symlink_agents,
@@ -163,16 +164,20 @@ def install(
     skills_result = symlink_skills(source_dir, cdir)
     agents_result = symlink_agents(source_dir, cdir)
 
-    # 7. settings.json merge.
+    # 7. Write centralised settings file.
+    user_settings = {"embedding-provider": embedding_provider}
+    write_mait_settings(user_settings)
+
+    # 8. Propagate settings into ~/.claude/settings.json for Claude Code.
     settings_path = cdir / "settings.json"
-    src_settings = read_settings_file(source_dir / "config" / "settings.json")
-    dst_settings = read_settings_file(settings_path)
+    src_settings = read_claude_settings(source_dir / "config" / "settings.json")
+    dst_settings = read_claude_settings(settings_path)
     merged = merge_settings(
         src_settings,
         dst_settings,
-        embedding_provider=embedding_provider,
+        user_settings=user_settings,
     )
-    write_settings_file(settings_path, merged)
+    write_claude_settings(settings_path, merged)
 
     # 8. Install record.
     record = InstallRecord.new(

@@ -36,8 +36,12 @@ from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._record import InstallRecord, read_record, write_record
 from mait_code.cli._settings import (
     merge_settings,
-    read_settings_file,
-    write_settings_file,
+    read_settings_file as read_claude_settings,
+    write_settings_file as write_claude_settings,
+)
+from mait_code.config import (
+    read_settings_file as read_mait_settings,
+    write_settings_file as write_mait_settings,
 )
 from mait_code.cli._symlinks import (
     SymlinkResult,
@@ -171,9 +175,19 @@ def update(
     source_dir = Path(record.source_dir)
     verify_source(source_dir)
 
-    if record.embedding_provider not in EMBEDDING_PROVIDERS:
+    # Read the centralised settings file; migrate from install record
+    # if no settings file exists yet (pre-0.19.0 install).
+    user_settings = read_mait_settings()
+    if not user_settings and hasattr(record, "embedding_provider"):
+        provider = record.embedding_provider
+        if provider in EMBEDDING_PROVIDERS:
+            user_settings = {"embedding-provider": provider}
+            write_mait_settings(user_settings)
+
+    embedding_provider = user_settings.get("embedding-provider", "local")
+    if embedding_provider not in EMBEDDING_PROVIDERS:
         raise ValueError(
-            f"Install record's embedding_provider is {record.embedding_provider!r}; "
+            f"embedding-provider is {embedding_provider!r}; "
             f"expected one of {EMBEDDING_PROVIDERS}"
         )
 
@@ -189,14 +203,10 @@ def update(
     else:
         branch = _current_branch(capture, source_dir)
         if branch:
-            # On a branch (e.g. local-clone dev install): fast-forward it.
             if not no_pull:
                 runner(["git", "merge", "--ff-only"], cwd=source_dir)
             landed_on = f"branch {branch}"
         else:
-            # Detached HEAD (typical post-bootstrap tag install): move to
-            # the latest release tag rather than attempting a `git pull`,
-            # which can't work without a branch.
             latest = _latest_tag(capture, source_dir)
             if latest is None:
                 raise ValueError(
@@ -207,7 +217,7 @@ def update(
             landed_on = latest
 
     # 2. uv tool install --force --reinstall.
-    extra = "[bedrock]" if record.embedding_provider == "bedrock" else ""
+    extra = "[bedrock]" if embedding_provider == "bedrock" else ""
     runner(
         [
             "uv",
@@ -228,20 +238,20 @@ def update(
     agents_result = symlink_agents(source_dir, cdir)
 
     settings_path = cdir / "settings.json"
-    src_settings = read_settings_file(source_dir / "config" / "settings.json")
-    dst_settings = read_settings_file(settings_path)
+    src_settings = read_claude_settings(source_dir / "config" / "settings.json")
+    dst_settings = read_claude_settings(settings_path)
     merged = merge_settings(
         src_settings,
         dst_settings,
-        embedding_provider=record.embedding_provider,
+        user_settings=user_settings,
     )
-    write_settings_file(settings_path, merged)
+    write_claude_settings(settings_path, merged)
 
     # 4. Bump the install record.
     refreshed = InstallRecord.new(
         source_dir=source_dir,
         version=mait_code.__version__,
-        embedding_provider=record.embedding_provider,
+        embedding_provider=embedding_provider,
     )
     write_record(refreshed)
 

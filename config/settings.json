@@ -1,7 +1,6 @@
 {
   "env": {
-    "MAIT_CODE_LOG_LEVEL": "INFO",
-    "MAIT_CODE_EMBEDDING_PROVIDER": "local"
+    "MAIT_CODE_LOG_LEVEL": "INFO"
   },
   "hooks": {
     "SessionStart": [
