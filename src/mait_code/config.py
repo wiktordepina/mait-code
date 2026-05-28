@@ -26,6 +26,7 @@ __all__ = [
     "Setting",
     "SETTINGS",
     "resolve",
+    "get",
     # Settings file I/O
     "read_settings_file",
     "write_settings_file",
@@ -129,17 +130,47 @@ SETTINGS: tuple[Setting, ...] = (
 )
 
 
-def resolve(setting: Setting) -> tuple[str, str]:
-    """Return ``(value, source)`` for display.
+_settings_cache: dict[str, str] | None = None
 
-    ``source`` is ``"env"`` when the variable is set to a non-empty value,
-    otherwise ``"default"``. This *reports* configuration; it does not
-    validate it — that is ``doctor``'s job.
+
+def _load_settings() -> dict[str, str]:
+    """Return the cached settings-file contents, loading on first call."""
+    global _settings_cache
+    if _settings_cache is None:
+        _settings_cache = read_settings_file()
+    return _settings_cache
+
+
+def resolve(setting: Setting) -> tuple[str, str]:
+    """Return ``(value, source)`` for a setting.
+
+    Resolution order (highest priority wins):
+
+    1. **Environment variable** — ``source = "env"``
+    2. **Settings file** — ``source = "settings"``
+    3. **Hardcoded default** — ``source = "default"``
+
+    This *reports* configuration; it does not validate it — that is
+    ``doctor``'s job.
     """
     raw = os.environ.get(setting.env)
     if raw is not None and raw.strip() != "":
         return raw, "env"
+    file_values = _load_settings()
+    if setting.key in file_values:
+        return file_values[setting.key], "settings"
     return setting.default, "default"
+
+
+def get(key: str) -> str:
+    """Return the resolved value for a setting by its kebab-case key.
+
+    Convenience wrapper around :func:`resolve` that discards the source.
+
+    Raises:
+        KeyError: If *key* is not a registered setting.
+    """
+    return resolve(_by_key()[key])[0]
 
 
 def data_dir() -> Path:
