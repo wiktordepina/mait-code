@@ -11,6 +11,14 @@
 
 ::: mait_code.config.resolve
 
+::: mait_code.config.get
+
+## Settings file I/O
+
+::: mait_code.config.read_settings_file
+
+::: mait_code.config.write_settings_file
+
 ## Resolvers
 
 ::: mait_code.config.data_dir

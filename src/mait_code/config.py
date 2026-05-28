@@ -298,7 +298,7 @@ class ResolvedSetting:
 
     key: str
     value: str
-    source: str  # "env" or "default"
+    source: str  # "env", "settings", or "default"
     requires_migration: bool
 
 
@@ -317,24 +317,27 @@ def _mask(value: str) -> str:
     return "…" + value[-4:]
 
 
-def collect_settings(recorded_provider: str | None = None) -> SettingsSnapshot:
+def collect_settings() -> SettingsSnapshot:
     """Resolve every setting for display, and flag embedding-provider drift.
 
-    Args:
-        recorded_provider: The embedding provider stored in the install
-            record, if any. When it disagrees with the active provider the
-            snapshot carries a drift warning — memories embedded with one
-            provider can't be searched with another.
+    Drift is detected when the env var overrides the settings file value
+    for ``embedding-provider`` — this means the runtime provider differs
+    from what was configured, and memories may need re-embedding.
 
     Returns:
         A read-only :class:`SettingsSnapshot`.
     """
     rows: list[ResolvedSetting] = []
-    active_provider: str | None = None
+    env_provider: str | None = None
+    file_provider: str | None = None
     for setting in SETTINGS:
         value, source = resolve(setting)
         if setting.key == "embedding-provider":
-            active_provider = value
+            raw_env = os.environ.get(setting.env)
+            if raw_env and raw_env.strip():
+                env_provider = raw_env
+            file_values = _load_settings()
+            file_provider = file_values.get(setting.key)
         if setting.secret and source == "env":
             value = _mask(value)
         rows.append(
@@ -342,11 +345,15 @@ def collect_settings(recorded_provider: str | None = None) -> SettingsSnapshot:
         )
 
     drift: str | None = None
-    if recorded_provider and active_provider and recorded_provider != active_provider:
+    if (
+        env_provider
+        and file_provider
+        and env_provider != file_provider
+    ):
         drift = (
-            f"active embedding-provider is '{active_provider}', but memories "
-            f"were embedded with '{recorded_provider}' — run "
-            f"mc-tool-memory reindex to re-embed"
+            f"env var overrides embedding-provider to '{env_provider}', "
+            f"but settings file says '{file_provider}' — run "
+            f"mc-tool-memory reindex to re-embed if intentional"
         )
     return SettingsSnapshot(settings=tuple(rows), drift=drift)
 
@@ -381,9 +388,18 @@ def render(snapshot: SettingsSnapshot) -> None:
 
     from mait_code.console import console
 
+    from mait_code.cli._paths import settings_path
+
     header = Text("mait-code settings", style="accent")
     header.append("   (read-only)", style="muted")
     console.print(header)
+    sp = settings_path()
+    sp_display = str(sp).replace(str(Path.home()), "~")
+    file_line = Text("settings file: ", style="muted")
+    file_line.append(sp_display, style="")
+    if not sp.exists():
+        file_line.append("  (not found)", style="warn")
+    console.print(file_line)
     console.rule(style="muted")
 
     table = Table(box=None, pad_edge=False, header_style="muted")
@@ -391,8 +407,18 @@ def render(snapshot: SettingsSnapshot) -> None:
     table.add_column("VALUE")
     table.add_column("SOURCE", no_wrap=True)
     for row in snapshot.settings:
-        value = Text(row.value, style="muted" if row.source == "default" else "")
-        source = Text(row.source, style="warn" if row.source == "env" else "muted")
+        if row.source == "default":
+            value_style = "muted"
+        else:
+            value_style = ""
+        value = Text(row.value, style=value_style)
+        if row.source == "env":
+            source_style = "warn"
+        elif row.source == "settings":
+            source_style = ""
+        else:
+            source_style = "muted"
+        source = Text(row.source, style=source_style)
         if row.requires_migration:
             source.append("  ⚠", style="warn")
         table.add_row(row.key, value, source)
