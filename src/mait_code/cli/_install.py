@@ -17,7 +17,6 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-import mait_code
 from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._record import InstallRecord, write_record
@@ -179,12 +178,8 @@ def install(
     )
     write_claude_settings(settings_path, merged)
 
-    # 8. Install record.
-    record = InstallRecord.new(
-        source_dir=source_dir,
-        version=mait_code.__version__,
-        embedding_provider=embedding_provider,
-    )
+    # 9. Install record.
+    record = InstallRecord.new(source_dir=source_dir)
     write_record(record)
 
     return InstallSummary(

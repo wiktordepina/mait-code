@@ -30,9 +30,9 @@ import subprocess
 from pathlib import Path
 from typing import Protocol
 
-import mait_code
 from mait_code.cli._install import EMBEDDING_PROVIDERS, verify_source
 from mait_code.cli._paths import claude_dir as default_claude_dir
+from mait_code.cli._paths import install_record_path
 from mait_code.cli._record import InstallRecord, read_record, write_record
 from mait_code.cli._settings import (
     merge_settings,
@@ -178,9 +178,14 @@ def update(
     # Read the centralised settings file; migrate from install record
     # if no settings file exists yet (pre-0.19.0 install).
     user_settings = read_mait_settings()
-    if not user_settings and hasattr(record, "embedding_provider"):
-        provider = record.embedding_provider
-        if provider in EMBEDDING_PROVIDERS:
+    if not user_settings:
+        import json
+
+        raw = json.loads(
+            install_record_path().read_text(encoding="utf-8")
+        )
+        provider = raw.get("embedding_provider")
+        if provider and provider in EMBEDDING_PROVIDERS:
             user_settings = {"embedding-provider": provider}
             write_mait_settings(user_settings)
 
@@ -248,11 +253,7 @@ def update(
     write_claude_settings(settings_path, merged)
 
     # 4. Bump the install record.
-    refreshed = InstallRecord.new(
-        source_dir=source_dir,
-        version=mait_code.__version__,
-        embedding_provider=embedding_provider,
-    )
+    refreshed = InstallRecord.new(source_dir=source_dir)
     write_record(refreshed)
 
     return UpdateSummary(

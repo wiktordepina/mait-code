@@ -17,9 +17,11 @@ from typing import Literal
 
 from rich.text import Text
 
+import mait_code
 from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._record import RecordError, read_record
+from mait_code.config import get as config_get
 from mait_code.console import GLYPH, console
 
 __all__ = [
@@ -119,8 +121,8 @@ def collect_status(
         record = read_record()
         status.record_present = True
         status.source_dir = record.source_dir
-        status.version = record.version
-        status.embedding_provider = record.embedding_provider
+        status.version = mait_code.__version__
+        status.embedding_provider = config_get("embedding-provider")
         status.installed_at = record.installed_at
     except RecordError as exc:
         status.record_error = str(exc)

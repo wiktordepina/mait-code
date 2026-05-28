@@ -122,7 +122,6 @@ class TestInstallHappyPath:
         install(source_dir=fake_source, embedding_provider="local")
         record = read_record()
         assert record.source_dir == str(fake_source.resolve())
-        assert record.embedding_provider == "local"
 
     def test_rejects_invalid_provider(self, fake_home: Path, fake_source: Path) -> None:
         with pytest.raises(ValueError, match="--embedding-provider must be one of"):

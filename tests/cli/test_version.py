@@ -55,28 +55,41 @@ class TestInstallRecord:
     def test_new_stamps_timestamp_and_resolves_source(self, tmp_path: Path) -> None:
         source = tmp_path / "src"
         source.mkdir()
-        record = InstallRecord.new(
-            source_dir=source,
-            version="0.14.1",
-            embedding_provider="local",
-        )
+        record = InstallRecord.new(source_dir=source)
         assert record.source_dir == str(source.resolve())
-        assert record.version == "0.14.1"
-        assert record.embedding_provider == "local"
         assert "T" in record.installed_at  # ISO 8601
         assert record.schema_version == 1
 
     def test_round_trip(self, fake_home: Path) -> None:
         record = InstallRecord(
             source_dir="/some/path",
-            version="0.14.1",
-            embedding_provider="bedrock",
             installed_at="2026-05-27T10:00:00+00:00",
         )
         path = write_record(record)
         assert path.exists()
         loaded = read_record()
         assert loaded == record
+
+    def test_reads_old_record_with_removed_fields(self, fake_home: Path) -> None:
+        """Old install records with version/embedding_provider still parse."""
+        import json
+
+        record_path = install_record_path()
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        record_path.write_text(
+            json.dumps(
+                {
+                    "source_dir": "/old/path",
+                    "version": "0.18.0",
+                    "embedding_provider": "bedrock",
+                    "installed_at": "2026-05-27T10:00:00+00:00",
+                    "schema_version": 1,
+                }
+            )
+        )
+        loaded = read_record()
+        assert loaded.source_dir == "/old/path"
+        assert loaded.installed_at == "2026-05-27T10:00:00+00:00"
 
     def test_read_missing_raises(self, fake_home: Path) -> None:
         try:

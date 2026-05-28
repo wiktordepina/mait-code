@@ -42,8 +42,6 @@ class InstallRecord:
 
     Attributes:
         source_dir: Absolute path to the cloned source tree.
-        version: The ``mait-code`` package version recorded at install time.
-        embedding_provider: ``"local"`` or ``"bedrock"``.
         installed_at: ISO 8601 UTC timestamp of the most recent
             install / update.
         schema_version: Format version of this record. See
@@ -51,8 +49,6 @@ class InstallRecord:
     """
 
     source_dir: str
-    version: str
-    embedding_provider: str
     installed_at: str
     schema_version: int = SCHEMA_VERSION
 
@@ -61,14 +57,10 @@ class InstallRecord:
         cls,
         *,
         source_dir: Path | str,
-        version: str,
-        embedding_provider: str,
     ) -> InstallRecord:
         """Construct a fresh record stamped with the current UTC time."""
         return cls(
             source_dir=str(Path(source_dir).resolve()),
-            version=version,
-            embedding_provider=embedding_provider,
             installed_at=datetime.now(UTC).isoformat(timespec="seconds"),
         )
 
@@ -129,7 +121,7 @@ def read_record(*, path: Path | None = None) -> InstallRecord:
             f"Upgrade `mait-code` (`mait-code update`)."
         )
 
-    required = {"source_dir", "version", "embedding_provider", "installed_at"}
+    required = {"source_dir", "installed_at"}
     missing = required - set(raw)
     if missing:
         raise RecordError(
@@ -138,8 +130,6 @@ def read_record(*, path: Path | None = None) -> InstallRecord:
 
     return InstallRecord(
         source_dir=raw["source_dir"],
-        version=raw["version"],
-        embedding_provider=raw["embedding_provider"],
         installed_at=raw["installed_at"],
         schema_version=schema_version,
     )
