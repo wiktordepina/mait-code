@@ -381,6 +381,21 @@ def _render_uninstall_summary(summary: UninstallSummary) -> None:
         typer.echo(f"  warning: {warning}", err=True)
 
 
+def _require_settings_file() -> None:
+    """Abort with exit code 1 if the centralised settings file is absent.
+
+    From 0.19.0 ``mait-code install`` always writes ``settings.toml``, so its
+    absence means a broken or pre-0.19.0 install. The read-only reporting
+    commands refuse to run rather than present defaults as configured values.
+    """
+    sp = settings_path()
+    if not sp.exists():
+        sp_display = str(sp).replace(str(Path.home()), "~")
+        typer.echo(f"error: settings file not found at {sp_display}", err=True)
+        typer.echo("run `mait-code install` to create it", err=True)
+        raise typer.Exit(code=1)
+
+
 @app.command(name="status")
 def status_cmd(
     as_json: Annotated[
@@ -406,6 +421,7 @@ def status_cmd(
     ] = None,
 ) -> None:
     """Print a read-only summary of the current install."""
+    _require_settings_file()
     status = _status_impl(
         claude_dir=claude_dir_override,
         data_dir=data_dir_override,
@@ -469,6 +485,7 @@ def settings_cmd(
     ] = False,
 ) -> None:
     """Show the active mait-code configuration (read-only)."""
+    _require_settings_file()
     snapshot = _collect_settings()
     if as_json:
         typer.echo(_settings_render_json(snapshot))
