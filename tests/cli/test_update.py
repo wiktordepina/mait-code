@@ -180,6 +180,56 @@ class TestUpdateReinstall:
             update(no_pull=True, runner=git.run, capture=git.capture)
 
 
+class TestUpdateReadsProviderFromSettings:
+    """The embedding provider comes from the centralised settings file that
+    `mait-code install` writes (0.19.0+). Update reads it to pick the
+    reinstall extra, and fails clearly when the file is missing rather than
+    silently defaulting (which would drop the bedrock extra).
+    """
+
+    @staticmethod
+    def _settings_toml(fake_home: Path) -> Path:
+        return fake_home / ".config" / "mait-code" / "settings.toml"
+
+    @staticmethod
+    def _uv_target(git: _FakeGit) -> str:
+        cmd = next(c for c, _ in git.run_calls if c[:3] == ["uv", "tool", "install"])
+        return cmd[3]
+
+    def test_local_provider_omits_bedrock_extra(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source, provider="local")
+        git = _FakeGit(branch="main", tags=[])
+
+        update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert not self._uv_target(git).endswith("[bedrock]")
+
+    def test_bedrock_provider_keeps_extra_across_update(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source, provider="bedrock")
+        git = _FakeGit(branch="main", tags=[])
+
+        update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert self._uv_target(git).endswith("[bedrock]")
+
+    def test_missing_settings_file_raises(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source, provider="bedrock")
+        self._settings_toml(fake_home).unlink()  # simulate a pre-0.19.0 install
+        git = _FakeGit(branch="main", tags=[])
+
+        with pytest.raises(ValueError, match="mait-code install"):
+            update(no_pull=True, runner=git.run, capture=git.capture)
+
+        # Bailed before reinstalling — no chance to drop the bedrock extra.
+        assert not git.ran(["uv", "tool", "install"])
+
+
 class TestUpdateCommand:
     def test_cli_invokes_update(
         self, fake_home: Path, fake_source: Path, monkeypatch
@@ -198,3 +248,16 @@ class TestUpdateCommand:
         result = runner.invoke(app, ["update", "--no-pull"])
         assert result.exit_code == 1
         assert "No install record" in result.output
+
+    def test_cli_missing_settings_exits_1(
+        self, fake_home: Path, fake_source: Path, monkeypatch
+    ) -> None:
+        _install_first(fake_source)
+        (fake_home / ".config" / "mait-code" / "settings.toml").unlink()
+        git = _FakeGit(branch="main", tags=[])
+        monkeypatch.setattr("mait_code.cli._update.default_runner", git.run)
+        monkeypatch.setattr("mait_code.cli._update.default_capture", git.capture)
+
+        result = runner.invoke(app, ["update", "--no-pull"])
+        assert result.exit_code == 1
+        assert "mait-code install" in result.output
