@@ -21,6 +21,8 @@ from typing import Protocol
 from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._paths import install_record_path
+from mait_code.cli._paths import mait_code_config_dir
+from mait_code.cli._paths import settings_path as mait_settings_path
 from mait_code.cli._record import RecordError, read_record
 from mait_code.cli._settings import (
     read_settings_file,
@@ -155,7 +157,15 @@ def uninstall(
         except Exception as exc:  # noqa: BLE001 — uninstall tolerates settings IO failures
             warnings.append(f"could not clean {settings_path}: {exc}")
 
-    # 5. uv tool uninstall.
+    # 5. Remove centralised settings file.
+    toml_path = mait_settings_path()
+    if toml_path.exists():
+        toml_path.unlink()
+        config_dir = mait_code_config_dir()
+        if config_dir.exists() and not any(config_dir.iterdir()):
+            config_dir.rmdir()
+
+    # 6. uv tool uninstall.
     uv_tool_uninstalled = False
     if not keep_uv_tool:
         uv_tool_uninstalled = safe(["uv", "tool", "uninstall", "mait-code"])
