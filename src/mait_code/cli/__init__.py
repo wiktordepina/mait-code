@@ -61,8 +61,13 @@ from mait_code.cli._paths import (
     claude_dir,
     data_dir,
     install_record_path,
+    mait_code_config_dir,
+    mait_code_log_dir,
     mait_code_state_dir,
+    settings_path,
+    xdg_config_home,
     xdg_data_home,
+    xdg_state_home,
 )
 from mait_code.cli._record import (
     SCHEMA_VERSION,
@@ -98,8 +103,13 @@ __all__ = [
     "claude_dir",
     "data_dir",
     "install_record_path",
+    "mait_code_config_dir",
+    "mait_code_log_dir",
     "mait_code_state_dir",
+    "settings_path",
+    "xdg_config_home",
     "xdg_data_home",
+    "xdg_state_home",
     # Install record
     "SCHEMA_VERSION",
     "InstallRecord",
