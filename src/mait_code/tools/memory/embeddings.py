@@ -12,7 +12,6 @@ callers always receive ``None`` instead of exceptions.
 
 import json
 import logging
-import os
 import sqlite3
 import struct
 from abc import ABC, abstractmethod
@@ -21,7 +20,7 @@ from mait_code.config import (
     DEFAULT_BEDROCK_MODEL_ID,
     DEFAULT_BEDROCK_REGION,
     DEFAULT_EMBEDDING_MODEL,
-    DEFAULT_EMBEDDING_PROVIDER,
+    get as config_get,
 )
 from mait_code.tools.memory.db import get_data_dir
 
@@ -65,7 +64,7 @@ class LocalProvider(EmbeddingProvider):
     def __init__(self):
         from fastembed import TextEmbedding
 
-        model = os.environ.get("MAIT_CODE_EMBEDDING_MODEL", self.DEFAULT_MODEL)
+        model = config_get("embedding-model")
         self._model_name = model
         self._dim = self.KNOWN_MODELS.get(model, 768)
         cache_dir = str(get_data_dir() / "models")
@@ -103,8 +102,8 @@ class BedrockProvider(EmbeddingProvider):
 
         import boto3
 
-        model_id = os.environ.get("MAIT_CODE_BEDROCK_MODEL_ID", self.DEFAULT_MODEL)
-        region = os.environ.get("MAIT_CODE_BEDROCK_REGION", self.DEFAULT_REGION)
+        model_id = config_get("bedrock-model-id")
+        region = config_get("bedrock-region")
         self._model_id = model_id
         self._dim = self.KNOWN_MODELS.get(model_id, 1024)
         self._is_titan = "titan" in model_id.lower()
@@ -143,21 +142,17 @@ class BedrockProvider(EmbeddingProvider):
 
 
 def _get_provider_name() -> str:
-    """Return the configured provider name from env (default: ``local``)."""
-    return os.environ.get(
-        "MAIT_CODE_EMBEDDING_PROVIDER", DEFAULT_EMBEDDING_PROVIDER
-    ).lower()
+    """Return the configured provider name (env → settings file → default)."""
+    return config_get("embedding-provider").lower()
 
 
 def _get_embedding_dim() -> int:
     """Return the expected embedding dimension derived from configuration."""
     provider_name = _get_provider_name()
     if provider_name == "bedrock":
-        model_id = os.environ.get(
-            "MAIT_CODE_BEDROCK_MODEL_ID", BedrockProvider.DEFAULT_MODEL
-        )
+        model_id = config_get("bedrock-model-id")
         return BedrockProvider.KNOWN_MODELS.get(model_id, 1024)
-    model = os.environ.get("MAIT_CODE_EMBEDDING_MODEL", LocalProvider.DEFAULT_MODEL)
+    model = config_get("embedding-model")
     return LocalProvider.KNOWN_MODELS.get(model, 768)
 
 
@@ -165,10 +160,8 @@ def _get_embedding_model() -> str:
     """Return the configured embedding model name."""
     provider_name = _get_provider_name()
     if provider_name == "bedrock":
-        return os.environ.get(
-            "MAIT_CODE_BEDROCK_MODEL_ID", BedrockProvider.DEFAULT_MODEL
-        )
-    return os.environ.get("MAIT_CODE_EMBEDDING_MODEL", LocalProvider.DEFAULT_MODEL)
+        return config_get("bedrock-model-id")
+    return config_get("embedding-model")
 
 
 # Module-level "constants" — computed from env vars at import time.
