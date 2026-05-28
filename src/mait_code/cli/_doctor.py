@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
@@ -21,6 +22,7 @@ from rich.text import Text
 from mait_code.cli._install import verify_source
 from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._paths import data_dir as default_data_dir
+from mait_code.cli._paths import settings_path
 from mait_code.cli._record import RecordError, read_record
 from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
 from mait_code.console import GLYPH, console
@@ -110,6 +112,27 @@ def _check_settings(cdir: Path) -> Check:
             fix_hint="repair the JSON syntax in that file",
         )
     return Check("settings", "ok", f"{settings_path} parses as JSON")
+
+
+def _check_mait_settings() -> Check:
+    sp = settings_path()
+    if not sp.exists():
+        return Check(
+            "settings-file",
+            "fail",
+            f"{sp} does not exist",
+            fix_hint="run mait-code install to create it",
+        )
+    try:
+        tomllib.loads(sp.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError) as exc:
+        return Check(
+            "settings-file",
+            "fail",
+            f"{sp}: {exc}",
+            fix_hint="repair the TOML syntax in that file",
+        )
+    return Check("settings-file", "ok", f"{sp} parses as TOML")
 
 
 def _check_hook_commands(cdir: Path) -> Check:
@@ -265,6 +288,7 @@ def run_doctor(
     checks: list[Check] = [
         record_check,
         _check_source(source),
+        _check_mait_settings(),
         _check_settings(cdir),
         _check_hook_commands(cdir),
         _check_symlinks(cdir, fix, fixes),

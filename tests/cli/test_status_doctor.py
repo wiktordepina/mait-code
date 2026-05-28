@@ -7,6 +7,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from mait_code import config
 from mait_code.cli import app
 from mait_code.cli._doctor import (
     render as doctor_render,
@@ -81,9 +82,17 @@ class TestStatus:
 
 class TestStatusCommand:
     def test_cli_no_record(self, fake_home: Path) -> None:
+        # A settings file exists but no install record: status still reports.
+        config.write_settings_file({"embedding-provider": "local"})
         result = runner.invoke(app, ["status"])
-        assert result.exit_code == 0  # status always exits 0
+        assert result.exit_code == 0
         assert "no install record" in result.output.lower()
+
+    def test_cli_aborts_when_settings_file_missing(self, fake_home: Path) -> None:
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 1
+        assert "settings file not found" in result.output.lower()
+        assert "mait-code install" in result.output
 
     def test_cli_json(self, fake_home: Path, fake_source: Path) -> None:
         install(source_dir=fake_source)
@@ -110,8 +119,20 @@ class TestDoctor:
         assert levels["install-record"] == "ok"
         assert levels["source-dir"] == "ok"
         assert levels["settings"] == "ok"
+        assert levels["settings-file"] == "ok"
         assert levels["symlinks"] == "ok"
         assert levels["data-dir"] == "ok"
+
+    def test_missing_settings_file_marks_fail(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        (fake_home / ".config" / "mait-code" / "settings.toml").unlink()
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["settings-file"].level == "fail"
+        assert report.has_fail is True
 
     def test_dangling_symlink_warns_without_fix(
         self, fake_home: Path, fake_source: Path
