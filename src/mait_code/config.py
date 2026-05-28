@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,6 +26,9 @@ __all__ = [
     "Setting",
     "SETTINGS",
     "resolve",
+    # Settings file I/O
+    "read_settings_file",
+    "write_settings_file",
     # Resolvers
     "data_dir",
     # Settings view
@@ -148,6 +153,107 @@ def data_dir() -> Path:
     if override:
         return Path(override)
     return Path.home() / ".claude" / "mait-code-data"
+
+
+# ---------------------------------------------------------------------------
+# Settings file I/O (TOML)
+# ---------------------------------------------------------------------------
+
+_SETTINGS_BY_KEY: dict[str, Setting] = {}
+
+
+def _by_key() -> dict[str, Setting]:
+    """Lazy-init lookup from kebab-case key to Setting."""
+    if not _SETTINGS_BY_KEY:
+        _SETTINGS_BY_KEY.update({s.key: s for s in SETTINGS})
+    return _SETTINGS_BY_KEY
+
+
+def read_settings_file(path: Path | None = None) -> dict[str, str]:
+    """Read the settings TOML file.
+
+    Args:
+        path: Override the settings file path (defaults to
+            :func:`~mait_code.cli._paths.settings_path`).
+
+    Returns:
+        A flat ``{key: value}`` dict with kebab-case keys and string
+        values. Returns ``{}`` if the file is missing or malformed.
+    """
+    if path is None:
+        from mait_code.cli._paths import settings_path
+
+        path = settings_path()
+    if not path.exists():
+        return {}
+    try:
+        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {k: str(v) for k, v in raw.items() if isinstance(v, str)}
+
+
+def _render_settings_toml(values: dict[str, str]) -> str:
+    """Generate a commented TOML string with all settings.
+
+    Every registered setting appears with its ``help`` text as a comment.
+    Settings whose default is a placeholder (contains ``<``) are
+    commented out unless an explicit value is provided.
+    """
+    lines = [
+        "# mait-code settings",
+        "# Written by mait-code install/update. Safe to edit by hand.",
+        "# Environment variables (MAIT_CODE_*) override these values when set.",
+        "",
+    ]
+    for setting in SETTINGS:
+        lines.append(f"# {setting.help}")
+        has_value = setting.key in values
+        value = values.get(setting.key, setting.default)
+        is_placeholder = "<" in setting.default and not has_value
+        if is_placeholder:
+            lines.append(f"# {setting.key} = \"{value}\"")
+        else:
+            lines.append(f'{setting.key} = "{value}"')
+        lines.append("")
+    return "\n".join(lines)
+
+
+def write_settings_file(
+    values: dict[str, str], *, path: Path | None = None
+) -> Path:
+    """Write the settings TOML file atomically.
+
+    Generates a fully commented TOML with all registered settings.
+    Values not in *values* are written with their defaults.
+
+    Args:
+        values: Setting values to write (kebab-case keys).
+        path: Override the settings file path (defaults to
+            :func:`~mait_code.cli._paths.settings_path`).
+
+    Returns:
+        The path the file was written to.
+    """
+    if path is None:
+        from mait_code.cli._paths import settings_path
+
+        path = settings_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = _render_settings_toml(values)
+    fd, tmp = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=str(path.parent)
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(content)
+        os.replace(tmp, path)
+    except Exception:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+    return path
 
 
 # ---------------------------------------------------------------------------
