@@ -26,6 +26,7 @@ Typer command callables themselves are private (their docs live in
 from __future__ import annotations
 
 import importlib.metadata
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -91,10 +92,17 @@ from mait_code.cli._symlinks import (
     symlink_claude_md,
     symlink_skills,
 )
+from mait_code.cli._settings_edit import (
+    ApplyOutcome,
+    SettingError as _SettingError,
+    apply_setting,
+)
 from mait_code.config import (
+    SETTINGS as _SETTINGS,
     collect_settings as _collect_settings,
     render as _settings_render,
     render_json as _settings_render_json,
+    resolve as _resolve_setting,
 )
 from mait_code.console import console
 
@@ -140,6 +148,9 @@ __all__ = [
     "read_settings_file",
     "unmerge_settings",
     "write_settings_file",
+    # Editable settings
+    "ApplyOutcome",
+    "apply_setting",
     # Entry point
     "app",
     "main",
@@ -486,8 +497,34 @@ def doctor_cmd(
         raise typer.Exit(code=1)
 
 
-@app.command(name="settings")
-def settings_cmd(
+settings_app = typer.Typer(
+    help="View and edit mait-code configuration.",
+    no_args_is_help=False,
+)
+app.add_typer(settings_app, name="settings")
+
+
+@settings_app.callback(invoke_without_command=True)
+def settings_root(ctx: typer.Context) -> None:
+    """View and edit mait-code configuration.
+
+    On a terminal this opens the interactive editor; when piped or
+    redirected it falls back to the read-only configuration view (the same
+    output as ``settings list``), so scripts are unaffected.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+    _require_settings_file()
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._settings_editor import run_interactive_editor
+
+        run_interactive_editor()
+    else:
+        _settings_render(_collect_settings())
+
+
+@settings_app.command("list")
+def settings_list(
     as_json: Annotated[
         bool,
         typer.Option(
@@ -503,6 +540,77 @@ def settings_cmd(
         typer.echo(_settings_render_json(snapshot))
     else:
         _settings_render(snapshot)
+
+
+@settings_app.command("get")
+def settings_get(
+    key: str,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Emit the value and source as a JSON document.",
+        ),
+    ] = False,
+) -> None:
+    """Print one resolved setting value and its source (for scripting)."""
+    _require_settings_file()
+    by_key = {s.key: s for s in _SETTINGS}
+    setting = by_key.get(key)
+    if setting is None:
+        typer.echo(f"error: unknown setting {key!r}", err=True)
+        raise typer.Exit(code=1)
+    value, source = _resolve_setting(setting)
+    if as_json:
+        import json
+
+        typer.echo(json.dumps({"key": key, "value": value, "source": source}))
+    else:
+        typer.echo(f"{value}\t({source})")
+
+
+@settings_app.command("set")
+def settings_set(
+    key: str,
+    value: str,
+    reindex: Annotated[
+        bool | None,
+        typer.Option(
+            "--reindex/--no-reindex",
+            help="For a migration key: re-embed memories now, or defer.",
+        ),
+    ] = None,
+    move_data: Annotated[
+        bool | None,
+        typer.Option(
+            "--move-data/--no-move-data",
+            help="For data-dir: relocate existing data, or leave it in place.",
+        ),
+    ] = None,
+) -> None:
+    """Validate and persist a setting, then run any required follow-up."""
+    _require_settings_file()
+    try:
+        outcome = apply_setting(key, value, reindex=reindex, move_data=move_data)
+    except _SettingError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+
+    typer.echo(f"{outcome.key}: {outcome.old_value!r} → {outcome.new_value!r}")
+    for warning in outcome.warnings:
+        typer.echo(f"warning: {warning}", err=True)
+    if outcome.followup == "reindex":
+        typer.echo(
+            "  re-embedded stored memories."
+            if outcome.followup_done
+            else "  deferred re-embed — run `mc-tool-memory reindex` when ready."
+        )
+    elif outcome.followup == "move-data":
+        typer.echo(
+            "  moved existing data to the new location."
+            if outcome.followup_done
+            else "  left existing data at the old location."
+        )
 
 
 def main() -> None:

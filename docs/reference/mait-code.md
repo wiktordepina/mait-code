@@ -345,23 +345,31 @@ mait-code doctor --json | jq '.checks[] | select(.level=="fail")'
 **Synopsis**
 
 ```
-mait-code settings [--json]
+mait-code settings                          # interactive editor (TTY) / list (piped)
+mait-code settings list [--json]            # read-only, provenance-aware view
+mait-code settings get <key> [--json]       # one resolved value + source
+mait-code settings set <key> <value> [flags]
 ```
 
 **Description**
 
-Read-only view of the active configuration — every knob the framework
-reads, with its resolved value and *source*. Modelled on `aws configure
-list`. Always exits `0`: it *reports* configuration, it doesn't validate
-it (that's `doctor`'s job, via the `settings-values` check).
+View and edit the active configuration. Bare `mait-code settings` opens an
+interactive editor when attached to a terminal, and falls back to the
+read-only view (`list`) when piped or redirected, so scripts are
+unaffected. Every write — from `set` or the editor — goes through one
+shared path: validate → persist `settings.toml` → keep `settings.json` in
+step → run the required follow-up.
 
-**Flags**
+### `settings list`
+
+Read-only view of every knob the framework reads, with its resolved value
+and *source*. Modelled on `aws configure list`. Always exits `0`: it
+*reports* configuration, it doesn't validate it (that's `doctor`'s job, via
+the `settings-values` check).
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--json` | off | Emit a machine-readable JSON document instead of text. |
-
-**Reports**
 
 | Column | Meaning |
 |--------|---------|
@@ -372,29 +380,64 @@ it (that's `doctor`'s job, via the `settings-values` check).
 Settings fall into three groups:
 
 - **Primary** — written uncommented in `settings.toml`: `data-dir`, `log-level`, `log-file`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`.
-- **Advanced** — written commented-out (the built-in default applies until you uncomment): `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`, `reflection-batch-size`, `reflection-novelty-gate`, `git-timeout`, and the scoring/dedup tuning knobs `score-weight-recency`, `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`, `half-life-semantic`, `dedup-string-threshold`, `dedup-vector-threshold`, `scope-boost-global`, `scope-boost-cross-project`.
+- **Advanced** — written commented-out (the built-in default applies until you opt in via `set` or by uncommenting): `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`, `reflection-batch-size`, `reflection-novelty-gate`, `git-timeout`, and the scoring/dedup tuning knobs `score-weight-recency`, `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`, `half-life-semantic`, `dedup-string-threshold`, `dedup-vector-threshold`, `scope-boost-global`, `scope-boost-cross-project`.
 - **Derived** (source `derived`, not settable): `embedding-dim`, `memory-db-path`, `tasks-db-path`, `decisions-db-path`, `reminders-db-path`, `model-cache-dir`, `observations-dir`, `project-aliases-path`.
 
 See the [Memory guide](../memory.md) for per-setting defaults and the scoring/dedup tuning ranges.
 
-**Changing a setting**
+### `settings get`
 
-`settings` never writes. The embedding knobs (`⚠`) are a deployment
-commitment — changing the provider or model re-embeds your memories. To
-change one, set its env var (in `settings.json` `env` or your shell),
-then run `mc-tool-memory reindex`: it detects the dimension change and
-rebuilds the vector table. If the active embedding provider no longer
-matches the one recorded at install time, `settings` flags the drift and
-points you at `reindex`.
+Print one resolved value and its source, for scripting. `--json` emits
+`{"key", "value", "source"}`. Exits `1` on an unknown key.
+
+### `settings set`
+
+Validate `<value>` against the same rules `doctor` runs, write it to
+`settings.toml`, then run the required follow-up. Validation reuses each
+setting's own validator (and enum `choices`, e.g. `embedding-provider` ∈
+{`local`, `bedrock`}, `log-level` ∈ {`DEBUG`, `INFO`, `WARNING`,
+`ERROR`}).
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--reindex` / `--no-reindex` | unset | For a migration key: re-embed memories now, or defer. |
+| `--move-data` / `--no-move-data` | unset | For `data-dir`: relocate existing data, or leave it in place. |
+
+Follow-ups by key:
+
+| Key(s) | Follow-up | Flag (required) |
+|--------|-----------|-----------------|
+| `embedding-provider`, `embedding-model`, `bedrock-model-id` | re-embed stored memories (rebuild the vector table) | `--reindex` / `--no-reindex` |
+| `data-dir` | move the existing data directory to the new path | `--move-data` / `--no-move-data` |
+| everything else | none — applies on the next invocation | — |
+
+For migration keys and `data-dir`, omitting the flag is an error that
+explains the destructive follow-up rather than guessing. The three scoring
+weights (`score-weight-*`) are **rejected** by `set` — they must sum to
+`1.0`, so changing one alone would leave an invalid file; use the
+interactive editor (which retunes all three at once) or edit `settings.toml`
+directly (`doctor` validates the result).
+
+**Env shadowing.** Resolution is env → file → default. `set` keeps an
+**already-mirrored** `MAIT_CODE_*` key in `~/.claude/settings.json` in step
+with the TOML, so the value `install` mirrored there (e.g.
+`embedding-provider`) can't silently shadow your change. It never *adds*
+keys to `settings.json`. If a shell export still overrides the new value,
+`set` warns precisely and names the variable to unset.
 
 **Examples**
 
 ```bash
-mait-code settings
-mait-code settings --json | jq '.settings[] | select(.source == "env")'
+mait-code settings                                  # edit interactively
+mait-code settings list --json | jq '.settings[] | select(.source == "env")'
+mait-code settings get embedding-provider
+mait-code settings set log-level DEBUG
+mait-code settings set embedding-provider bedrock --reindex
+mait-code settings set data-dir ~/mait-data --move-data
 ```
 
-**Exit code:** always `0`.
+**Exit codes:** `list`/bare always `0`; `get` and `set` exit `1` on an
+unknown key, invalid value, or a missing required follow-up flag.
 
 ---
 

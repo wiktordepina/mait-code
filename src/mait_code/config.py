@@ -98,6 +98,10 @@ class Setting:
             ``config`` stays a light, stdlib-only leaf.
         validate: Optional callable taking the raw string value and returning
             an error message, or ``None`` when valid. Run by ``doctor``.
+        choices: Optional fixed set of valid values for an enum-like setting
+            (e.g. ``embedding-provider`` → ``("local", "bedrock")``). Drives
+            the interactive editor's picker; the matching :attr:`validate`
+            enforces membership for ``set`` and ``doctor``.
     """
 
     key: str
@@ -111,6 +115,7 @@ class Setting:
     advanced: bool = False
     derive: Callable[[], str] | None = None
     validate: Callable[[str], str | None] | None = None
+    choices: tuple[str, ...] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +171,19 @@ def _log_level(value: str) -> str | None:
     )
 
 
+# Valid embedding backends. Kept in step with ``cli._install.EMBEDDING_PROVIDERS``
+# (pinned by a test) — config stays the leaf, so the constant lives here.
+_EMBEDDING_PROVIDERS = ("local", "bedrock")
+
+
+def _embedding_provider(value: str) -> str | None:
+    return (
+        None
+        if value in _EMBEDDING_PROVIDERS
+        else f"must be one of {', '.join(_EMBEDDING_PROVIDERS)}, got {value!r}"
+    )
+
+
 def _unit_interval(value: str) -> str | None:
     try:
         f = float(value)
@@ -195,6 +213,7 @@ SETTINGS: tuple[Setting, ...] = (
         DEFAULT_LOG_LEVEL,
         help="Log verbosity: DEBUG, INFO, WARNING or ERROR.",
         validate=_log_level,
+        choices=_LOG_LEVELS,
     ),
     Setting(
         "log-file",
@@ -208,6 +227,8 @@ SETTINGS: tuple[Setting, ...] = (
         DEFAULT_EMBEDDING_PROVIDER,
         requires_migration=True,
         help="Embedding backend: 'local' or 'bedrock'.",
+        validate=_embedding_provider,
+        choices=_EMBEDDING_PROVIDERS,
     ),
     Setting(
         "embedding-model",
@@ -635,9 +656,10 @@ def _render_settings_toml(values: dict[str, str]) -> str:
 
     1. **Primary** settable knobs — uncommented (placeholder defaults stay
        commented unless an explicit value is provided).
-    2. **Advanced** settable knobs — always commented-out, showing the
-       default as the example value so the hardcoded default stays
-       authoritative until the user uncomments a line.
+    2. **Advanced** settable knobs — written *active* when *values* carries
+       an explicit value (an opt-in via ``settings set``), otherwise
+       commented-out showing the default as the example, so the hardcoded
+       default stays authoritative until the user opts a line in.
     3. **Derived** read-only values — informational comments only; never an
        assignable line.
     """
@@ -671,8 +693,11 @@ def _render_settings_toml(values: dict[str, str]) -> str:
         lines.append("")
         for setting in advanced:
             lines.append(f"# {setting.help}")
-            value = values.get(setting.key, setting.default)
-            lines.append(f'# {setting.key} = "{value}"')
+            if setting.key in values:
+                # Explicitly opted in (e.g. via `settings set`) — write active.
+                lines.append(f'{setting.key} = "{values[setting.key]}"')
+            else:
+                lines.append(f'# {setting.key} = "{setting.default}"')
             lines.append("")
 
     derived = [s for s in SETTINGS if not s.settable]

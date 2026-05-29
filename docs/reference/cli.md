@@ -85,6 +85,12 @@
 
 ::: mait_code.cli.write_settings_file
 
+## Editable settings
+
+::: mait_code.cli.ApplyOutcome
+
+::: mait_code.cli.apply_setting
+
 ## Entry point
 
 ::: mait_code.cli.app

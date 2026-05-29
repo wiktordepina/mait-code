@@ -386,7 +386,7 @@ Advanced operational knobs (written commented-out in `settings.toml`; the built-
 
 Advanced scoring/dedup tuning knobs (`MAIT_CODE_SCORE_WEIGHT_*`, `MAIT_CODE_HALF_LIFE_*`, `MAIT_CODE_DEDUP_*_THRESHOLD`, `MAIT_CODE_SCOPE_BOOST_*`) directly affect retrieval quality — see the [Memory guide](memory.md) for the full list, ranges, and the weight-sum constraint.
 
-These knobs are defined once in `src/mait_code/config.py`; `mait-code settings` prints their resolved values and the source of each (`env`, `settings` file, `default`, or `derived`). `mait-code doctor` validates them via its `settings-values` check.
+These knobs are defined once in `src/mait_code/config.py`; `mait-code settings list` prints their resolved values and the source of each (`env`, `settings` file, `default`, or `derived`), `mait-code settings set <key> <value>` edits one (validating, persisting, and running any follow-up), and bare `mait-code settings` edits them interactively. `mait-code doctor` validates them via its `settings-values` check.
 
 **Features:**
 
