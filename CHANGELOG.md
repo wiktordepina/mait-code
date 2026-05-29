@@ -10,6 +10,57 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-05-29
+
+**`mait-code settings` is now editable: a non-interactive `set`, an
+interactive editor, and `get`/`list` subcommands — every change validated,
+kept clear of stale env shadows, and with destructive follow-ups carried
+out rather than left implied.**
+
+### Added
+
+- **`mait-code settings set <key> <value>`** validates against the same
+  rules `doctor` runs, persists to `settings.toml`, and runs the required
+  follow-up. Migration keys (`embedding-provider`, `embedding-model`,
+  `bedrock-model-id`) require an explicit `--reindex`/`--no-reindex`;
+  `data-dir` requires `--move-data`/`--no-move-data`. The three scoring
+  weights are rejected (they can't change one at a time without a transient
+  invalid sum) with a pointer to the editor.
+- **Interactive editor on bare `mait-code settings`** (when attached to a
+  terminal): an arrow-key picker with live, per-value validation, enum
+  pickers for `embedding-provider` and `log-level`, a grouped editor that
+  retunes all three scoring weights and enforces their sum before a single
+  write, and inline confirmation of re-embed / data-dir-move follow-ups.
+  Piped or redirected, the bare command still prints the read-only view, so
+  scripts are unaffected.
+- **`mait-code settings list [--json]`** is the read-only, provenance-aware
+  view that was previously the bare command; **`mait-code settings get <key>
+  [--json]`** prints one resolved value and its source for scripting.
+- **Enum `choices` on `Setting`** for `embedding-provider` and `log-level`,
+  driving both the editor's picker and `set`/`doctor` validation from one
+  source.
+
+### Changed
+
+- **Bare `mait-code settings` opens the editor on a TTY** instead of printing
+  the view; the `--json` flag moved to `settings list`. Non-interactive use
+  (pipes, redirects) is unchanged.
+- **`set` keeps an already-mirrored `MAIT_CODE_*` key in
+  `~/.claude/settings.json` in step** with `settings.toml` (so a stale mirror
+  can't silently shadow the change) and warns precisely when a shell export
+  still overrides the new value. It never adds keys to `settings.json`.
+- Advanced settings are now written **active** in `settings.toml` when an
+  explicit value is set (e.g. via `settings set`), instead of always
+  commented-out; install/update still emit them commented, so generated files
+  are unchanged.
+- `run_reindex()` is extracted from the memory CLI so the settings follow-up
+  can re-embed in-process.
+
+### Dependencies
+
+- Added `questionary` (pulls `prompt_toolkit`, pure-Python) for the
+  interactive editor.
+
 ## [0.20.0] — 2026-05-29
 
 **`mait-code settings` now exposes the configuration surface that was

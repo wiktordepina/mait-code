@@ -121,7 +121,7 @@ All embedding settings live in `~/.config/mait-code/settings.toml` (or `$XDG_CON
 | `bedrock-region` | `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock |
 | `bedrock-model-id` | `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Bedrock model ID |
 
-Run `mait-code settings` to see the active configuration and where each value comes from.
+Run `mait-code settings list` to see the active configuration and where each value comes from, or bare `mait-code settings` to edit it interactively. To change one value non-interactively, use `mait-code settings set <key> <value>` — it validates the value, persists it to `settings.toml`, keeps any mirrored entry in `~/.claude/settings.json` in step, and warns if a shell export still shadows the change.
 
 **Derived values (read-only):** `mait-code settings` also reports values that are *computed* rather than configured — listed with source `derived`. They can't be set, but they answer "where does my data live?" and "why does a provider switch force a reindex?":
 
@@ -133,11 +133,11 @@ Run `mait-code settings` to see the active configuration and where each value co
 | `observations-dir` | `data-dir` + `/memory/observations` |
 | `project-aliases-path` | `data-dir` + `/project-aliases.json` |
 
-**Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table. Run `mait-code settings` to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
+**Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires re-embedding, which detects the dimension mismatch and recreates the vec table. The simplest path is `mait-code settings set embedding-provider bedrock --reindex` (a migration key requires an explicit `--reindex`/`--no-reindex`), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run `mc-tool-memory reindex` yourself. `mait-code settings list` shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
 
 #### Advanced settings
 
-The settings file also carries an **Advanced** section of operational knobs, written **commented-out** so the built-in default stays in effect until you deliberately uncomment a line. They never need touching for normal use; bad values fall back to the default and are flagged by `mait-code doctor`.
+The settings file also carries an **Advanced** section of operational knobs, written **commented-out** so the built-in default stays in effect until you opt in — either with `mait-code settings set <key> <value>` (which writes the line active) or by uncommenting it by hand. They never need touching for normal use; bad values fall back to the default and are flagged by `mait-code doctor`.
 
 | Setting key | Env var override | Default | Description |
 |-------------|-----------------|---------|-------------|
@@ -223,7 +223,7 @@ Depends on search mode:
 
 ### Tuning (advanced)
 
-The scoring and deduplication knobs are exposed as **advanced** settings (commented-out in `settings.toml`). They directly affect retrieval quality — leave them alone unless you know why you're changing them, and re-check with `mait-code doctor`, which validates ranges and the weight sum.
+The scoring and deduplication knobs are exposed as **advanced** settings (commented-out in `settings.toml`). They directly affect retrieval quality — leave them alone unless you know why you're changing them, and re-check with `mait-code doctor`, which validates ranges and the weight sum. The dedup, half-life and scope-boost knobs can be changed with `mait-code settings set`. The three scoring **weights** can't (setting one alone would leave a transient invalid sum) — retune all three together in the interactive editor (`mait-code settings`), which enforces the sum before saving, or edit `settings.toml` by hand and let `doctor` validate the result.
 
 | Setting key | Default | Sensible range | Notes |
 |-------------|---------|----------------|-------|

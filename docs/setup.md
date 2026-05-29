@@ -82,7 +82,9 @@ Once installed, the `mait-code` binary owns the full install lifecycle. Its subc
 ```bash
 mait-code status            # read-only summary, with a health badge (use --json)
 mait-code doctor            # surface silent breakage; --fix applies safe fixes
-mait-code settings          # read-only view of the active config (use --json)
+mait-code settings          # edit config interactively (lists when piped)
+mait-code settings list     # read-only view of the active config (use --json)
+mait-code settings set log-level DEBUG   # validate, persist, enforce one knob
 mait-code update            # git pull, reinstall if changed, refresh symlinks/settings
 mait-code uninstall         # remove symlinks, strip settings; preserves data by default
 mait-code uninstall --purge-data   # also delete the data directory
