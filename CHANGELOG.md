@@ -10,6 +10,32 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-05-29
+
+**The interactive `mait-code settings` editor is now a proper full-screen
+TUI.** The questionary prompt sequence shipped in 0.21.0 is replaced by a
+[Textual](https://textual.textualize.io/) app — a master–detail layout with
+live, in-context validation.
+
+### Changed
+
+- **Bare `mait-code settings` (on a TTY) opens a full-screen editor**: the
+  settings list on the left, an inline edit form on the right that adapts to
+  the highlighted setting — a radio set for enums, a validated text input
+  otherwise, read-only for derived values. The grouped scoring-weight editor
+  enforces the sum of `1.0` before a single combined write; migration and
+  `data-dir` follow-ups are confirmed in a modal (a re-embed drops out to the
+  terminal for its normal progress output). The non-TTY fallback, and the
+  `list`/`get`/`set` subcommands, are unchanged.
+
+### Dependencies
+
+- Replaced `questionary` with `textual` for the interactive editor. Textual
+  builds on `rich` (already shipped) and `markdown-it-py` (already in the
+  lock), so the net footprint is small; `prompt_toolkit` and `wcwidth` are
+  dropped with questionary. Imported lazily, so hooks and CLI tools never
+  load it.
+
 ## [0.21.0] — 2026-05-29
 
 **`mait-code settings` is now editable: a non-interactive `set`, an

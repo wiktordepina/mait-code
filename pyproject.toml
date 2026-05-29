@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mait-code"
-version = "0.21.0"
+version = "0.22.0"
 description = "Companion framework extending Claude Code with persistent memory, identity, and skills"
 requires-python = ">=3.13"
 dependencies = [
@@ -15,7 +15,7 @@ dependencies = [
     "truststore>=0.9",
     "markdownify>=0.14",
     "typer>=0.12,<1",
-    "questionary>=2.0",
+    "textual>=0.80",
 ]
 
 [project.scripts]
