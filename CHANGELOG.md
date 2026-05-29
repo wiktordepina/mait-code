@@ -10,6 +10,27 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.19.1] — 2026-05-29
+
+**`mait-code update` is now a cheap no-op when nothing changed.**
+
+### Fixed
+
+- **`mait-code update` no longer rebuilds every package on each run.** The
+  reinstall is now skipped when the source `HEAD` did not move during the
+  advance step, so a repeated update with nothing new upstream is a fast
+  no-op instead of a full `uv tool install --force --reinstall` of all
+  dependencies. When a reinstall *is* needed, it uses
+  `--reinstall-package mait-code` to rebuild only the local source package —
+  whose version does not bump between commits — leaving unchanged
+  third-party dependencies in place.
+
+### Added
+
+- **`mait-code update --force`** reinstalls even when the source `HEAD` is
+  unchanged, for rebuilding uncommitted working-tree edits on a dev
+  checkout.
+
 ## [0.19.0] — 2026-05-28
 
 **Centralised settings file and XDG-compliant directory layout.**
@@ -610,7 +631,15 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.15.2...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.19.1
+[0.19.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.19.0
+[0.18.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.18.0
+[0.17.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.17.0
+[0.16.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.16.0
+[0.15.5]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.5
+[0.15.4]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.4
+[0.15.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.3
 [0.15.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.2
 [0.15.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.1
 [0.15.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.15.0

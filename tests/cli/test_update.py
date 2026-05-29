@@ -24,9 +24,21 @@ class _FakeGit:
     tag" without a real git repo.
     """
 
-    def __init__(self, *, branch: str = "", tags: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        branch: str = "",
+        tags: list[str] | None = None,
+        heads: list[str] | None = None,
+    ) -> None:
         self.branch = branch
         self.tags = tags if tags is not None else []
+        # Successive `git rev-parse HEAD` answers: the first is captured
+        # before the advance, the second after. Defaulting to two distinct
+        # shas means an advance is treated as "moved" → reinstall, which is
+        # what most tests expect. Pass equal values to simulate a no-op.
+        self.heads = heads if heads is not None else ["HEAD_BEFORE", "HEAD_AFTER"]
+        self._head_idx = 0
         self.run_calls: list[tuple[list[str], Path | None]] = []
 
     def run(self, cmd: list[str], *, cwd: Path | None = None) -> None:
@@ -37,6 +49,10 @@ class _FakeGit:
             return self.branch
         if cmd == ["git", "tag", "--list", "--sort=-v:refname", "v*"]:
             return "\n".join(self.tags)
+        if cmd == ["git", "rev-parse", "HEAD"]:
+            val = self.heads[min(self._head_idx, len(self.heads) - 1)]
+            self._head_idx += 1
+            return val
         return ""
 
     def ran(self, prefix: list[str]) -> bool:
@@ -136,6 +152,23 @@ class TestUpdateReinstall:
 
         assert git.ran(["uv", "tool", "install"])
 
+    def test_reinstall_narrowed_to_mait_code(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # The reinstall must target only the local package so unchanged deps
+        # are not needlessly rebuilt — never a blanket `--reinstall`.
+        _install_first(fake_source)
+        git = _FakeGit(branch="main", tags=[])
+
+        update(no_pull=True, runner=git.run, capture=git.capture)
+
+        uv_call = next(
+            cmd for cmd, _ in git.run_calls if cmd[:3] == ["uv", "tool", "install"]
+        )
+        assert "--reinstall-package" in uv_call
+        assert uv_call[uv_call.index("--reinstall-package") + 1] == "mait-code"
+        assert "--reinstall" not in uv_call
+
     def test_bedrock_provider_passes_extra(
         self, fake_home: Path, fake_source: Path
     ) -> None:
@@ -166,10 +199,63 @@ class TestUpdateReinstall:
         (new_skill / "SKILL.md").write_text("fresh skill\n")
 
         git = _FakeGit(branch="main", tags=[])
-        summary = update(no_pull=True, runner=git.run, capture=git.capture)
+        update(no_pull=True, runner=git.run, capture=git.capture)
 
         link = fake_home / ".claude" / "skills" / "fresh"
         assert link.is_symlink()
+
+
+class TestUpdateIdempotency:
+    """A repeated update with nothing new upstream must be a cheap no-op:
+    no reinstall when HEAD did not move, unless --force is given."""
+
+    def test_unchanged_head_skips_reinstall(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        # Same sha before and after the advance → nothing moved.
+        git = _FakeGit(branch="main", tags=[], heads=["same", "same"])
+
+        summary = update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert not git.ran(["uv", "tool", "install"])
+        assert summary.reinstalled is False
+
+    def test_changed_head_reinstalls(self, fake_home: Path, fake_source: Path) -> None:
+        _install_first(fake_source)
+        git = _FakeGit(branch="main", tags=[], heads=["old", "new"])
+
+        summary = update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert git.ran(["uv", "tool", "install"])
+        assert summary.reinstalled is True
+
+    def test_force_reinstalls_when_unchanged(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        git = _FakeGit(branch="main", tags=[], heads=["same", "same"])
+
+        summary = update(no_pull=True, force=True, runner=git.run, capture=git.capture)
+
+        assert git.ran(["uv", "tool", "install"])
+        assert summary.reinstalled is True
+
+    def test_skip_still_refreshes_symlinks_and_settings(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # Even on a no-op reinstall, the cheap config-refresh steps run so a
+        # new skill shipped without a commit bump still gets linked.
+        _install_first(fake_source)
+        new_skill = fake_source / "skills" / "fresh"
+        new_skill.mkdir()
+        (new_skill / "SKILL.md").write_text("fresh skill\n")
+        git = _FakeGit(branch="main", tags=[], heads=["same", "same"])
+
+        summary = update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert summary.reinstalled is False
+        assert (fake_home / ".claude" / "skills" / "fresh").is_symlink()
         assert any(p.name == "fresh" for p in summary.skills.created)
 
     def test_no_record_raises(self, fake_home: Path) -> None:

@@ -275,6 +275,14 @@ def update_cmd(
             help="Checkout this ref (tag/branch/sha) before reinstalling.",
         ),
     ] = None,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Reinstall even when the source is unchanged "
+            "(e.g. to rebuild uncommitted dev edits).",
+        ),
+    ] = False,
     claude_dir_override: Annotated[
         Path | None,
         typer.Option(
@@ -288,6 +296,7 @@ def update_cmd(
         summary = _update_impl(
             no_pull=no_pull,
             ref=ref,
+            force=force,
             claude_dir=claude_dir_override,
         )
     except RecordError as exc:
@@ -308,7 +317,10 @@ def _render_update_summary(summary: UpdateSummary) -> None:
     if summary.fetched:
         pieces.append("fetched")
     pieces.append(f"now on {summary.landed_on}")
-    pieces.append(f"reinstalled {mait_code.__version__}")
+    if summary.reinstalled:
+        pieces.append(f"reinstalled {mait_code.__version__}")
+    else:
+        pieces.append(f"already current ({mait_code.__version__}), reinstall skipped")
     typer.echo(f"Updated mait-code: {', '.join(pieces)}.")
     typer.echo(f"  Source: {record.source_dir}")
     typer.echo(
