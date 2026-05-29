@@ -360,24 +360,40 @@ All entry points use a shared logging module (`src/mait_code/logging.py`) that w
 
 **Configuration** (via `settings.json` `env` block or shell environment):
 
+Primary knobs:
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MAIT_CODE_DATA_DIR` | `~/.claude/mait-code-data` | Data directory (memories, logs, personalised files) |
+| `MAIT_CODE_DATA_DIR` | `~/.claude/mait-code-data` | Data directory (memories, personalised files) |
 | `MAIT_CODE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `MAIT_CODE_LOG_FILE` | `~/.claude/mait-code-data/logs/mait-code.log` | Override log file path |
+| `MAIT_CODE_LOG_FILE` | `~/.local/state/mait-code/mait-code.log` | Override log file path |
 | `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | Embedding provider: `local` (fastembed) or `bedrock` (AWS) |
 | `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local embedding provider |
 | `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock embedding provider |
 | `MAIT_CODE_BEDROCK_MODEL_ID` | `amazon.titan-embed-text-v2:0` | Model ID for Bedrock embedding provider |
 
-These knobs are defined once in `src/mait_code/config.py`; `mait-code settings` prints their resolved values and whether each came from the environment or the default.
+Advanced operational knobs (written commented-out in `settings.toml`; the built-in default applies until overridden):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAIT_CODE_LOG_BACKUP_COUNT` | `14` | Days of rotated log files to keep |
+| `MAIT_CODE_EXTRACTION_MODEL` | `haiku` | Model used for memory extraction |
+| `MAIT_CODE_REFLECTION_MODEL` | `haiku` | Model used for reflection synthesis |
+| `MAIT_CODE_LLM_TIMEOUT` | `90` | Timeout (seconds) for subprocess LLM calls |
+| `MAIT_CODE_REFLECTION_BATCH_SIZE` | `50` | Default `--batch-size` for reflection |
+| `MAIT_CODE_REFLECTION_NOVELTY_GATE` | `3` | Default `--min-new` for reflection |
+| `MAIT_CODE_GIT_TIMEOUT` | `5` | Timeout (seconds) for git context probes |
+
+Advanced scoring/dedup tuning knobs (`MAIT_CODE_SCORE_WEIGHT_*`, `MAIT_CODE_HALF_LIFE_*`, `MAIT_CODE_DEDUP_*_THRESHOLD`, `MAIT_CODE_SCOPE_BOOST_*`) directly affect retrieval quality — see the [Memory guide](memory.md) for the full list, ranges, and the weight-sum constraint.
+
+These knobs are defined once in `src/mait_code/config.py`; `mait-code settings` prints their resolved values and the source of each (`env`, `settings` file, `default`, or `derived`). `mait-code doctor` validates them via its `settings-values` check.
 
 **Features:**
 
 - `setup_logging()` — call once per entry point; idempotent, configures the `mait_code` logger hierarchy
 - `@log_invocation(name=...)` — decorator that logs command name, parsed arguments, duration, and exit status
 - Sensitive parameters (`content`, `query`, `what`, `prompt`, `message`) are automatically truncated to 80 chars
-- `RotatingFileHandler` — 5 MB max, 3 backups
+- `TimedRotatingFileHandler` — rotates at midnight, keeps `log-backup-count` days (default 14)
 
 **Log format:**
 ```
