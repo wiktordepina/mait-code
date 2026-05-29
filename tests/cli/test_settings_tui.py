@@ -15,10 +15,10 @@ import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
-from textual.widgets import Input, RadioButton, RadioSet, Static
+from textual.widgets import Button, Input, RadioButton, RadioSet, Static
 
 from mait_code import config
-from mait_code.cli._settings_tui import SettingRow, SettingsApp
+from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingRow, SettingsApp
 
 
 def _run(coro_factory):
@@ -175,6 +175,97 @@ class TestFollowups:
         assert called == 0
         assert config.read_settings_file()["embedding-provider"] == "bedrock"
 
+
+class TestWeights:
+    def test_weights_row_present(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                rows = [
+                    c.setting_key
+                    for c in app.query_one("#list").children
+                    if isinstance(c, SettingRow)
+                ]
+                # Grouped row present; individual weight keys are not listed.
+                assert _WEIGHTS_KEY in rows
+                assert "score-weight-recency" not in rows
+
+        _run(scenario)
+
+    def test_valid_sum_persists_all_three(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _WEIGHTS_KEY)
+                await pilot.press("ctrl+s")  # opens the weights modal
+                await pilot.pause()
+                await pilot.pause()
+                # Modal widgets live on the top screen, not the base screen.
+                app.screen.query_one("#w-score-weight-recency", Input).value = "0.2"
+                app.screen.query_one("#w-score-weight-importance", Input).value = "0.3"
+                app.screen.query_one("#w-score-weight-relevance", Input).value = "0.5"
+                await pilot.pause()
+                await pilot.click("#w-apply")
+                await pilot.pause()
+                await pilot.pause()
+
+        _run(scenario)
+        config._settings_cache = None
+        values = config.read_settings_file()
+        assert values["score-weight-recency"] == "0.2"
+        assert values["score-weight-importance"] == "0.3"
+        assert values["score-weight-relevance"] == "0.5"
+
+    def test_invalid_sum_disables_apply(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _WEIGHTS_KEY)
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                app.screen.query_one("#w-score-weight-recency", Input).value = "0.5"
+                app.screen.query_one("#w-score-weight-importance", Input).value = "0.5"
+                app.screen.query_one("#w-score-weight-relevance", Input).value = "0.5"
+                await pilot.pause()
+                return app.screen.query_one("#w-apply", Button).disabled
+
+        disabled = _run(scenario)
+        assert disabled is True
+        config._settings_cache = None
+        # Nothing written.
+        assert "score-weight-recency" not in config.read_settings_file()
+
+    def test_cancel_writes_nothing(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _WEIGHTS_KEY)
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                app.screen.query_one("#w-score-weight-recency", Input).value = "0.2"
+                app.screen.query_one("#w-score-weight-importance", Input).value = "0.3"
+                app.screen.query_one("#w-score-weight-relevance", Input).value = "0.5"
+                await pilot.pause()
+                await pilot.click("#w-cancel")
+                await pilot.pause()
+
+        _run(scenario)
+        config._settings_cache = None
+        assert "score-weight-recency" not in config.read_settings_file()
+
+
+class TestFollowupsDataDir:
     def test_data_dir_move_on_confirm(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
         old = config.data_dir()

@@ -44,6 +44,9 @@ from mait_code.cli._settings_edit import (
 
 __all__ = ["run_interactive_editor"]
 
+_WEIGHTS_KEY = "__weights__"
+"""Sentinel list-row key for the grouped scoring-weight editor."""
+
 
 def run_interactive_editor() -> None:
     """Launch the Textual settings editor (blocks until the user quits)."""
@@ -71,15 +74,18 @@ class SettingRow(ListItem):
 
     def __init__(self, key: str) -> None:
         self.setting_key = key
-        setting = _by_key()[key]
         # Derived rows stay navigable (so the detail pane can explain them) but
         # are visually dimmed and reject edits.
+        derived = key != _WEIGHTS_KEY and not _by_key()[key].settable
         super().__init__(
             Label(self._row_text()),
-            classes="" if setting.settable else "derived",
+            classes="derived" if derived else "",
         )
 
     def _row_text(self) -> str:
+        if self.setting_key == _WEIGHTS_KEY:
+            weights = " / ".join(config.get(k) for k in config._WEIGHT_KEYS)
+            return f"{'scoring weights…':<26} {weights:<22} grouped"
         setting = _by_key()[self.setting_key]
         value, source = config.resolve(setting)
         marker = " ⚠" if setting.requires_migration else ""
@@ -114,6 +120,72 @@ class ConfirmScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class WeightsScreen(ModalScreen[bool]):
+    """Retune all three scoring weights at once; Apply gated on a sum of 1.0.
+
+    Resolves to ``True`` when the weights were written, ``False`` on cancel.
+    A single combined write avoids the transient invalid sum that ``set``
+    refuses piecemeal.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="weights-dialog"):
+            yield Label("Scoring weights — must sum to 1.0", id="weights-title")
+            for key in config._WEIGHT_KEYS:
+                yield Label(key, classes="weight-label")
+                yield Input(
+                    value=config.get(key),
+                    id=f"w-{key}",
+                    validators=[_LiveValidator(_by_key()[key])],
+                )
+            yield Static("", id="weights-sum")
+            with Horizontal(id="weights-buttons"):
+                yield Button("Apply", id="w-apply", variant="primary", disabled=True)
+                yield Button("Cancel", id="w-cancel")
+
+    def on_mount(self) -> None:
+        self._recompute()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        self._recompute()
+
+    def _recompute(self) -> None:
+        total = 0.0
+        parseable = True
+        for key in config._WEIGHT_KEYS:
+            raw = self.query_one(f"#w-{key}", Input).value
+            try:
+                total += float(raw)
+            except (TypeError, ValueError):
+                parseable = False
+        valid = parseable and abs(total - 1.0) <= 1e-6
+        summary = self.query_one("#weights-sum", Static)
+        if not parseable:
+            summary.update("sum: (enter three numbers)")
+        else:
+            summary.update(f"sum: {total:.3f}  {'✓' if valid else '✗ must be 1.0'}")
+        self.query_one("#w-apply", Button).disabled = not valid
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "w-apply":
+            self._save()
+            self.dismiss(True)
+        elif event.button.id == "w-cancel":
+            self.dismiss(False)
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+    def _save(self) -> None:
+        values = config.read_settings_file()
+        for key in config._WEIGHT_KEYS:
+            values[key] = self.query_one(f"#w-{key}", Input).value
+        config.write_settings_file(values)
+        config._settings_cache = None
+
+
 class SettingsApp(App[None]):
     """Master–detail editor for the mait-code settings registry."""
 
@@ -136,6 +208,16 @@ class SettingsApp(App[None]):
     }
     ConfirmScreen #buttons { height: auto; margin-top: 1; align-horizontal: right; }
     ConfirmScreen Button { margin-left: 2; }
+    WeightsScreen { align: center middle; }
+    WeightsScreen #weights-dialog {
+        width: 60; height: auto; padding: 1 2;
+        border: thick $accent; background: $surface;
+    }
+    WeightsScreen #weights-title { text-style: bold; margin-bottom: 1; }
+    WeightsScreen .weight-label { color: $text-muted; }
+    WeightsScreen #weights-sum { margin-top: 1; }
+    WeightsScreen #weights-buttons { height: auto; margin-top: 1; align-horizontal: right; }
+    WeightsScreen Button { margin-left: 2; }
     """
 
     BINDINGS = [
@@ -156,9 +238,15 @@ class SettingsApp(App[None]):
 
     def _build_rows(self) -> list[SettingRow]:
         rows: list[SettingRow] = []
+        weights_added = False
         for setting in config.SETTINGS:
             if setting.key in config._WEIGHT_KEYS:
-                continue  # grouped weight editor lands in a later commit
+                # Collapse the three weights into one grouped row, placed where
+                # the first weight key would otherwise appear.
+                if not weights_added:
+                    rows.append(SettingRow(_WEIGHTS_KEY))
+                    weights_added = True
+                continue
             rows.append(SettingRow(setting.key))
         return rows
 
@@ -169,10 +257,26 @@ class SettingsApp(App[None]):
 
     async def _show_detail(self, key: str) -> None:
         self._current_key = key
-        setting = _by_key()[key]
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
 
+        if key == _WEIGHTS_KEY:
+            current = ", ".join(
+                f"{k.removeprefix('score-weight-')}={config.get(k)}"
+                for k in config._WEIGHT_KEYS
+            )
+            await detail.mount(
+                Label("scoring weights", classes="title"),
+                Label(
+                    "Three weights that must sum to 1.0; edited together.",
+                    classes="help",
+                ),
+                Static(current),
+                Button("Edit weights…", id="edit-weights", variant="primary"),
+            )
+            return
+
+        setting = _by_key()[key]
         widgets: list[Static | Input | RadioSet | Button] = [
             Label(setting.key, classes="title"),
             Label(setting.help, classes="help"),
@@ -212,8 +316,9 @@ class SettingsApp(App[None]):
 
     def on_input_changed(self, event: Input.Changed) -> None:
         # Ignore stray Changed events from an input being torn down during a
-        # panel rebuild (the new row may have no #msg slot, e.g. a derived one).
-        if self._current_key is None:
+        # panel rebuild (the new row may have no #msg slot, e.g. a derived one),
+        # and the weights modal's own inputs (it validates them itself).
+        if self._current_key is None or self._current_key == _WEIGHTS_KEY:
             return
         editors = self.query("#editor")
         msg_slots = self.query("#msg")
@@ -229,10 +334,24 @@ class SettingsApp(App[None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "apply":
             self.action_apply()
+        elif event.button.id == "edit-weights":
+            self._edit_weights()
 
     def action_apply(self) -> None:
-        if self._current_key is not None:
+        if self._current_key == _WEIGHTS_KEY:
+            self._edit_weights()
+        elif self._current_key is not None:
             self._apply(self._current_key)
+
+    @work
+    async def _edit_weights(self) -> None:
+        changed = await self.push_screen_wait(WeightsScreen())
+        if not changed:
+            return
+        row = self.query_one("#list", ListView).highlighted_child
+        if isinstance(row, SettingRow):
+            row.refresh_row()
+        await self._show_detail(_WEIGHTS_KEY)
 
     @work
     async def _apply(self, key: str) -> None:
