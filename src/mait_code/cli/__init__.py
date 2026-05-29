@@ -26,6 +26,7 @@ Typer command callables themselves are private (their docs live in
 from __future__ import annotations
 
 import importlib.metadata
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -507,13 +508,19 @@ app.add_typer(settings_app, name="settings")
 def settings_root(ctx: typer.Context) -> None:
     """View and edit mait-code configuration.
 
-    With no subcommand this shows the read-only configuration view (the
-    same output as ``settings list``).
+    On a terminal this opens the interactive editor; when piped or
+    redirected it falls back to the read-only configuration view (the same
+    output as ``settings list``), so scripts are unaffected.
     """
     if ctx.invoked_subcommand is not None:
         return
     _require_settings_file()
-    _settings_render(_collect_settings())
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._settings_editor import run_interactive_editor
+
+        run_interactive_editor()
+    else:
+        _settings_render(_collect_settings())
 
 
 @settings_app.command("list")

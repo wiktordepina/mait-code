@@ -26,6 +26,7 @@ __all__ = [
     "SettingError",
     "apply_setting",
     "move_data_dir",
+    "validation_error",
 ]
 
 
@@ -85,7 +86,9 @@ def apply_setting(
             follow-up decision was not supplied.
     """
     setting = _resolve_settable(key)
-    _validate(setting, value)
+    msg = validation_error(setting, value)
+    if msg is not None:
+        raise SettingError(f"{setting.key}: {msg}")
 
     old_value, _ = config.resolve(setting)
 
@@ -145,22 +148,26 @@ def _resolve_settable(key: str) -> config.Setting:
     return setting
 
 
-def _validate(setting: config.Setting, value: str) -> None:
-    """Run kind coercion and the Setting's own validator; raise on failure."""
+def validation_error(setting: config.Setting, value: str) -> str | None:
+    """Return a validation error for *value*, or ``None`` when it is valid.
+
+    Combines kind coercion (int/float) with the Setting's own validator.
+    The single source of truth shared by :func:`apply_setting` and the
+    interactive editor's live validator, so both reject identically.
+    """
     if setting.kind == "int":
         try:
             int(value)
         except (TypeError, ValueError):
-            raise SettingError(f"{setting.key}: must be an integer, got {value!r}")
+            return f"must be an integer, got {value!r}"
     elif setting.kind == "float":
         try:
             float(value)
         except (TypeError, ValueError):
-            raise SettingError(f"{setting.key}: must be a number, got {value!r}")
+            return f"must be a number, got {value!r}"
     if setting.validate is not None:
-        msg = setting.validate(value)
-        if msg is not None:
-            raise SettingError(f"{setting.key}: {msg}")
+        return setting.validate(value)
+    return None
 
 
 # ---------------------------------------------------------------------------
