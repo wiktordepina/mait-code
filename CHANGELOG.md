@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-05-29
+
+### Added
+
+- **`/board` skill** — view and drive the kanban board conversationally. Shows
+  the current project's board, and teaches Claude the verb vocabulary so "pick
+  up the next refined card", "refine card N", and complete/block/move/add map to
+  `mc-tool-board` calls. Claude acts as the worker; nothing moves without your
+  say-so.
+- **Session-start board summary** — the `session_start` hook now surfaces a
+  one-line summary of the current project's live (non-done) columns alongside
+  reminders and tasks (e.g. `3 refined · 1 in progress`), and stays silent when
+  there's nothing actionable.
+
 ## [0.23.0] — 2026-05-29
 
 ### Added
