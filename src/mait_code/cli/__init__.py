@@ -613,6 +613,47 @@ def settings_set(
         )
 
 
+@app.command("board")
+def board() -> None:
+    """Open the interactive kanban board (read-only render when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._board_tui import run_board_tui
+
+        run_board_tui()
+    else:
+        _board_render()
+
+
+def _board_render() -> None:
+    """Print every project's board as grouped text (the non-TTY fallback)."""
+    from mait_code.tools.board import service
+    from mait_code.tools.board.columns import BOARD_ORDER, label as col_label
+    from mait_code.tools.board.db import connection
+
+    with connection() as conn:
+        cards = service.list_cards(conn)
+
+    if not cards:
+        typer.echo("No cards on the board.")
+        return
+
+    by_status: dict[str, list[dict]] = {}
+    for card in cards:
+        by_status.setdefault(card["status"], []).append(card)
+
+    for status in BOARD_ORDER:
+        group = by_status.get(status)
+        if not group:
+            continue
+        typer.echo(f"{col_label(status)} ({len(group)}):")
+        for card in group:
+            typer.echo(
+                f"  [#{card['id']}] ({card['priority']}) {card['title']} "
+                f"[{card['project']}]"
+            )
+        typer.echo("")
+
+
 def main() -> None:
     """Console-script entry point declared in ``pyproject.toml``."""
     app()
