@@ -29,6 +29,7 @@ graph TD
             memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect"]
             reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
             tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
+            board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns"]
             decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
             web_fetch_tool["web_fetch/ <i>(CLI)</i><br/>cli, fetch, convert"]
         end
@@ -38,7 +39,7 @@ graph TD
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md<br/>user_context.md"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>memory.db <i>(SQLite)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
-        other_dbs["reminders.db<br/>tasks.db<br/>decisions.db"]
+        other_dbs["reminders.db<br/>tasks.db<br/>board.db<br/>decisions.db"]
     end
 
     HOOKS --> mait_code
@@ -267,6 +268,59 @@ Per-project task tracking. Tasks are scoped by the basename of the git root (or 
 | `check` | --project? | List open tasks for current project (used by session_start hook) |
 | `list-all` | — | List open tasks across all projects |
 
+## Board Database
+
+The board database (`board.db`) stores a single cross-project kanban board. Cards carry a `project` field — so one board serves every project and UIs filter by it — and move through a fixed, hardcoded column workflow.
+
+**Cards table: `cards`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `project` | TEXT | Project identifier (free-form; defaults to basename of git root or cwd) |
+| `title` | TEXT | Card title |
+| `description` | TEXT | The what/why |
+| `acceptance_criteria` | TEXT | Definition-of-done; filled by the refine step |
+| `status` | TEXT | Column: `backlog`, `refined`, `in_progress`, `blocked`, `done`, or `archived` (default `backlog`) |
+| `priority` | TEXT | `low`, `medium`, or `high` (default `medium`) |
+| `completion_summary` | TEXT | Handoff summary, set when moved to `done` |
+| `created_at` | DATETIME | Timestamp of creation |
+| `updated_at` | DATETIME | Timestamp of last mutation |
+| `completed_at` | DATETIME | Timestamp of completion (null unless `done`) |
+
+**Comments table: `card_comments`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `card_id` | INTEGER FK | References `cards(id)`; `ON DELETE CASCADE` |
+| `author` | TEXT | `me` or `claude` (default `me`) |
+| `body` | TEXT | Comment text |
+| `created_at` | DATETIME | Timestamp of creation |
+
+**Columns are fixed, not configurable.** `backlog → refined → in_progress → done` is the main flow; `blocked` is a side-state reachable from anywhere (returns to `refined` on unblock); `archived` is a hidden terminal excluded from default views. The constants live in `src/mait_code/tools/board/columns.py`. Project detection uses `mait_code.context.get_project()`; pass `--project` for work with no git repo (e.g. an app idea).
+
+## Board CLI Tool (`mc-tool-board`)
+
+Manually-driven kanban board. Claude in the live session acts as the worker ("pick up the next refined card"); there is no autonomous dispatcher — *you* drive the board. Cards are project-scoped via the basename of the git root (or cwd), stored in a shared `board.db`. Read commands accept `--json` for UI/skill consumption.
+
+| Subcommand | Args | Description |
+|------------|------|-------------|
+| `add` | title, --description?, --priority?, --project? | Add a card to the backlog |
+| `list` | --all?, --status?, --archived?, --json? | List cards grouped by column (current project by default; archived hidden) |
+| `show` | id, --json? | Show a card and its comment thread |
+| `move` | id, status | Move a card to any column (sets/clears `completed_at` around `done`) |
+| `refine` | id, --description?, --acceptance? | Set description/acceptance and move to `refined` |
+| `next` | --project?, --claim?, --json? | Show the next refined card (priority, then oldest); `--claim` moves it to `in_progress` |
+| `complete` | id, --summary? | Move to `done` with a completion summary |
+| `block` | id, reason? | Move to `blocked`; an optional reason is recorded as a comment |
+| `unblock` | id | Return a blocked card to `refined` |
+| `archive` | id | Archive a card (hidden, not deleted) |
+| `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
+| `edit` | id, --title?, --description?, --priority?, --acceptance? | Edit card fields |
+| `remove` | id | Delete a card permanently (cascades comments) |
+| `summary` | --all?, --project?, --json? | Per-column counts (used by the session-start hook) |
+
 ## Decisions Database
 
 The decisions database (`decisions.db`) stores project-scoped technical decision records (ADR-lite).
@@ -455,6 +509,7 @@ Adding a new migration:
 │   └── ...
 ├── reminders.db              # Reminder database
 ├── tasks.db                  # Per-project tasks database
+├── board.db                  # Cross-project kanban board database
 └── decisions.db              # Decision records database
 ```
 
