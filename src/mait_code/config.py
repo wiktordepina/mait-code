@@ -635,9 +635,10 @@ def _render_settings_toml(values: dict[str, str]) -> str:
 
     1. **Primary** settable knobs — uncommented (placeholder defaults stay
        commented unless an explicit value is provided).
-    2. **Advanced** settable knobs — always commented-out, showing the
-       default as the example value so the hardcoded default stays
-       authoritative until the user uncomments a line.
+    2. **Advanced** settable knobs — written *active* when *values* carries
+       an explicit value (an opt-in via ``settings set``), otherwise
+       commented-out showing the default as the example, so the hardcoded
+       default stays authoritative until the user opts a line in.
     3. **Derived** read-only values — informational comments only; never an
        assignable line.
     """
@@ -671,8 +672,11 @@ def _render_settings_toml(values: dict[str, str]) -> str:
         lines.append("")
         for setting in advanced:
             lines.append(f"# {setting.help}")
-            value = values.get(setting.key, setting.default)
-            lines.append(f'# {setting.key} = "{value}"')
+            if setting.key in values:
+                # Explicitly opted in (e.g. via `settings set`) — write active.
+                lines.append(f'{setting.key} = "{values[setting.key]}"')
+            else:
+                lines.append(f'# {setting.key} = "{setting.default}"')
             lines.append("")
 
     derived = [s for s in SETTINGS if not s.settable]

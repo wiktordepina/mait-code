@@ -277,6 +277,30 @@ class TestAdvancedSettings:
         # The default still wins until uncommented.
         assert config.read_settings_file(path=f).get("git-timeout") is None
 
+    def test_advanced_written_active_when_value_given(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _use_settings(
+            monkeypatch,
+            config.Setting("log-level", "MAIT_CODE_LOG_LEVEL", "INFO"),
+            config.Setting(
+                "git-timeout",
+                "MAIT_CODE_GIT_TIMEOUT",
+                "5",
+                kind="int",
+                advanced=True,
+                help="git op timeout",
+            ),
+        )
+        f = tmp_path / "settings.toml"
+        config.write_settings_file({"git-timeout": "10"}, path=f)
+        content = f.read_text()
+        # Opted-in advanced key is written active, not commented.
+        assert 'git-timeout = "10"' in content
+        assert '# git-timeout = "10"' not in content
+        # And it round-trips back through the reader.
+        assert config.read_settings_file(path=f).get("git-timeout") == "10"
+
 
 class TestValidateSettings:
     def test_collects_per_setting_errors(self, monkeypatch: pytest.MonkeyPatch) -> None:
