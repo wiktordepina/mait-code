@@ -113,6 +113,27 @@ class Setting:
     validate: Callable[[str], str | None] | None = None
 
 
+# ---------------------------------------------------------------------------
+# Derived-value helpers (Tier 2 display-only settings). Pure — no mkdir — so
+# `mait-code settings` stays read-only. Each mirrors a runtime path helper;
+# tests in test_config.py pin them together to guard against drift.
+# ---------------------------------------------------------------------------
+
+
+def _display_path(*parts: str) -> str:
+    """Join *parts* under the data dir, abbreviating ``$HOME`` to ``~``."""
+    text = str(data_dir().joinpath(*parts))
+    home = str(Path.home())
+    return "~" + text[len(home) :] if text.startswith(home) else text
+
+
+def _derive_embedding_dim() -> str:
+    """Embedding vector size for the configured provider/model."""
+    from mait_code.tools.memory.embeddings import _get_embedding_dim
+
+    return str(_get_embedding_dim())
+
+
 SETTINGS: tuple[Setting, ...] = (
     Setting(
         "data-dir",
@@ -158,6 +179,72 @@ SETTINGS: tuple[Setting, ...] = (
         "MAIT_CODE_BEDROCK_REGION",
         DEFAULT_BEDROCK_REGION,
         help="AWS region for the Bedrock embedding client.",
+    ),
+    # --- Tier 2: derived, display-only (settable=False) ---
+    Setting(
+        "embedding-dim",
+        "",
+        "",
+        settable=False,
+        kind="int",
+        derive=_derive_embedding_dim,
+        help="Embedding vector size (derived from provider + model).",
+    ),
+    Setting(
+        "memory-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("memory.db"),
+        help="SQLite store for memories (derived from data-dir).",
+    ),
+    Setting(
+        "tasks-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("tasks.db"),
+        help="SQLite store for tasks (derived from data-dir).",
+    ),
+    Setting(
+        "decisions-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("decisions.db"),
+        help="SQLite store for decisions (derived from data-dir).",
+    ),
+    Setting(
+        "reminders-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("reminders.db"),
+        help="SQLite store for reminders (derived from data-dir).",
+    ),
+    Setting(
+        "model-cache-dir",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("models"),
+        help="Local embedding-model cache (derived from data-dir; can be ~550MB).",
+    ),
+    Setting(
+        "observations-dir",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("memory", "observations"),
+        help="Observation JSONL logs (derived from data-dir).",
+    ),
+    Setting(
+        "project-aliases-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("project-aliases.json"),
+        help="Project-alias map (derived from data-dir).",
     ),
 )
 

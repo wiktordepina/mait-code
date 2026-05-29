@@ -299,3 +299,57 @@ class TestValidateSettings:
             config.Setting("log-level", "MAIT_CODE_LOG_LEVEL", "INFO"),
         )
         assert config.validate_settings() == []
+
+
+# ---------------------------------------------------------------------------
+# Tier 2 derived values — pinned to their runtime path helpers (no drift)
+# ---------------------------------------------------------------------------
+
+
+class TestDerivedRegistry:
+    def test_all_derived_keys_are_display_only(self) -> None:
+        derived = [s for s in config.SETTINGS if not s.settable]
+        assert {s.key for s in derived} == {
+            "embedding-dim",
+            "memory-db-path",
+            "tasks-db-path",
+            "decisions-db-path",
+            "reminders-db-path",
+            "model-cache-dir",
+            "observations-dir",
+            "project-aliases-path",
+        }
+        for s in derived:
+            assert s.env == ""  # no env var
+            assert s.derive is not None
+            assert config.resolve(s)[1] == "derived"
+
+    def test_db_paths_match_runtime_helpers(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from mait_code.tools.decisions.db import get_db_path as decisions_db
+        from mait_code.tools.memory.db import get_db_path as memory_db
+        from mait_code.tools.reminders.db import get_db_path as reminders_db
+        from mait_code.tools.tasks.db import get_db_path as tasks_db
+
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.delenv("MAIT_CODE_DATA_DIR", raising=False)
+        monkeypatch.setattr(config, "_settings_cache", {})
+
+        pairs = {
+            "memory-db-path": memory_db,
+            "tasks-db-path": tasks_db,
+            "decisions-db-path": decisions_db,
+            "reminders-db-path": reminders_db,
+        }
+        for key, helper in pairs.items():
+            derived = Path(config.get(key)).expanduser()
+            assert derived == helper()
+
+    def test_embedding_dim_matches_provider(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mait_code.tools.memory.embeddings import _get_embedding_dim
+
+        monkeypatch.setattr(config, "_settings_cache", {})
+        assert config.get_int("embedding-dim") == _get_embedding_dim()

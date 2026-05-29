@@ -123,6 +123,16 @@ All embedding settings live in `~/.config/mait-code/settings.toml` (or `$XDG_CON
 
 Run `mait-code settings` to see the active configuration and where each value comes from.
 
+**Derived values (read-only):** `mait-code settings` also reports values that are *computed* rather than configured — listed with source `derived`. They can't be set, but they answer "where does my data live?" and "why does a provider switch force a reindex?":
+
+| Derived value | Computed from |
+|---------------|---------------|
+| `embedding-dim` | provider + model (768 for local nomic, 1024 for Bedrock Titan v2) |
+| `memory-db-path`, `tasks-db-path`, `decisions-db-path`, `reminders-db-path` | `data-dir` |
+| `model-cache-dir` | `data-dir` + `/models` (local model cache, can be ~550MB) |
+| `observations-dir` | `data-dir` + `/memory/observations` |
+| `project-aliases-path` | `data-dir` + `/project-aliases.json` |
+
 **Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table. Run `mait-code settings` to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
 
 #### How it works
