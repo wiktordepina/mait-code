@@ -602,10 +602,15 @@ def data_dir() -> Path:
     Honours ``$MAIT_CODE_DATA_DIR`` when set to a non-empty value;
     otherwise ``~/.claude/mait-code-data``. Computed at call time so tests
     that relocate ``$HOME`` are honoured.
+
+    A leading ``~`` in the override is expanded — otherwise a value like
+    ``~/.claude/mait-code-data`` (a literal, unexpanded tilde from the
+    environment) would resolve relative to the cwd, scattering data into a
+    stray ``~`` directory instead of ``$HOME``.
     """
     override = os.environ.get("MAIT_CODE_DATA_DIR", "").strip()
     if override:
-        return Path(override)
+        return Path(override).expanduser()
     return Path.home() / ".claude" / "mait-code-data"
 
 

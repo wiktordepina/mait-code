@@ -323,3 +323,39 @@ class TestDetail:
         rendered = _run(scenario)
         assert "first note" in rendered
         assert "claude" in rendered
+
+
+class TestLayout:
+    """Guards against the panes rendering at zero height (cards invisible)."""
+
+    def test_panes_have_nonzero_height(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": BACKLOG}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                from textual.containers import Vertical
+
+                return app.query_one("#col-backlog", Vertical).size.height
+
+        # Before the CSS height fix this was 0, so no card ever painted.
+        assert _run(scenario) > 0
+
+    def test_card_text_is_rendered(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "Find me", "status": BACKLOG}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                # Join the compositor's rendered line strips — a real paint of
+                # the live screen, so a zero-height/blank column would not
+                # contain the card text.
+                strips = app.screen._compositor.render_strips()
+                painted = "\n".join(
+                    "".join(seg.text for seg in strip) for strip in strips
+                )
+                return "Find me" in painted
+
+        assert _run(scenario) is True

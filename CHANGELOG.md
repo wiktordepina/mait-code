@@ -10,6 +10,26 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.25.1] — 2026-05-29
+
+### Fixed
+
+- **Board TUI showed no cards.** The status panes were laid out with no height,
+  so every column collapsed to zero rows and `mait-code board` rendered empty
+  even when cards existed. The panes now fill the body and the card lists flex
+  to fill each pane. Added layout regression tests that assert non-zero pane
+  height and that card text actually paints (the earlier tests only checked the
+  data model, not the render).
+- **Card detail modal dropped bracketed text.** A comment author (`[claude]`)
+  or any field containing `[...]` was parsed as Rich console markup and
+  silently removed. Dynamic fields are now escaped, so the text renders
+  literally.
+- **`data-dir` with a leading `~` resolved to the wrong place.** A
+  `MAIT_CODE_DATA_DIR` value like `~/.claude/mait-code-data` (a literal,
+  unexpanded tilde) was used as a relative path, scattering databases into a
+  stray `~` directory under the working directory — so the board, tasks, and
+  memory read empty stores. `data_dir()` now expands a leading `~`.
+
 ## [0.25.0] — 2026-05-29
 
 ### Added
