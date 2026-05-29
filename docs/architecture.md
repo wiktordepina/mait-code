@@ -321,6 +321,14 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `remove` | id | Delete a card permanently (cascades comments) |
 | `summary` | --all?, --project?, --json? | Per-column counts (used by the session-start hook) |
 
+Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
+
+## Board TUI (`mait-code board`)
+
+`mait-code board` opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a `p`-cycle project filter, arrow-key navigation, `<`/`>` to move a card along the flow (`backlog → refined → in_progress → done`; `blocked` is reached via `b`/`u`, not the move line), a card-detail modal with the comment thread, and `c` to comment. It is built on Textual and reuses the board `service.py`, mirroring the `mait-code settings` editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.
+
+The board TUI is **on-demand and foreground** — it is launched explicitly, runs until you quit with `q`, and leaves nothing behind. The *No background services* principle is intact: there is no daemon polling the board, only a short-lived app you open when you want to see it.
+
 ## Decisions Database
 
 The decisions database (`decisions.db`) stores project-scoped technical decision records (ADR-lite).

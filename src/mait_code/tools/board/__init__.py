@@ -1,9 +1,10 @@
 """Board tool — a manually-driven kanban board across projects.
 
 A single SQLite board (``board.db``) of cards tagged by ``project``. The CLI
-(``main``) handles create / refine / pick-up / move / complete operations.
-Columns are fixed: backlog → refined → in_progress → blocked → done, plus a
-hidden archived state.
+(``main``) handles create / refine / pick-up / move / complete operations, all
+sitting on the presentation-agnostic :mod:`~mait_code.tools.board.service` core
+that the interactive TUI shares. Columns are fixed: backlog → refined →
+in_progress → blocked → done, plus a hidden archived state.
 """
 
 from mait_code.tools.board.cli import main
@@ -28,8 +29,28 @@ from mait_code.tools.board.db import (
     get_project,
 )
 from mait_code.tools.board.migrate import ensure_schema
+from mait_code.tools.board.service import (
+    CardNotFound,
+    add_card,
+    add_comment,
+    archive_card,
+    block_card,
+    complete_card,
+    edit_card,
+    get_card,
+    get_comments,
+    list_cards,
+    list_projects,
+    move_card,
+    next_refined,
+    refine_card,
+    remove_card,
+    summary_counts,
+    unblock_card,
+)
 
 __all__ = [
+    # Columns
     "ALL_STATUSES",
     "ARCHIVED",
     "BACKLOG",
@@ -39,13 +60,33 @@ __all__ = [
     "IN_PROGRESS",
     "LABELS",
     "REFINED",
+    "is_valid_status",
+    "label",
+    # Database
     "connection",
     "ensure_schema",
     "get_connection",
     "get_data_dir",
     "get_db_path",
     "get_project",
-    "is_valid_status",
-    "label",
+    # Service
+    "CardNotFound",
+    "add_card",
+    "add_comment",
+    "archive_card",
+    "block_card",
+    "complete_card",
+    "edit_card",
+    "get_card",
+    "get_comments",
+    "list_cards",
+    "list_projects",
+    "move_card",
+    "next_refined",
+    "refine_card",
+    "remove_card",
+    "summary_counts",
+    "unblock_card",
+    # Entry point
     "main",
 ]

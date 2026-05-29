@@ -10,6 +10,26 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-05-29
+
+### Added
+
+- **`mait-code board`** — an on-demand, full-screen kanban TUI. View every
+  project's cards in side-by-side status columns, filter by project (`p`),
+  navigate with the arrow keys, and move a card along the flow with `<`/`>`
+  (`backlog → refined → in_progress → done`; `blocked` is reached via `b`/`u`).
+  Open a card's detail and comment thread with `Enter`, add a comment with `c`,
+  toggle archived with `a`, and quit with `q`. Launched explicitly and run in
+  the foreground — no background process. Piped or redirected, it falls back to
+  a read-only grouped render. This completes the board: data + CLI (0.23.0),
+  skill + session summary (0.24.0), and now the visual board.
+
+### Changed
+
+- **Board internals** — the card queries and mutations (including the
+  done-invariant) now live in a shared `board/service.py`, so the CLI and the
+  TUI sit on one source of truth. No change to the `mc-tool-board` interface.
+
 ## [0.24.0] — 2026-05-29
 
 ### Added

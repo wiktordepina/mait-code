@@ -3,6 +3,8 @@
 
 # Board — API reference
 
+## Columns
+
 ::: mait_code.tools.board.ALL_STATUSES
 
 ::: mait_code.tools.board.ARCHIVED
@@ -21,6 +23,12 @@
 
 ::: mait_code.tools.board.REFINED
 
+::: mait_code.tools.board.is_valid_status
+
+::: mait_code.tools.board.label
+
+## Database
+
 ::: mait_code.tools.board.connection
 
 ::: mait_code.tools.board.ensure_schema
@@ -33,8 +41,42 @@
 
 ::: mait_code.tools.board.get_project
 
-::: mait_code.tools.board.is_valid_status
+## Service
 
-::: mait_code.tools.board.label
+::: mait_code.tools.board.CardNotFound
+
+::: mait_code.tools.board.add_card
+
+::: mait_code.tools.board.add_comment
+
+::: mait_code.tools.board.archive_card
+
+::: mait_code.tools.board.block_card
+
+::: mait_code.tools.board.complete_card
+
+::: mait_code.tools.board.edit_card
+
+::: mait_code.tools.board.get_card
+
+::: mait_code.tools.board.get_comments
+
+::: mait_code.tools.board.list_cards
+
+::: mait_code.tools.board.list_projects
+
+::: mait_code.tools.board.move_card
+
+::: mait_code.tools.board.next_refined
+
+::: mait_code.tools.board.refine_card
+
+::: mait_code.tools.board.remove_card
+
+::: mait_code.tools.board.summary_counts
+
+::: mait_code.tools.board.unblock_card
+
+## Entry point
 
 ::: mait_code.tools.board.main
