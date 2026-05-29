@@ -17,6 +17,7 @@ to one, falling back to the read-only list otherwise.
 
 from __future__ import annotations
 
+from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -24,16 +25,16 @@ from textual.screen import ModalScreen
 from textual.validation import ValidationResult, Validator
 from textual.widgets import (
     Button,
+    DataTable,
     Footer,
     Header,
     Input,
     Label,
-    ListItem,
-    ListView,
     RadioButton,
     RadioSet,
     Static,
 )
+from textual.widgets.data_table import ColumnKey
 
 from mait_code import config
 from mait_code.cli._settings_edit import (
@@ -69,32 +70,56 @@ class _LiveValidator(Validator):
         return self.success() if msg is None else self.failure(msg)
 
 
-class SettingRow(ListItem):
-    """A single list row, carrying the setting key it represents."""
+# Source only ever holds these words, so the column is sized to the longest
+# ("settings"). The migration marker rides on the Setting column instead, so it
+# costs the wider Value column nothing.
+_SETTING_WIDTH = 26
+_SOURCE_WIDTH = 8
+_VALUE_WIDTH = 26
+_MIGRATION_MARK = " ⚠"
 
-    def __init__(self, key: str) -> None:
-        self.setting_key = key
-        # Derived rows stay navigable (so the detail pane can explain them) but
-        # are visually dimmed and reject edits.
-        derived = key != _WEIGHTS_KEY and not _by_key()[key].settable
-        super().__init__(
-            Label(self._row_text()),
-            classes="derived" if derived else "",
+
+def _truncate(text: str, width: int = _VALUE_WIDTH) -> str:
+    """Clip *text* to *width*, marking truncation with an ellipsis."""
+    return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def _row_cells(key: str, value_width: int = _VALUE_WIDTH) -> tuple[Text, Text, Text]:
+    """Return the (setting, value, source) cells for a settings-table row.
+
+    *value_width* is the current width of the (flexing) Value column, used to
+    truncate the value with an ellipsis so it never overflows.
+    """
+    if key == _WEIGHTS_KEY:
+        weights = " / ".join(config.get(k) for k in config._WEIGHT_KEYS)
+        return (
+            Text("scoring weights…"),
+            Text(_truncate(weights, value_width)),
+            Text("grouped", style="cyan"),
         )
 
-    def _row_text(self) -> str:
-        if self.setting_key == _WEIGHTS_KEY:
-            weights = " / ".join(config.get(k) for k in config._WEIGHT_KEYS)
-            return f"{'scoring weights…':<26} {weights:<22} grouped"
-        setting = _by_key()[self.setting_key]
-        value, source = config.resolve(setting)
-        marker = " ⚠" if setting.requires_migration else ""
-        if not setting.settable:
-            return f"{setting.key:<26} {value}  ·  read-only"
-        return f"{setting.key:<26} {value:<22} {source}{marker}"
+    setting = _by_key()[key]
+    value, source = config.resolve(setting)
 
-    def refresh_row(self) -> None:
-        self.query_one(Label).update(self._row_text())
+    if not setting.settable:
+        # Derived rows stay navigable (the detail pane explains them) but read
+        # as muted and reject edits.
+        return (
+            Text(setting.key, style="dim"),
+            Text(_truncate(value, value_width), style="dim"),
+            Text("derived", style="dim"),
+        )
+
+    setting_cell = Text(setting.key)
+    if setting.requires_migration:
+        setting_cell.append(_MIGRATION_MARK, style="yellow")
+    value_style = "dim" if source == "default" else ""
+    source_cell = Text(source, style="dim" if source == "default" else "")
+    return (
+        setting_cell,
+        Text(_truncate(value, value_width), style=value_style),
+        source_cell,
+    )
 
 
 class ConfirmScreen(ModalScreen[bool]):
@@ -193,11 +218,12 @@ class SettingsApp(App[None]):
 
     CSS = """
     #body { height: 1fr; }
-    #list { width: 42%; border-right: solid $panel; }
-    #list .derived { color: $text-muted; }
+    #list { width: 1fr; border-right: solid $panel; }
+    #list > .datatable--header { text-style: bold; color: $text-muted; }
     #detail { width: 1fr; padding: 1 2; }
     #detail .title { text-style: bold; color: $accent; }
     #detail .help { color: $text-muted; margin-bottom: 1; }
+    #detail .warn-note { color: $warning; margin-bottom: 1; }
     #detail #source { color: $text-muted; margin-top: 1; }
     #detail #msg { margin-top: 1; }
     #detail #apply { margin-top: 1; }
@@ -222,38 +248,95 @@ class SettingsApp(App[None]):
 
     BINDINGS = [
         ("ctrl+s", "apply", "Apply"),
+        ("escape", "focus_list", "Back to list"),
         ("q", "quit", "Quit"),
     ]
 
     def __init__(self) -> None:
         super().__init__()
         self._current_key: str | None = None
+        self._row_order: list[str] = []
+        self._value_width = _VALUE_WIDTH
+        self._value_col: ColumnKey | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal(id="body"):
-            yield ListView(*self._build_rows(), id="list")
+            yield DataTable(id="list", cursor_type="row", zebra_stripes=True)
             yield VerticalScroll(id="detail")
         yield Footer()
 
-    def _build_rows(self) -> list[SettingRow]:
-        rows: list[SettingRow] = []
+    def on_mount(self) -> None:
+        # The detail pane scrolls but shouldn't be a Tab stop — Tab should land
+        # straight on the editor widget, not the container around it.
+        self.query_one("#detail", VerticalScroll).can_focus = False
+        table = self.query_one("#list", DataTable)
+        table.add_column("Setting", width=_SETTING_WIDTH, key="k")
+        self._value_col = table.add_column("Value", width=self._value_width, key="v")
+        table.add_column("Source", width=_SOURCE_WIDTH, key="s")
+        for key in self._ordered_keys():
+            table.add_row(*_row_cells(key, self._value_width), key=key)
+            self._row_order.append(key)
+        table.focus()
+        # Size the Value column to fill the half once the layout is known.
+        self.call_after_refresh(self._fit_value_column)
+
+    def on_resize(self) -> None:
+        self._fit_value_column()
+
+    def _fit_value_column(self) -> None:
+        """Flex the Value column to fill the list pane's remaining width."""
+        if not self._row_order or self._value_col is None:
+            return
+        table = self.query_one("#list", DataTable)
+        available = table.scrollable_content_region.width
+        if available <= 0:
+            return
+        # Reserve the two fixed columns (and per-column padding) and give the
+        # rest to Value. A small floor keeps Source visible rather than letting
+        # Value push it off the edge on a narrow pane.
+        pad = table.cell_padding * 2
+        value_width = max(
+            8, available - (_SETTING_WIDTH + pad) - (_SOURCE_WIDTH + pad) - pad
+        )
+        if value_width == self._value_width:
+            return
+        self._value_width = value_width
+        table.columns[self._value_col].width = value_width
+        for key in self._row_order:
+            table.update_cell(key, "v", _row_cells(key, value_width)[1])
+        table.refresh(layout=True)
+
+    def _ordered_keys(self) -> list[str]:
+        """Row keys in display order: the three weights collapse into one row."""
+        keys: list[str] = []
         weights_added = False
         for setting in config.SETTINGS:
             if setting.key in config._WEIGHT_KEYS:
-                # Collapse the three weights into one grouped row, placed where
-                # the first weight key would otherwise appear.
                 if not weights_added:
-                    rows.append(SettingRow(_WEIGHTS_KEY))
+                    keys.append(_WEIGHTS_KEY)
                     weights_added = True
                 continue
-            rows.append(SettingRow(setting.key))
-        return rows
+            keys.append(setting.key)
+        return keys
 
-    async def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        item = event.item
-        if isinstance(item, SettingRow):
-            await self._show_detail(item.setting_key)
+    async def on_data_table_row_highlighted(
+        self, event: DataTable.RowHighlighted
+    ) -> None:
+        key = event.row_key.value
+        if key is not None:
+            await self._show_detail(key)
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        # Enter on a row hands focus to the detail pane's editor.
+        self._focus_editor()
+
+    def _focus_editor(self) -> None:
+        for selector in ("#editor", "#edit-weights", "#apply"):
+            found = self.query(selector)
+            if found:
+                found.first().focus()
+                return
 
     async def _show_detail(self, key: str) -> None:
         self._current_key = key
@@ -281,6 +364,15 @@ class SettingsApp(App[None]):
             Label(setting.key, classes="title"),
             Label(setting.help, classes="help"),
         ]
+        if setting.requires_migration:
+            widgets.append(
+                Static(
+                    "⚠ Changing this re-embeds all stored memories "
+                    "(rebuilds the vector table from preserved text — no data "
+                    "loss, but it takes a moment).",
+                    classes="warn-note",
+                )
+            )
         current, source = config.resolve(setting)
 
         if not setting.settable:
@@ -343,15 +435,23 @@ class SettingsApp(App[None]):
         elif self._current_key is not None:
             self._apply(self._current_key)
 
+    def action_focus_list(self) -> None:
+        self.query_one("#list", DataTable).focus()
+
     @work
     async def _edit_weights(self) -> None:
         changed = await self.push_screen_wait(WeightsScreen())
         if not changed:
             return
-        row = self.query_one("#list", ListView).highlighted_child
-        if isinstance(row, SettingRow):
-            row.refresh_row()
+        self._refresh_row(_WEIGHTS_KEY)
         await self._show_detail(_WEIGHTS_KEY)
+
+    def _refresh_row(self, key: str) -> None:
+        """Re-render a single table row's cells in place after a change."""
+        table = self.query_one("#list", DataTable)
+        cells = _row_cells(key, self._value_width)
+        for column_key, cell in zip(("k", "v", "s"), cells):
+            table.update_cell(key, column_key, cell)
 
     @work
     async def _apply(self, key: str) -> None:
@@ -407,9 +507,7 @@ class SettingsApp(App[None]):
             input("\nPress Enter to return to settings… ")
 
     def _after_apply(self, setting: config.Setting, outcome: object) -> None:
-        row = self.query_one("#list", ListView).highlighted_child
-        if isinstance(row, SettingRow):
-            row.refresh_row()
+        self._refresh_row(setting.key)
         _, source = config.resolve(setting)
         self.query_one("#source", Static).update(f"source: {source}")
         warnings = getattr(outcome, "warnings", []) or []

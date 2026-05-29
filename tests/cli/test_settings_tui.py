@@ -15,10 +15,10 @@ import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
-from textual.widgets import Button, Input, RadioButton, RadioSet, Static
+from textual.widgets import Button, DataTable, Input, RadioButton, RadioSet, Static
 
 from mait_code import config
-from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingRow, SettingsApp
+from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingsApp, _row_cells
 
 
 def _run(coro_factory):
@@ -34,10 +34,9 @@ def _select_radio(app: SettingsApp, label: str) -> None:
 
 
 async def _goto(pilot, app: SettingsApp, key: str) -> None:
-    """Highlight the list row for *key* and let the detail panel build."""
-    rows = [c for c in app.query_one("#list").children if isinstance(c, SettingRow)]
-    target = next(i for i, r in enumerate(rows) if r.setting_key == key)
-    app.query_one("#list").index = target
+    """Move the table cursor to *key*'s row and let the detail panel build."""
+    table = app.query_one("#list", DataTable)
+    table.move_cursor(row=app._row_order.index(key))
     await pilot.pause()
     await pilot.pause()
 
@@ -68,6 +67,52 @@ class TestNavigation:
 
         _run(scenario)
 
+    def test_enter_focuses_editor(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "bedrock-region")
+                app.query_one("#list", DataTable).focus()
+                await pilot.press("enter")
+                await pilot.pause()
+                return type(app.focused).__name__, getattr(app.focused, "id", None)
+
+        name, widget_id = _run(scenario)
+        assert (name, widget_id) == ("Input", "editor")
+
+    def test_escape_returns_focus_to_list(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "bedrock-region")
+                app.query_one("#list", DataTable).focus()
+                await pilot.press("enter")  # focus the editor
+                await pilot.pause()
+                in_editor = getattr(app.focused, "id", None)
+                await pilot.press("escape")  # back to the list
+                await pilot.pause()
+                return in_editor, type(app.focused).__name__
+
+        assert _run(scenario) == ("editor", "DataTable")
+
+    def test_single_tab_reaches_editor(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "bedrock-region")
+                app.query_one("#list", DataTable).focus()
+                await pilot.press("tab")
+                await pilot.pause()
+                return getattr(app.focused, "id", None)
+
+        assert _run(scenario) == "editor"
+
     def test_derived_row_is_read_only(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
 
@@ -80,6 +125,42 @@ class TestNavigation:
                 assert "derived" in str(app.query_one("#source", Static).render())
 
         _run(scenario)
+
+
+class TestMigrationMarker:
+    def test_marker_on_setting_not_source(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        setting_cell, _value, source_cell = _row_cells("embedding-provider")
+        assert "⚠" in str(setting_cell)
+        assert "⚠" not in str(source_cell)
+
+    def test_no_marker_on_plain_setting(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        setting_cell, _value, _source = _row_cells("log-level")
+        assert "⚠" not in str(setting_cell)
+
+    def test_detail_explains_marker(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "embedding-provider")
+                notes = app.query(".warn-note")
+                return bool(notes) and "re-embed" in str(notes.first().render())
+
+        assert _run(scenario) is True
+
+    def test_no_note_for_plain_setting(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "log-level")
+                return len(app.query(".warn-note"))
+
+        assert _run(scenario) == 0
 
 
 class TestEditing:
@@ -184,14 +265,9 @@ class TestWeights:
             app = SettingsApp()
             async with app.run_test() as pilot:
                 await pilot.pause()
-                rows = [
-                    c.setting_key
-                    for c in app.query_one("#list").children
-                    if isinstance(c, SettingRow)
-                ]
                 # Grouped row present; individual weight keys are not listed.
-                assert _WEIGHTS_KEY in rows
-                assert "score-weight-recency" not in rows
+                assert _WEIGHTS_KEY in app._row_order
+                assert "score-weight-recency" not in app._row_order
 
         _run(scenario)
 
