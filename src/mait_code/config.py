@@ -15,11 +15,15 @@ user-facing settings.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     # Registry
@@ -27,6 +31,9 @@ __all__ = [
     "SETTINGS",
     "resolve",
     "get",
+    "get_int",
+    "get_float",
+    "validate_settings",
     # Settings file I/O
     "read_settings_file",
     "write_settings_file",
@@ -60,17 +67,37 @@ DEFAULT_BEDROCK_REGION = "eu-west-2"
 
 @dataclass(frozen=True)
 class Setting:
-    """One user-facing configuration knob, read from an environment variable.
+    """One configuration knob shown by ``mait-code settings``.
+
+    Most settings are *settable*: backed by an environment variable, with a
+    value resolved env → file → default. Two extra flavours exist:
+
+    * **Derived** (``settable=False``): a read-only value computed at display
+      time by :attr:`derive` (e.g. database paths derived from ``data-dir``).
+      These have no environment variable and never appear as an assignable
+      line in the settings file.
+    * **Advanced** (``advanced=True``): a real settable knob that is written
+      *commented-out* in the generated settings file, so the hardcoded
+      default stays authoritative until the user deliberately uncomments it.
 
     Attributes:
         key: Stable, kebab-case identifier shown by ``mait-code settings``.
-        env: The environment variable that backs it.
+        env: The environment variable that backs it (empty for derived).
         default: Display string for the default value (``<data-dir>``-style
             placeholders are allowed where the real default is derived).
         requires_migration: ``True`` when changing it invalidates stored
             embeddings (provider/model changes need a re-embed).
         secret: ``True`` when the value should be masked in output.
         help: One-line description.
+        kind: Value type for typed accessors — ``"str"``, ``"int"`` or
+            ``"float"``. Drives :func:`get_int` / :func:`get_float` coercion.
+        settable: ``False`` marks a derived, display-only value.
+        advanced: ``True`` writes the knob commented-out in the settings file.
+        derive: For derived settings, a zero-arg callable returning the
+            computed value as a string. Must lazy-import any heavy deps so
+            ``config`` stays a light, stdlib-only leaf.
+        validate: Optional callable taking the raw string value and returning
+            an error message, or ``None`` when valid. Run by ``doctor``.
     """
 
     key: str
@@ -79,6 +106,80 @@ class Setting:
     requires_migration: bool = False
     secret: bool = False
     help: str = ""
+    kind: str = "str"
+    settable: bool = True
+    advanced: bool = False
+    derive: Callable[[], str] | None = None
+    validate: Callable[[str], str | None] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Derived-value helpers (Tier 2 display-only settings). Pure — no mkdir — so
+# `mait-code settings` stays read-only. Each mirrors a runtime path helper;
+# tests in test_config.py pin them together to guard against drift.
+# ---------------------------------------------------------------------------
+
+
+def _display_path(*parts: str) -> str:
+    """Join *parts* under the data dir, abbreviating ``$HOME`` to ``~``."""
+    text = str(data_dir().joinpath(*parts))
+    home = str(Path.home())
+    return "~" + text[len(home) :] if text.startswith(home) else text
+
+
+def _derive_embedding_dim() -> str:
+    """Embedding vector size for the configured provider/model."""
+    from mait_code.tools.memory.embeddings import _get_embedding_dim
+
+    return str(_get_embedding_dim())
+
+
+# ---------------------------------------------------------------------------
+# Per-value validators (run by `doctor` via validate_settings()).
+# ---------------------------------------------------------------------------
+
+
+def _positive_int(value: str) -> str | None:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return f"must be an integer, got {value!r}"
+    return None if n > 0 else f"must be a positive integer, got {n}"
+
+
+def _non_negative_int(value: str) -> str | None:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return f"must be an integer, got {value!r}"
+    return None if n >= 0 else f"must be zero or greater, got {n}"
+
+
+_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
+
+def _log_level(value: str) -> str | None:
+    return (
+        None
+        if value.upper() in _LOG_LEVELS
+        else f"must be one of {', '.join(_LOG_LEVELS)}, got {value!r}"
+    )
+
+
+def _unit_interval(value: str) -> str | None:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return f"must be a number, got {value!r}"
+    return None if 0.0 <= f <= 1.0 else f"must be in [0, 1], got {f}"
+
+
+def _positive_float(value: str) -> str | None:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return f"must be a number, got {value!r}"
+    return None if f > 0.0 else f"must be greater than zero, got {f}"
 
 
 SETTINGS: tuple[Setting, ...] = (
@@ -93,6 +194,7 @@ SETTINGS: tuple[Setting, ...] = (
         "MAIT_CODE_LOG_LEVEL",
         DEFAULT_LOG_LEVEL,
         help="Log verbosity: DEBUG, INFO, WARNING or ERROR.",
+        validate=_log_level,
     ),
     Setting(
         "log-file",
@@ -127,6 +229,214 @@ SETTINGS: tuple[Setting, ...] = (
         DEFAULT_BEDROCK_REGION,
         help="AWS region for the Bedrock embedding client.",
     ),
+    # --- Tier 3: advanced operational knobs (commented-out by default) ---
+    Setting(
+        "log-backup-count",
+        "MAIT_CODE_LOG_BACKUP_COUNT",
+        "14",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Days of rotated log files to keep.",
+    ),
+    Setting(
+        "extraction-model",
+        "MAIT_CODE_EXTRACTION_MODEL",
+        "haiku",
+        advanced=True,
+        help="Model used for memory extraction (fast/cheap by default).",
+    ),
+    Setting(
+        "reflection-model",
+        "MAIT_CODE_REFLECTION_MODEL",
+        "haiku",
+        advanced=True,
+        help="Model used for reflection synthesis.",
+    ),
+    Setting(
+        "llm-timeout",
+        "MAIT_CODE_LLM_TIMEOUT",
+        "90",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Timeout (seconds) for subprocess LLM calls.",
+    ),
+    Setting(
+        "reflection-batch-size",
+        "MAIT_CODE_REFLECTION_BATCH_SIZE",
+        "50",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Default entries processed per reflection (--batch-size overrides).",
+    ),
+    Setting(
+        "reflection-novelty-gate",
+        "MAIT_CODE_REFLECTION_NOVELTY_GATE",
+        "3",
+        kind="int",
+        advanced=True,
+        validate=_non_negative_int,
+        help="Default new entries required to trigger reflection (--min-new overrides).",
+    ),
+    Setting(
+        "git-timeout",
+        "MAIT_CODE_GIT_TIMEOUT",
+        "5",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Timeout (seconds) for git context probes.",
+    ),
+    # --- Tier 4: scoring / dedup tuning (advanced, validated) ---
+    Setting(
+        "score-weight-recency",
+        "MAIT_CODE_SCORE_WEIGHT_RECENCY",
+        "0.3",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Scoring weight for recency (the three weights must sum to 1.0).",
+    ),
+    Setting(
+        "score-weight-importance",
+        "MAIT_CODE_SCORE_WEIGHT_IMPORTANCE",
+        "0.3",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Scoring weight for importance (the three weights must sum to 1.0).",
+    ),
+    Setting(
+        "score-weight-relevance",
+        "MAIT_CODE_SCORE_WEIGHT_RELEVANCE",
+        "0.4",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Scoring weight for relevance (the three weights must sum to 1.0).",
+    ),
+    Setting(
+        "half-life-episodic",
+        "MAIT_CODE_HALF_LIFE_EPISODIC",
+        "3.0",
+        kind="float",
+        advanced=True,
+        validate=_positive_float,
+        help="Recency half-life (days) for episodic memories (events, tasks).",
+    ),
+    Setting(
+        "half-life-semantic",
+        "MAIT_CODE_HALF_LIFE_SEMANTIC",
+        "90.0",
+        kind="float",
+        advanced=True,
+        validate=_positive_float,
+        help="Recency half-life (days) for semantic memories (facts, preferences).",
+    ),
+    Setting(
+        "dedup-string-threshold",
+        "MAIT_CODE_DEDUP_STRING_THRESHOLD",
+        "0.85",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="String-similarity threshold above which a memory is a duplicate.",
+    ),
+    Setting(
+        "dedup-vector-threshold",
+        "MAIT_CODE_DEDUP_VECTOR_THRESHOLD",
+        "0.92",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Cosine-similarity threshold above which a memory is a duplicate.",
+    ),
+    Setting(
+        "scope-boost-global",
+        "MAIT_CODE_SCOPE_BOOST_GLOBAL",
+        "0.7",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Relevance multiplier applied to global-scoped memories.",
+    ),
+    Setting(
+        "scope-boost-cross-project",
+        "MAIT_CODE_SCOPE_BOOST_CROSS_PROJECT",
+        "0.3",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Relevance multiplier applied across project boundaries.",
+    ),
+    # --- Tier 2: derived, display-only (settable=False) ---
+    Setting(
+        "embedding-dim",
+        "",
+        "",
+        settable=False,
+        kind="int",
+        derive=_derive_embedding_dim,
+        help="Embedding vector size (derived from provider + model).",
+    ),
+    Setting(
+        "memory-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("memory.db"),
+        help="SQLite store for memories (derived from data-dir).",
+    ),
+    Setting(
+        "tasks-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("tasks.db"),
+        help="SQLite store for tasks (derived from data-dir).",
+    ),
+    Setting(
+        "decisions-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("decisions.db"),
+        help="SQLite store for decisions (derived from data-dir).",
+    ),
+    Setting(
+        "reminders-db-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("reminders.db"),
+        help="SQLite store for reminders (derived from data-dir).",
+    ),
+    Setting(
+        "model-cache-dir",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("models"),
+        help="Local embedding-model cache (derived from data-dir; can be ~550MB).",
+    ),
+    Setting(
+        "observations-dir",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("memory", "observations"),
+        help="Observation JSONL logs (derived from data-dir).",
+    ),
+    Setting(
+        "project-aliases-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("project-aliases.json"),
+        help="Project-alias map (derived from data-dir).",
+    ),
 )
 
 
@@ -150,9 +460,14 @@ def resolve(setting: Setting) -> tuple[str, str]:
     2. **Settings file** — ``source = "settings"``
     3. **Hardcoded default** — ``source = "default"``
 
+    Derived settings (``settable=False``) short-circuit to their computed
+    value with source ``"derived"``.
+
     This *reports* configuration; it does not validate it — that is
     ``doctor``'s job.
     """
+    if not setting.settable and setting.derive is not None:
+        return setting.derive(), "derived"
     raw = os.environ.get(setting.env)
     if raw is not None and raw.strip() != "":
         return raw, "env"
@@ -171,6 +486,93 @@ def get(key: str) -> str:
         KeyError: If *key* is not a registered setting.
     """
     return resolve(_by_key()[key])[0]
+
+
+def get_int(key: str) -> int:
+    """Return a setting coerced to ``int``.
+
+    Falls back to the setting's hardcoded default (logging a warning) when
+    the resolved value cannot be parsed, so a fat-fingered settings file
+    degrades to stock behaviour rather than crashing a hook. ``doctor`` is
+    responsible for surfacing the bad value loudly.
+
+    Raises:
+        KeyError: If *key* is not a registered setting.
+    """
+    setting = _by_key()[key]
+    value, _ = resolve(setting)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "setting %r is not an integer (%r); using default %r",
+            key,
+            value,
+            setting.default,
+        )
+        return int(setting.default)
+
+
+def get_float(key: str) -> float:
+    """Return a setting coerced to ``float``.
+
+    Like :func:`get_int`, falls back to the hardcoded default on a bad value.
+
+    Raises:
+        KeyError: If *key* is not a registered setting.
+    """
+    setting = _by_key()[key]
+    value, _ = resolve(setting)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "setting %r is not a number (%r); using default %r",
+            key,
+            value,
+            setting.default,
+        )
+        return float(setting.default)
+
+
+def validate_settings() -> list[str]:
+    """Return a list of human-readable validation errors (empty when healthy).
+
+    Runs every setting's per-value :attr:`Setting.validate` callable, plus
+    the cross-field invariants below. Called by ``doctor``; it reads the
+    resolved configuration but never mutates it.
+    """
+    errors: list[str] = []
+    for setting in SETTINGS:
+        if setting.validate is None:
+            continue
+        value, _ = resolve(setting)
+        msg = setting.validate(value)
+        if msg is not None:
+            errors.append(f"{setting.key}: {msg}")
+    errors.extend(_cross_field_errors())
+    return errors
+
+
+_WEIGHT_KEYS = (
+    "score-weight-recency",
+    "score-weight-importance",
+    "score-weight-relevance",
+)
+
+
+def _cross_field_errors() -> list[str]:
+    """Cross-field setting invariants (e.g. scoring weights must sum to 1.0)."""
+    errors: list[str] = []
+    by_key = _by_key()
+    if all(k in by_key for k in _WEIGHT_KEYS):
+        total = sum(get_float(k) for k in _WEIGHT_KEYS)
+        if abs(total - 1.0) > 1e-6:
+            errors.append(
+                f"scoring weights sum to {total:.3f}, must be 1.0 "
+                "(recency + importance + relevance)"
+            )
+    return errors
 
 
 def data_dir() -> Path:
@@ -229,9 +631,15 @@ def read_settings_file(path: Path | None = None) -> dict[str, str]:
 def _render_settings_toml(values: dict[str, str]) -> str:
     """Generate a commented TOML string with all settings.
 
-    Every registered setting appears with its ``help`` text as a comment.
-    Settings whose default is a placeholder (contains ``<``) are
-    commented out unless an explicit value is provided.
+    Three groups are written in order:
+
+    1. **Primary** settable knobs — uncommented (placeholder defaults stay
+       commented unless an explicit value is provided).
+    2. **Advanced** settable knobs — always commented-out, showing the
+       default as the example value so the hardcoded default stays
+       authoritative until the user uncomments a line.
+    3. **Derived** read-only values — informational comments only; never an
+       assignable line.
     """
     lines = [
         "# mait-code settings",
@@ -239,7 +647,10 @@ def _render_settings_toml(values: dict[str, str]) -> str:
         "# Environment variables (MAIT_CODE_*) override these values when set.",
         "",
     ]
+
     for setting in SETTINGS:
+        if not setting.settable or setting.advanced:
+            continue
         lines.append(f"# {setting.help}")
         has_value = setting.key in values
         value = values.get(setting.key, setting.default)
@@ -249,7 +660,37 @@ def _render_settings_toml(values: dict[str, str]) -> str:
         else:
             lines.append(f'{setting.key} = "{value}"')
         lines.append("")
+
+    advanced = [s for s in SETTINGS if s.settable and s.advanced]
+    if advanced:
+        lines.append(_SECTION_RULE)
+        lines.append(
+            "# Advanced — uncomment to override. Defaults shown; safe to leave alone."
+        )
+        lines.append(_SECTION_RULE)
+        lines.append("")
+        for setting in advanced:
+            lines.append(f"# {setting.help}")
+            value = values.get(setting.key, setting.default)
+            lines.append(f'# {setting.key} = "{value}"')
+            lines.append("")
+
+    derived = [s for s in SETTINGS if not s.settable]
+    if derived:
+        lines.append(_SECTION_RULE)
+        lines.append(
+            "# Derived — read-only, shown by `mait-code settings`. Not configurable here."
+        )
+        lines.append(_SECTION_RULE)
+        lines.append("")
+        for setting in derived:
+            lines.append(f"# {setting.key}: {setting.help}")
+        lines.append("")
+
     return "\n".join(lines)
+
+
+_SECTION_RULE = "# " + "-" * 73
 
 
 def write_settings_file(values: dict[str, str], *, path: Path | None = None) -> Path:

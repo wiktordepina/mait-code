@@ -25,6 +25,7 @@ from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._paths import settings_path
 from mait_code.cli._record import RecordError, read_record
 from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
+from mait_code.config import validate_settings
 from mait_code.console import GLYPH, console
 
 __all__ = [
@@ -133,6 +134,19 @@ def _check_mait_settings() -> Check:
             fix_hint="repair the TOML syntax in that file",
         )
     return Check("settings-file", "ok", f"{sp} parses as TOML")
+
+
+def _check_setting_values() -> Check:
+    errors = validate_settings()
+    if errors:
+        return Check(
+            "settings-values",
+            "fail",
+            "; ".join(errors),
+            fix_hint="edit settings.toml so the flagged values are valid "
+            "(e.g. scoring weights must sum to 1.0)",
+        )
+    return Check("settings-values", "ok", "setting values are valid")
 
 
 def _check_hook_commands(cdir: Path) -> Check:
@@ -289,6 +303,7 @@ def run_doctor(
         record_check,
         _check_source(source),
         _check_mait_settings(),
+        _check_setting_values(),
         _check_settings(cdir),
         _check_hook_commands(cdir),
         _check_symlinks(cdir, fix, fixes),

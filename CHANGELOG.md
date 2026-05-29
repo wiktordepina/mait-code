@@ -10,6 +10,41 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-05-29
+
+**`mait-code settings` now exposes the configuration surface that was
+previously hardcoded — derived values, operational knobs, and scoring
+tuning — without changing any default.**
+
+### Added
+
+- **Derived, read-only values in `mait-code settings`.** The view now reports
+  computed values with source `derived`: `embedding-dim`, the four database
+  paths (`memory-db-path`, `tasks-db-path`, `decisions-db-path`,
+  `reminders-db-path`), `model-cache-dir`, `observations-dir` and
+  `project-aliases-path`. They answer "where does my data live?" and "why does
+  a provider switch force a reindex?". They cannot be set.
+- **Advanced operational settings**, written commented-out in `settings.toml`
+  so the built-in default stays authoritative until you opt in:
+  `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`,
+  `reflection-batch-size`, `reflection-novelty-gate` and `git-timeout`.
+- **Advanced scoring & dedup tuning**, all validated: `score-weight-recency`,
+  `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`,
+  `half-life-semantic`, `dedup-string-threshold`, `dedup-vector-threshold`,
+  `scope-boost-global` and `scope-boost-cross-project`.
+- **`mait-code doctor` validates setting values** via a new `settings-values`
+  check: it flags out-of-range values and scoring weights that don't sum to
+  1.0. Bad values fall back to defaults at runtime, so retrieval is never
+  silently skewed between doctor runs.
+
+### Changed
+
+- The `Setting` registry gained typed accessors (`get_int`, `get_float`),
+  derived (display-only) and advanced (opt-in, commented-out) settings, and a
+  per-value/cross-field validation hook. Existing settings are unchanged.
+- `llm-timeout` reconciles the previous split (60s general / 90s extraction)
+  onto a single knob defaulting to 90s.
+
 ## [0.19.1] — 2026-05-29
 
 **`mait-code update` is now a cheap no-op when nothing changed.**

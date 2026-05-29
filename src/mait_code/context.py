@@ -8,7 +8,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from mait_code.config import data_dir
+from mait_code.config import data_dir, get_int
 
 __all__ = [
     "DEFAULT_BRANCHES",
@@ -39,7 +39,7 @@ def get_project() -> str | None:
             ["git", "rev-parse", "--show-toplevel"],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=get_int("git-timeout"),
         )
         if result.returncode == 0:
             return canonical_project(Path(result.stdout.strip()).name)
@@ -61,7 +61,7 @@ def get_branch() -> str | None:
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=get_int("git-timeout"),
         )
         if result.returncode == 0:
             branch = result.stdout.strip()

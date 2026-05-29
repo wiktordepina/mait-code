@@ -130,3 +130,17 @@ class TestProjectAliases:
         (tmp_path / "project-aliases.json").write_text(self.ALIASES)
         with _mock_run(returncode=0, stdout="/home/user/projects/h-cc-bridge\n"):
             assert get_project() == "hermes-cc-bridge"
+
+
+class TestGitTimeoutSetting:
+    def test_git_timeout_is_read_from_setting(self, monkeypatch):
+        from mait_code import config
+
+        monkeypatch.setattr(config, "_settings_cache", {})
+        monkeypatch.setenv("MAIT_CODE_GIT_TIMEOUT", "7")
+        with patch("mait_code.context.subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="/x/proj\n"
+            )
+            get_project()
+            assert mock_run.call_args[1]["timeout"] == 7

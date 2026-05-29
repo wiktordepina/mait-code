@@ -40,7 +40,24 @@ def test_call_claude_basic(mock_subprocess):
         "--no-session-persistence",
     ]
     assert args[1]["input"] == "test prompt"
-    assert args[1]["timeout"] == 60
+    # Default timeout follows the llm-timeout setting (90 by default).
+    from mait_code import config
+
+    assert args[1]["timeout"] == config.get_int("llm-timeout")
+
+
+def test_call_claude_default_timeout_reads_setting(mock_subprocess, monkeypatch):
+    from mait_code import config
+
+    monkeypatch.setattr(config, "_settings_cache", {})
+    monkeypatch.setenv("MAIT_CODE_LLM_TIMEOUT", "123")
+    mock_subprocess.return_value.returncode = 0
+    mock_subprocess.return_value.stdout = "ok"
+    mock_subprocess.return_value.stderr = ""
+
+    call_claude("prompt")
+
+    assert mock_subprocess.call_args[1]["timeout"] == 123
 
 
 def test_call_claude_custom_model(mock_subprocess):

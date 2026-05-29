@@ -10,6 +10,7 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 
+from mait_code.config import get as config_get
 from mait_code.llm import call_claude
 from mait_code.tools.memory.db import get_data_dir
 from mait_code.tools.memory.writer import store_memory
@@ -602,8 +603,7 @@ def reflect(
     response = call_claude(
         prompt,
         system_prompt=REFLECTION_SYSTEM_PROMPT,
-        model="haiku",
-        timeout=60,
+        model=config_get("reflection-model"),
     )
 
     if not response:

@@ -123,7 +123,31 @@ All embedding settings live in `~/.config/mait-code/settings.toml` (or `$XDG_CON
 
 Run `mait-code settings` to see the active configuration and where each value comes from.
 
+**Derived values (read-only):** `mait-code settings` also reports values that are *computed* rather than configured — listed with source `derived`. They can't be set, but they answer "where does my data live?" and "why does a provider switch force a reindex?":
+
+| Derived value | Computed from |
+|---------------|---------------|
+| `embedding-dim` | provider + model (768 for local nomic, 1024 for Bedrock Titan v2) |
+| `memory-db-path`, `tasks-db-path`, `decisions-db-path`, `reminders-db-path` | `data-dir` |
+| `model-cache-dir` | `data-dir` + `/models` (local model cache, can be ~550MB) |
+| `observations-dir` | `data-dir` + `/memory/observations` |
+| `project-aliases-path` | `data-dir` + `/project-aliases.json` |
+
 **Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table. Run `mait-code settings` to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
+
+#### Advanced settings
+
+The settings file also carries an **Advanced** section of operational knobs, written **commented-out** so the built-in default stays in effect until you deliberately uncomment a line. They never need touching for normal use; bad values fall back to the default and are flagged by `mait-code doctor`.
+
+| Setting key | Env var override | Default | Description |
+|-------------|-----------------|---------|-------------|
+| `log-backup-count` | `MAIT_CODE_LOG_BACKUP_COUNT` | `14` | Days of rotated log files to keep |
+| `extraction-model` | `MAIT_CODE_EXTRACTION_MODEL` | `haiku` | Model used for memory extraction |
+| `reflection-model` | `MAIT_CODE_REFLECTION_MODEL` | `haiku` | Model used for reflection synthesis |
+| `llm-timeout` | `MAIT_CODE_LLM_TIMEOUT` | `90` | Timeout (seconds) for subprocess LLM calls |
+| `reflection-batch-size` | `MAIT_CODE_REFLECTION_BATCH_SIZE` | `50` | Default `--batch-size` for reflection |
+| `reflection-novelty-gate` | `MAIT_CODE_REFLECTION_NOVELTY_GATE` | `3` | Default `--min-new` for reflection |
+| `git-timeout` | `MAIT_CODE_GIT_TIMEOUT` | `5` | Timeout (seconds) for git context probes |
 
 #### How it works
 
@@ -196,6 +220,22 @@ Depends on search mode:
 - **Hybrid:** cosine similarity from vector search (for entries found by both methods)
 - **FTS:** hardcoded 0.7 (BM25 already filtered for relevance)
 - **Vector:** cosine similarity converted from distance
+
+### Tuning (advanced)
+
+The scoring and deduplication knobs are exposed as **advanced** settings (commented-out in `settings.toml`). They directly affect retrieval quality — leave them alone unless you know why you're changing them, and re-check with `mait-code doctor`, which validates ranges and the weight sum.
+
+| Setting key | Default | Sensible range | Notes |
+|-------------|---------|----------------|-------|
+| `score-weight-recency` | `0.3` | 0.0–1.0 | The three weights **must sum to 1.0**; a bad sum falls back to defaults and is flagged by `doctor`. |
+| `score-weight-importance` | `0.3` | 0.0–1.0 | |
+| `score-weight-relevance` | `0.4` | 0.0–1.0 | |
+| `half-life-episodic` | `3.0` | days | Too short and events vanish; too long and they crowd out facts. |
+| `half-life-semantic` | `90.0` | days | Too short and facts fade; too long and stale facts persist. |
+| `dedup-string-threshold` | `0.85` | 0.0–1.0 | Too low misses near-duplicates; too high admits false positives. |
+| `dedup-vector-threshold` | `0.92` | 0.0–1.0 | Same trade-off, on cosine similarity. |
+| `scope-boost-global` | `0.7` | 0.0–1.0 | Relevance multiplier for global memories. |
+| `scope-boost-cross-project` | `0.3` | 0.0–1.0 | Relevance multiplier across project boundaries. |
 
 ## Reminders
 

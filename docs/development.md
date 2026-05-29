@@ -116,7 +116,7 @@ This injects the OS trust store into Python's `ssl` module via the `truststore` 
 
 - `MAIT_CODE_LOG_LEVEL` env var (default: `INFO`) — set via `settings.json` `env` block
 - `MAIT_CODE_LOG_FILE` env var — override log file path
-- Logs write to `~/.claude/mait-code-data/logs/mait-code.log` (rotating, 5 MB, 3 backups)
+- Logs write to `~/.local/state/mait-code/mait-code.log` (rotates at midnight, keeps `log-backup-count` days — default 14)
 - Logs never go to stdout/stderr
 
 ## Adding New Memory Types

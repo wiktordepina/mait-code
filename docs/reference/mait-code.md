@@ -316,6 +316,7 @@ ends with a one-line pass/fail verdict. The `--json` output includes a
 |------|--------|-------------|
 | `install-record` | ok / fail | Record exists and parses at the expected schema version. |
 | `source-dir` | ok / warn / fail | The recorded source still exists and looks like a mait-code clone. `warn` when there's no record to validate against. |
+| `settings-values` | ok / fail | Every setting's value is valid for its type and range, and cross-field invariants hold (the scoring weights must sum to `1.0`). `fail` lists each offending value. |
 | `settings` | ok / warn / fail | `<claude-dir>/settings.json` parses as JSON. `warn` if missing. |
 | `hooks-on-path` | ok / warn / fail | Every registered hook with the `mc-hook-` prefix resolves on `PATH`. |
 | `symlinks` | ok / warn | No dangling symlinks under `<claude-dir>/skills/` or `<claude-dir>/agents/`. Dangling links are a **warning** (auto-fixable, so they don't fail the run); `--fix` removes them. |
@@ -349,11 +350,10 @@ mait-code settings [--json]
 
 **Description**
 
-Read-only view of the active configuration — every `MAIT_CODE_*` knob
-the framework reads, with its resolved value and *source* (`env` when
-set in the environment or `settings.json`, otherwise `default`).
-Modelled on `aws configure list`. Always exits `0`: it *reports*
-configuration, it doesn't validate it (that's `doctor`'s job).
+Read-only view of the active configuration — every knob the framework
+reads, with its resolved value and *source*. Modelled on `aws configure
+list`. Always exits `0`: it *reports* configuration, it doesn't validate
+it (that's `doctor`'s job, via the `settings-values` check).
 
 **Flags**
 
@@ -365,9 +365,17 @@ configuration, it doesn't validate it (that's `doctor`'s job).
 
 | Column | Meaning |
 |--------|---------|
-| `SETTING` | The knob: `data-dir`, `log-level`, `log-file`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`. |
+| `SETTING` | The knob (see the groups below). |
 | `VALUE` | The resolved value (`default` values are dimmed). |
-| `SOURCE` | `env` or `default`. Migration-sensitive knobs are marked `⚠`. |
+| `SOURCE` | `env`, `settings` (the TOML file), `default`, or `derived` (computed, read-only). Migration-sensitive knobs are marked `⚠`. |
+
+Settings fall into three groups:
+
+- **Primary** — written uncommented in `settings.toml`: `data-dir`, `log-level`, `log-file`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`.
+- **Advanced** — written commented-out (the built-in default applies until you uncomment): `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`, `reflection-batch-size`, `reflection-novelty-gate`, `git-timeout`, and the scoring/dedup tuning knobs `score-weight-recency`, `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`, `half-life-semantic`, `dedup-string-threshold`, `dedup-vector-threshold`, `scope-boost-global`, `scope-boost-cross-project`.
+- **Derived** (source `derived`, not settable): `embedding-dim`, `memory-db-path`, `tasks-db-path`, `decisions-db-path`, `reminders-db-path`, `model-cache-dir`, `observations-dir`, `project-aliases-path`.
+
+See the [Memory guide](../memory.md) for per-setting defaults and the scoring/dedup tuning ranges.
 
 **Changing a setting**
 

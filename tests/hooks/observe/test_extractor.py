@@ -97,9 +97,16 @@ def test_extract_observations_unparseable_returns_empty():
     assert result == {}
 
 
-def test_call_haiku_delegates_to_call_claude():
-    """Verify call_haiku passes model='haiku', timeout=90, and retries=2 to call_claude."""
+def test_call_haiku_delegates_to_call_claude(monkeypatch):
+    """call_haiku passes the configured extraction model and retries=2.
+
+    Timeout is left to call_claude (which reads the llm-timeout setting).
+    """
+    from mait_code import config
     from mait_code.hooks.observe.extractor import call_haiku
+
+    monkeypatch.setattr(config, "_settings_cache", {})
+    monkeypatch.delenv("MAIT_CODE_EXTRACTION_MODEL", raising=False)
 
     with patch(
         "mait_code.hooks.observe.extractor.call_claude", return_value="response"
@@ -107,4 +114,19 @@ def test_call_haiku_delegates_to_call_claude():
         result = call_haiku("test prompt")
 
     assert result == "response"
-    mock.assert_called_once_with("test prompt", model="haiku", timeout=90, retries=2)
+    mock.assert_called_once_with("test prompt", model="haiku", retries=2)
+
+
+def test_call_haiku_honours_extraction_model_setting(monkeypatch):
+    from mait_code import config
+    from mait_code.hooks.observe.extractor import call_haiku
+
+    monkeypatch.setattr(config, "_settings_cache", {})
+    monkeypatch.setenv("MAIT_CODE_EXTRACTION_MODEL", "sonnet")
+
+    with patch(
+        "mait_code.hooks.observe.extractor.call_claude", return_value="r"
+    ) as mock:
+        call_haiku("p")
+
+    assert mock.call_args[1]["model"] == "sonnet"

@@ -19,7 +19,7 @@ def call_claude(
     *,
     system_prompt: str | None = None,
     model: str = "haiku",
-    timeout: int = 60,
+    timeout: int | None = None,
     retries: int = 0,
     backoff_base: float = 2.0,
 ) -> str | None:
@@ -29,13 +29,19 @@ def call_claude(
         prompt: The user prompt to send.
         system_prompt: Optional system prompt prepended with a marker.
         model: Model name passed to ``--model`` (default: haiku).
-        timeout: Subprocess timeout in seconds.
+        timeout: Subprocess timeout in seconds. ``None`` (the default) reads
+            the ``llm-timeout`` setting.
         retries: Number of retries on transient failure (default: 0).
         backoff_base: Base for exponential backoff in seconds (default: 2.0).
 
     Returns:
         Stripped stdout on success, or ``None`` on failure.
     """
+    if timeout is None:
+        from mait_code.config import get_int
+
+        timeout = get_int("llm-timeout")
+
     full_prompt = prompt
     if system_prompt:
         full_prompt = f"[System instruction]: {system_prompt}\n\n{prompt}"
