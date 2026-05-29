@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /decision, /decisions<br/>/web-fetch<br/>memory-store"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /board<br/>/decision, /decisions<br/>/web-fetch<br/>memory-store"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -388,7 +388,7 @@ Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed
 
 | Hook | Trigger | Mode | Purpose |
 |------|---------|------|---------|
-| `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks) |
+| `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks, board summary) |
 | `observe` | PreCompact | async | Extract observations before context compaction |
 | `observe` | SessionEnd | async | Final observation extraction |
 | `auto_format` | *not registered* | — | Placeholder package — entry point exists (`mc-hook-format`) but no settings.json registration and no implementation |
