@@ -120,12 +120,12 @@ mait-code install --from /opt/mait-code/source \
 **Synopsis**
 
 ```
-mait-code update [--no-pull] [--ref <tag|branch|sha>] [--claude-dir <path>]
+mait-code update [--no-pull] [--ref <tag|branch|sha>] [--force] [--claude-dir <path>]
 ```
 
 **Description**
 
-Advance the source tree to the right ref, reinstall via `uv tool install --force --reinstall`, refresh symlinks and settings, bump the install record.
+Advance the source tree to the right ref and — only if `HEAD` actually moved — reinstall via `uv tool install`, then refresh symlinks and settings and bump the install record. A repeated update with nothing new upstream is a cheap no-op: the reinstall is skipped rather than rebuilding every package.
 
 How the source is advanced depends on its current state — a bootstrap install pins to a release **tag** (detached HEAD), while a local-clone dev install sits on a **branch**:
 
@@ -139,6 +139,7 @@ How the source is advanced depends on its current state — a bootstrap install 
 |------|---------|-------------|
 | `--no-pull` | off | Skip the network fetch and branch fast-forward; reinstall from whatever is currently checked out. `--ref` still checks out a local ref. |
 | `--ref <ref>` | *(none)* | `git checkout <ref>` (after a fetch unless `--no-pull`). Pins to a tag/branch/sha. |
+| `--force` | off | Reinstall even when the source `HEAD` did not move — e.g. to rebuild uncommitted working-tree edits on a dev checkout. |
 | `--claude-dir <path>` | `~/.claude` | Override the Claude Code config directory. |
 
 **Behaviour**
@@ -150,8 +151,8 @@ How the source is advanced depends on its current state — a bootstrap install 
     - `--ref` given → `git checkout <ref>`.
     - on a branch → `git merge --ff-only` (skipped under `--no-pull`).
     - detached HEAD → `git checkout <latest v* tag>`. Aborts if there are no tags and no `--ref`.
-5. `uv tool install <source>[<extra>] --force --reinstall --python 3.13`. The `[bedrock]` extra is applied when the install record records the bedrock provider.
-6. Re-runs the symlink and settings-merge steps from `install` (picks up new skills, settings.json changes).
+5. If `HEAD` moved during step 4 (or `--force` was given): `uv tool install <source>[<extra>] --force --reinstall-package mait-code --python 3.13`. `--reinstall-package mait-code` forces a rebuild of just the local source — whose version does not bump between commits — while leaving unchanged third-party deps in place. The `[bedrock]` extra is applied when the install record records the bedrock provider. If `HEAD` did not move and `--force` was not given, this step is skipped.
+6. Re-runs the symlink and settings-merge steps from `install` (picks up new skills, settings.json changes). These run even when the reinstall is skipped.
 7. Rewrites the install record with the new version and timestamp.
 
 **Examples**
@@ -166,6 +167,9 @@ mait-code update --ref v0.14.1
 
 # Reinstall from the current checkout without touching git:
 mait-code update --no-pull
+
+# Force a rebuild even when nothing moved (e.g. uncommitted dev edits):
+mait-code update --no-pull --force
 ```
 
 **Exit codes**

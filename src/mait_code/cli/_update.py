@@ -1,11 +1,11 @@
 """``mait-code update`` &mdash; fetch the latest source and reinstall.
 
 Reads the install record to find the source tree, advances it to the
-right ref, runs ``uv tool install --force --reinstall`` against the
-source dir with the configured embedding extra, then re-runs the symlink
-and settings-merge steps in case the new source ships changes (new
-skills, updated settings.json). Bumps the install record's
-``installed_at``.
+right ref, and &mdash; **only if the source actually moved** &mdash; runs
+``uv tool install`` against the source dir with the configured embedding
+extra. It then re-runs the symlink and settings-merge steps in case the
+new source ships changes (new skills, updated settings.json) and bumps
+the install record's ``installed_at``.
 
 How the source is advanced depends on its current state, because a
 bootstrap install pins to a release **tag** (detached HEAD) while a
@@ -19,6 +19,15 @@ local-clone dev install sits on a **branch**:
 This is the fix for the bug where ``git pull`` was run unconditionally
 and failed on a tag-pinned (detached HEAD) install with "You are not
 currently on a branch".
+
+Idempotency: the reinstall is the expensive part, so it is skipped when
+the advance step left ``HEAD`` on the same commit it started on. A
+repeated ``mait-code update`` with nothing new upstream is therefore a
+cheap no-op rather than a full rebuild of every package. ``--force``
+reinstalls regardless (e.g. to pick up uncommitted working-tree edits on
+a dev checkout). When a reinstall *does* run, it uses
+``--reinstall-package mait-code`` so only the local source package is
+rebuilt; unchanged third-party dependencies are left in place.
 
 The subprocess calls are kept narrow and explicit so tests can replace
 them with stubs without having to patch the heavier orchestrator.
@@ -99,6 +108,12 @@ def _current_branch(capture: Capture, source_dir: Path) -> str:
     return capture(["git", "branch", "--show-current"], cwd=source_dir).strip()
 
 
+def _head(capture: Capture, source_dir: Path) -> str:
+    """Return the current ``HEAD`` commit sha, used to detect whether an
+    advance actually moved the source tree."""
+    return capture(["git", "rev-parse", "HEAD"], cwd=source_dir).strip()
+
+
 def _latest_tag(capture: Capture, source_dir: Path) -> str | None:
     """Return the highest ``v*`` tag by version sort, or ``None`` if none exist."""
     out = capture(
@@ -118,6 +133,7 @@ class UpdateSummary:
         record: InstallRecord,
         fetched: bool,
         landed_on: str,
+        reinstalled: bool,
         claude_md: SymlinkResult,
         skills: SymlinkResult,
         agents: SymlinkResult,
@@ -126,6 +142,7 @@ class UpdateSummary:
         self.record = record
         self.fetched = fetched
         self.landed_on = landed_on
+        self.reinstalled = reinstalled
         self.claude_md = claude_md
         self.skills = skills
         self.agents = agents
@@ -136,6 +153,7 @@ def update(
     *,
     no_pull: bool = False,
     ref: str | None = None,
+    force: bool = False,
     claude_dir: Path | None = None,
     runner: Runner | None = None,
     capture: Capture | None = None,
@@ -148,6 +166,9 @@ def update(
             still checks out (a local) ref.
         ref: If set, ``git checkout <ref>`` (after a fetch unless
             ``no_pull``). Pins to a tag/branch/sha.
+        force: Reinstall even when the source ``HEAD`` did not move.
+            Useful to rebuild from uncommitted working-tree edits on a
+            dev checkout, where the commit is unchanged but files differ.
         claude_dir: Override the Claude Code config dir (defaults to
             :func:`~mait_code.cli._paths.claude_dir`).
         runner: Mutating subprocess runner for tests to stub out.
@@ -190,7 +211,9 @@ def update(
             f"expected one of {EMBEDDING_PROVIDERS}"
         )
 
-    # 1. Advance the source tree to the right ref.
+    # 1. Advance the source tree to the right ref, tracking whether HEAD
+    #    actually moved so we can skip a needless reinstall below.
+    head_before = _head(capture, source_dir)
     fetched = False
     if not no_pull:
         runner(["git", "fetch", "origin", "--tags", "--prune"], cwd=source_dir)
@@ -215,20 +238,29 @@ def update(
             runner(["git", "checkout", latest], cwd=source_dir)
             landed_on = latest
 
-    # 2. uv tool install --force --reinstall.
-    extra = "[bedrock]" if embedding_provider == "bedrock" else ""
-    runner(
-        [
-            "uv",
-            "tool",
-            "install",
-            f"{source_dir}{extra}",
-            "--force",
-            "--reinstall",
-            "--python",
-            "3.13",
-        ],
-    )
+    head_after = _head(capture, source_dir)
+
+    # 2. uv tool install &mdash; only when the source actually changed (or
+    #    --force). uv keys its build cache on the package version, which does
+    #    not bump between commits, so `--reinstall-package mait-code` forces a
+    #    rebuild of just the local source; unchanged deps stay put. Skipping
+    #    this entirely on a no-op is what makes a repeated update cheap.
+    reinstalled = force or head_after != head_before
+    if reinstalled:
+        extra = "[bedrock]" if embedding_provider == "bedrock" else ""
+        runner(
+            [
+                "uv",
+                "tool",
+                "install",
+                f"{source_dir}{extra}",
+                "--force",
+                "--reinstall-package",
+                "mait-code",
+                "--python",
+                "3.13",
+            ],
+        )
 
     # 3. Refresh symlinks + settings.
     cdir = (claude_dir if claude_dir is not None else default_claude_dir()).resolve()
@@ -254,6 +286,7 @@ def update(
         record=refreshed,
         fetched=fetched,
         landed_on=landed_on,
+        reinstalled=reinstalled,
         claude_md=claude_md_result,
         skills=skills_result,
         agents=agents_result,
