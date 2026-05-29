@@ -221,6 +221,22 @@ Depends on search mode:
 - **FTS:** hardcoded 0.7 (BM25 already filtered for relevance)
 - **Vector:** cosine similarity converted from distance
 
+### Tuning (advanced)
+
+The scoring and deduplication knobs are exposed as **advanced** settings (commented-out in `settings.toml`). They directly affect retrieval quality — leave them alone unless you know why you're changing them, and re-check with `mait-code doctor`, which validates ranges and the weight sum.
+
+| Setting key | Default | Sensible range | Notes |
+|-------------|---------|----------------|-------|
+| `score-weight-recency` | `0.3` | 0.0–1.0 | The three weights **must sum to 1.0**; a bad sum falls back to defaults and is flagged by `doctor`. |
+| `score-weight-importance` | `0.3` | 0.0–1.0 | |
+| `score-weight-relevance` | `0.4` | 0.0–1.0 | |
+| `half-life-episodic` | `3.0` | days | Too short and events vanish; too long and they crowd out facts. |
+| `half-life-semantic` | `90.0` | days | Too short and facts fade; too long and stale facts persist. |
+| `dedup-string-threshold` | `0.85` | 0.0–1.0 | Too low misses near-duplicates; too high admits false positives. |
+| `dedup-vector-threshold` | `0.92` | 0.0–1.0 | Same trade-off, on cosine similarity. |
+| `scope-boost-global` | `0.7` | 0.0–1.0 | Relevance multiplier for global memories. |
+| `scope-boost-cross-project` | `0.3` | 0.0–1.0 | Relevance multiplier across project boundaries. |
+
 ## Reminders
 
 Reminders are a separate system stored in `reminders.db`. They are time-based triggers, not memories.

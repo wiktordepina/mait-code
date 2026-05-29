@@ -18,20 +18,53 @@ Where:
   provides).
 """
 
+import logging
 import math
 from datetime import UTC, datetime
 
-# Default weights
-W_RECENCY = 0.3
-W_IMPORTANCE = 0.3
-W_RELEVANCE = 0.4
+from mait_code import config
+
+logger = logging.getLogger(__name__)
+
+# Default weights, used when the configured weights don't sum to 1.0.
+_DEFAULT_WEIGHTS = (0.3, 0.3, 0.4)
+
+
+def _load_weights() -> tuple[float, float, float]:
+    """Resolve the three scoring weights, falling back if they don't sum to 1.0.
+
+    Reading once at import time mirrors the previous module-level constants.
+    ``doctor`` surfaces a bad sum loudly; here we degrade gracefully so a
+    skewed settings file can't silently distort every retrieval.
+    """
+    weights = (
+        config.get_float("score-weight-recency"),
+        config.get_float("score-weight-importance"),
+        config.get_float("score-weight-relevance"),
+    )
+    total = sum(weights)
+    if abs(total - 1.0) > 1e-6:
+        logger.warning(
+            "scoring weights sum to %.3f, not 1.0; using defaults %s",
+            total,
+            _DEFAULT_WEIGHTS,
+        )
+        return _DEFAULT_WEIGHTS
+    return weights
+
+
+W_RECENCY, W_IMPORTANCE, W_RELEVANCE = _load_weights()
 
 # Per-class decay half-lives (days)
 HALF_LIFE_DAYS: dict[str, float] = {
-    "episodic": 3.0,  # Events/tasks: ~50% at 3 days, ~6% at 12 days
-    "semantic": 90.0,  # Facts/preferences/insights: ~50% at 90 days
+    "episodic": config.get_float("half-life-episodic"),  # ~50% at 3 days
+    "semantic": config.get_float("half-life-semantic"),  # ~50% at 90 days
 }
 DEFAULT_HALF_LIFE = 7.0  # Fallback when memory_class is unknown
+
+# Relevance multipliers by scope match (project match 0.85 / branch 1.0 fixed).
+SCOPE_BOOST_GLOBAL = config.get_float("scope-boost-global")
+SCOPE_BOOST_CROSS_PROJECT = config.get_float("scope-boost-cross-project")
 
 
 def recency_score(
@@ -99,19 +132,21 @@ def scope_boost(
         query_branch: Branch context for the query, or ``None``.
 
     Returns:
-        ``1.0`` for a branch match, ``0.85`` for a project match, ``0.7``
-        for global entries, and ``1.0`` when no query context is provided
-        (backward compat).
+        ``1.0`` for a branch match, ``0.85`` for a project match,
+        ``SCOPE_BOOST_GLOBAL`` (default ``0.7``) for global entries,
+        ``SCOPE_BOOST_CROSS_PROJECT`` (default ``0.3``) across projects, and
+        ``1.0`` when no query context is provided (backward compat).
     """
     # No query context — no boost applied
     if query_project is None:
         return 1.0
 
     if entry_scope == "global" or entry_project is None:
-        return 0.7
+        return SCOPE_BOOST_GLOBAL
 
     if entry_project != query_project:
-        return 0.3  # Shouldn't happen given search filtering, but defensive
+        # Shouldn't happen given search filtering, but defensive
+        return SCOPE_BOOST_CROSS_PROJECT
 
     if (
         entry_scope == "branch"

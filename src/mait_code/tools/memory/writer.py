@@ -9,6 +9,7 @@ import logging
 import sqlite3
 from difflib import SequenceMatcher
 
+from mait_code import config
 from mait_code.context import canonical_project
 from mait_code.tools.memory.embeddings import embed_text, serialize_f32
 
@@ -27,8 +28,8 @@ MEMORY_CLASS_MAP: dict[str, str] = {
 
 VALID_ENTRY_TYPES: set[str] = set(MEMORY_CLASS_MAP)
 
-STRING_SIMILARITY_THRESHOLD: float = 0.85
-VECTOR_SIMILARITY_THRESHOLD: float = 0.92
+STRING_SIMILARITY_THRESHOLD: float = config.get_float("dedup-string-threshold")
+VECTOR_SIMILARITY_THRESHOLD: float = config.get_float("dedup-vector-threshold")
 
 
 def _project_condition(project: str | None) -> tuple[str, list]:

@@ -393,3 +393,49 @@ class TestTier3Advanced:
             monkeypatch.delenv(config._by_key()[key].env, raising=False)
         monkeypatch.delenv("MAIT_CODE_LOG_LEVEL", raising=False)
         assert config.validate_settings() == []
+
+
+# ---------------------------------------------------------------------------
+# Tier 4 scoring / dedup knobs + cross-field validation
+# ---------------------------------------------------------------------------
+
+
+class TestTier4Scoring:
+    EXPECTED = {
+        "score-weight-recency": "0.3",
+        "score-weight-importance": "0.3",
+        "score-weight-relevance": "0.4",
+        "half-life-episodic": "3.0",
+        "half-life-semantic": "90.0",
+        "dedup-string-threshold": "0.85",
+        "dedup-vector-threshold": "0.92",
+        "scope-boost-global": "0.7",
+        "scope-boost-cross-project": "0.3",
+    }
+
+    def test_registered_with_expected_defaults(self) -> None:
+        by_key = {s.key: s for s in config.SETTINGS}
+        for key, default in self.EXPECTED.items():
+            assert by_key[key].advanced is True, key
+            assert by_key[key].kind == "float", key
+            assert by_key[key].default == default, key
+
+    def test_default_weights_sum_to_one(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(config, "_settings_cache", {})
+        for key in self.EXPECTED:
+            monkeypatch.delenv(config._by_key()[key].env, raising=False)
+        assert config.validate_settings() == []
+
+    def test_bad_weight_sum_is_flagged(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(config, "_settings_cache", {})
+        monkeypatch.setenv("MAIT_CODE_SCORE_WEIGHT_RELEVANCE", "0.9")
+        errors = config.validate_settings()
+        assert any("scoring weights sum to" in e for e in errors)
+
+    def test_out_of_range_threshold_is_flagged(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "_settings_cache", {})
+        monkeypatch.setenv("MAIT_CODE_DEDUP_VECTOR_THRESHOLD", "1.5")
+        errors = config.validate_settings()
+        assert any(e.startswith("dedup-vector-threshold:") for e in errors)

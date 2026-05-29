@@ -13,6 +13,12 @@
 
 ::: mait_code.config.get
 
+::: mait_code.config.get_int
+
+::: mait_code.config.get_float
+
+::: mait_code.config.validate_settings
+
 ## Settings file I/O
 
 ::: mait_code.config.read_settings_file

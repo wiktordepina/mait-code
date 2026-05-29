@@ -166,6 +166,22 @@ def _log_level(value: str) -> str | None:
     )
 
 
+def _unit_interval(value: str) -> str | None:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return f"must be a number, got {value!r}"
+    return None if 0.0 <= f <= 1.0 else f"must be in [0, 1], got {f}"
+
+
+def _positive_float(value: str) -> str | None:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return f"must be a number, got {value!r}"
+    return None if f > 0.0 else f"must be greater than zero, got {f}"
+
+
 SETTINGS: tuple[Setting, ...] = (
     Setting(
         "data-dir",
@@ -272,6 +288,88 @@ SETTINGS: tuple[Setting, ...] = (
         advanced=True,
         validate=_positive_int,
         help="Timeout (seconds) for git context probes.",
+    ),
+    # --- Tier 4: scoring / dedup tuning (advanced, validated) ---
+    Setting(
+        "score-weight-recency",
+        "MAIT_CODE_SCORE_WEIGHT_RECENCY",
+        "0.3",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Scoring weight for recency (the three weights must sum to 1.0).",
+    ),
+    Setting(
+        "score-weight-importance",
+        "MAIT_CODE_SCORE_WEIGHT_IMPORTANCE",
+        "0.3",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Scoring weight for importance (the three weights must sum to 1.0).",
+    ),
+    Setting(
+        "score-weight-relevance",
+        "MAIT_CODE_SCORE_WEIGHT_RELEVANCE",
+        "0.4",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Scoring weight for relevance (the three weights must sum to 1.0).",
+    ),
+    Setting(
+        "half-life-episodic",
+        "MAIT_CODE_HALF_LIFE_EPISODIC",
+        "3.0",
+        kind="float",
+        advanced=True,
+        validate=_positive_float,
+        help="Recency half-life (days) for episodic memories (events, tasks).",
+    ),
+    Setting(
+        "half-life-semantic",
+        "MAIT_CODE_HALF_LIFE_SEMANTIC",
+        "90.0",
+        kind="float",
+        advanced=True,
+        validate=_positive_float,
+        help="Recency half-life (days) for semantic memories (facts, preferences).",
+    ),
+    Setting(
+        "dedup-string-threshold",
+        "MAIT_CODE_DEDUP_STRING_THRESHOLD",
+        "0.85",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="String-similarity threshold above which a memory is a duplicate.",
+    ),
+    Setting(
+        "dedup-vector-threshold",
+        "MAIT_CODE_DEDUP_VECTOR_THRESHOLD",
+        "0.92",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Cosine-similarity threshold above which a memory is a duplicate.",
+    ),
+    Setting(
+        "scope-boost-global",
+        "MAIT_CODE_SCOPE_BOOST_GLOBAL",
+        "0.7",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Relevance multiplier applied to global-scoped memories.",
+    ),
+    Setting(
+        "scope-boost-cross-project",
+        "MAIT_CODE_SCOPE_BOOST_CROSS_PROJECT",
+        "0.3",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Relevance multiplier applied across project boundaries.",
     ),
     # --- Tier 2: derived, display-only (settable=False) ---
     Setting(
@@ -456,9 +554,25 @@ def validate_settings() -> list[str]:
     return errors
 
 
+_WEIGHT_KEYS = (
+    "score-weight-recency",
+    "score-weight-importance",
+    "score-weight-relevance",
+)
+
+
 def _cross_field_errors() -> list[str]:
-    """Cross-field setting invariants. Extended as grouped knobs are added."""
-    return []
+    """Cross-field setting invariants (e.g. scoring weights must sum to 1.0)."""
+    errors: list[str] = []
+    by_key = _by_key()
+    if all(k in by_key for k in _WEIGHT_KEYS):
+        total = sum(get_float(k) for k in _WEIGHT_KEYS)
+        if abs(total - 1.0) > 1e-6:
+            errors.append(
+                f"scoring weights sum to {total:.3f}, must be 1.0 "
+                "(recency + importance + relevance)"
+            )
+    return errors
 
 
 def data_dir() -> Path:

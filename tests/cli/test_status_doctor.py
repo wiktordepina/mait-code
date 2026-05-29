@@ -120,8 +120,23 @@ class TestDoctor:
         assert levels["source-dir"] == "ok"
         assert levels["settings"] == "ok"
         assert levels["settings-file"] == "ok"
+        assert levels["settings-values"] == "ok"
         assert levels["symlinks"] == "ok"
         assert levels["data-dir"] == "ok"
+
+    def test_bad_setting_value_marks_settings_values_fail(
+        self, fake_home: Path, fake_source: Path, monkeypatch
+    ) -> None:
+        _populate_source(fake_source)
+        install(source_dir=fake_source)
+        # Skew the scoring weights so they no longer sum to 1.0.
+        monkeypatch.setenv("MAIT_CODE_SCORE_WEIGHT_RELEVANCE", "0.9")
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["settings-values"].level == "fail"
+        assert "sum to" in names["settings-values"].message
+        assert report.has_fail is True
 
     def test_missing_settings_file_marks_fail(
         self, fake_home: Path, fake_source: Path
