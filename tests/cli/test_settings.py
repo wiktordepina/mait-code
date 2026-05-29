@@ -127,9 +127,14 @@ class TestSettingsCommand:
         result = runner.invoke(app, ["settings"])
         assert result.exit_code == 0
 
+    def test_cli_list_subcommand(self) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        result = runner.invoke(app, ["settings", "list"])
+        assert result.exit_code == 0, result.output
+
     def test_cli_json(self) -> None:
         config.write_settings_file({"embedding-provider": "local"})
-        result = runner.invoke(app, ["settings", "--json"])
+        result = runner.invoke(app, ["settings", "list", "--json"])
         assert result.exit_code == 0, result.output
         payload = json.loads(result.output)
         assert "settings" in payload
@@ -142,6 +147,6 @@ class TestSettingsCommand:
         assert "mait-code install" in result.output
 
     def test_cli_json_aborts_when_settings_file_missing(self) -> None:
-        result = runner.invoke(app, ["settings", "--json"])
+        result = runner.invoke(app, ["settings", "list", "--json"])
         assert result.exit_code == 1
         assert "settings file not found" in result.output.lower()
