@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.25.1] — 2026-05-29
+
+### Fixed
+
+- **Board TUI showed no cards.** The status panes were laid out with no height,
+  so every column collapsed to zero rows and `mait-code board` rendered empty
+  even when cards existed. The panes now fill the body and the card lists flex
+  to fill each pane. Added layout regression tests that assert non-zero pane
+  height and that card text actually paints (the earlier tests only checked the
+  data model, not the render).
+
 ## [0.25.0] — 2026-05-29
 
 ### Added

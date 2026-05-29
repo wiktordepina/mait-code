@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from rich.markup import escape
 from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
@@ -101,28 +102,31 @@ class DetailScreen(ModalScreen[None]):
         card = self._card
         with VerticalScroll(id="detail-dialog"):
             yield Label(
-                Text(f"#{card['id']} ({card['priority']}) {card['title']}"),
+                escape(f"#{card['id']} ({card['priority']}) {card['title']}"),
                 classes="detail-title",
             )
             yield Static(
-                f"project: {card['project']}   status: {col_label(card['status'])}",
+                escape(
+                    f"project: {card['project']}   status: {col_label(card['status'])}"
+                ),
                 classes="detail-meta",
             )
             if card["description"]:
                 yield Label("Description", classes="detail-head")
-                yield Static(Text(card["description"]))
+                yield Static(escape(card["description"]))
             if card["acceptance_criteria"]:
                 yield Label("Acceptance criteria", classes="detail-head")
-                yield Static(Text(card["acceptance_criteria"]))
+                yield Static(escape(card["acceptance_criteria"]))
             if card["completion_summary"]:
                 yield Label("Completion summary", classes="detail-head")
-                yield Static(Text(card["completion_summary"]))
+                yield Static(escape(card["completion_summary"]))
             yield Label(f"Comments ({len(self._comments)})", classes="detail-head")
             if self._comments:
                 for comment in self._comments:
-                    # Plain Text (not a markup string) so a body or author
-                    # containing brackets isn't parsed as Rich console markup.
-                    yield Static(Text(f"[{comment['author']}] {comment['body']}"))
+                    # Escape so a body or author containing brackets isn't
+                    # parsed as Rich console markup (Textual 8's Content system
+                    # parses "[...]" even from a Text, dropping the span text).
+                    yield Static(escape(f"[{comment['author']}] {comment['body']}"))
             else:
                 yield Static("(none)", classes="dim")
 
@@ -171,8 +175,9 @@ class BoardApp(App[None]):
 
     CSS = """
     #body { height: 1fr; }
-    .col { width: 1fr; border-right: solid $panel; }
+    .col { width: 1fr; height: 100%; border-right: solid $panel; }
     .col-head { text-style: bold; color: $accent; padding: 0 1; }
+    .col DataTable { height: 1fr; }
     DetailScreen { align: center middle; }
     DetailScreen #detail-dialog {
         width: 70; max-height: 80%; padding: 1 2;
