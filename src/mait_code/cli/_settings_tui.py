@@ -248,6 +248,7 @@ class SettingsApp(App[None]):
 
     BINDINGS = [
         ("ctrl+s", "apply", "Apply"),
+        ("escape", "focus_list", "Back to list"),
         ("q", "quit", "Quit"),
     ]
 
@@ -433,6 +434,9 @@ class SettingsApp(App[None]):
             self._edit_weights()
         elif self._current_key is not None:
             self._apply(self._current_key)
+
+    def action_focus_list(self) -> None:
+        self.query_one("#list", DataTable).focus()
 
     @work
     async def _edit_weights(self) -> None:

@@ -82,6 +82,23 @@ class TestNavigation:
         name, widget_id = _run(scenario)
         assert (name, widget_id) == ("Input", "editor")
 
+    def test_escape_returns_focus_to_list(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "bedrock-region")
+                app.query_one("#list", DataTable).focus()
+                await pilot.press("enter")  # focus the editor
+                await pilot.pause()
+                in_editor = getattr(app.focused, "id", None)
+                await pilot.press("escape")  # back to the list
+                await pilot.pause()
+                return in_editor, type(app.focused).__name__
+
+        assert _run(scenario) == ("editor", "DataTable")
+
     def test_single_tab_reaches_editor(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
 
