@@ -38,3 +38,18 @@ def test_paths_data_dir_delegates_and_expands(monkeypatch) -> None:
     # the single source of truth.
     monkeypatch.setenv("MAIT_CODE_DATA_DIR", "~/.claude/mait-code-data")
     assert _paths.data_dir() == Path.home() / ".claude" / "mait-code-data"
+
+
+def test_xdg_data_home_expands_tilde(monkeypatch) -> None:
+    monkeypatch.setenv("XDG_DATA_HOME", "~/somewhere/share")
+    assert _paths.xdg_data_home() == Path.home() / "somewhere" / "share"
+
+
+def test_xdg_config_home_expands_tilde(monkeypatch) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", "~/somewhere/config")
+    assert _paths.xdg_config_home() == Path.home() / "somewhere" / "config"
+
+
+def test_xdg_state_home_expands_tilde(monkeypatch) -> None:
+    monkeypatch.setenv("XDG_STATE_HOME", "~/somewhere/state")
+    assert _paths.xdg_state_home() == Path.home() / "somewhere" / "state"

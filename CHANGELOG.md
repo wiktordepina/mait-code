@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.25.2] — 2026-05-29
+
+### Fixed
+
+- **`XDG_DATA_HOME` / `XDG_CONFIG_HOME` / `XDG_STATE_HOME` with a leading `~`
+  resolved to the wrong place.** Same bug class as the 0.25.1 `data-dir` fix:
+  an override with a literal, unexpanded tilde was used as a relative path, so
+  the install record, settings file, and logs could land in a stray `~`
+  directory under the working directory. The three XDG resolvers now expand a
+  leading `~`.
+
 ## [0.25.1] — 2026-05-29
 
 ### Fixed

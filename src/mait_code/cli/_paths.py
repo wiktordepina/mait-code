@@ -39,7 +39,7 @@ def xdg_data_home() -> Path:
     """
     override = os.environ.get("XDG_DATA_HOME", "").strip()
     if override:
-        return Path(override)
+        return Path(override).expanduser()
     return Path.home() / ".local" / "share"
 
 
@@ -51,7 +51,7 @@ def xdg_config_home() -> Path:
     """
     override = os.environ.get("XDG_CONFIG_HOME", "").strip()
     if override:
-        return Path(override)
+        return Path(override).expanduser()
     return Path.home() / ".config"
 
 
@@ -63,7 +63,7 @@ def xdg_state_home() -> Path:
     """
     override = os.environ.get("XDG_STATE_HOME", "").strip()
     if override:
-        return Path(override)
+        return Path(override).expanduser()
     return Path.home() / ".local" / "state"
 
 
