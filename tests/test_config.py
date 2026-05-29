@@ -177,3 +177,125 @@ class TestSettingsFileIO:
         assert result["embedding-provider"] == "bedrock"
         assert result["log-level"] == "DEBUG"
         assert result["data-dir"] == "~/.claude/mait-code-data"
+
+
+# ---------------------------------------------------------------------------
+# Typed, derived and advanced settings (Setting model extension)
+# ---------------------------------------------------------------------------
+
+
+def _use_settings(monkeypatch: pytest.MonkeyPatch, *settings: config.Setting) -> None:
+    """Swap in a temporary SETTINGS registry and reset the key cache."""
+    monkeypatch.setattr(config, "SETTINGS", tuple(settings))
+    monkeypatch.setattr(config, "_SETTINGS_BY_KEY", {})
+    monkeypatch.setattr(config, "_settings_cache", {})
+
+
+class TestTypedGetters:
+    def test_get_int_coerces(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _use_settings(
+            monkeypatch,
+            config.Setting("retries", "MAIT_CODE_RETRIES", "3", kind="int"),
+        )
+        monkeypatch.setenv("MAIT_CODE_RETRIES", "9")
+        assert config.get_int("retries") == 9
+
+    def test_get_int_falls_back_on_bad_value(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _use_settings(
+            monkeypatch,
+            config.Setting("retries", "MAIT_CODE_RETRIES", "3", kind="int"),
+        )
+        monkeypatch.setenv("MAIT_CODE_RETRIES", "not-a-number")
+        assert config.get_int("retries") == 3
+
+    def test_get_float_coerces_and_falls_back(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _use_settings(
+            monkeypatch,
+            config.Setting("ratio", "MAIT_CODE_RATIO", "0.4", kind="float"),
+        )
+        monkeypatch.setenv("MAIT_CODE_RATIO", "0.75")
+        assert config.get_float("ratio") == 0.75
+        monkeypatch.setenv("MAIT_CODE_RATIO", "huh")
+        assert config.get_float("ratio") == 0.4
+
+
+class TestDerivedSettings:
+    def test_resolve_returns_derived_source(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        s = config.Setting("answer", "", "", settable=False, derive=lambda: "42")
+        _use_settings(monkeypatch, s)
+        assert config.resolve(s) == ("42", "derived")
+        assert config.get_int("answer") == 42
+
+    def test_derived_value_is_not_an_assignable_toml_line(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _use_settings(
+            monkeypatch,
+            config.Setting(
+                "db-path",
+                "",
+                "",
+                settable=False,
+                derive=lambda: "/tmp/x.db",
+                help="where data lives",
+            ),
+        )
+        f = tmp_path / "settings.toml"
+        config.write_settings_file({}, path=f)
+        content = f.read_text()
+        assert "# db-path: where data lives" in content
+        assert "db-path = " not in content  # never an assignable line
+
+
+class TestAdvancedSettings:
+    def test_advanced_is_written_commented_out(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        _use_settings(
+            monkeypatch,
+            config.Setting("log-level", "MAIT_CODE_LOG_LEVEL", "INFO"),
+            config.Setting(
+                "git-timeout",
+                "MAIT_CODE_GIT_TIMEOUT",
+                "5",
+                kind="int",
+                advanced=True,
+                help="git op timeout",
+            ),
+        )
+        f = tmp_path / "settings.toml"
+        config.write_settings_file({}, path=f)
+        content = f.read_text()
+        assert 'log-level = "INFO"' in content  # primary: uncommented
+        assert '# git-timeout = "5"' in content  # advanced: commented-out
+        # The default still wins until uncommented.
+        assert config.read_settings_file(path=f).get("git-timeout") is None
+
+
+class TestValidateSettings:
+    def test_collects_per_setting_errors(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def must_be_pos(v: str) -> str | None:
+            return None if v.isdigit() else "must be a positive integer"
+
+        _use_settings(
+            monkeypatch,
+            config.Setting("n", "MAIT_CODE_N", "3", kind="int", validate=must_be_pos),
+        )
+        monkeypatch.setenv("MAIT_CODE_N", "-1")
+        errors = config.validate_settings()
+        assert errors == ["n: must be a positive integer"]
+
+    def test_healthy_config_has_no_errors(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _use_settings(
+            monkeypatch,
+            config.Setting("log-level", "MAIT_CODE_LOG_LEVEL", "INFO"),
+        )
+        assert config.validate_settings() == []

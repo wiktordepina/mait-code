@@ -15,11 +15,15 @@ user-facing settings.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     # Registry
@@ -27,6 +31,9 @@ __all__ = [
     "SETTINGS",
     "resolve",
     "get",
+    "get_int",
+    "get_float",
+    "validate_settings",
     # Settings file I/O
     "read_settings_file",
     "write_settings_file",
@@ -60,17 +67,37 @@ DEFAULT_BEDROCK_REGION = "eu-west-2"
 
 @dataclass(frozen=True)
 class Setting:
-    """One user-facing configuration knob, read from an environment variable.
+    """One configuration knob shown by ``mait-code settings``.
+
+    Most settings are *settable*: backed by an environment variable, with a
+    value resolved env → file → default. Two extra flavours exist:
+
+    * **Derived** (``settable=False``): a read-only value computed at display
+      time by :attr:`derive` (e.g. database paths derived from ``data-dir``).
+      These have no environment variable and never appear as an assignable
+      line in the settings file.
+    * **Advanced** (``advanced=True``): a real settable knob that is written
+      *commented-out* in the generated settings file, so the hardcoded
+      default stays authoritative until the user deliberately uncomments it.
 
     Attributes:
         key: Stable, kebab-case identifier shown by ``mait-code settings``.
-        env: The environment variable that backs it.
+        env: The environment variable that backs it (empty for derived).
         default: Display string for the default value (``<data-dir>``-style
             placeholders are allowed where the real default is derived).
         requires_migration: ``True`` when changing it invalidates stored
             embeddings (provider/model changes need a re-embed).
         secret: ``True`` when the value should be masked in output.
         help: One-line description.
+        kind: Value type for typed accessors — ``"str"``, ``"int"`` or
+            ``"float"``. Drives :func:`get_int` / :func:`get_float` coercion.
+        settable: ``False`` marks a derived, display-only value.
+        advanced: ``True`` writes the knob commented-out in the settings file.
+        derive: For derived settings, a zero-arg callable returning the
+            computed value as a string. Must lazy-import any heavy deps so
+            ``config`` stays a light, stdlib-only leaf.
+        validate: Optional callable taking the raw string value and returning
+            an error message, or ``None`` when valid. Run by ``doctor``.
     """
 
     key: str
@@ -79,6 +106,11 @@ class Setting:
     requires_migration: bool = False
     secret: bool = False
     help: str = ""
+    kind: str = "str"
+    settable: bool = True
+    advanced: bool = False
+    derive: Callable[[], str] | None = None
+    validate: Callable[[str], str | None] | None = None
 
 
 SETTINGS: tuple[Setting, ...] = (
@@ -150,9 +182,14 @@ def resolve(setting: Setting) -> tuple[str, str]:
     2. **Settings file** — ``source = "settings"``
     3. **Hardcoded default** — ``source = "default"``
 
+    Derived settings (``settable=False``) short-circuit to their computed
+    value with source ``"derived"``.
+
     This *reports* configuration; it does not validate it — that is
     ``doctor``'s job.
     """
+    if not setting.settable and setting.derive is not None:
+        return setting.derive(), "derived"
     raw = os.environ.get(setting.env)
     if raw is not None and raw.strip() != "":
         return raw, "env"
@@ -171,6 +208,77 @@ def get(key: str) -> str:
         KeyError: If *key* is not a registered setting.
     """
     return resolve(_by_key()[key])[0]
+
+
+def get_int(key: str) -> int:
+    """Return a setting coerced to ``int``.
+
+    Falls back to the setting's hardcoded default (logging a warning) when
+    the resolved value cannot be parsed, so a fat-fingered settings file
+    degrades to stock behaviour rather than crashing a hook. ``doctor`` is
+    responsible for surfacing the bad value loudly.
+
+    Raises:
+        KeyError: If *key* is not a registered setting.
+    """
+    setting = _by_key()[key]
+    value, _ = resolve(setting)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "setting %r is not an integer (%r); using default %r",
+            key,
+            value,
+            setting.default,
+        )
+        return int(setting.default)
+
+
+def get_float(key: str) -> float:
+    """Return a setting coerced to ``float``.
+
+    Like :func:`get_int`, falls back to the hardcoded default on a bad value.
+
+    Raises:
+        KeyError: If *key* is not a registered setting.
+    """
+    setting = _by_key()[key]
+    value, _ = resolve(setting)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "setting %r is not a number (%r); using default %r",
+            key,
+            value,
+            setting.default,
+        )
+        return float(setting.default)
+
+
+def validate_settings() -> list[str]:
+    """Return a list of human-readable validation errors (empty when healthy).
+
+    Runs every setting's per-value :attr:`Setting.validate` callable, plus
+    the cross-field invariants below. Called by ``doctor``; it reads the
+    resolved configuration but never mutates it.
+    """
+    errors: list[str] = []
+    for setting in SETTINGS:
+        if setting.validate is None:
+            continue
+        value, _ = resolve(setting)
+        msg = setting.validate(value)
+        if msg is not None:
+            errors.append(f"{setting.key}: {msg}")
+    errors.extend(_cross_field_errors())
+    return errors
+
+
+def _cross_field_errors() -> list[str]:
+    """Cross-field setting invariants. Extended as grouped knobs are added."""
+    return []
 
 
 def data_dir() -> Path:
@@ -229,9 +337,15 @@ def read_settings_file(path: Path | None = None) -> dict[str, str]:
 def _render_settings_toml(values: dict[str, str]) -> str:
     """Generate a commented TOML string with all settings.
 
-    Every registered setting appears with its ``help`` text as a comment.
-    Settings whose default is a placeholder (contains ``<``) are
-    commented out unless an explicit value is provided.
+    Three groups are written in order:
+
+    1. **Primary** settable knobs — uncommented (placeholder defaults stay
+       commented unless an explicit value is provided).
+    2. **Advanced** settable knobs — always commented-out, showing the
+       default as the example value so the hardcoded default stays
+       authoritative until the user uncomments a line.
+    3. **Derived** read-only values — informational comments only; never an
+       assignable line.
     """
     lines = [
         "# mait-code settings",
@@ -239,7 +353,10 @@ def _render_settings_toml(values: dict[str, str]) -> str:
         "# Environment variables (MAIT_CODE_*) override these values when set.",
         "",
     ]
+
     for setting in SETTINGS:
+        if not setting.settable or setting.advanced:
+            continue
         lines.append(f"# {setting.help}")
         has_value = setting.key in values
         value = values.get(setting.key, setting.default)
@@ -249,7 +366,37 @@ def _render_settings_toml(values: dict[str, str]) -> str:
         else:
             lines.append(f'{setting.key} = "{value}"')
         lines.append("")
+
+    advanced = [s for s in SETTINGS if s.settable and s.advanced]
+    if advanced:
+        lines.append(_SECTION_RULE)
+        lines.append(
+            "# Advanced — uncomment to override. Defaults shown; safe to leave alone."
+        )
+        lines.append(_SECTION_RULE)
+        lines.append("")
+        for setting in advanced:
+            lines.append(f"# {setting.help}")
+            value = values.get(setting.key, setting.default)
+            lines.append(f'# {setting.key} = "{value}"')
+            lines.append("")
+
+    derived = [s for s in SETTINGS if not s.settable]
+    if derived:
+        lines.append(_SECTION_RULE)
+        lines.append(
+            "# Derived — read-only, shown by `mait-code settings`. Not configurable here."
+        )
+        lines.append(_SECTION_RULE)
+        lines.append("")
+        for setting in derived:
+            lines.append(f"# {setting.key}: {setting.help}")
+        lines.append("")
+
     return "\n".join(lines)
+
+
+_SECTION_RULE = "# " + "-" * 73
 
 
 def write_settings_file(values: dict[str, str], *, path: Path | None = None) -> Path:
