@@ -67,6 +67,35 @@ class TestNavigation:
 
         _run(scenario)
 
+    def test_enter_focuses_editor(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "bedrock-region")
+                app.query_one("#list", DataTable).focus()
+                await pilot.press("enter")
+                await pilot.pause()
+                return type(app.focused).__name__, getattr(app.focused, "id", None)
+
+        name, widget_id = _run(scenario)
+        assert (name, widget_id) == ("Input", "editor")
+
+    def test_single_tab_reaches_editor(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "bedrock-region")
+                app.query_one("#list", DataTable).focus()
+                await pilot.press("tab")
+                await pilot.pause()
+                return getattr(app.focused, "id", None)
+
+        assert _run(scenario) == "editor"
+
     def test_derived_row_is_read_only(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
 

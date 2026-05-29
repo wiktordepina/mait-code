@@ -19,7 +19,9 @@ don't change the public surface. Everything is still in flux.
   single-line rows whose source column drifted out of line on long values.
   Values are truncated with an ellipsis (the full value stays editable in the
   detail pane); migration knobs keep their `⚠` marker and derived/default rows
-  read as muted.
+  read as muted. The list and detail panes now split the screen evenly, `Enter`
+  on a row jumps focus to the editor, and a single `Tab` moves between the list
+  and the editor.
 
 ## [0.22.0] — 2026-05-29
 

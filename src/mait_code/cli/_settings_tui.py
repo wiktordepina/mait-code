@@ -202,7 +202,7 @@ class SettingsApp(App[None]):
 
     CSS = """
     #body { height: 1fr; }
-    #list { width: auto; max-width: 70%; border-right: solid $panel; }
+    #list { width: 1fr; border-right: solid $panel; }
     #list > .datatable--header { text-style: bold; color: $text-muted; }
     #detail { width: 1fr; padding: 1 2; }
     #detail .title { text-style: bold; color: $accent; }
@@ -247,6 +247,9 @@ class SettingsApp(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        # The detail pane scrolls but shouldn't be a Tab stop — Tab should land
+        # straight on the editor widget, not the container around it.
+        self.query_one("#detail", VerticalScroll).can_focus = False
         table = self.query_one("#list", DataTable)
         table.add_column("Setting", width=26, key="k")
         table.add_column("Value", width=_VALUE_WIDTH, key="v")
@@ -275,6 +278,17 @@ class SettingsApp(App[None]):
         key = event.row_key.value
         if key is not None:
             await self._show_detail(key)
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        # Enter on a row hands focus to the detail pane's editor.
+        self._focus_editor()
+
+    def _focus_editor(self) -> None:
+        for selector in ("#editor", "#edit-weights", "#apply"):
+            found = self.query(selector)
+            if found:
+                found.first().focus()
+                return
 
     async def _show_detail(self, key: str) -> None:
         self._current_key = key
