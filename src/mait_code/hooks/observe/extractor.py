@@ -4,6 +4,7 @@ import json
 import logging
 import re
 
+from mait_code.config import get as config_get
 from mait_code.llm import call_claude
 from mait_code.tools.memory.entities import RELATIONSHIP_TYPES
 
@@ -104,15 +105,18 @@ def build_extraction_prompt(
 
 
 def call_haiku(prompt: str) -> str | None:
-    """Call Claude Haiku via the shared LLM module.
+    """Call the configured extraction model via the shared LLM module.
+
+    The model is the ``extraction-model`` setting (default ``haiku``); the
+    timeout follows the ``llm-timeout`` setting.
 
     Args:
         prompt: The full extraction prompt to send.
 
     Returns:
-        Stripped stdout from Haiku, or ``None`` on failure.
+        Stripped stdout from the model, or ``None`` on failure.
     """
-    return call_claude(prompt, model="haiku", timeout=90, retries=2)
+    return call_claude(prompt, model=config_get("extraction-model"), retries=2)
 
 
 def parse_extraction(raw_output: str) -> dict | None:

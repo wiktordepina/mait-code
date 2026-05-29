@@ -353,3 +353,43 @@ class TestDerivedRegistry:
 
         monkeypatch.setattr(config, "_settings_cache", {})
         assert config.get_int("embedding-dim") == _get_embedding_dim()
+
+
+# ---------------------------------------------------------------------------
+# Tier 3 advanced operational knobs
+# ---------------------------------------------------------------------------
+
+
+class TestTier3Advanced:
+    # Pin defaults to the constants they replaced — guards silent drift.
+    EXPECTED = {
+        "log-backup-count": "14",
+        "extraction-model": "haiku",
+        "reflection-model": "haiku",
+        "llm-timeout": "90",
+        "reflection-batch-size": "50",
+        "reflection-novelty-gate": "3",
+        "git-timeout": "5",
+    }
+
+    def test_registered_as_advanced_with_expected_defaults(self) -> None:
+        by_key = {s.key: s for s in config.SETTINGS}
+        for key, default in self.EXPECTED.items():
+            assert by_key[key].advanced is True, key
+            assert by_key[key].settable is True, key
+            assert by_key[key].default == default, key
+
+    def test_validate_flags_bad_values(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(config, "_settings_cache", {})
+        monkeypatch.setenv("MAIT_CODE_GIT_TIMEOUT", "0")
+        monkeypatch.setenv("MAIT_CODE_LOG_LEVEL", "LOUD")
+        errors = config.validate_settings()
+        assert any(e.startswith("git-timeout:") for e in errors)
+        assert any(e.startswith("log-level:") for e in errors)
+
+    def test_healthy_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(config, "_settings_cache", {})
+        for key in self.EXPECTED:
+            monkeypatch.delenv(config._by_key()[key].env, raising=False)
+        monkeypatch.delenv("MAIT_CODE_LOG_LEVEL", raising=False)
+        assert config.validate_settings() == []

@@ -134,6 +134,38 @@ def _derive_embedding_dim() -> str:
     return str(_get_embedding_dim())
 
 
+# ---------------------------------------------------------------------------
+# Per-value validators (run by `doctor` via validate_settings()).
+# ---------------------------------------------------------------------------
+
+
+def _positive_int(value: str) -> str | None:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return f"must be an integer, got {value!r}"
+    return None if n > 0 else f"must be a positive integer, got {n}"
+
+
+def _non_negative_int(value: str) -> str | None:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return f"must be an integer, got {value!r}"
+    return None if n >= 0 else f"must be zero or greater, got {n}"
+
+
+_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
+
+def _log_level(value: str) -> str | None:
+    return (
+        None
+        if value.upper() in _LOG_LEVELS
+        else f"must be one of {', '.join(_LOG_LEVELS)}, got {value!r}"
+    )
+
+
 SETTINGS: tuple[Setting, ...] = (
     Setting(
         "data-dir",
@@ -146,6 +178,7 @@ SETTINGS: tuple[Setting, ...] = (
         "MAIT_CODE_LOG_LEVEL",
         DEFAULT_LOG_LEVEL,
         help="Log verbosity: DEBUG, INFO, WARNING or ERROR.",
+        validate=_log_level,
     ),
     Setting(
         "log-file",
@@ -179,6 +212,66 @@ SETTINGS: tuple[Setting, ...] = (
         "MAIT_CODE_BEDROCK_REGION",
         DEFAULT_BEDROCK_REGION,
         help="AWS region for the Bedrock embedding client.",
+    ),
+    # --- Tier 3: advanced operational knobs (commented-out by default) ---
+    Setting(
+        "log-backup-count",
+        "MAIT_CODE_LOG_BACKUP_COUNT",
+        "14",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Days of rotated log files to keep.",
+    ),
+    Setting(
+        "extraction-model",
+        "MAIT_CODE_EXTRACTION_MODEL",
+        "haiku",
+        advanced=True,
+        help="Model used for memory extraction (fast/cheap by default).",
+    ),
+    Setting(
+        "reflection-model",
+        "MAIT_CODE_REFLECTION_MODEL",
+        "haiku",
+        advanced=True,
+        help="Model used for reflection synthesis.",
+    ),
+    Setting(
+        "llm-timeout",
+        "MAIT_CODE_LLM_TIMEOUT",
+        "90",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Timeout (seconds) for subprocess LLM calls.",
+    ),
+    Setting(
+        "reflection-batch-size",
+        "MAIT_CODE_REFLECTION_BATCH_SIZE",
+        "50",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Default entries processed per reflection (--batch-size overrides).",
+    ),
+    Setting(
+        "reflection-novelty-gate",
+        "MAIT_CODE_REFLECTION_NOVELTY_GATE",
+        "3",
+        kind="int",
+        advanced=True,
+        validate=_non_negative_int,
+        help="Default new entries required to trigger reflection (--min-new overrides).",
+    ),
+    Setting(
+        "git-timeout",
+        "MAIT_CODE_GIT_TIMEOUT",
+        "5",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Timeout (seconds) for git context probes.",
     ),
     # --- Tier 2: derived, display-only (settable=False) ---
     Setting(

@@ -24,6 +24,7 @@ from typing import Any
 
 from mait_code.cli._paths import mait_code_log_dir
 from mait_code.config import get as config_get
+from mait_code.config import get_int as config_get_int
 
 __all__ = [
     "log_invocation",
@@ -72,7 +73,7 @@ def setup_logging() -> None:
     handler = TimedRotatingFileHandler(
         log_path,
         when="midnight",
-        backupCount=14,
+        backupCount=config_get_int("log-backup-count"),
         encoding="utf-8",
     )
 

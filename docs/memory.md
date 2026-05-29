@@ -135,6 +135,20 @@ Run `mait-code settings` to see the active configuration and where each value co
 
 **Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a `mc-tool-memory reindex` which detects the dimension mismatch and recreates the vec table. Run `mait-code settings` to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
 
+#### Advanced settings
+
+The settings file also carries an **Advanced** section of operational knobs, written **commented-out** so the built-in default stays in effect until you deliberately uncomment a line. They never need touching for normal use; bad values fall back to the default and are flagged by `mait-code doctor`.
+
+| Setting key | Env var override | Default | Description |
+|-------------|-----------------|---------|-------------|
+| `log-backup-count` | `MAIT_CODE_LOG_BACKUP_COUNT` | `14` | Days of rotated log files to keep |
+| `extraction-model` | `MAIT_CODE_EXTRACTION_MODEL` | `haiku` | Model used for memory extraction |
+| `reflection-model` | `MAIT_CODE_REFLECTION_MODEL` | `haiku` | Model used for reflection synthesis |
+| `llm-timeout` | `MAIT_CODE_LLM_TIMEOUT` | `90` | Timeout (seconds) for subprocess LLM calls |
+| `reflection-batch-size` | `MAIT_CODE_REFLECTION_BATCH_SIZE` | `50` | Default `--batch-size` for reflection |
+| `reflection-novelty-gate` | `MAIT_CODE_REFLECTION_NOVELTY_GATE` | `3` | Default `--min-new` for reflection |
+| `git-timeout` | `MAIT_CODE_GIT_TIMEOUT` | `5` | Timeout (seconds) for git context probes |
+
 #### How it works
 
 - **On store:** the content is embedded and the vector is stored in a `vec0` virtual table alongside the entry. For the local provider, content is prefixed with `"search_document: "` (nomic-embed requires this); Bedrock providers receive raw text.

@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 
+from mait_code import config
 from mait_code.context import get_context
 from mait_code.logging import log_invocation, setup_logging
 
@@ -809,14 +810,14 @@ def main():
     p_reflect.add_argument(
         "--min-new",
         type=int,
-        default=3,
+        default=config.get_int("reflection-novelty-gate"),
         help="Minimum new observations to trigger reflection",
     )
     p_reflect.add_argument(
         "--batch-size",
         type=int,
-        default=50,
-        help="Maximum entries to process per reflection (default: 50)",
+        default=config.get_int("reflection-batch-size"),
+        help="Maximum entries to process per reflection",
     )
     p_reflect.add_argument(
         "--drain",
