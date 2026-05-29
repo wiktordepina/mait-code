@@ -19,6 +19,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
 | Tasks | `/tasks` | Show open tasks for the current project | **Implemented** |
+| Board | `/board` | View and drive the project kanban board | **Implemented** |
 | Decision | `/decision [--status ...] [--tags ...] <title>` | Record a technical decision | **Implemented** |
 | Decisions | `/decisions` | Browse and search decision records | **Implemented** |
 | Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
@@ -147,6 +148,25 @@ Show open tasks for the current project.
 1. Preprocesses results via `mc-tool-tasks list` (injected before Claude sees the skill)
 2. Presents open tasks sorted by priority (high → medium → low)
 3. Supports completing tasks via `mc-tool-tasks done <id>` or removing via `mc-tool-tasks remove <id>`
+
+### /board
+
+View and drive the manually-driven kanban board for the current project. Claude acts as the worker — there is no autonomous dispatcher.
+
+**Usage:**
+```
+/board                                  # Show the board, then act on requests
+```
+
+**How it works:**
+
+1. Preprocesses the current project's board via `mc-tool-board list` (injected before Claude sees the skill)
+2. Teaches Claude the verb vocabulary so conversational requests map to `mc-tool-board` calls:
+   - "pick up the next refined card" → `mc-tool-board next --claim` (top refined card → `in_progress`)
+   - "refine card N" → draft description + acceptance criteria, confirm, then `mc-tool-board refine N ...`
+   - complete / block / unblock / archive / move / add / edit / comment via the matching subcommands
+3. Cards flow through fixed columns: backlog → refined → in_progress → done, with `blocked` and hidden `archived` side-states
+4. Never moves, completes, or archives cards without the user's confirmation
 
 ### /commit
 
@@ -320,6 +340,8 @@ skills/
 │   └── SKILL.md     # Add a project task
 ├── tasks/
 │   └── SKILL.md     # Show project tasks
+├── board/
+│   └── SKILL.md     # View and drive the kanban board
 ├── commit/
 │   └── SKILL.md     # Smart commit with conventional message
 ├── standup/
