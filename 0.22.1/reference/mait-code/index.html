@@ -1,0 +1,2989 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Companion framework extending Claude Code with persistent memory, identity, and skills.">
+      
+      
+        <meta name="author" content="Wiktor de Pina">
+      
+      
+        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/0.22.1/reference/mait-code/">
+      
+      
+        <link rel="prev" href="../skills/">
+      
+      
+        <link rel="next" href="../">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>CLI - mait-code</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mait-code-command-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mait-code" class="md-header__button md-logo" aria-label="mait-code" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mait-code
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CLI
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/wiktordepina/mait-code" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wiktordepina/mait-code
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../setup/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../philosophy/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../skills/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../decisions/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Decisions
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Contributing
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mait-code" class="md-nav__button md-logo" aria-label="mait-code" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    mait-code
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/wiktordepina/mait-code" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    wiktordepina/mait-code
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-machine sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../philosophy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Philosophy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How memory works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install record
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code update
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-uninstall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code uninstall
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-doctor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code doctor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code settings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="mait-code settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-interactive-editor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The interactive editor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings get
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings set
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code version
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5_3" id="__nav_5_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../llm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tools
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/reminders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reminders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tasks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/web_fetch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web fetch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hooks/observe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hooks/session_start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hooks/auto_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auto-format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decision records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing to docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install record
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code update
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-uninstall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code uninstall
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-doctor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code doctor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code settings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="mait-code settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-interactive-editor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The interactive editor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings get
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings set
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code version
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/reference/mait-code.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="mait-code-command-reference"><code>mait-code</code> command reference<a class="headerlink" href="#mait-code-command-reference" title="Permanent link">&para;</a></h1>
+<p>The <code>mait-code</code> binary owns the install lifecycle. It's installed via
+<code>uv tool install</code> from the local source — the bash shim
+(<code>scripts/install.sh</code>) handles that bootstrap step the first time.
+After that, everything goes through the CLI.</p>
+<p>This page documents every subcommand: synopsis, flags, behaviour,
+examples, exit codes.</p>
+<h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Convention</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;value&gt;</code></td>
+<td>Required positional or option argument the user supplies.</td>
+</tr>
+<tr>
+<td><code>[--flag]</code></td>
+<td>Optional flag.</td>
+</tr>
+<tr>
+<td><code>--claude-dir &lt;path&gt;</code></td>
+<td>Override <code>~/.claude</code> (useful for tests and non-default layouts). Accepted by install / update / uninstall / status / doctor.</td>
+</tr>
+<tr>
+<td><code>--data-dir &lt;path&gt;</code></td>
+<td>Override <code>~/.claude/mait-code-data</code>. Accepted by install / uninstall / status / doctor.</td>
+</tr>
+<tr>
+<td><code>--no-color</code></td>
+<td>Disable coloured output. A global flag (<code>mait-code --no-color doctor</code>); colour is also dropped automatically off a TTY and under <code>NO_COLOR</code> / <code>TERM=dumb</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Every subcommand also accepts <code>--help</code> and prints a one-screen summary.</p>
+<h2 id="install-record">Install record<a class="headerlink" href="#install-record" title="Permanent link">&para;</a></h2>
+<p>The CLI persists state at <code>~/.local/share/mait-code/install.json</code>
+(XDG-aware — honours <code>$XDG_DATA_HOME</code>). It is:</p>
+<ul>
+<li>Created by <code>install</code>.</li>
+<li>Updated by <code>update</code> (version + timestamp).</li>
+<li>Read by <code>update</code>, <code>uninstall</code>, <code>status</code>, <code>doctor</code>, <code>settings</code> (the
+  recorded embedding provider drives <code>settings</code>' drift check).</li>
+<li>Removed by <code>uninstall</code>.</li>
+</ul>
+<p>Schema (<code>schema_version: 1</code>):</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;source_dir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/home/wiktor/projects/mait-code&quot;</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.14.1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;embedding_provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;installed_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-05-27T10:00:00+00:00&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>A binary refuses to read a record whose <code>schema_version</code> exceeds what
+it understands — the error message points at <code>mait-code update</code> as the
+recovery path.</p>
+<hr />
+<h2 id="mait-code-install"><code>mait-code install</code><a class="headerlink" href="#mait-code-install" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mait-code install --from &lt;path&gt; [--embedding-provider local|bedrock]
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>                  [--data-dir &lt;path&gt;] [--claude-dir &lt;path&gt;]
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>First-time setup. Validates the source path is a mait-code clone,
+creates data directories, copies templates, sets up symlinks
+(<code>CLAUDE.md</code>, <code>skills/*</code>, <code>agents/*</code>), merges <code>settings.json</code>, and
+writes the install record.</p>
+<p><strong>Flags</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--from &lt;path&gt;</code></td>
+<td><em>(required)</em></td>
+<td>Absolute path to the cloned mait-code source tree.</td>
+</tr>
+<tr>
+<td><code>--embedding-provider &lt;name&gt;</code></td>
+<td><code>local</code></td>
+<td><code>local</code> (fastembed) or <code>bedrock</code> (AWS Bedrock; install with <code>[bedrock]</code> extra).</td>
+</tr>
+<tr>
+<td><code>--data-dir &lt;path&gt;</code></td>
+<td><code>$MAIT_CODE_DATA_DIR</code> or <code>~/.claude/mait-code-data</code></td>
+<td>Override the data directory location.</td>
+</tr>
+<tr>
+<td><code>--claude-dir &lt;path&gt;</code></td>
+<td><code>~/.claude</code></td>
+<td>Override the Claude Code config directory.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Behaviour</strong></p>
+<ol>
+<li>Verifies <code>&lt;source&gt;/pyproject.toml</code> exists with <code>name = "mait-code"</code> and <code>&lt;source&gt;/src/mait_code/</code> is a directory.</li>
+<li>Creates <code>&lt;data-dir&gt;/memory/observations/</code> and <code>&lt;data-dir&gt;/memory/reflections/</code>. (<code>memory/graph/</code> is intentionally not created.)</li>
+<li>Copies <code>templates/soul_document.md</code> and <code>templates/user_context.md</code> into the data dir — <strong>never overwrites</strong> existing files.</li>
+<li>Writes a <code>MEMORY.md</code> stub into <code>&lt;data-dir&gt;/memory/</code> if missing.</li>
+<li>Symlinks <code>&lt;source&gt;/config/CLAUDE.md</code> to <code>&lt;claude-dir&gt;/CLAUDE.md</code>. If a non-symlink <code>CLAUDE.md</code> already exists, it's first renamed to <code>CLAUDE.md.backup</code>.</li>
+<li>Symlinks each <code>&lt;source&gt;/skills/&lt;name&gt;/</code> into <code>&lt;claude-dir&gt;/skills/</code> and each <code>&lt;source&gt;/agents/&lt;file&gt;</code> into <code>&lt;claude-dir&gt;/agents/</code>. <code>.gitkeep</code> placeholders are skipped.</li>
+<li>Merges <code>&lt;source&gt;/config/settings.json</code> into <code>&lt;claude-dir&gt;/settings.json</code> (hooks, mcpServers, and <code>MAIT_CODE_EMBEDDING_PROVIDER</code> env). User-set keys are preserved verbatim. The write is atomic (tempfile + rename).</li>
+<li>Writes the install record.</li>
+</ol>
+<p><strong>Examples</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Standard install from a local clone:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mait-code<span class="w"> </span>install<span class="w"> </span>--from<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PWD</span><span class="s2">&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Bedrock-backed install with a non-default data directory:</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>mait-code<span class="w"> </span>install<span class="w"> </span>--from<span class="w"> </span>/opt/mait-code/source<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">                  </span>--embedding-provider<span class="w"> </span>bedrock<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">                  </span>--data-dir<span class="w"> </span>/var/lib/mait-code
+</span></code></pre></div>
+<p><strong>Exit codes</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Install succeeded.</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>&lt;source&gt;</code> is not a mait-code clone, or <code>--embedding-provider</code> is not one of <code>local</code> / <code>bedrock</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notes</strong></p>
+<ul>
+<li>This subcommand does <strong>not</strong> run <code>uv tool install</code>. By the time it
+  runs, the <code>mait-code</code> binary is already on PATH (that's how it was
+  invoked). The bash shim handles the bootstrap.</li>
+<li>Re-running <code>install</code> is safe — it's idempotent. Symlinks that
+  already point at the right target are left alone; templates are
+  never overwritten.</li>
+</ul>
+<hr />
+<h2 id="mait-code-update"><code>mait-code update</code><a class="headerlink" href="#mait-code-update" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mait-code update [--no-pull] [--ref &lt;tag|branch|sha&gt;] [--force] [--claude-dir &lt;path&gt;]
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Advance the source tree to the right ref and — only if <code>HEAD</code> actually moved — reinstall via <code>uv tool install</code>, then refresh symlinks and settings and bump the install record. A repeated update with nothing new upstream is a cheap no-op: the reinstall is skipped rather than rebuilding every package.</p>
+<p>How the source is advanced depends on its current state — a bootstrap install pins to a release <strong>tag</strong> (detached HEAD), while a local-clone dev install sits on a <strong>branch</strong>:</p>
+<ul>
+<li><code>--ref &lt;X&gt;</code> given → checkout <code>X</code>.</li>
+<li>On a branch → fast-forward it (<code>git merge --ff-only</code>).</li>
+<li>Detached HEAD (typical post-bootstrap) → checkout the latest <code>v*</code> tag.</li>
+</ul>
+<p><strong>Flags</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--no-pull</code></td>
+<td>off</td>
+<td>Skip the network fetch and branch fast-forward; reinstall from whatever is currently checked out. <code>--ref</code> still checks out a local ref.</td>
+</tr>
+<tr>
+<td><code>--ref &lt;ref&gt;</code></td>
+<td><em>(none)</em></td>
+<td><code>git checkout &lt;ref&gt;</code> (after a fetch unless <code>--no-pull</code>). Pins to a tag/branch/sha.</td>
+</tr>
+<tr>
+<td><code>--force</code></td>
+<td>off</td>
+<td>Reinstall even when the source <code>HEAD</code> did not move — e.g. to rebuild uncommitted working-tree edits on a dev checkout.</td>
+</tr>
+<tr>
+<td><code>--claude-dir &lt;path&gt;</code></td>
+<td><code>~/.claude</code></td>
+<td>Override the Claude Code config directory.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Behaviour</strong></p>
+<ol>
+<li>Reads the install record. Aborts with exit <code>1</code> if missing.</li>
+<li>Verifies the recorded source dir still looks like a mait-code clone.</li>
+<li>Unless <code>--no-pull</code>: <code>git fetch origin --tags --prune</code>.</li>
+<li>Advance to the target ref:<ul>
+<li><code>--ref</code> given → <code>git checkout &lt;ref&gt;</code>.</li>
+<li>on a branch → <code>git merge --ff-only</code> (skipped under <code>--no-pull</code>).</li>
+<li>detached HEAD → <code>git checkout &lt;latest v* tag&gt;</code>. Aborts if there are no tags and no <code>--ref</code>.</li>
+</ul>
+</li>
+<li>If <code>HEAD</code> moved during step 4 (or <code>--force</code> was given): <code>uv tool install &lt;source&gt;[&lt;extra&gt;] --force --reinstall-package mait-code --python 3.13</code>. <code>--reinstall-package mait-code</code> forces a rebuild of just the local source — whose version does not bump between commits — while leaving unchanged third-party deps in place. The <code>[bedrock]</code> extra is applied when the install record records the bedrock provider. If <code>HEAD</code> did not move and <code>--force</code> was not given, this step is skipped.</li>
+<li>Re-runs the symlink and settings-merge steps from <code>install</code> (picks up new skills, settings.json changes). These run even when the reinstall is skipped.</li>
+<li>Rewrites the install record with the new version and timestamp.</li>
+</ol>
+<p><strong>Examples</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Standard update — fetch, advance to latest tag (or fast-forward</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># branch), reinstall, refresh:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mait-code<span class="w"> </span>update
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Pin to a specific release tag:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>mait-code<span class="w"> </span>update<span class="w"> </span>--ref<span class="w"> </span>v0.14.1
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1"># Reinstall from the current checkout without touching git:</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>mait-code<span class="w"> </span>update<span class="w"> </span>--no-pull
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1"># Force a rebuild even when nothing moved (e.g. uncommitted dev edits):</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>mait-code<span class="w"> </span>update<span class="w"> </span>--no-pull<span class="w"> </span>--force
+</span></code></pre></div>
+<p><strong>Exit codes</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Update succeeded.</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>No install record, source dir no longer valid, detached HEAD with no <code>v*</code> tags (and no <code>--ref</code>), or any subprocess (<code>git</code>, <code>uv</code>) failed.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="mait-code-uninstall"><code>mait-code uninstall</code><a class="headerlink" href="#mait-code-uninstall" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mait-code uninstall [--purge-data] [--keep-uv-tool]
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>                    [--data-dir &lt;path&gt;] [--claude-dir &lt;path&gt;]
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Reverse the install footprint. Removes symlinks, strips mait-code
+entries from <code>settings.json</code>, runs <code>uv tool uninstall mait-code</code>,
+deletes the install record. Preserves the data directory by default.</p>
+<p><strong>Flags</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--purge-data</code></td>
+<td>off</td>
+<td>Also delete the data directory (memories, personalised soul / user-context files). Destructive.</td>
+</tr>
+<tr>
+<td><code>--keep-uv-tool</code></td>
+<td>off</td>
+<td>Skip <code>uv tool uninstall mait-code</code> (useful when temporarily downgrading or switching extras).</td>
+</tr>
+<tr>
+<td><code>--data-dir &lt;path&gt;</code></td>
+<td><code>$MAIT_CODE_DATA_DIR</code> or <code>~/.claude/mait-code-data</code></td>
+<td>Override the data directory location.</td>
+</tr>
+<tr>
+<td><code>--claude-dir &lt;path&gt;</code></td>
+<td><code>~/.claude</code></td>
+<td>Override the Claude Code config directory.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Behaviour</strong></p>
+<ol>
+<li>Reads the install record (best-effort — missing record is a warning, not an error).</li>
+<li>Removes <code>&lt;claude-dir&gt;/CLAUDE.md</code> if it's a symlink pointing into the recorded source. Restores <code>CLAUDE.md.backup</code> if present.</li>
+<li>Removes skill symlinks under <code>&lt;claude-dir&gt;/skills/</code> that resolve into the recorded source. Foreign symlinks (e.g. from other tools) are preserved.</li>
+<li>Same for agents.</li>
+<li>Cleans mait-code-owned entries from <code>&lt;claude-dir&gt;/settings.json</code> (hook commands with the <code>mc-hook-</code> prefix; legacy <code>mait-reminders</code> MCP server; the <code>MAIT_CODE_EMBEDDING_PROVIDER</code> env). Empty top-level sections are dropped.</li>
+<li><code>uv tool uninstall mait-code</code> (unless <code>--keep-uv-tool</code>). Failure here is a warning — the binary may already be gone.</li>
+<li>With <code>--purge-data</code>: deletes the data directory.</li>
+<li>Deletes the install record.</li>
+</ol>
+<p><strong>Examples</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Standard uninstall — keeps memories and personalised files:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mait-code<span class="w"> </span>uninstall
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Full wipe (data dir too):</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>mait-code<span class="w"> </span>uninstall<span class="w"> </span>--purge-data
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Downgrade to an older release without losing settings:</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>mait-code<span class="w"> </span>uninstall<span class="w"> </span>--keep-uv-tool
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>mait-code<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.14.0
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>mait-code<span class="w"> </span>install<span class="w"> </span>--from<span class="w"> </span>/path/to/old-source
+</span></code></pre></div>
+<p><strong>Exit codes</strong></p>
+<p><code>0</code> always. Uninstall is best-effort; missing components produce
+warnings on stderr, not non-zero exit. If you need failure on broken
+state, run <code>mait-code doctor</code> first.</p>
+<hr />
+<h2 id="mait-code-status"><code>mait-code status</code><a class="headerlink" href="#mait-code-status" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mait-code status [--json] [--data-dir &lt;path&gt;] [--claude-dir &lt;path&gt;]
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Read-only summary of the current install. Always exits <code>0</code> — there's
+no diagnostic intent here, just a report. The text output is grouped
+into sections under a one-line health badge (<code>healthy</code> / <code>degraded</code> /
+<code>not installed</code>); <code>degraded</code> flags fixable oddities such as an unlinked
+<code>CLAUDE.md</code>, with a git-style hint on how to fix them.</p>
+<p><strong>Flags</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--json</code></td>
+<td>off</td>
+<td>Emit a machine-readable JSON document instead of human-readable text. The JSON shape is stable and independent of the text grouping.</td>
+</tr>
+<tr>
+<td><code>--data-dir &lt;path&gt;</code></td>
+<td><code>$MAIT_CODE_DATA_DIR</code> or <code>~/.claude/mait-code-data</code></td>
+<td>Override the data directory location.</td>
+</tr>
+<tr>
+<td><code>--claude-dir &lt;path&gt;</code></td>
+<td><code>~/.claude</code></td>
+<td>Override the Claude Code config directory.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Reports</strong></p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Header</td>
+<td>Version and a health badge: <code>healthy</code>, <code>degraded</code>, or <code>not installed</code>.</td>
+</tr>
+<tr>
+<td>Install</td>
+<td><code>source_dir</code>, the resolved <code>mait-code</code> binary path, install date</td>
+</tr>
+<tr>
+<td>Identity</td>
+<td><code>CLAUDE.md</code> symlink status, and presence of <code>soul_document.md</code> / <code>user_context.md</code> / <code>memory/MEMORY.md</code></td>
+</tr>
+<tr>
+<td>Components</td>
+<td>Linked / available skills and agents; registered hook events</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>Embedding provider; data-dir path and humanised size</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mait-code<span class="w"> </span>status
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>mait-code<span class="w"> </span>status<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.embedding_provider&#39;</span>
+</span></code></pre></div>
+<p><strong>Exit code:</strong> always <code>0</code>.</p>
+<hr />
+<h2 id="mait-code-doctor"><code>mait-code doctor</code><a class="headerlink" href="#mait-code-doctor" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mait-code doctor [--fix] [--json] [--data-dir &lt;path&gt;] [--claude-dir &lt;path&gt;]
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Validate the install. Surfaces silent breakage — broken symlinks,
+unparseable settings, hook commands missing from PATH. Exits <code>1</code> if
+any check reports a <code>fail</code>-level finding, <code>0</code> otherwise. Each failing or
+warning check carries the exact command or URL to fix it, and the run
+ends with a one-line pass/fail verdict. The <code>--json</code> output includes a
+<code>fix_hint</code> field per check.</p>
+<p><strong>Flags</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--fix</code></td>
+<td>off</td>
+<td>Apply safe fixes for findings that support it.</td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>off</td>
+<td>Emit a machine-readable JSON document.</td>
+</tr>
+<tr>
+<td><code>--data-dir &lt;path&gt;</code></td>
+<td><code>$MAIT_CODE_DATA_DIR</code> or <code>~/.claude/mait-code-data</code></td>
+<td>Override the data directory location.</td>
+</tr>
+<tr>
+<td><code>--claude-dir &lt;path&gt;</code></td>
+<td><code>~/.claude</code></td>
+<td>Override the Claude Code config directory.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Checks</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Levels</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>install-record</code></td>
+<td>ok / fail</td>
+<td>Record exists and parses at the expected schema version.</td>
+</tr>
+<tr>
+<td><code>source-dir</code></td>
+<td>ok / warn / fail</td>
+<td>The recorded source still exists and looks like a mait-code clone. <code>warn</code> when there's no record to validate against.</td>
+</tr>
+<tr>
+<td><code>settings-values</code></td>
+<td>ok / fail</td>
+<td>Every setting's value is valid for its type and range, and cross-field invariants hold (the scoring weights must sum to <code>1.0</code>). <code>fail</code> lists each offending value.</td>
+</tr>
+<tr>
+<td><code>settings</code></td>
+<td>ok / warn / fail</td>
+<td><code>&lt;claude-dir&gt;/settings.json</code> parses as JSON. <code>warn</code> if missing.</td>
+</tr>
+<tr>
+<td><code>hooks-on-path</code></td>
+<td>ok / warn / fail</td>
+<td>Every registered hook with the <code>mc-hook-</code> prefix resolves on <code>PATH</code>.</td>
+</tr>
+<tr>
+<td><code>symlinks</code></td>
+<td>ok / warn</td>
+<td>No dangling symlinks under <code>&lt;claude-dir&gt;/skills/</code> or <code>&lt;claude-dir&gt;/agents/</code>. Dangling links are a <strong>warning</strong> (auto-fixable, so they don't fail the run); <code>--fix</code> removes them.</td>
+</tr>
+<tr>
+<td><code>data-dir</code></td>
+<td>ok / fail</td>
+<td>The data dir exists and is writable. With <code>--fix</code>, creates it (plus the <code>memory/observations</code> and <code>memory/reflections</code> subdirs) if missing.</td>
+</tr>
+<tr>
+<td><code>uv-on-path</code></td>
+<td>ok / fail</td>
+<td><code>uv</code> is on <code>PATH</code> — required for <code>install</code> / <code>update</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>mait-code<span class="w"> </span>doctor<span class="w">                       </span><span class="c1"># diagnose</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>mait-code<span class="w"> </span>doctor<span class="w"> </span>--fix<span class="w">                 </span><span class="c1"># diagnose and clean up safe findings</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>mait-code<span class="w"> </span>doctor<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.checks[] | select(.level==&quot;fail&quot;)&#39;</span>
+</span></code></pre></div>
+<p><strong>Exit codes</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>No <code>fail</code>-level findings (warnings are allowed).</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>One or more checks reported <code>fail</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="mait-code-settings"><code>mait-code settings</code><a class="headerlink" href="#mait-code-settings" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mait-code settings                          # interactive editor (TTY) / list (piped)
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>mait-code settings list [--json]            # read-only, provenance-aware view
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>mait-code settings get &lt;key&gt; [--json]       # one resolved value + source
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>mait-code settings set &lt;key&gt; &lt;value&gt; [flags]
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>View and edit the active configuration. Bare <code>mait-code settings</code> opens a
+full-screen editor (a <a href="https://textual.textualize.io/">Textual</a> TUI) when
+attached to a terminal, and falls back to the read-only view (<code>list</code>) when
+piped or redirected, so scripts are unaffected. Every write — from <code>set</code> or
+the editor — goes through one shared path: validate → persist
+<code>settings.toml</code> → keep <code>settings.json</code> in step → run the required follow-up.</p>
+<h3 id="the-interactive-editor">The interactive editor<a class="headerlink" href="#the-interactive-editor" title="Permanent link">&para;</a></h3>
+<p>A master–detail layout: the settings list on the left, an inline edit form
+on the right that adapts to the highlighted setting — a radio set for enums
+(<code>embedding-provider</code>, <code>log-level</code>), a text input with live validation for
+everything else, and a read-only view for derived values. The three scoring
+weights collapse into one <strong>grouped</strong> row whose editor retunes all three at
+once and only enables <em>Apply</em> when they sum to <code>1.0</code>. Migration and
+<code>data-dir</code> changes confirm their follow-up in a modal; a re-embed drops out
+to the terminal so <code>reindex</code> prints its normal progress, then returns.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>↑</code> / <code>↓</code></td>
+<td>Move between settings</td>
+</tr>
+<tr>
+<td><code>Ctrl+S</code> / <code>Enter</code></td>
+<td>Apply the edit (or open the grouped weight editor)</td>
+</tr>
+<tr>
+<td><code>q</code></td>
+<td>Quit</td>
+</tr>
+</tbody>
+</table>
+<h3 id="settings-list"><code>settings list</code><a class="headerlink" href="#settings-list" title="Permanent link">&para;</a></h3>
+<p>Read-only view of every knob the framework reads, with its resolved value
+and <em>source</em>. Modelled on <code>aws configure list</code>. Always exits <code>0</code>: it
+<em>reports</em> configuration, it doesn't validate it (that's <code>doctor</code>'s job, via
+the <code>settings-values</code> check).</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--json</code></td>
+<td>off</td>
+<td>Emit a machine-readable JSON document instead of text.</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SETTING</code></td>
+<td>The knob (see the groups below).</td>
+</tr>
+<tr>
+<td><code>VALUE</code></td>
+<td>The resolved value (<code>default</code> values are dimmed).</td>
+</tr>
+<tr>
+<td><code>SOURCE</code></td>
+<td><code>env</code>, <code>settings</code> (the TOML file), <code>default</code>, or <code>derived</code> (computed, read-only). Migration-sensitive knobs are marked <code>⚠</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Settings fall into three groups:</p>
+<ul>
+<li><strong>Primary</strong> — written uncommented in <code>settings.toml</code>: <code>data-dir</code>, <code>log-level</code>, <code>log-file</code>, <code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code>, <code>bedrock-region</code>.</li>
+<li><strong>Advanced</strong> — written commented-out (the built-in default applies until you opt in via <code>set</code> or by uncommenting): <code>log-backup-count</code>, <code>extraction-model</code>, <code>reflection-model</code>, <code>llm-timeout</code>, <code>reflection-batch-size</code>, <code>reflection-novelty-gate</code>, <code>git-timeout</code>, and the scoring/dedup tuning knobs <code>score-weight-recency</code>, <code>score-weight-importance</code>, <code>score-weight-relevance</code>, <code>half-life-episodic</code>, <code>half-life-semantic</code>, <code>dedup-string-threshold</code>, <code>dedup-vector-threshold</code>, <code>scope-boost-global</code>, <code>scope-boost-cross-project</code>.</li>
+<li><strong>Derived</strong> (source <code>derived</code>, not settable): <code>embedding-dim</code>, <code>memory-db-path</code>, <code>tasks-db-path</code>, <code>decisions-db-path</code>, <code>reminders-db-path</code>, <code>model-cache-dir</code>, <code>observations-dir</code>, <code>project-aliases-path</code>.</li>
+</ul>
+<p>See the <a href="../../memory/">Memory guide</a> for per-setting defaults and the scoring/dedup tuning ranges.</p>
+<h3 id="settings-get"><code>settings get</code><a class="headerlink" href="#settings-get" title="Permanent link">&para;</a></h3>
+<p>Print one resolved value and its source, for scripting. <code>--json</code> emits
+<code>{"key", "value", "source"}</code>. Exits <code>1</code> on an unknown key.</p>
+<h3 id="settings-set"><code>settings set</code><a class="headerlink" href="#settings-set" title="Permanent link">&para;</a></h3>
+<p>Validate <code>&lt;value&gt;</code> against the same rules <code>doctor</code> runs, write it to
+<code>settings.toml</code>, then run the required follow-up. Validation reuses each
+setting's own validator (and enum <code>choices</code>, e.g. <code>embedding-provider</code> ∈
+{<code>local</code>, <code>bedrock</code>}, <code>log-level</code> ∈ {<code>DEBUG</code>, <code>INFO</code>, <code>WARNING</code>,
+<code>ERROR</code>}).</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--reindex</code> / <code>--no-reindex</code></td>
+<td>unset</td>
+<td>For a migration key: re-embed memories now, or defer.</td>
+</tr>
+<tr>
+<td><code>--move-data</code> / <code>--no-move-data</code></td>
+<td>unset</td>
+<td>For <code>data-dir</code>: relocate existing data, or leave it in place.</td>
+</tr>
+</tbody>
+</table>
+<p>Follow-ups by key:</p>
+<table>
+<thead>
+<tr>
+<th>Key(s)</th>
+<th>Follow-up</th>
+<th>Flag (required)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code></td>
+<td>re-embed stored memories (rebuild the vector table)</td>
+<td><code>--reindex</code> / <code>--no-reindex</code></td>
+</tr>
+<tr>
+<td><code>data-dir</code></td>
+<td>move the existing data directory to the new path</td>
+<td><code>--move-data</code> / <code>--no-move-data</code></td>
+</tr>
+<tr>
+<td>everything else</td>
+<td>none — applies on the next invocation</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>For migration keys and <code>data-dir</code>, omitting the flag is an error that
+explains the destructive follow-up rather than guessing. The three scoring
+weights (<code>score-weight-*</code>) are <strong>rejected</strong> by <code>set</code> — they must sum to
+<code>1.0</code>, so changing one alone would leave an invalid file; use the
+interactive editor (which retunes all three at once) or edit <code>settings.toml</code>
+directly (<code>doctor</code> validates the result).</p>
+<p><strong>Env shadowing.</strong> Resolution is env → file → default. <code>set</code> keeps an
+<strong>already-mirrored</strong> <code>MAIT_CODE_*</code> key in <code>~/.claude/settings.json</code> in step
+with the TOML, so the value <code>install</code> mirrored there (e.g.
+<code>embedding-provider</code>) can't silently shadow your change. It never <em>adds</em>
+keys to <code>settings.json</code>. If a shell export still overrides the new value,
+<code>set</code> warns precisely and names the variable to unset.</p>
+<p><strong>Examples</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mait-code<span class="w"> </span>settings<span class="w">                                  </span><span class="c1"># edit interactively</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>mait-code<span class="w"> </span>settings<span class="w"> </span>list<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.settings[] | select(.source == &quot;env&quot;)&#39;</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>mait-code<span class="w"> </span>settings<span class="w"> </span>get<span class="w"> </span>embedding-provider
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>log-level<span class="w"> </span>DEBUG
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>embedding-provider<span class="w"> </span>bedrock<span class="w"> </span>--reindex
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>data-dir<span class="w"> </span>~/mait-data<span class="w"> </span>--move-data
+</span></code></pre></div>
+<p><strong>Exit codes:</strong> <code>list</code>/bare always <code>0</code>; <code>get</code> and <code>set</code> exit <code>1</code> on an
+unknown key, invalid value, or a missing required follow-up flag.</p>
+<hr />
+<h2 id="mait-code-version"><code>mait-code version</code><a class="headerlink" href="#mait-code-version" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>mait-code version
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Print the installed <code>mait-code</code> package version (from
+<code>importlib.metadata</code>). Falls back to <code>mait_code.__version__</code> when
+running from a checkout that hasn't been <code>uv tool install</code>ed.</p>
+<p><strong>Exit codes</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Version printed.</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>Neither metadata nor in-tree <code>__version__</code> could be read.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../setup/">Setup</a> — first-time install walkthrough using the bash shim.</li>
+<li><a href="../skills/">Skills</a> — slash commands available inside a Claude Code session.</li>
+<li><a href="../cli/">Python API → CLI</a> — the helpers that power these subcommands (for contributors / extension authors).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Wiktor de Pina
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/wiktordepina/mait-code" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.tracking", "navigation.top", "navigation.indexes", "toc.follow", "content.code.copy", "content.code.annotate", "content.action.edit", "search.suggest", "search.share", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"alias": true, "default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
