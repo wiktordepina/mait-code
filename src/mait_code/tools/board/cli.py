@@ -3,6 +3,11 @@
 A single cross-project kanban board stored in ``board.db``. Cards carry a
 ``project`` field and move through a fixed workflow: backlog → refined →
 in_progress → done, with ``blocked`` and hidden ``archived`` side-states.
+
+The handlers here are thin: argument parsing, the not-found/exit helper, and
+presentation (text vs ``--json``). Every query and mutation — including the
+done-invariant — lives in :mod:`mait_code.tools.board.service`, the shared core
+the interactive TUI sits on too.
 """
 
 import argparse
@@ -10,16 +15,14 @@ import json
 import logging
 import sys
 from datetime import datetime, timezone
+from typing import NoReturn
 
 from mait_code.logging import log_invocation, setup_logging
+from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ALL_STATUSES,
     ARCHIVED,
-    BACKLOG,
-    BLOCKED,
     BOARD_ORDER,
-    DONE,
-    IN_PROGRESS,
     REFINED,
     label,
 )
@@ -29,49 +32,17 @@ logger = logging.getLogger(__name__)
 
 PRIORITIES = ("low", "medium", "high")
 AUTHORS = ("me", "claude")
-_PRIORITY_ORDER = "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"
-_CARD_COLS = (
-    "id, project, title, description, acceptance_criteria, status, priority, "
-    "completion_summary, created_at, updated_at, completed_at"
-)
-_CARD_KEYS = (
-    "id",
-    "project",
-    "title",
-    "description",
-    "acceptance_criteria",
-    "status",
-    "priority",
-    "completion_summary",
-    "created_at",
-    "updated_at",
-    "completed_at",
-)
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _card_dict(row) -> dict:
-    """Map a row selected with ``_CARD_COLS`` to a JSON-friendly dict."""
-    return dict(zip(_CARD_KEYS, row))
-
-
-def _fetch_card(conn, card_id):
-    return conn.execute(
-        f"SELECT {_CARD_COLS} FROM cards WHERE id = ?", (card_id,)
-    ).fetchone()
-
-
-def _require_card(conn, card_id):
-    """Fetch a card or exit(1) with a not-found error."""
-    row = _fetch_card(conn, card_id)
-    if row is None:
-        logger.error("card #%d not found", card_id)
-        print(f"Error: card #{card_id} not found.", file=sys.stderr)
-        sys.exit(1)
-    return row
+def _not_found(card_id: int) -> NoReturn:
+    """Print a not-found error to stderr and exit(1)."""
+    logger.error("card #%d not found", card_id)
+    print(f"Error: card #{card_id} not found.", file=sys.stderr)
+    sys.exit(1)
 
 
 # --- Card CRUD ---
@@ -85,41 +56,29 @@ def cmd_add(args):
         sys.exit(1)
 
     project = args.project or get_project()
-    now = _now().isoformat()
     with connection() as conn:
-        cursor = conn.execute(
-            "INSERT INTO cards (project, title, description, status, priority, "
-            "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (project, title, args.description, BACKLOG, args.priority, now, now),
+        card_id = service.add_card(
+            conn,
+            project=project,
+            title=title,
+            description=args.description,
+            priority=args.priority,
         )
-        conn.commit()
-        card_id = cursor.lastrowid
 
     print(f"Card #{card_id} added ({args.priority}): {title}")
 
 
 def cmd_list(args):
-    where = []
-    params = []
-    if not args.all:
-        where.append("project = ?")
-        params.append(get_project())
-    if args.status:
-        where.append("status = ?")
-        params.append(args.status)
-    elif not args.archived:
-        where.append("status != ?")
-        params.append(ARCHIVED)
-    clause = (" WHERE " + " AND ".join(where)) if where else ""
-
+    project = None if args.all else get_project()
+    statuses = [args.status] if args.status else None
     with connection() as conn:
-        rows = conn.execute(
-            f"SELECT {_CARD_COLS} FROM cards{clause} "
-            f"ORDER BY {_PRIORITY_ORDER}, created_at, id",
-            params,
-        ).fetchall()
+        cards = service.list_cards(
+            conn,
+            project=project,
+            statuses=statuses,
+            include_archived=args.archived,
+        )
 
-    cards = [_card_dict(r) for r in rows]
     if args.json:
         print(json.dumps(cards, indent=2))
         return
@@ -147,18 +106,13 @@ def cmd_list(args):
 
 def cmd_show(args):
     with connection() as conn:
-        row = _require_card(conn, args.id)
-        comments = conn.execute(
-            "SELECT author, body, created_at FROM card_comments "
-            "WHERE card_id = ? ORDER BY id",
-            (args.id,),
-        ).fetchall()
+        card = service.get_card(conn, args.id)
+        if card is None:
+            _not_found(args.id)
+        comments = service.get_comments(conn, args.id)
 
-    card = _card_dict(row)
     if args.json:
-        card["comments"] = [
-            {"author": a, "body": b, "created_at": c} for a, b, c in comments
-        ]
+        card["comments"] = comments
         print(json.dumps(card, indent=2))
         return
 
@@ -172,8 +126,8 @@ def cmd_show(args):
         print(f"\nCompletion summary:\n{card['completion_summary']}")
     if comments:
         print(f"\nComments ({len(comments)}):")
-        for author, body, _created_at in comments:
-            print(f"  [{author}] {body}")
+        for comment in comments:
+            print(f"  [{comment['author']}] {comment['body']}")
 
 
 def cmd_edit(args):
@@ -191,23 +145,21 @@ def cmd_edit(args):
         print("Error: nothing to edit (pass at least one field).", file=sys.stderr)
         sys.exit(1)
 
-    fields["updated_at"] = _now().isoformat()
     with connection() as conn:
-        _require_card(conn, args.id)
-        cols = ", ".join(f"{key} = ?" for key in fields)
-        conn.execute(
-            f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), args.id)
-        )
-        conn.commit()
+        try:
+            service.edit_card(conn, args.id, **fields)
+        except service.CardNotFound:
+            _not_found(args.id)
 
     print(f"Card #{args.id} updated.")
 
 
 def cmd_remove(args):
     with connection() as conn:
-        _require_card(conn, args.id)
-        conn.execute("DELETE FROM cards WHERE id = ?", (args.id,))
-        conn.commit()
+        try:
+            service.remove_card(conn, args.id)
+        except service.CardNotFound:
+            _not_found(args.id)
 
     print(f"Card #{args.id} removed.")
 
@@ -218,16 +170,11 @@ def cmd_comment(args):
         print("Error: comment body cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
-    now = _now().isoformat()
     with connection() as conn:
-        _require_card(conn, args.id)
-        conn.execute(
-            "INSERT INTO card_comments (card_id, author, body, created_at) "
-            "VALUES (?, ?, ?, ?)",
-            (args.id, args.author, body, now),
-        )
-        conn.execute("UPDATE cards SET updated_at = ? WHERE id = ?", (now, args.id))
-        conn.commit()
+        try:
+            service.add_comment(conn, args.id, body, author=args.author)
+        except service.CardNotFound:
+            _not_found(args.id)
 
     print(f"Comment added to card #{args.id}.")
 
@@ -238,49 +185,26 @@ def cmd_comment(args):
 def cmd_move(args):
     new_status = args.status  # argparse choices=ALL_STATUSES guarantees validity
     with connection() as conn:
-        row = _require_card(conn, args.id)
-        old_status = row[5]
-        now = _now().isoformat()
-        if new_status == DONE and old_status != DONE:
-            conn.execute(
-                "UPDATE cards SET status = ?, completed_at = ?, updated_at = ? "
-                "WHERE id = ?",
-                (new_status, now, now, args.id),
-            )
-        elif new_status != DONE and old_status == DONE:
-            conn.execute(
-                "UPDATE cards SET status = ?, completed_at = NULL, updated_at = ? "
-                "WHERE id = ?",
-                (new_status, now, args.id),
-            )
-        else:
-            conn.execute(
-                "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
-                (new_status, now, args.id),
-            )
-        conn.commit()
+        try:
+            service.move_card(conn, args.id, new_status)
+        except service.CardNotFound:
+            _not_found(args.id)
 
     print(f"Card #{args.id} → {label(new_status)}.")
 
 
 def cmd_refine(args):
-    now = _now().isoformat()
-    fields: dict[str, str] = {"status": REFINED, "updated_at": now}
-    if args.description is not None:
-        fields["description"] = args.description
-    if args.acceptance is not None:
-        fields["acceptance_criteria"] = args.acceptance
-
     with connection() as conn:
-        row = _require_card(conn, args.id)
-        cols = ", ".join(f"{key} = ?" for key in fields)
-        conn.execute(
-            f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), args.id)
+        card = service.get_card(conn, args.id)
+        if card is None:
+            _not_found(args.id)
+        had_acceptance = bool(card["acceptance_criteria"])
+        service.refine_card(
+            conn, args.id, description=args.description, acceptance=args.acceptance
         )
-        conn.commit()
 
     # Warn if the card lands in Refined with no acceptance criteria at all.
-    if args.acceptance is None and not row[4]:
+    if args.acceptance is None and not had_acceptance:
         print(f"Warning: card #{args.id} has no acceptance criteria.", file=sys.stderr)
     print(f"Card #{args.id} → {label(REFINED)}.")
 
@@ -289,32 +213,15 @@ def cmd_next(args):
     """Print the next refined card; with --claim, move it to in_progress."""
     project = args.project or get_project()
     with connection() as conn:
-        row = conn.execute(
-            f"SELECT {_CARD_COLS} FROM cards "
-            f"WHERE project = ? AND status = ? "
-            f"ORDER BY {_PRIORITY_ORDER}, created_at, id LIMIT 1",
-            (project, REFINED),
-        ).fetchone()
+        card = service.next_refined(conn, project, claim=args.claim)
 
-        if row is None:
-            if args.json:
-                print("null")
-            else:
-                print(f"No refined cards for {project}.")
-            return
+    if card is None:
+        if args.json:
+            print("null")
+        else:
+            print(f"No refined cards for {project}.")
+        return
 
-        if args.claim:
-            now = _now().isoformat()
-            # Guard on status so a concurrent claim can't double-move.
-            conn.execute(
-                "UPDATE cards SET status = ?, updated_at = ? "
-                "WHERE id = ? AND status = ?",
-                (IN_PROGRESS, now, row[0], REFINED),
-            )
-            conn.commit()
-            row = _fetch_card(conn, row[0])
-
-    card = _card_dict(row)
     if args.json:
         print(json.dumps(card, indent=2))
         return
@@ -328,60 +235,41 @@ def cmd_next(args):
 def cmd_complete(args):
     summary = " ".join(args.summary).strip()
     with connection() as conn:
-        _require_card(conn, args.id)
-        now = _now().isoformat()
-        conn.execute(
-            "UPDATE cards SET status = ?, completion_summary = ?, completed_at = ?, "
-            "updated_at = ? WHERE id = ?",
-            (DONE, summary or None, now, now, args.id),
-        )
-        conn.commit()
+        try:
+            service.complete_card(conn, args.id, summary=summary or None)
+        except service.CardNotFound:
+            _not_found(args.id)
 
     print(f"Card #{args.id} completed.")
 
 
 def cmd_block(args):
     reason = " ".join(args.reason).strip()
-    now = _now().isoformat()
     with connection() as conn:
-        _require_card(conn, args.id)
-        conn.execute(
-            "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
-            (BLOCKED, now, args.id),
-        )
-        if reason:
-            conn.execute(
-                "INSERT INTO card_comments (card_id, author, body, created_at) "
-                "VALUES (?, ?, ?, ?)",
-                (args.id, "me", f"Blocked: {reason}", now),
-            )
-        conn.commit()
+        try:
+            service.block_card(conn, args.id, reason=reason or None)
+        except service.CardNotFound:
+            _not_found(args.id)
 
-    print(f"Card #{args.id} → {label(BLOCKED)}.")
+    print(f"Card #{args.id} → {label('blocked')}.")
 
 
 def cmd_unblock(args):
-    now = _now().isoformat()
     with connection() as conn:
-        _require_card(conn, args.id)
-        conn.execute(
-            "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
-            (REFINED, now, args.id),
-        )
-        conn.commit()
+        try:
+            service.unblock_card(conn, args.id)
+        except service.CardNotFound:
+            _not_found(args.id)
 
     print(f"Card #{args.id} → {label(REFINED)}.")
 
 
 def cmd_archive(args):
-    now = _now().isoformat()
     with connection() as conn:
-        _require_card(conn, args.id)
-        conn.execute(
-            "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
-            (ARCHIVED, now, args.id),
-        )
-        conn.commit()
+        try:
+            service.archive_card(conn, args.id)
+        except service.CardNotFound:
+            _not_found(args.id)
 
     print(f"Card #{args.id} → {label(ARCHIVED)}.")
 
@@ -389,22 +277,7 @@ def cmd_archive(args):
 def cmd_summary(args):
     project = args.project or (None if args.all else get_project())
     with connection() as conn:
-        if project is None:
-            rows = conn.execute(
-                "SELECT status, COUNT(*) FROM cards WHERE status != ? GROUP BY status",
-                (ARCHIVED,),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT status, COUNT(*) FROM cards "
-                "WHERE project = ? AND status != ? GROUP BY status",
-                (project, ARCHIVED),
-            ).fetchall()
-
-    counts = {status: 0 for status in BOARD_ORDER}
-    for status, count in rows:
-        if status in counts:
-            counts[status] = count
+        counts = service.summary_counts(conn, project=project)
 
     if args.json:
         print(json.dumps({"project": project, "counts": counts}, indent=2))

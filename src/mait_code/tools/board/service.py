@@ -1,0 +1,399 @@
+"""Presentation-agnostic board operations shared by the CLI and the TUI.
+
+Pure functions over an open ``sqlite3.Connection`` — queries and mutations,
+including the *done-invariant* (set ``completed_at`` on entering ``done``, clear
+it on leaving). The caller owns the connection lifecycle: the argparse CLI opens
+one per command via :func:`~mait_code.tools.board.db.connection`; the Textual
+TUI holds a single connection for the app's lifetime.
+
+Rows are returned as the same dicts the CLI has always produced (see
+:func:`_card_dict`). Mutations raise :class:`CardNotFound` for a missing id
+rather than printing and exiting — that ``print``/``sys.exit`` is a CLI concern
+the caller layers on top (the CLI exits; the TUI flashes a notification).
+"""
+
+from __future__ import annotations
+
+import sqlite3
+from collections.abc import Iterable, Sequence
+from datetime import datetime, timezone
+
+from mait_code.tools.board.columns import (
+    ARCHIVED,
+    BACKLOG,
+    BLOCKED,
+    BOARD_ORDER,
+    DONE,
+    IN_PROGRESS,
+    REFINED,
+)
+
+__all__ = [
+    "CardNotFound",
+    "add_card",
+    "add_comment",
+    "archive_card",
+    "block_card",
+    "complete_card",
+    "edit_card",
+    "get_card",
+    "get_comments",
+    "list_cards",
+    "list_projects",
+    "move_card",
+    "next_refined",
+    "refine_card",
+    "remove_card",
+    "summary_counts",
+    "unblock_card",
+]
+
+_PRIORITY_ORDER = "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"
+_CARD_COLS = (
+    "id, project, title, description, acceptance_criteria, status, priority, "
+    "completion_summary, created_at, updated_at, completed_at"
+)
+_CARD_KEYS = (
+    "id",
+    "project",
+    "title",
+    "description",
+    "acceptance_criteria",
+    "status",
+    "priority",
+    "completion_summary",
+    "created_at",
+    "updated_at",
+    "completed_at",
+)
+
+
+class CardNotFound(Exception):
+    """Raised by mutations when no card has the given id."""
+
+    def __init__(self, card_id: int) -> None:
+        super().__init__(f"card #{card_id} not found")
+        self.card_id = card_id
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _card_dict(row: Sequence) -> dict:
+    """Map a row selected with ``_CARD_COLS`` to a JSON-friendly dict."""
+    return dict(zip(_CARD_KEYS, row))
+
+
+def _fetch_card_row(conn: sqlite3.Connection, card_id: int):
+    return conn.execute(
+        f"SELECT {_CARD_COLS} FROM cards WHERE id = ?", (card_id,)
+    ).fetchone()
+
+
+def _require_row(conn: sqlite3.Connection, card_id: int):
+    row = _fetch_card_row(conn, card_id)
+    if row is None:
+        raise CardNotFound(card_id)
+    return row
+
+
+# --- Queries ---
+
+
+def list_cards(
+    conn: sqlite3.Connection,
+    *,
+    project: str | None = None,
+    statuses: Iterable[str] | None = None,
+    include_archived: bool = False,
+) -> list[dict]:
+    """Return cards ordered priority-then-oldest.
+
+    Args:
+        conn: Open board connection.
+        project: Restrict to one project, or ``None`` for every project.
+        statuses: Restrict to these statuses; ``None`` means "all". When given,
+            it takes precedence over *include_archived*.
+        include_archived: When no *statuses* filter is set, whether to include
+            archived cards (default excludes them).
+    """
+    where: list[str] = []
+    params: list = []
+    if project is not None:
+        where.append("project = ?")
+        params.append(project)
+    if statuses is not None:
+        statuses = list(statuses)
+        placeholders = ", ".join("?" for _ in statuses)
+        where.append(f"status IN ({placeholders})")
+        params.extend(statuses)
+    elif not include_archived:
+        where.append("status != ?")
+        params.append(ARCHIVED)
+    clause = (" WHERE " + " AND ".join(where)) if where else ""
+    rows = conn.execute(
+        f"SELECT {_CARD_COLS} FROM cards{clause} "
+        f"ORDER BY {_PRIORITY_ORDER}, created_at, id",
+        params,
+    ).fetchall()
+    return [_card_dict(r) for r in rows]
+
+
+def get_card(conn: sqlite3.Connection, card_id: int) -> dict | None:
+    """Return one card as a dict, or ``None`` if no card has that id."""
+    row = _fetch_card_row(conn, card_id)
+    return _card_dict(row) if row is not None else None
+
+
+def get_comments(conn: sqlite3.Connection, card_id: int) -> list[dict]:
+    """Return a card's comments in insertion order."""
+    rows = conn.execute(
+        "SELECT author, body, created_at FROM card_comments "
+        "WHERE card_id = ? ORDER BY id",
+        (card_id,),
+    ).fetchall()
+    return [{"author": a, "body": b, "created_at": c} for a, b, c in rows]
+
+
+def list_projects(conn: sqlite3.Connection) -> list[str]:
+    """Return the distinct project names on the board, sorted."""
+    rows = conn.execute(
+        "SELECT DISTINCT project FROM cards ORDER BY project"
+    ).fetchall()
+    return [r[0] for r in rows]
+
+
+def summary_counts(
+    conn: sqlite3.Connection, *, project: str | None = None
+) -> dict[str, int]:
+    """Return per-column card counts (excluding archived).
+
+    The result always has a key for every :data:`BOARD_ORDER` status, defaulting
+    to ``0``. ``project=None`` counts across every project.
+    """
+    if project is None:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) FROM cards WHERE status != ? GROUP BY status",
+            (ARCHIVED,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) FROM cards "
+            "WHERE project = ? AND status != ? GROUP BY status",
+            (project, ARCHIVED),
+        ).fetchall()
+    counts = {status: 0 for status in BOARD_ORDER}
+    for status, count in rows:
+        if status in counts:
+            counts[status] = count
+    return counts
+
+
+def next_refined(
+    conn: sqlite3.Connection, project: str, *, claim: bool = False
+) -> dict | None:
+    """Return the top refined card for *project* (priority, then oldest).
+
+    With ``claim=True`` the card is moved to ``in_progress`` first (guarded on
+    its status so a concurrent claim can't double-move it). Returns ``None``
+    when the project has no refined cards.
+    """
+    row = conn.execute(
+        f"SELECT {_CARD_COLS} FROM cards "
+        f"WHERE project = ? AND status = ? "
+        f"ORDER BY {_PRIORITY_ORDER}, created_at, id LIMIT 1",
+        (project, REFINED),
+    ).fetchone()
+    if row is None:
+        return None
+    if claim:
+        conn.execute(
+            "UPDATE cards SET status = ?, updated_at = ? WHERE id = ? AND status = ?",
+            (IN_PROGRESS, _now(), row[0], REFINED),
+        )
+        conn.commit()
+        row = _fetch_card_row(conn, row[0])
+    return _card_dict(row)
+
+
+# --- Mutations ---
+
+
+def add_card(
+    conn: sqlite3.Connection,
+    *,
+    project: str,
+    title: str,
+    description: str | None = None,
+    priority: str = "medium",
+) -> int:
+    """Insert a backlog card and return its new id."""
+    now = _now()
+    cursor = conn.execute(
+        "INSERT INTO cards (project, title, description, status, priority, "
+        "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (project, title, description, BACKLOG, priority, now, now),
+    )
+    conn.commit()
+    card_id = cursor.lastrowid
+    assert card_id is not None  # a successful INSERT always sets lastrowid
+    return card_id
+
+
+def move_card(conn: sqlite3.Connection, card_id: int, new_status: str) -> None:
+    """Move a card to *new_status*, maintaining the done-invariant.
+
+    Entering ``done`` stamps ``completed_at``; leaving it clears the stamp.
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    row = _require_row(conn, card_id)
+    old_status = row[5]
+    now = _now()
+    if new_status == DONE and old_status != DONE:
+        conn.execute(
+            "UPDATE cards SET status = ?, completed_at = ?, updated_at = ? "
+            "WHERE id = ?",
+            (new_status, now, now, card_id),
+        )
+    elif new_status != DONE and old_status == DONE:
+        conn.execute(
+            "UPDATE cards SET status = ?, completed_at = NULL, updated_at = ? "
+            "WHERE id = ?",
+            (new_status, now, card_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
+            (new_status, now, card_id),
+        )
+    conn.commit()
+
+
+def refine_card(
+    conn: sqlite3.Connection,
+    card_id: int,
+    *,
+    description: str | None = None,
+    acceptance: str | None = None,
+) -> None:
+    """Move a card to ``refined``, optionally setting description/acceptance.
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    fields: dict[str, str] = {"status": REFINED, "updated_at": _now()}
+    if description is not None:
+        fields["description"] = description
+    if acceptance is not None:
+        fields["acceptance_criteria"] = acceptance
+    _require_row(conn, card_id)
+    cols = ", ".join(f"{key} = ?" for key in fields)
+    conn.execute(f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), card_id))
+    conn.commit()
+
+
+def complete_card(
+    conn: sqlite3.Connection, card_id: int, *, summary: str | None = None
+) -> None:
+    """Move a card to ``done`` with an optional completion summary.
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    now = _now()
+    conn.execute(
+        "UPDATE cards SET status = ?, completion_summary = ?, completed_at = ?, "
+        "updated_at = ? WHERE id = ?",
+        (DONE, summary or None, now, now, card_id),
+    )
+    conn.commit()
+
+
+def block_card(
+    conn: sqlite3.Connection, card_id: int, *, reason: str | None = None
+) -> None:
+    """Move a card to ``blocked``; record *reason* as a comment if given.
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    now = _now()
+    conn.execute(
+        "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
+        (BLOCKED, now, card_id),
+    )
+    if reason:
+        conn.execute(
+            "INSERT INTO card_comments (card_id, author, body, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (card_id, "me", f"Blocked: {reason}", now),
+        )
+    conn.commit()
+
+
+def unblock_card(conn: sqlite3.Connection, card_id: int) -> None:
+    """Return a blocked card to ``refined``.
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    conn.execute(
+        "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
+        (REFINED, _now(), card_id),
+    )
+    conn.commit()
+
+
+def archive_card(conn: sqlite3.Connection, card_id: int) -> None:
+    """Archive a card (hide it from default views).
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    conn.execute(
+        "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
+        (ARCHIVED, _now(), card_id),
+    )
+    conn.commit()
+
+
+def add_comment(
+    conn: sqlite3.Connection, card_id: int, body: str, *, author: str = "me"
+) -> None:
+    """Append a comment to a card and bump its ``updated_at``.
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    now = _now()
+    conn.execute(
+        "INSERT INTO card_comments (card_id, author, body, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (card_id, author, body, now),
+    )
+    conn.execute("UPDATE cards SET updated_at = ? WHERE id = ?", (now, card_id))
+    conn.commit()
+
+
+def edit_card(conn: sqlite3.Connection, card_id: int, **fields: str) -> None:
+    """Update arbitrary card columns, bumping ``updated_at``.
+
+    Pass column names as keyword arguments (e.g. ``title=..``,
+    ``acceptance_criteria=..``). Raises :class:`CardNotFound` if the id is
+    unknown; a no-op (no fields) is the caller's concern.
+    """
+    _require_row(conn, card_id)
+    fields["updated_at"] = _now()
+    cols = ", ".join(f"{key} = ?" for key in fields)
+    conn.execute(f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), card_id))
+    conn.commit()
+
+
+def remove_card(conn: sqlite3.Connection, card_id: int) -> None:
+    """Delete a card permanently (comments cascade).
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
+    conn.commit()
