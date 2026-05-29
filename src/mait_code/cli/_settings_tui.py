@@ -34,6 +34,7 @@ from textual.widgets import (
     RadioSet,
     Static,
 )
+from textual.widgets.data_table import ColumnKey
 
 from mait_code import config
 from mait_code.cli._settings_edit import (
@@ -69,7 +70,13 @@ class _LiveValidator(Validator):
         return self.success() if msg is None else self.failure(msg)
 
 
-_VALUE_WIDTH = 24
+# Source only ever holds these words, so the column is sized to the longest
+# ("settings"). The migration marker rides on the Setting column instead, so it
+# costs the wider Value column nothing.
+_SETTING_WIDTH = 26
+_SOURCE_WIDTH = 8
+_VALUE_WIDTH = 26
+_MIGRATION_MARK = " ⚠"
 
 
 def _truncate(text: str, width: int = _VALUE_WIDTH) -> str:
@@ -77,13 +84,17 @@ def _truncate(text: str, width: int = _VALUE_WIDTH) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
-def _row_cells(key: str) -> tuple[Text, Text, Text]:
-    """Return the (setting, value, source) cells for a settings-table row."""
+def _row_cells(key: str, value_width: int = _VALUE_WIDTH) -> tuple[Text, Text, Text]:
+    """Return the (setting, value, source) cells for a settings-table row.
+
+    *value_width* is the current width of the (flexing) Value column, used to
+    truncate the value with an ellipsis so it never overflows.
+    """
     if key == _WEIGHTS_KEY:
         weights = " / ".join(config.get(k) for k in config._WEIGHT_KEYS)
         return (
             Text("scoring weights…"),
-            Text(_truncate(weights)),
+            Text(_truncate(weights, value_width)),
             Text("grouped", style="cyan"),
         )
 
@@ -95,15 +106,20 @@ def _row_cells(key: str) -> tuple[Text, Text, Text]:
         # as muted and reject edits.
         return (
             Text(setting.key, style="dim"),
-            Text(_truncate(value), style="dim"),
+            Text(_truncate(value, value_width), style="dim"),
             Text("derived", style="dim"),
         )
 
-    source_cell = Text(source, style="dim" if source == "default" else "")
+    setting_cell = Text(setting.key)
     if setting.requires_migration:
-        source_cell.append(" ⚠", style="yellow")
+        setting_cell.append(_MIGRATION_MARK, style="yellow")
     value_style = "dim" if source == "default" else ""
-    return (Text(setting.key), Text(_truncate(value), style=value_style), source_cell)
+    source_cell = Text(source, style="dim" if source == "default" else "")
+    return (
+        setting_cell,
+        Text(_truncate(value, value_width), style=value_style),
+        source_cell,
+    )
 
 
 class ConfirmScreen(ModalScreen[bool]):
@@ -207,6 +223,7 @@ class SettingsApp(App[None]):
     #detail { width: 1fr; padding: 1 2; }
     #detail .title { text-style: bold; color: $accent; }
     #detail .help { color: $text-muted; margin-bottom: 1; }
+    #detail .warn-note { color: $warning; margin-bottom: 1; }
     #detail #source { color: $text-muted; margin-top: 1; }
     #detail #msg { margin-top: 1; }
     #detail #apply { margin-top: 1; }
@@ -238,6 +255,8 @@ class SettingsApp(App[None]):
         super().__init__()
         self._current_key: str | None = None
         self._row_order: list[str] = []
+        self._value_width = _VALUE_WIDTH
+        self._value_col: ColumnKey | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -251,13 +270,41 @@ class SettingsApp(App[None]):
         # straight on the editor widget, not the container around it.
         self.query_one("#detail", VerticalScroll).can_focus = False
         table = self.query_one("#list", DataTable)
-        table.add_column("Setting", width=26, key="k")
-        table.add_column("Value", width=_VALUE_WIDTH, key="v")
-        table.add_column("Source", width=10, key="s")
+        table.add_column("Setting", width=_SETTING_WIDTH, key="k")
+        self._value_col = table.add_column("Value", width=self._value_width, key="v")
+        table.add_column("Source", width=_SOURCE_WIDTH, key="s")
         for key in self._ordered_keys():
-            table.add_row(*_row_cells(key), key=key)
+            table.add_row(*_row_cells(key, self._value_width), key=key)
             self._row_order.append(key)
         table.focus()
+        # Size the Value column to fill the half once the layout is known.
+        self.call_after_refresh(self._fit_value_column)
+
+    def on_resize(self) -> None:
+        self._fit_value_column()
+
+    def _fit_value_column(self) -> None:
+        """Flex the Value column to fill the list pane's remaining width."""
+        if not self._row_order or self._value_col is None:
+            return
+        table = self.query_one("#list", DataTable)
+        available = table.scrollable_content_region.width
+        if available <= 0:
+            return
+        # Reserve the two fixed columns (and per-column padding) and give the
+        # rest to Value. A small floor keeps Source visible rather than letting
+        # Value push it off the edge on a narrow pane.
+        pad = table.cell_padding * 2
+        value_width = max(
+            8, available - (_SETTING_WIDTH + pad) - (_SOURCE_WIDTH + pad) - pad
+        )
+        if value_width == self._value_width:
+            return
+        self._value_width = value_width
+        table.columns[self._value_col].width = value_width
+        for key in self._row_order:
+            table.update_cell(key, "v", _row_cells(key, value_width)[1])
+        table.refresh(layout=True)
 
     def _ordered_keys(self) -> list[str]:
         """Row keys in display order: the three weights collapse into one row."""
@@ -316,6 +363,15 @@ class SettingsApp(App[None]):
             Label(setting.key, classes="title"),
             Label(setting.help, classes="help"),
         ]
+        if setting.requires_migration:
+            widgets.append(
+                Static(
+                    "⚠ Changing this re-embeds all stored memories "
+                    "(rebuilds the vector table from preserved text — no data "
+                    "loss, but it takes a moment).",
+                    classes="warn-note",
+                )
+            )
         current, source = config.resolve(setting)
 
         if not setting.settable:
@@ -389,7 +445,7 @@ class SettingsApp(App[None]):
     def _refresh_row(self, key: str) -> None:
         """Re-render a single table row's cells in place after a change."""
         table = self.query_one("#list", DataTable)
-        cells = _row_cells(key)
+        cells = _row_cells(key, self._value_width)
         for column_key, cell in zip(("k", "v", "s"), cells):
             table.update_cell(key, column_key, cell)
 

@@ -18,7 +18,7 @@ from unittest.mock import patch
 from textual.widgets import Button, DataTable, Input, RadioButton, RadioSet, Static
 
 from mait_code import config
-from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingsApp
+from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingsApp, _row_cells
 
 
 def _run(coro_factory):
@@ -108,6 +108,42 @@ class TestNavigation:
                 assert "derived" in str(app.query_one("#source", Static).render())
 
         _run(scenario)
+
+
+class TestMigrationMarker:
+    def test_marker_on_setting_not_source(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        setting_cell, _value, source_cell = _row_cells("embedding-provider")
+        assert "⚠" in str(setting_cell)
+        assert "⚠" not in str(source_cell)
+
+    def test_no_marker_on_plain_setting(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        setting_cell, _value, _source = _row_cells("log-level")
+        assert "⚠" not in str(setting_cell)
+
+    def test_detail_explains_marker(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "embedding-provider")
+                notes = app.query(".warn-note")
+                return bool(notes) and "re-embed" in str(notes.first().render())
+
+        assert _run(scenario) is True
+
+    def test_no_note_for_plain_setting(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "log-level")
+                return len(app.query(".warn-note"))
+
+        assert _run(scenario) == 0
 
 
 class TestEditing:
