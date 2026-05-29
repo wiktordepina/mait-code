@@ -257,6 +257,18 @@ class TestCmdReindex:
         out = capsys.readouterr().out
         assert "No memory entries" in out
 
+    def test_run_reindex_raises_when_unavailable(self, populated_mem_db):
+        from mait_code.tools.memory.cli import ReindexError, run_reindex
+
+        with pytest.raises(ReindexError, match="embedding model unavailable"):
+            run_reindex()
+
+    def test_run_reindex_returns_count(self, mem_db):
+        from mait_code.tools.memory.cli import run_reindex
+
+        with patch("mait_code.tools.memory.cli.is_available", return_value=True):
+            assert run_reindex() == 0
+
 
 class TestCmdRestore:
     def test_restore_no_obs_dir(self, mem_db, tmp_path, capsys):

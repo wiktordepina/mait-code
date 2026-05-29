@@ -397,17 +397,31 @@ def _recreate_vec_table(conn, dim: int):
     conn.commit()
 
 
-def cmd_reindex(_args):
-    """Recompute vector embeddings for all memory entries."""
-    provider = _embedding_provider_name()
+class ReindexError(RuntimeError):
+    """Reindex could not run (e.g. the embedding provider is unavailable)."""
+
+
+def run_reindex() -> int:
+    """Recompute all vector embeddings, recreating the vec table on a
+    dimension change.
+
+    The programmatic counterpart to :func:`cmd_reindex`: callers (the
+    ``mait-code settings`` follow-up, for one) get a return value instead
+    of a process exit. Progress is still printed to stdout.
+
+    Returns:
+        The number of embeddings written.
+
+    Raises:
+        ReindexError: if the embedding provider is unavailable.
+    """
     if not is_available():
-        logger.error("embedding model unavailable")
+        provider = _embedding_provider_name()
         if provider == "bedrock":
             hint = "Ensure boto3 is installed: pip install boto3"
         else:
             hint = "Ensure fastembed is installed: pip install fastembed"
-        print(f"Error: embedding model unavailable. {hint}", file=sys.stderr)
-        sys.exit(1)
+        raise ReindexError(f"embedding model unavailable. {hint}")
 
     with connection() as conn:
         matches, table_dim, expected_dim = check_dimension_match(conn)
@@ -418,9 +432,19 @@ def cmd_reindex(_args):
             )
             _recreate_vec_table(conn, expected_dim)
 
-        embedded = _reindex_embeddings(conn)
-        if embedded:
-            print(f"\nDone. {embedded} embeddings stored.")
+        return _reindex_embeddings(conn)
+
+
+def cmd_reindex(_args):
+    """Recompute vector embeddings for all memory entries."""
+    try:
+        embedded = run_reindex()
+    except ReindexError as exc:
+        logger.error("embedding model unavailable")
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    if embedded:
+        print(f"\nDone. {embedded} embeddings stored.")
 
 
 def cmd_restore(args):
