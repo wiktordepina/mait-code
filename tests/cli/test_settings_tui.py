@@ -1,0 +1,200 @@
+"""Tests for the Textual ``mait-code settings`` editor.
+
+Textual ships a real headless harness (``App.run_test()`` → pilot), so unlike
+the old questionary glue these drive the actual app: navigate the list, edit a
+widget, apply, and assert the settings file changed. Each test wraps an async
+scenario in ``asyncio.run`` so no pytest-asyncio plugin is needed.
+
+The shared write path (`apply_setting`) is covered exhaustively in
+``test_settings_edit``; here we only check the TUI wiring on top of it.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from pathlib import Path
+from unittest.mock import patch
+
+from textual.widgets import Input, RadioButton, RadioSet, Static
+
+from mait_code import config
+from mait_code.cli._settings_tui import SettingRow, SettingsApp
+
+
+def _run(coro_factory):
+    return asyncio.run(coro_factory())
+
+
+def _select_radio(app: SettingsApp, label: str) -> None:
+    """Set the RadioSet selection to the button with the given label."""
+    rs = app.query_one("#editor", RadioSet)
+    for rb in rs.query(RadioButton):
+        if str(rb.label) == label:
+            rb.value = True
+
+
+async def _goto(pilot, app: SettingsApp, key: str) -> None:
+    """Highlight the list row for *key* and let the detail panel build."""
+    rows = [c for c in app.query_one("#list").children if isinstance(c, SettingRow)]
+    target = next(i for i, r in enumerate(rows) if r.setting_key == key)
+    app.query_one("#list").index = target
+    await pilot.pause()
+    await pilot.pause()
+
+
+class TestNavigation:
+    def test_boot_shows_first_setting(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                assert app._current_key == "data-dir"
+                # data-dir is free text → an Input editor.
+                assert app.query_one("#editor", Input) is not None
+
+        _run(scenario)
+
+    def test_enum_setting_uses_radioset(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "log-level")
+                rs = app.query_one("#editor", RadioSet)
+                assert len(list(rs.query(RadioButton))) == 4
+
+        _run(scenario)
+
+    def test_derived_row_is_read_only(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "embedding-dim")
+                # No editor widget for a derived value.
+                assert not app.query("#editor")
+                assert "derived" in str(app.query_one("#source", Static).render())
+
+        _run(scenario)
+
+
+class TestEditing:
+    def test_text_edit_persists(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "bedrock-region")
+                app.query_one("#editor", Input).value = "us-east-1"
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+
+        _run(scenario)
+        config._settings_cache = None
+        assert config.read_settings_file()["bedrock-region"] == "us-east-1"
+
+    def test_invalid_value_blocks_apply(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "git-timeout")
+                app.query_one("#editor", Input).value = "soon"
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                assert "✗" in str(app.query_one("#msg", Static).render())
+
+        _run(scenario)
+        config._settings_cache = None
+        assert "git-timeout" not in config.read_settings_file()
+
+    def test_enum_edit_persists(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "log-level")
+                _select_radio(app, "DEBUG")
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+
+        _run(scenario)
+        config._settings_cache = None
+        assert config.read_settings_file()["log-level"] == "DEBUG"
+
+
+class TestFollowups:
+    def test_migration_confirm_yes_runs_reindex(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            with patch.object(SettingsApp, "_run_reindex_suspended") as reindex:
+                async with app.run_test() as pilot:
+                    await _goto(pilot, app, "embedding-provider")
+                    _select_radio(app, "bedrock")
+                    await pilot.press("ctrl+s")
+                    await pilot.pause()
+                    await pilot.click("#yes")
+                    await pilot.pause()
+                    await pilot.pause()
+                return reindex.call_count
+
+        called = _run(scenario)
+        config._settings_cache = None
+        assert called == 1
+        assert config.read_settings_file()["embedding-provider"] == "bedrock"
+
+    def test_migration_confirm_no_defers_reindex(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            with patch.object(SettingsApp, "_run_reindex_suspended") as reindex:
+                async with app.run_test() as pilot:
+                    await _goto(pilot, app, "embedding-provider")
+                    _select_radio(app, "bedrock")
+                    await pilot.press("ctrl+s")
+                    await pilot.pause()
+                    await pilot.click("#no")
+                    await pilot.pause()
+                    await pilot.pause()
+                return reindex.call_count
+
+        called = _run(scenario)
+        config._settings_cache = None
+        assert called == 0
+        assert config.read_settings_file()["embedding-provider"] == "bedrock"
+
+    def test_data_dir_move_on_confirm(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        old = config.data_dir()
+        old.mkdir(parents=True, exist_ok=True)
+        (old / "marker").write_text("x")
+        new = fake_home / "relocated"
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "data-dir")
+                app.query_one("#editor", Input).value = str(new)
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.click("#yes")
+                await pilot.pause()
+                await pilot.pause()
+
+        _run(scenario)
+        config._settings_cache = None
+        assert (new / "marker").read_text() == "x"
+        assert not old.exists()
+        assert config.read_settings_file()["data-dir"] == str(new)

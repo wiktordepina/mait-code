@@ -15,7 +15,7 @@ dependencies = [
     "truststore>=0.9",
     "markdownify>=0.14",
     "typer>=0.12,<1",
-    "questionary>=2.0",
+    "textual>=0.80",
 ]
 
 [project.scripts]

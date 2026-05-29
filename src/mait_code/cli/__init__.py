@@ -516,7 +516,7 @@ def settings_root(ctx: typer.Context) -> None:
         return
     _require_settings_file()
     if sys.stdin.isatty() and sys.stdout.isatty():
-        from mait_code.cli._settings_editor import run_interactive_editor
+        from mait_code.cli._settings_tui import run_interactive_editor
 
         run_interactive_editor()
     else:
