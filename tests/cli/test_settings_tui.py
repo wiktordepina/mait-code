@@ -15,10 +15,10 @@ import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
-from textual.widgets import Button, Input, RadioButton, RadioSet, Static
+from textual.widgets import Button, DataTable, Input, RadioButton, RadioSet, Static
 
 from mait_code import config
-from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingRow, SettingsApp
+from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingsApp
 
 
 def _run(coro_factory):
@@ -34,10 +34,9 @@ def _select_radio(app: SettingsApp, label: str) -> None:
 
 
 async def _goto(pilot, app: SettingsApp, key: str) -> None:
-    """Highlight the list row for *key* and let the detail panel build."""
-    rows = [c for c in app.query_one("#list").children if isinstance(c, SettingRow)]
-    target = next(i for i, r in enumerate(rows) if r.setting_key == key)
-    app.query_one("#list").index = target
+    """Move the table cursor to *key*'s row and let the detail panel build."""
+    table = app.query_one("#list", DataTable)
+    table.move_cursor(row=app._row_order.index(key))
     await pilot.pause()
     await pilot.pause()
 
@@ -184,14 +183,9 @@ class TestWeights:
             app = SettingsApp()
             async with app.run_test() as pilot:
                 await pilot.pause()
-                rows = [
-                    c.setting_key
-                    for c in app.query_one("#list").children
-                    if isinstance(c, SettingRow)
-                ]
                 # Grouped row present; individual weight keys are not listed.
-                assert _WEIGHTS_KEY in rows
-                assert "score-weight-recency" not in rows
+                assert _WEIGHTS_KEY in app._row_order
+                assert "score-weight-recency" not in app._row_order
 
         _run(scenario)
 

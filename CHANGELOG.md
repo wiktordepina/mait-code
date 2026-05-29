@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.22.1] — 2026-05-29
+
+### Changed
+
+- **The interactive `mait-code settings` list is now an aligned table** —
+  `Setting` / `Value` / `Source` columns under a header, replacing the ragged
+  single-line rows whose source column drifted out of line on long values.
+  Values are truncated with an ellipsis (the full value stays editable in the
+  detail pane); migration knobs keep their `⚠` marker and derived/default rows
+  read as muted.
+
 ## [0.22.0] — 2026-05-29
 
 **The interactive `mait-code settings` editor is now a proper full-screen
