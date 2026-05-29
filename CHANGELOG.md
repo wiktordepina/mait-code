@@ -10,6 +10,19 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-05-29
+
+### Added
+
+- **A manually-driven kanban board (`mc-tool-board`).** A single cross-project
+  board in `board.db`: cards carry a `project` field and move through a fixed
+  workflow — backlog → refined → in_progress → done, with `blocked` and hidden
+  `archived` side-states. Create and refine cards (description + acceptance
+  criteria), pick up the next refined card for the current project
+  (`next --claim`), comment, and complete with a handoff summary. Claude in the
+  live session is the worker — there's no background dispatcher. CLI-only in
+  this release; an on-demand TUI and a `/board` skill follow.
+
 ## [0.22.1] — 2026-05-29
 
 ### Changed
