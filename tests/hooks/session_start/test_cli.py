@@ -97,7 +97,8 @@ def test_main_includes_board_section(monkeypatch, capsys):
     main()
 
     out = json.loads(capsys.readouterr().out)
-    context = out["hookSpecificOutput"]["context"]
+    assert out["hookSpecificOutput"]["hookEventName"] == "SessionStart"
+    context = out["hookSpecificOutput"]["additionalContext"]
     assert "## Board" in context
     assert "2 refined · 1 blocked" in context
 
