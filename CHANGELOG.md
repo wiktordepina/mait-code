@@ -23,6 +23,14 @@ don't change the public surface. Everything is still in flux.
   `additionalContext`). The regression slipped through because the test asserted
   the same wrong key; it now checks the correct contract.
 
+### Internal
+
+- **Shared hook-output schema test.** Added a single validator for the Claude
+  Code `hookSpecificOutput` contract that every hook's actual stdout is checked
+  against, replacing per-hook ad-hoc shape assertions. Catches missing
+  `hookEventName`, mislabelled context keys, and unknown events for any current
+  or future hook.
+
 ## [0.25.2] — 2026-05-29
 
 ### Fixed
