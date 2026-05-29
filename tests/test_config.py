@@ -325,6 +325,29 @@ class TestValidateSettings:
         assert config.validate_settings() == []
 
 
+class TestChoices:
+    def test_enum_settings_declare_choices(self) -> None:
+        by_key = {s.key: s for s in config.SETTINGS}
+        assert by_key["embedding-provider"].choices == ("local", "bedrock")
+        assert by_key["log-level"].choices == ("DEBUG", "INFO", "WARNING", "ERROR")
+
+    def test_embedding_provider_choices_match_install(self) -> None:
+        # config is the leaf; the install constant must not drift from it.
+        from mait_code.cli._install import EMBEDDING_PROVIDERS
+
+        by_key = {s.key: s for s in config.SETTINGS}
+        assert by_key["embedding-provider"].choices == EMBEDDING_PROVIDERS
+
+    def test_embedding_provider_validator_rejects_off_choice(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        by_key = {s.key: s for s in config.SETTINGS}
+        validate = by_key["embedding-provider"].validate
+        assert validate is not None
+        assert validate("local") is None
+        assert validate("openai") is not None
+
+
 # ---------------------------------------------------------------------------
 # Tier 2 derived values — pinned to their runtime path helpers (no drift)
 # ---------------------------------------------------------------------------
