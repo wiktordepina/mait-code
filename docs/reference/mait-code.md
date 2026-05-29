@@ -353,12 +353,29 @@ mait-code settings set <key> <value> [flags]
 
 **Description**
 
-View and edit the active configuration. Bare `mait-code settings` opens an
-interactive editor when attached to a terminal, and falls back to the
-read-only view (`list`) when piped or redirected, so scripts are
-unaffected. Every write — from `set` or the editor — goes through one
-shared path: validate → persist `settings.toml` → keep `settings.json` in
-step → run the required follow-up.
+View and edit the active configuration. Bare `mait-code settings` opens a
+full-screen editor (a [Textual](https://textual.textualize.io/) TUI) when
+attached to a terminal, and falls back to the read-only view (`list`) when
+piped or redirected, so scripts are unaffected. Every write — from `set` or
+the editor — goes through one shared path: validate → persist
+`settings.toml` → keep `settings.json` in step → run the required follow-up.
+
+### The interactive editor
+
+A master–detail layout: the settings list on the left, an inline edit form
+on the right that adapts to the highlighted setting — a radio set for enums
+(`embedding-provider`, `log-level`), a text input with live validation for
+everything else, and a read-only view for derived values. The three scoring
+weights collapse into one **grouped** row whose editor retunes all three at
+once and only enables *Apply* when they sum to `1.0`. Migration and
+`data-dir` changes confirm their follow-up in a modal; a re-embed drops out
+to the terminal so `reindex` prints its normal progress, then returns.
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Move between settings |
+| `Ctrl+S` / `Enter` | Apply the edit (or open the grouped weight editor) |
+| `q` | Quit |
 
 ### `settings list`
 
