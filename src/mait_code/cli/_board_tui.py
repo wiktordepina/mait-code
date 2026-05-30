@@ -606,9 +606,11 @@ class BoardApp(MaitApp):
         if idx < 0 or idx >= len(_MOVE_FLOW):
             self.notify("Already at the end of the flow.")
             return
-        service.move_card(self._conn, card_id, _MOVE_FLOW[idx])
+        new_status = _MOVE_FLOW[idx]
+        service.move_card(self._conn, card_id, new_status)
         self._reload()
         self._select_card(card_id)
+        self.notify(f"Card #{card_id} → {col_label(new_status)}")
 
     # -- block / unblock ---------------------------------------------------
 
@@ -619,6 +621,7 @@ class BoardApp(MaitApp):
         service.block_card(self._conn, card_id)
         self._reload()
         self._select_card(card_id)
+        self.notify(f"Card #{card_id} blocked", severity="warning")
 
     def action_unblock(self) -> None:
         card_id = self._selected_card_id()
@@ -627,6 +630,7 @@ class BoardApp(MaitApp):
         service.unblock_card(self._conn, card_id)
         self._reload()
         self._select_card(card_id)
+        self.notify(f"Card #{card_id} unblocked")
 
     # -- filter / archived / reload ---------------------------------------
 
@@ -690,8 +694,10 @@ class BoardApp(MaitApp):
         # Toggle: a tag already on the card is removed, otherwise added.
         if tag in service.list_tags(self._conn, card_id):
             service.remove_tag(self._conn, card_id, tag)
+            self.notify(f"Removed #{tag} from card #{card_id}")
         else:
             service.add_tag(self._conn, card_id, tag)
+            self.notify(f"Tagged card #{card_id} #{tag}")
         self._reload()
         self._select_card(card_id)
 
