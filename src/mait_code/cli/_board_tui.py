@@ -169,23 +169,47 @@ class BoardColumn(OptionList):
     ]
 
 
+#: The card screen's view-mode action bindings — the set :meth:`CardScreen.check_action`
+#: hides while editing (they don't apply with the form up). Save and Close are
+#: deliberately absent: Save is the edit-mode action, Close is universal.
+_VIEW_ACTIONS: frozenset[str] = frozenset(
+    {
+        "edit",
+        "comment",
+        "tag",
+        "complete",
+        "block",
+        "unblock",
+        "move_left",
+        "move_right",
+    }
+)
+
+
 class CardScreen(ModalScreen[None]):
     """A near-fullscreen card surface with a view↔edit toggle.
 
     One screen, two modes. *view* is read-only — the card's fields and its
-    comment thread. *edit* is a form over title / priority / description /
-    acceptance. ``e`` flips view→edit; **Save** persists in place and flips back
-    to view (so an edit lands without a round-trip to the board); ``escape``
-    cancels an edit back to view, or closes the screen from view.
+    comment thread, with the full action set (comment / tag / move / complete /
+    block) reachable in place. *edit* is a form over title / priority /
+    description / acceptance. ``e`` flips view→edit; **Save** (or ``ctrl+s``)
+    persists in place and flips back to view (so an edit lands without a
+    round-trip to the board); ``escape`` cancels an edit back to view, or closes
+    the screen from view.
 
     The frame is near-fullscreen for room, but the content column stays capped
     (see ``_board.tcss``) so running prose keeps a readable measure — the win
     from the detail-readability pass.
 
-    The screen never touches the database itself: saving posts a
-    :class:`CardScreen.Saved` message that the app persists, after which the app
-    feeds the refreshed card back via :meth:`show_card`. Mutation stays in the
-    service layer, mirroring the rest of the board.
+    The screen never touches the database itself: every action posts a message
+    (:class:`Saved` for an edit, :class:`Mutate` for the rest) that the app
+    persists, after which the app feeds the refreshed card back via
+    :meth:`show_card`. Mutation stays in the service layer, mirroring the rest of
+    the board.
+
+    The footer is contextual: :meth:`check_action` gates the bindings to the
+    active mode and the card's tag state, so the binding bar advertises only what
+    you can do right now.
     """
 
     class Saved(Message):
@@ -200,9 +224,38 @@ class CardScreen(ModalScreen[None]):
             self.fields = fields
             super().__init__()
 
+    class Mutate(Message):
+        """Posted to ask the app to apply an in-place action, then refresh.
+
+        Covers every non-edit action reachable from the card screen — comment,
+        tag, move, block/unblock, complete. Like :class:`Saved`, the screen never
+        writes to the DB itself: it posts the intent (with any gathered input),
+        the app persists via the service layer and feeds the refreshed card back
+        through :meth:`show_card`, so the action lands in place without bouncing
+        to the board.
+
+        ``op`` is the action name; ``value`` carries its payload — the comment
+        body, the tag to toggle, the move delta (``-1``/``+1``) or the completion
+        summary — and is ``None`` for block/unblock.
+        """
+
+        def __init__(self, card_id: int, op: str, value: object = None) -> None:
+            self.card_id = card_id
+            self.op = op
+            self.value = value
+            super().__init__()
+
     BINDINGS = [
-        Binding("escape", "close", "Close"),
         Binding("e", "edit", "Edit"),
+        Binding("ctrl+s", "save", "Save"),
+        Binding("c", "comment", "Comment"),
+        Binding("t", "tag", "Tag"),
+        Binding("C", "complete", "Complete"),
+        Binding("b", "block", "Block"),
+        Binding("u", "unblock", "Unblock"),
+        Binding("less_than_sign", "move_left", "Move ←"),
+        Binding("greater_than_sign", "move_right", "Move →"),
+        Binding("escape", "close", "Close"),
     ]
 
     def __init__(self, card: dict, comments: list[dict], *, mode: str = "view") -> None:
@@ -291,11 +344,16 @@ class CardScreen(ModalScreen[None]):
     # -- mode handling -----------------------------------------------------
 
     def _apply_mode(self) -> None:
-        """Show the active mode's container; focus the title when editing."""
+        """Show the active mode's container; focus the title when editing.
+
+        Re-runs :meth:`refresh_bindings` so the footer tracks the mode flip —
+        the view actions drop out in edit mode, Save appears.
+        """
         self.query_one("#card-view").display = self._mode == "view"
         self.query_one("#card-edit").display = self._mode == "edit"
         if self._mode == "edit":
             self.query_one("#edit-title", Input).focus()
+        self.refresh_bindings()
 
     def action_edit(self) -> None:
         """``e`` in view mode opens the form (no-op while already editing)."""
@@ -304,6 +362,11 @@ class CardScreen(ModalScreen[None]):
             self._mode = "edit"
             self._apply_mode()
 
+    def action_save(self) -> None:
+        """``ctrl+s`` in edit mode persists the form (mirrors the Save button)."""
+        if self._mode == "edit":
+            self._submit()
+
     def action_close(self) -> None:
         """Esc backs an edit out to view first, then closes from view."""
         if self._mode == "edit":
@@ -311,6 +374,77 @@ class CardScreen(ModalScreen[None]):
             self._apply_mode()
         else:
             self.dismiss(None)
+
+    # -- in-place actions (view mode only) ---------------------------------
+    #
+    # Each posts a Mutate the app applies and reflects back via show_card; none
+    # touches the DB directly, mirroring the Saved round-trip. All are inert
+    # outside view mode so edit-mode keystrokes stay with the form (check_action
+    # also hides them from the footer there).
+
+    @work
+    async def action_comment(self) -> None:
+        if self._mode != "view":
+            return
+        body = await self.app.push_screen_wait(CommentScreen(self._card["id"]))
+        if body:
+            self.post_message(self.Mutate(self._card["id"], "comment", body))
+
+    @work
+    async def action_tag(self) -> None:
+        if self._mode != "view":
+            return
+        tag = await self.app.push_screen_wait(
+            TagScreen(self._card["id"], self._card.get("tags", []))
+        )
+        if tag:
+            self.post_message(self.Mutate(self._card["id"], "tag", tag))
+
+    @work
+    async def action_complete(self) -> None:
+        if self._mode != "view":
+            return
+        summary = await self.app.push_screen_wait(CompleteScreen(self._card["id"]))
+        if summary:
+            self.post_message(self.Mutate(self._card["id"], "complete", summary))
+
+    def action_block(self) -> None:
+        if self._mode == "view":
+            self.post_message(self.Mutate(self._card["id"], "block"))
+
+    def action_unblock(self) -> None:
+        if self._mode == "view":
+            self.post_message(self.Mutate(self._card["id"], "unblock"))
+
+    def action_move_left(self) -> None:
+        if self._mode == "view":
+            self.post_message(self.Mutate(self._card["id"], "move", -1))
+
+    def action_move_right(self) -> None:
+        if self._mode == "view":
+            self.post_message(self.Mutate(self._card["id"], "move", 1))
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        """Gate the footer/bindings to the active mode and card state.
+
+        Edit mode exposes only Save + Close — the view actions don't apply with
+        the form up. View mode hides Save and shows whichever of block / unblock
+        matches the card's current tag (they're mutually exclusive). Move arrows
+        always show, matching the board (the out-of-bounds notify handles the
+        ends). Paired with :meth:`refresh_bindings` so the footer updates on every
+        mode flip and in-place change.
+        """
+        editing = self._mode == "edit"
+        if action == "save":
+            return editing
+        if action in _VIEW_ACTIONS:
+            if editing:
+                return False
+            if action == "block":
+                return BLOCKED_TAG not in self._card.get("tags", [])
+            if action == "unblock":
+                return BLOCKED_TAG in self._card.get("tags", [])
+        return True
 
     async def show_card(self, card: dict, comments: list[dict]) -> None:
         """Re-render with a freshly-saved card and return to view mode.
@@ -768,19 +902,29 @@ class BoardApp(MaitApp):
     def action_move_right(self) -> None:
         self._shift(1)
 
+    def _move_target(self, status: str, delta: int) -> str | None:
+        """The status ``delta`` steps along the flow, or ``None`` (with a notify)
+        when the card is off-flow or already at an end.
+
+        Shared by the board-level move (``_shift``) and the in-place card move so
+        both honour the same bounds and messaging.
+        """
+        if status not in _MOVE_FLOW:
+            self.notify("Archived cards aren't on the move line.")
+            return None
+        idx = _MOVE_FLOW.index(status) + delta
+        if idx < 0 or idx >= len(_MOVE_FLOW):
+            self.notify("Already at the end of the flow.")
+            return None
+        return _MOVE_FLOW[idx]
+
     def _shift(self, delta: int) -> None:
         card_id = self._selected_card_id()
         if card_id is None:
             return
-        status = self._card_status.get(card_id)
-        if status not in _MOVE_FLOW:
-            self.notify("Archived cards aren't on the move line.")
+        new_status = self._move_target(self._card_status.get(card_id, ""), delta)
+        if new_status is None:
             return
-        idx = _MOVE_FLOW.index(status) + delta
-        if idx < 0 or idx >= len(_MOVE_FLOW):
-            self.notify("Already at the end of the flow.")
-            return
-        new_status = _MOVE_FLOW[idx]
         service.move_card(self._conn, card_id, new_status)
         self._reload()
         self._select_card(card_id)
@@ -871,6 +1015,52 @@ class BoardApp(MaitApp):
         if card is not None and isinstance(self.screen, CardScreen):
             await self.screen.show_card(card, comments)
         self.notify(f"Updated card #{message.card_id}")
+
+    async def on_card_screen_mutate(self, message: CardScreen.Mutate) -> None:
+        """Apply an in-place card action, then refresh the open card screen.
+
+        The card-screen counterpart to the board-level action handlers: the same
+        service calls, but the result lands back in the still-open screen (via
+        :meth:`CardScreen.show_card`) instead of bouncing to the board. The board
+        is reloaded too, so it's correct underneath when the screen closes.
+        """
+        cid = message.card_id
+        card = service.get_card(self._conn, cid)
+        if card is None:
+            return
+        op = message.op
+        if op == "comment":
+            service.add_comment(self._conn, cid, str(message.value))
+        elif op == "tag":
+            tag = str(message.value)
+            # Toggle: a tag already on the card is removed, otherwise added —
+            # mirrors the board-level tag gesture.
+            if tag in service.list_tags(self._conn, cid):
+                service.remove_tag(self._conn, cid, tag)
+                self.notify(f"Removed #{tag} from card #{cid}")
+            else:
+                service.add_tag(self._conn, cid, tag)
+                self.notify(f"Tagged card #{cid} #{tag}")
+        elif op == "move":
+            new_status = self._move_target(card["status"], int(message.value))  # type: ignore[arg-type]
+            if new_status is None:
+                return  # off-flow / at an end; _move_target already notified
+            service.move_card(self._conn, cid, new_status)
+            self.notify(f"Card #{cid} → {col_label(new_status)}")
+        elif op == "block":
+            service.block_card(self._conn, cid)
+            self.notify(f"Card #{cid} blocked", severity="warning")
+        elif op == "unblock":
+            service.unblock_card(self._conn, cid)
+            self.notify(f"Card #{cid} unblocked")
+        elif op == "complete":
+            service.complete_card(self._conn, cid, summary=str(message.value))
+            self.notify(f"Card #{cid} completed")
+        self._reload()
+        refreshed = service.get_card(self._conn, cid)
+        comments = service.get_comments(self._conn, cid)
+        if refreshed is not None and isinstance(self.screen, CardScreen):
+            await self.screen.show_card(refreshed, comments)
 
     @work
     async def action_comment(self) -> None:
