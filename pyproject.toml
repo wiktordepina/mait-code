@@ -15,7 +15,7 @@ dependencies = [
     "truststore>=0.9",
     "markdownify>=0.14",
     "typer>=0.12,<1",
-    "textual>=0.80",
+    "textual>=0.86",
 ]
 
 [project.scripts]
@@ -37,6 +37,7 @@ bedrock = ["boto3>=1.34"]
 dev = [
     "pyright>=1.1",
     "pytest>=8.0",
+    "pytest-textual-snapshot>=1.0",
     "ruff>=0.8",
 ]
 docs = [
