@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from textual.widgets import Input, Label, Static
 
-from mait_code.cli._board_tui import BoardApp, CommentScreen, DetailScreen
+from mait_code.cli._board_tui import BoardApp, CommentScreen, DetailScreen, TagScreen
 from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
@@ -228,6 +228,59 @@ class TestBlocking:
         card = _run(scenario)
         assert card["status"] == REFINED
         assert BLOCKED_TAG not in card["tags"]
+
+
+class TestTagging:
+    def test_tag_gesture_toggles(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                # First toggle adds the tag.
+                await pilot.press("t")
+                await pilot.pause()
+                assert isinstance(app.screen, TagScreen)
+                app.screen.query_one("#tag-input", Input).value = "urgent"
+                await pilot.click("#tag-apply")
+                await pilot.pause()
+                await pilot.pause()
+                added = service.list_tags(app._conn, ids["card"])
+                # Second toggle of the same tag removes it.
+                await pilot.press("t")
+                await pilot.pause()
+                app.screen.query_one("#tag-input", Input).value = "urgent"
+                await pilot.click("#tag-apply")
+                await pilot.pause()
+                await pilot.pause()
+                removed = service.list_tags(app._conn, ids["card"])
+                return added, removed
+
+        added, removed = _run(scenario)
+        assert added == ["urgent"]
+        assert removed == []
+
+    def test_blocked_tag_paints_on_row(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "x", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            # Wide terminal so the column is broad enough that the tag suffix
+            # isn't truncated off the card row.
+            async with app.run_test(size=(220, 30)) as pilot:
+                await pilot.pause()
+                service.block_card(app._conn, ids["x"])
+                app._reload()
+                await pilot.pause()
+                strips = app.screen._compositor.render_strips()
+                painted = "\n".join(
+                    "".join(seg.text for seg in strip) for strip in strips
+                )
+                return painted
+
+        assert f"#{BLOCKED_TAG}" in _run(scenario)
 
 
 class TestProjectFilter:

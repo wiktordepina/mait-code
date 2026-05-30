@@ -517,6 +517,65 @@ def test_cmd_unblock(mock_conn):
     assert remaining == 0
 
 
+def test_cmd_tag(mock_conn):
+    cid = _insert_card(mock_conn, "t")
+    from mait_code.tools.board.cli import cmd_tag
+
+    cmd_tag(_ns(id=cid, tag="urgent"))
+    row = mock_conn.execute(
+        "SELECT tag FROM card_tags WHERE card_id = ?", (cid,)
+    ).fetchone()
+    assert row[0] == "urgent"
+
+
+def test_cmd_tag_empty(mock_conn):
+    cid = _insert_card(mock_conn, "t")
+    from mait_code.tools.board.cli import cmd_tag
+
+    with pytest.raises(SystemExit):
+        cmd_tag(_ns(id=cid, tag="   "))
+
+
+def test_cmd_tag_not_found(mock_conn):
+    from mait_code.tools.board.cli import cmd_tag
+
+    with pytest.raises(SystemExit):
+        cmd_tag(_ns(id=999, tag="urgent"))
+
+
+def test_cmd_untag(mock_conn):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_untag
+
+    cid = _insert_card(mock_conn, "t")
+    service.add_tag(mock_conn, cid, "urgent")
+    cmd_untag(_ns(id=cid, tag="urgent"))
+    remaining = mock_conn.execute(
+        "SELECT COUNT(*) FROM card_tags WHERE card_id = ?", (cid,)
+    ).fetchone()[0]
+    assert remaining == 0
+
+
+def test_cmd_show_renders_tags(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_show
+
+    cid = _insert_card(mock_conn, "t")
+    service.add_tag(mock_conn, cid, "urgent")
+    cmd_show(_ns(id=cid, json=False))
+    assert "tags: urgent" in capsys.readouterr().out
+
+
+def test_cmd_list_renders_tags(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_list
+
+    cid = _insert_card(mock_conn, "t", status=REFINED)
+    service.add_tag(mock_conn, cid, "urgent")
+    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    assert "#urgent" in capsys.readouterr().out
+
+
 def test_cmd_archive_then_excluded_from_next(mock_conn, capsys):
     cid = _insert_card(mock_conn, "a", status=REFINED)
     from mait_code.tools.board.cli import cmd_archive, cmd_next

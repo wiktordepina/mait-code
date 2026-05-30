@@ -101,7 +101,10 @@ def cmd_list(args):
         print(f"{label(status)} ({len(group)}):")
         for card in group:
             project = f" [{card['project']}]" if args.all else ""
-            print(f"  [#{card['id']}] ({card['priority']}) {card['title']}{project}")
+            tags = "".join(f"  #{t}" for t in card["tags"])
+            print(
+                f"  [#{card['id']}] ({card['priority']}) {card['title']}{project}{tags}"
+            )
         print()
 
 
@@ -119,6 +122,8 @@ def cmd_show(args):
 
     print(f"#{card['id']} ({card['priority']}) {card['title']}")
     print(f"  project: {card['project']}   status: {label(card['status'])}")
+    if card["tags"]:
+        print(f"  tags: {', '.join(card['tags'])}")
     if card["description"]:
         print(f"\nDescription:\n{card['description']}")
     if card["acceptance_criteria"]:
@@ -265,6 +270,33 @@ def cmd_unblock(args):
     print(f"Card #{args.id}: 'blocked' tag removed.")
 
 
+def cmd_tag(args):
+    tag = args.tag.strip()
+    if not tag:
+        logger.warning("tag cannot be empty")
+        print("Error: tag cannot be empty.", file=sys.stderr)
+        sys.exit(1)
+
+    with connection() as conn:
+        try:
+            service.add_tag(conn, args.id, tag)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    print(f"Card #{args.id} tagged '{tag}'.")
+
+
+def cmd_untag(args):
+    tag = args.tag.strip()
+    with connection() as conn:
+        try:
+            service.remove_tag(conn, args.id, tag)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    print(f"Card #{args.id}: '{tag}' tag removed.")
+
+
 def cmd_archive(args):
     with connection() as conn:
         try:
@@ -354,6 +386,16 @@ def main():
     p_unblock = sub.add_parser("unblock", help="Remove the 'blocked' tag from a card")
     p_unblock.add_argument("id", type=int, help="Card ID")
     p_unblock.set_defaults(func=cmd_unblock)
+
+    p_tag = sub.add_parser("tag", help="Add a tag to a card")
+    p_tag.add_argument("id", type=int, help="Card ID")
+    p_tag.add_argument("tag", help="Tag to add")
+    p_tag.set_defaults(func=cmd_tag)
+
+    p_untag = sub.add_parser("untag", help="Remove a tag from a card")
+    p_untag.add_argument("id", type=int, help="Card ID")
+    p_untag.add_argument("tag", help="Tag to remove")
+    p_untag.set_defaults(func=cmd_untag)
 
     p_archive = sub.add_parser("archive", help="Archive a card (hide it)")
     p_archive.add_argument("id", type=int, help="Card ID")

@@ -2,7 +2,7 @@
 
 A full-screen, on-demand board: one column-pane per status laid side by side,
 every project's cards visible with a project filter, keyboard navigation, and
-move / comment / block gestures. It runs in the foreground and exits on ``q``
+move / comment / tag / block gestures. It runs in the foreground and exits on ``q``
 &mdash; no background process &mdash; mirroring the ``mait-code settings`` editor.
 
 Every query and mutation delegates to
@@ -32,6 +32,7 @@ from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
+    BLOCKED_TAG,
     BOARD_ORDER,
     DONE,
     IN_PROGRESS,
@@ -61,6 +62,9 @@ def _card_row(card: dict, *, show_project: bool) -> Text:
     text = Text(f"#{card['id']} ({card['priority']}) {card['title']}")
     if show_project:
         text.append(f"  {card['project']}", style="dim")
+    for tag in card.get("tags", []):
+        style = "bold red" if tag == BLOCKED_TAG else "dim"
+        text.append(f" #{tag}", style=style)
     return text
 
 
@@ -80,6 +84,7 @@ class BoardColumn(DataTable):
         Binding("greater_than_sign", "app.move_right", "Move →"),
         Binding("enter", "app.detail", "Detail"),
         Binding("c", "app.comment", "Comment"),
+        Binding("t", "app.tag", "Tag"),
         Binding("b", "app.block", "Block"),
         Binding("u", "app.unblock", "Unblock"),
         Binding("p", "app.cycle_project", "Project"),
@@ -168,6 +173,46 @@ class CommentScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
+class TagScreen(ModalScreen[str | None]):
+    """A single-line tag input; resolves to the tag, or ``None`` on cancel.
+
+    The app *toggles* the returned tag: present → removed, absent → added.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, card_id: int) -> None:
+        super().__init__()
+        self._card_id = card_id
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="tag-dialog"):
+            yield Label(f"Tag card #{self._card_id} (toggles)", id="tag-title")
+            yield Input(placeholder="tag…", id="tag-input")
+            with Horizontal(id="tag-buttons"):
+                yield Button("Apply", id="tag-apply", variant="primary")
+                yield Button("Cancel", id="tag-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#tag-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "tag-apply":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        tag = self.query_one("#tag-input", Input).value.strip()
+        self.dismiss(tag or None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 class BoardApp(App[None]):
     """Full-screen kanban over every project's cards."""
 
@@ -195,6 +240,14 @@ class BoardApp(App[None]):
     CommentScreen #comment-title { text-style: bold; margin-bottom: 1; }
     CommentScreen #comment-buttons { height: auto; margin-top: 1; align-horizontal: right; }
     CommentScreen Button { margin-left: 2; }
+    TagScreen { align: center middle; }
+    TagScreen #tag-dialog {
+        width: 60; height: auto; padding: 1 2;
+        border: thick $accent; background: $surface;
+    }
+    TagScreen #tag-title { text-style: bold; margin-bottom: 1; }
+    TagScreen #tag-buttons { height: auto; margin-top: 1; align-horizontal: right; }
+    TagScreen Button { margin-left: 2; }
     """
 
     BINDINGS = [("q", "quit", "Quit")]
@@ -401,5 +454,21 @@ class BoardApp(App[None]):
         if not body:
             return
         service.add_comment(self._conn, card_id, body)
+        self._reload()
+        self._select_card(card_id)
+
+    @work
+    async def action_tag(self) -> None:
+        card_id = self._selected_card_id()
+        if card_id is None:
+            return
+        tag = await self.push_screen_wait(TagScreen(card_id))
+        if not tag:
+            return
+        # Toggle: a tag already on the card is removed, otherwise added.
+        if tag in service.list_tags(self._conn, card_id):
+            service.remove_tag(self._conn, card_id, tag)
+        else:
+            service.add_tag(self._conn, card_id, tag)
         self._reload()
         self._select_card(card_id)
