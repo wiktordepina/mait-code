@@ -13,12 +13,15 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from textual.widgets import Input, Label, Static
+from textual.widgets import Input, Label, Static, TextArea
 
 from mait_code.cli._board_tui import (
     BoardApp,
     CommentScreen,
+    CompleteScreen,
     DetailScreen,
+    EditCardScreen,
+    NewCardScreen,
     TagScreen,
     _card_row,
 )
@@ -481,3 +484,84 @@ class TestLayout:
                 return "Find me" in painted
 
         assert _run(scenario) is True
+
+
+class TestMutationModals:
+    def test_new_card_creates_in_backlog(self, board_path: Path) -> None:
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("n")
+                await pilot.pause()
+                assert isinstance(app.screen, NewCardScreen)
+                app.screen.query_one("#new-title", Input).value = "Fresh card"
+                app.screen.query_one("#new-project", Input).value = "demo"
+                await pilot.click("#new-add")
+                await pilot.pause()
+                await pilot.pause()
+                return service.list_cards(app._conn, project="demo")
+
+        cards = _run(scenario)
+        assert [c["title"] for c in cards] == ["Fresh card"]
+        assert cards[0]["status"] == BACKLOG
+
+    def test_new_card_empty_title_stays_open(self, board_path: Path) -> None:
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("n")
+                await pilot.pause()
+                await pilot.click("#new-add")  # empty title
+                await pilot.pause()
+                still_open = isinstance(app.screen, NewCardScreen)
+                count = len(service.list_cards(app._conn))
+                return still_open, count
+
+        still_open, count = _run(scenario)
+        assert still_open is True
+        assert count == 0
+
+    def test_edit_card_updates_fields(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "old", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("e")
+                await pilot.pause()
+                assert isinstance(app.screen, EditCardScreen)
+                app.screen.query_one("#edit-title", Input).value = "new title"
+                app.screen.query_one("#edit-description", TextArea).text = "a desc"
+                await pilot.click("#edit-save")
+                await pilot.pause()
+                await pilot.pause()
+                return service.get_card(app._conn, ids["old"])
+
+        card = _run(scenario)
+        assert card["title"] == "new title"
+        assert card["description"] == "a desc"
+
+    def test_complete_with_summary_records_handoff(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "wip", "status": IN_PROGRESS}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                app._focus_status(IN_PROGRESS)
+                await pilot.press("C")
+                await pilot.pause()
+                assert isinstance(app.screen, CompleteScreen)
+                app.screen.query_one("#complete-input", Input).value = "shipped it"
+                await pilot.click("#complete-ok")
+                await pilot.pause()
+                await pilot.pause()
+                return service.get_card(app._conn, ids["wip"])
+
+        card = _run(scenario)
+        assert card["status"] == DONE
+        assert card["completion_summary"] == "shipped it"

@@ -26,7 +26,18 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.screen import ModalScreen
-from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Static
+from textual.widgets import (
+    Button,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    Label,
+    RadioButton,
+    RadioSet,
+    Static,
+    TextArea,
+)
 
 from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
@@ -39,7 +50,7 @@ from mait_code.tools.board.columns import (
     REFINED,
     label as col_label,
 )
-from mait_code.tools.board.db import get_connection
+from mait_code.tools.board.db import get_connection, get_project
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 
 __all__ = ["BoardApp", "run_board_tui"]
@@ -102,6 +113,9 @@ class BoardColumn(DataTable):
         Binding("less_than_sign", "app.move_left", "Move ←"),
         Binding("greater_than_sign", "app.move_right", "Move →"),
         Binding("enter", "app.detail", "Detail"),
+        Binding("n", "app.new", "New"),
+        Binding("e", "app.edit", "Edit"),
+        Binding("C", "app.complete", "Complete"),
         Binding("c", "app.comment", "Comment"),
         Binding("t", "app.tag", "Tag"),
         Binding("b", "app.block", "Block"),
@@ -230,6 +244,177 @@ class TagScreen(ModalScreen[str | None]):
     def _submit(self) -> None:
         tag = self.query_one("#tag-input", Input).value.strip()
         self.dismiss(tag or None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+#: Priority choices, low→high, as offered in the new/edit modals.
+_PRIORITIES: tuple[str, ...] = ("low", "medium", "high")
+
+
+class NewCardScreen(ModalScreen[dict | None]):
+    """Capture a new card's title, project and priority.
+
+    Resolves to a ``{title, project, priority}`` dict, or ``None`` on cancel.
+    An empty title keeps the modal open (a titleless card is never created);
+    escape always cancels.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, default_project: str) -> None:
+        super().__init__()
+        self._default_project = default_project
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label("New card", classes="modal-title")
+            yield Input(placeholder="Title…", id="new-title")
+            yield Input(
+                value=self._default_project, placeholder="project", id="new-project"
+            )
+            yield RadioSet(
+                *(RadioButton(p, value=(p == "medium")) for p in _PRIORITIES),
+                id="new-priority",
+            )
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Add", id="new-add", variant="primary")
+                yield Button("Cancel", id="new-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#new-title", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "new-add":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        title = self.query_one("#new-title", Input).value.strip()
+        if not title:
+            return  # title required; stay open (escape to cancel)
+        project = (
+            self.query_one("#new-project", Input).value.strip() or self._default_project
+        )
+        idx = self.query_one("#new-priority", RadioSet).pressed_index
+        priority = _PRIORITIES[idx] if idx >= 0 else "medium"
+        self.dismiss({"title": title, "project": project, "priority": priority})
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class EditCardScreen(ModalScreen[dict | None]):
+    """Edit the focused card's title/priority/description/acceptance.
+
+    Resolves to a dict of the edited fields, or ``None`` on cancel. Title is
+    required; escape cancels.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, card: dict) -> None:
+        super().__init__()
+        self._card = card
+
+    def compose(self) -> ComposeResult:
+        card = self._card
+        with Vertical(classes="modal-dialog", id="edit-dialog"):
+            yield Label(f"Edit card #{card['id']}", classes="modal-title")
+            with VerticalScroll(id="edit-fields"):
+                yield Label("Title", classes="field-label")
+                yield Input(value=card["title"], id="edit-title")
+                yield Label("Priority", classes="field-label")
+                yield RadioSet(
+                    *(
+                        RadioButton(p, value=(p == card["priority"]))
+                        for p in _PRIORITIES
+                    ),
+                    id="edit-priority",
+                )
+                yield Label("Description", classes="field-label")
+                yield TextArea(card.get("description") or "", id="edit-description")
+                yield Label("Acceptance criteria", classes="field-label")
+                yield TextArea(
+                    card.get("acceptance_criteria") or "", id="edit-acceptance"
+                )
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Save", id="edit-save", variant="primary")
+                yield Button("Cancel", id="edit-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#edit-title", Input).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "edit-save":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        title = self.query_one("#edit-title", Input).value.strip()
+        if not title:
+            return  # title required; stay open
+        idx = self.query_one("#edit-priority", RadioSet).pressed_index
+        priority = _PRIORITIES[idx] if idx >= 0 else self._card["priority"]
+        self.dismiss(
+            {
+                "title": title,
+                "priority": priority,
+                "description": self.query_one("#edit-description", TextArea).text,
+                "acceptance_criteria": self.query_one(
+                    "#edit-acceptance", TextArea
+                ).text,
+            }
+        )
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class CompleteScreen(ModalScreen[str | None]):
+    """Prompt for a completion summary; resolves to the summary or ``None``.
+
+    A summary is the whole point of this gesture (vs a bare move into done), so
+    an empty summary cancels — done cards are never summary-less.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, card_id: int) -> None:
+        super().__init__()
+        self._card_id = card_id
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label(
+                f"Complete card #{self._card_id} — summary", classes="modal-title"
+            )
+            yield Input(placeholder="What was done…", id="complete-input")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Complete", id="complete-ok", variant="primary")
+                yield Button("Cancel", id="complete-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#complete-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "complete-ok":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        summary = self.query_one("#complete-input", Input).value.strip()
+        self.dismiss(summary or None)
 
     def action_cancel(self) -> None:
         self.dismiss(None)
@@ -461,3 +646,51 @@ class BoardApp(MaitApp):
             service.add_tag(self._conn, card_id, tag)
         self._reload()
         self._select_card(card_id)
+
+    # -- mutation modals ---------------------------------------------------
+
+    @work
+    async def action_new(self) -> None:
+        default = self._project_filter or get_project()
+        result = await self.push_screen_wait(NewCardScreen(default))
+        if not result:
+            return
+        card_id = service.add_card(
+            self._conn,
+            project=result["project"],
+            title=result["title"],
+            priority=result["priority"],
+        )
+        self._projects = service.list_projects(self._conn)
+        self._reload()
+        self._select_card(card_id)
+        self.notify(f"Created card #{card_id}")
+
+    @work
+    async def action_edit(self) -> None:
+        card_id = self._selected_card_id()
+        if card_id is None:
+            return
+        card = service.get_card(self._conn, card_id)
+        if card is None:
+            return
+        result = await self.push_screen_wait(EditCardScreen(card))
+        if not result:
+            return
+        service.edit_card(self._conn, card_id, **result)
+        self._reload()
+        self._select_card(card_id)
+        self.notify(f"Updated card #{card_id}")
+
+    @work
+    async def action_complete(self) -> None:
+        card_id = self._selected_card_id()
+        if card_id is None:
+            return
+        summary = await self.push_screen_wait(CompleteScreen(card_id))
+        if not summary:
+            return
+        service.complete_card(self._conn, card_id, summary=summary)
+        self._reload()
+        self._select_card(card_id)
+        self.notify(f"Completed card #{card_id}")
