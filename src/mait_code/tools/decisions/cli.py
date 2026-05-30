@@ -22,7 +22,7 @@ def _now() -> datetime:
 def cmd_record(args):
     title = " ".join(args.title)
     if not title.strip():
-        logger.error("decision title cannot be empty")
+        logger.warning("decision title cannot be empty")
         print("Error: decision title cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
@@ -106,7 +106,7 @@ def cmd_show(args):
         ).fetchone()
 
     if row is None:
-        logger.error("decision #%d not found", args.id)
+        logger.warning("decision #%d not found", args.id)
         print(f"Error: decision #{args.id} not found.", file=sys.stderr)
         sys.exit(1)
 
@@ -149,7 +149,7 @@ def cmd_amend(args):
         ).fetchone()
 
         if row is None:
-            logger.error("decision #%d not found", args.id)
+            logger.warning("decision #%d not found", args.id)
             print(f"Error: decision #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
 
@@ -253,7 +253,7 @@ def cmd_remove(args):
         ).fetchone()
 
         if row is None:
-            logger.error("decision #%d not found", args.id)
+            logger.warning("decision #%d not found", args.id)
             print(f"Error: decision #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
 

@@ -21,7 +21,7 @@ def _now() -> datetime:
 def cmd_add(args):
     title = " ".join(args.title)
     if not title.strip():
-        logger.error("task title cannot be empty")
+        logger.warning("task title cannot be empty")
         print("Error: task title cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
@@ -88,7 +88,7 @@ def cmd_done(args):
         ).fetchone()
 
         if row is None:
-            logger.error("task #%d not found", args.id)
+            logger.warning("task #%d not found", args.id)
             print(f"Error: task #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
 
@@ -110,7 +110,7 @@ def cmd_remove(args):
         row = conn.execute("SELECT id FROM tasks WHERE id = ?", (args.id,)).fetchone()
 
         if row is None:
-            logger.error("task #%d not found", args.id)
+            logger.warning("task #%d not found", args.id)
             print(f"Error: task #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
 

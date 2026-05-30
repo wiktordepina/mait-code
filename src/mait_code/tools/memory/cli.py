@@ -78,7 +78,7 @@ def _format_scope_label(r: dict) -> str:
 def cmd_search(args):
     query = " ".join(args.query)
     if not query.strip():
-        logger.error("query cannot be empty")
+        logger.warning("query cannot be empty")
         print("Error: query cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
@@ -141,12 +141,12 @@ def cmd_search(args):
 def cmd_store(args):
     content = " ".join(args.content)
     if not content.strip():
-        logger.error("content cannot be empty")
+        logger.warning("content cannot be empty")
         print("Error: content cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
     if args.type not in VALID_ENTRY_TYPES:
-        logger.error("invalid type '%s'", args.type)
+        logger.warning("invalid type '%s'", args.type)
         print(
             f"Error: invalid type '{args.type}'. "
             f"Valid types: {', '.join(sorted(VALID_ENTRY_TYPES))}",
@@ -232,7 +232,7 @@ def cmd_delete(args):
         if delete_entry(conn, args.id):
             print(f"Memory #{args.id} deleted.")
         else:
-            logger.error("memory #%d not found", args.id)
+            logger.warning("memory #%d not found", args.id)
             print(f"Error: memory #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
 
@@ -316,7 +316,7 @@ def cmd_relationships(args):
     with connection() as conn:
         entity = find_entity_by_name(conn, entity_name)
         if not entity:
-            logger.error("entity '%s' not found", entity_name)
+            logger.warning("entity '%s' not found", entity_name)
             print(f"Entity '{entity_name}' not found.", file=sys.stderr)
             sys.exit(1)
 
@@ -459,13 +459,13 @@ def cmd_restore(args):
 
     obs_dir = get_data_dir() / "memory" / "observations"
     if not obs_dir.exists():
-        logger.error("no observation logs found")
+        logger.warning("no observation logs found")
         print("No observation logs found.", file=sys.stderr)
         sys.exit(1)
 
     log_files = sorted(obs_dir.glob("*.jsonl"))
     if not log_files:
-        logger.error("no observation log files found")
+        logger.warning("no observation log files found")
         print("No observation log files found.", file=sys.stderr)
         sys.exit(1)
 

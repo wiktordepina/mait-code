@@ -36,13 +36,13 @@ def cmd_set(args):
     what = " ".join(args.what)
 
     if not what.strip():
-        logger.error("reminder content cannot be empty")
+        logger.warning("reminder content cannot be empty")
         print("Error: reminder content cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
     due = _parse_when(when_str)
     if due is None:
-        logger.error("could not parse time '%s'", when_str)
+        logger.warning("could not parse time '%s'", when_str)
         print(f"Error: could not parse time '{when_str}'.", file=sys.stderr)
         sys.exit(1)
 
@@ -110,7 +110,7 @@ def cmd_dismiss(args):
         ).fetchone()
 
         if row is None:
-            logger.error("reminder #%d not found", args.id)
+            logger.warning("reminder #%d not found", args.id)
             print(f"Error: reminder #{args.id} not found.", file=sys.stderr)
             sys.exit(1)
 
