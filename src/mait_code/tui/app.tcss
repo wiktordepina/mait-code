@@ -1,0 +1,42 @@
+/* mait-code — shared TUI stylesheet (A1 Identity Retrofit).
+ *
+ * Loaded by every MaitApp subclass alongside that app's own layout sheet.
+ * Everything here is role-driven: colours come from the active theme's
+ * $-variables, never hard-coded, so a theme switch (Ctrl+P) restyles the whole
+ * app. App-specific layout lives in each app's sheet (e.g. cli/_board.tcss).
+ */
+
+/* --- Modals --------------------------------------------------------------- */
+
+/* A type selector matches subclasses too, so this centres every ModalScreen. */
+ModalScreen {
+    align: center middle;
+}
+
+/* Shared dialog container: a rounded panel over the surface colour, with the
+ * house cyan border. Width defaults here; a content-heavy modal widens (and a
+ * scrolling one caps its height) via its own id in the app sheet. Height is
+ * left to `auto` so a plain (non-scrolling) modal is never clipped. */
+.modal-dialog {
+    width: 60;
+    height: auto;
+    padding: 1 2;
+    background: $surface;
+    border: round $primary;
+}
+
+.modal-title {
+    text-style: bold;
+    color: $text-primary;
+    margin-bottom: 1;
+}
+
+.modal-buttons {
+    height: auto;
+    margin-top: 1;
+    align-horizontal: right;
+}
+
+.modal-buttons Button {
+    margin-left: 2;
+}

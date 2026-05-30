@@ -10,6 +10,25 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.27.0] — 2026-05-30
+
+### Added
+
+- **A shared design system for the Textual TUIs.** A new house theme
+  (`mait-dark`) and a single colour palette now back both the board and the
+  settings editor, and the same palette colours the plain CLI output — so the
+  TUIs and command output read as one product. Press `Ctrl+P` to switch themes
+  (the house theme alongside Textual's built-ins).
+
+### Changed
+
+- **The board and settings TUIs are restyled onto the shared theme.** Titled
+  rounded panels with a clear focus colour, a consistent type hierarchy, and
+  shared modal styling replace the old per-app inline CSS. Behaviour is
+  unchanged.
+- **Raised the Textual floor to `>=0.86`** (the Theme-system baseline; the
+  installed version already satisfied it).
+
 ## [0.26.0] — 2026-05-30
 
 ### Added
@@ -925,7 +944,20 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.27.0
+[0.26.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.26.0
+[0.25.4]: https://github.com/wiktordepina/mait-code/releases/tag/v0.25.4
+[0.25.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.25.3
+[0.25.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.25.2
+[0.25.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.25.1
+[0.25.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.25.0
+[0.24.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.24.0
+[0.23.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.23.0
+[0.22.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.22.1
+[0.22.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.22.0
+[0.21.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.21.0
+[0.20.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.20.0
 [0.19.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.19.1
 [0.19.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.19.0
 [0.18.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.18.0

@@ -16,6 +16,8 @@ from __future__ import annotations
 from rich.console import Console
 from rich.theme import Theme
 
+from mait_code.tui import palette as p
+
 __all__ = [
     # Console
     "THEME",
@@ -27,14 +29,18 @@ __all__ = [
 
 #: Semantic styles shared across status, doctor and settings output. The
 #: ``ok``/``warn``/``fail`` keys deliberately match the doctor check levels,
-#: so ``[ok]…[/ok]`` markup and ``style="warn"`` both resolve here.
+#: so ``[ok]…[/ok]`` markup and ``style="warn"`` both resolve here. Colours come
+#: from :mod:`mait_code.tui.palette` &mdash; the single source of truth shared with
+#: the TUI theme &mdash; so plain CLI output and the TUIs read as one product.
+#: ``muted`` stays the terminal-relative ``dim`` attribute rather than a fixed
+#: grey, to keep low-emphasis output legible on any background.
 THEME = Theme(
     {
-        "ok": "green",
-        "warn": "yellow",
-        "fail": "red bold",
+        "ok": p.SUCCESS,
+        "warn": p.WARNING,
+        "fail": f"{p.ERROR} bold",
         "muted": "dim",
-        "accent": "cyan",
+        "accent": p.PRIMARY,
     }
 )
 

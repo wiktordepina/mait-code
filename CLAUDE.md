@@ -72,6 +72,8 @@ src/mait_code/
 ├── logging.py       # Shared logging (setup_logging, @log_invocation)
 ├── ssl.py           # OS trust store injection (setup_ssl, for corporate proxies)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
+├── cli/             # The `mait-code` CLI + Textual TUIs (board, settings)
+├── tui/             # Shared TUI layer: house theme, palette, base MaitApp
 └── tools/           # CLI tools (memory, reminders, tasks, decisions, web_fetch)
 config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
@@ -89,5 +91,6 @@ docs/                # Documentation
 
 - **New hook:** Add package in `src/mait_code/hooks/<hook_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-hook-*`) in `pyproject.toml`, register in `config/settings.json`. Use `"async": true` for observation/logging hooks that don't need to feed results back into the conversation, to avoid blocking the user. Wire in `setup_logging()` and `@log_invocation()`. If the hook makes outbound HTTPS requests, also call `setup_ssl()`.
 - **New CLI tool:** Add package in `src/mait_code/tools/<tool_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-tool-*`) in `pyproject.toml`. Wire in `setup_logging()` and `@log_invocation()`. If the tool makes outbound HTTPS requests, also call `setup_ssl()`.
+- **New TUI surface:** Subclass `MaitApp` (`src/mait_code/tui/app.py`) for the house theme + shared stylesheet; add a per-app `.tcss` next to the module and list it in `CSS_PATH` alongside `SHARED_TCSS` (it does not merge across the MRO); drive colours off theme `$`-variables; add a `pytest-textual-snapshot` test. See `docs/development.md` → "Adding a New TUI Surface".
 - **New skill:** Create directory in `skills/` with `SKILL.md` — skills can invoke CLI tools via preprocessing or Bash
 - **New MCP server:** Only if persistent connection/streaming needed; add package in `src/mait_code/mcp/<server_name>/` with `cli.py` as the entry point containing `main()` , entry point (`mc-mcp-*`) in `pyproject.toml`

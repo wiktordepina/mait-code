@@ -16,7 +16,7 @@ uv run pytest -v       # verbose
 uv run pytest tests/tools/memory/   # narrow to a package
 ```
 
-The suite covers every package under `src/mait_code/` (~460 tests at the time of
+The suite covers every package under `src/mait_code/` (~845 tests at the time of
 writing). Fixtures live in tool-specific `tests/<area>/conftest.py` files; the
 root `tests/conftest.py` keeps cross-cutting setup. See the "Writing Tests for
 Memory Components" section below for the established patterns.
@@ -24,6 +24,22 @@ Memory Components" section below for the established patterns.
 `tests/test_imports.py` is the smoke test that asserts every reference-surface
 module declares a non-empty `__all__`. CI's `ci.yml` runs the full suite on
 every PR and push to `main`.
+
+### Snapshot tests
+
+The TUIs are guarded by `pytest-textual-snapshot`: a test renders an app at a
+fixed terminal size and compares it against an accepted baseline under
+`tests/cli/__snapshots__/`. Regenerate baselines intentionally — and eyeball the
+change — after a deliberate visual edit:
+
+```bash
+uv run pytest tests/cli/test_board_tui_snapshot.py --snapshot-update
+```
+
+Keep snapshots deterministic: pin `terminal_size`, seed fixed data, and
+neutralise anything environment-dependent (e.g. the settings snapshot clears
+`MAIT_CODE_*` so every row resolves to its default source). The `mait-dark`
+theme is applied by `MaitApp`, so there's no need to pin it.
 
 ## Linting, formatting, typechecking
 
@@ -65,6 +81,38 @@ src/mait_code/tools/memory/
 **Dependency order:** `migrate.py` ← `db.py` ← everything else. `scoring.py` has no internal dependencies. `embeddings.py` depends only on `db.py` (for data dir).
 
 **Pattern:** All search/writer/entity functions receive a `sqlite3.Connection` as their first argument. The CLI tool opens and closes connections per subcommand invocation.
+
+## TUI Layer
+
+The Textual TUIs share one identity through `src/mait_code/tui/`:
+
+```
+src/mait_code/tui/
+├── __init__.py    # Re-exports palette only (kept Textual-free)
+├── palette.py     # Canonical role→hex colours — the single source of truth
+├── theme.py       # The mait-dark Textual Theme, built from palette
+├── app.py         # MaitApp base class + SHARED_TCSS path
+└── app.tcss       # Shared stylesheet (modal geometry, conventions)
+```
+
+**Dependency order:** `palette.py` ← `theme.py` ← `app.py`. The one hard rule:
+**`palette.py` imports nothing from Textual or the rest of `mait_code`.** It
+sits on the CLI hot path — `console.py` imports it to colour plain output — so
+pulling Textual in there would slow every CLI invocation. `theme.py` and
+`app.py` *do* import Textual; import those submodules directly
+(`from mait_code.tui.app import MaitApp`), never via the package, so that
+`import mait_code.tui` stays cheap.
+
+**One palette, two consumers.** `palette.py` is the single source of truth for
+both the Rich CLI theme (`console.py`) and the Textual TUI theme (`theme.py`),
+so plain CLI output and the TUIs share a colour identity. Tune a colour once and
+both follow. Every value clears WCAG AA (≥4.5:1) against the dark backgrounds.
+
+**Theming model.** `MaitApp` registers the `mait-dark` house theme as the
+default and leaves Textual's built-in themes registered, so the Ctrl+P command
+palette's "Change theme" offers the house theme alongside them. Because every
+style is driven off `$`-variables, a user *can* drop in their own theme file and
+it works mechanically — but arbitrary themes are not a supported surface.
 
 ## Logging
 
@@ -196,6 +244,29 @@ def mem_db(tmp_path):
 - Each migration is recorded in `schema_version` table
 - `ensure_schema()` is idempotent — safe to call on every connection
 - Vec0 migrations gracefully skip if `sqlite-vec` is not loaded
+
+## Adding a New TUI Surface
+
+1. Subclass `MaitApp` (from `mait_code.tui.app`) — it wires the house theme and
+   the shared stylesheet, and inherits the `q`-to-quit binding.
+2. Put the surface's layout in its own `.tcss` next to the module, and load it
+   alongside the shared sheet. `CSS_PATH` is read only from the most-derived
+   class (it does **not** merge across the MRO), so list both explicitly:
+   ```python
+   from pathlib import Path
+   from mait_code.tui.app import MaitApp, SHARED_TCSS
+
+   class MyApp(MaitApp):
+       CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_my.tcss"]
+   ```
+3. Reuse the shared modal styling: wrap a modal's body in a container with
+   `classes="modal-dialog"`, its heading with `classes="modal-title"`, and its
+   button row with `classes="modal-buttons"`. Only a *scrolling* modal should
+   cap its height (`max-height`); a plain one must grow to its content, or its
+   buttons clip off-screen on a short terminal.
+4. Drive every colour off theme `$`-variables (e.g. `$text-primary`; `$border`
+   vs `$border-blurred` for a focus signal) — never hard-code a hex in a `.tcss`.
+5. Add a snapshot test (see "Snapshot tests" above).
 
 ## Adding a New Skill
 

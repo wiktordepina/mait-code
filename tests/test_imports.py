@@ -28,6 +28,8 @@ REFERENCE_MODULES = [
     "mait_code.tools.board",
     "mait_code.tools.decisions",
     "mait_code.tools.web_fetch",
+    # TUI
+    "mait_code.tui",
     # Hooks
     "mait_code.hooks.observe",
     "mait_code.hooks.session_start",

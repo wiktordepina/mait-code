@@ -17,9 +17,11 @@ to one, falling back to the read-only list otherwise.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from rich.text import Text
 from textual import work
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.validation import ValidationResult, Validator
@@ -42,6 +44,7 @@ from mait_code.cli._settings_edit import (
     apply_setting,
     validation_error,
 )
+from mait_code.tui.app import SHARED_TCSS, MaitApp
 
 __all__ = ["run_interactive_editor"]
 
@@ -132,9 +135,9 @@ class ConfirmScreen(ModalScreen[bool]):
         self._question = question
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="dialog"):
-            yield Label(self._question, id="question")
-            with Horizontal(id="buttons"):
+        with Vertical(classes="modal-dialog"):
+            yield Label(self._question, classes="modal-title")
+            with Horizontal(classes="modal-buttons"):
                 yield Button("Yes", id="yes", variant="primary")
                 yield Button("No", id="no")
 
@@ -156,8 +159,8 @@ class WeightsScreen(ModalScreen[bool]):
     BINDINGS = [("escape", "cancel", "Cancel")]
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="weights-dialog"):
-            yield Label("Scoring weights — must sum to 1.0", id="weights-title")
+        with Vertical(classes="modal-dialog"):
+            yield Label("Scoring weights — must sum to 1.0", classes="modal-title")
             for key in config._WEIGHT_KEYS:
                 yield Label(key, classes="weight-label")
                 yield Input(
@@ -166,7 +169,7 @@ class WeightsScreen(ModalScreen[bool]):
                     validators=[_LiveValidator(_by_key()[key])],
                 )
             yield Static("", id="weights-sum")
-            with Horizontal(id="weights-buttons"):
+            with Horizontal(classes="modal-buttons"):
                 yield Button("Apply", id="w-apply", variant="primary", disabled=True)
                 yield Button("Cancel", id="w-cancel")
 
@@ -211,45 +214,15 @@ class WeightsScreen(ModalScreen[bool]):
         config._settings_cache = None
 
 
-class SettingsApp(App[None]):
+class SettingsApp(MaitApp):
     """Master–detail editor for the mait-code settings registry."""
 
     TITLE = "mait-code settings"
-
-    CSS = """
-    #body { height: 1fr; }
-    #list { width: 1fr; border-right: solid $panel; }
-    #list > .datatable--header { text-style: bold; color: $text-muted; }
-    #detail { width: 1fr; padding: 1 2; }
-    #detail .title { text-style: bold; color: $accent; }
-    #detail .help { color: $text-muted; margin-bottom: 1; }
-    #detail .warn-note { color: $warning; margin-bottom: 1; }
-    #detail #source { color: $text-muted; margin-top: 1; }
-    #detail #msg { margin-top: 1; }
-    #detail #apply { margin-top: 1; }
-    ConfirmScreen { align: center middle; }
-    ConfirmScreen #dialog {
-        width: 60; height: auto; padding: 1 2;
-        border: thick $accent; background: $surface;
-    }
-    ConfirmScreen #buttons { height: auto; margin-top: 1; align-horizontal: right; }
-    ConfirmScreen Button { margin-left: 2; }
-    WeightsScreen { align: center middle; }
-    WeightsScreen #weights-dialog {
-        width: 60; height: auto; padding: 1 2;
-        border: thick $accent; background: $surface;
-    }
-    WeightsScreen #weights-title { text-style: bold; margin-bottom: 1; }
-    WeightsScreen .weight-label { color: $text-muted; }
-    WeightsScreen #weights-sum { margin-top: 1; }
-    WeightsScreen #weights-buttons { height: auto; margin-top: 1; align-horizontal: right; }
-    WeightsScreen Button { margin-left: 2; }
-    """
+    CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_settings.tcss"]
 
     BINDINGS = [
         ("ctrl+s", "apply", "Apply"),
         ("escape", "focus_list", "Back to list"),
-        ("q", "quit", "Quit"),
     ]
 
     def __init__(self) -> None:
