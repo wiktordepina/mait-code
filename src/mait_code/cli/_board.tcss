@@ -43,11 +43,45 @@
     color: $foreground;
 }
 
-/* The detail modal is wider and scrolls; geometry otherwise from .modal-dialog.
- * It caps its height (it's a VerticalScroll) so a long thread stays on-screen. */
-#detail-dialog {
-    width: 70;
-    max-height: 80%;
+/* The card screen is near-fullscreen — a roomy frame for reading and editing —
+ * but the *content* column stays capped (max-width below) so running prose keeps
+ * a readable measure. Geometry otherwise from .modal-dialog. */
+#card-dialog {
+    width: 90%;
+    height: 90%;
+}
+
+/* The two modes are stacked siblings; only one is displayed at a time, so the
+ * shown one takes the 1fr between the title/footer. The view scroll centres its
+ * capped content within the wide frame so it doesn't hug the left edge. */
+#card-view, #card-edit {
+    height: 1fr;
+}
+
+#card-view {
+    align-horizontal: center;
+}
+
+#card-edit {
+    align-horizontal: center;
+}
+
+#card-view-content {
+    width: 100%;
+    max-width: 100;
+    height: auto;
+}
+
+/* Edit mode: the scrolling field area fills the frame (buttons sit outside it),
+ * sharing the same capped, centred measure as the view. */
+#edit-fields {
+    width: 100%;
+    max-width: 100;
+    height: 1fr;
+}
+
+#card-edit TextArea {
+    height: 8;
 }
 
 .detail-title {
@@ -69,7 +103,7 @@
     margin-top: 1;
 }
 
-#detail-dialog Rule {
+#card-view Rule {
     margin: 0 0 1 0;
     color: $primary 40%;
 }
@@ -88,21 +122,6 @@
 
 .detail-dim {
     color: $text-muted;
-}
-
-/* Edit modal: wider, with a capped scrolling field area so the buttons (which
- * sit outside the scroll) are never pushed off-screen. */
-#edit-dialog {
-    width: 70;
-}
-
-#edit-fields {
-    height: auto;
-    max-height: 18;
-}
-
-#edit-dialog TextArea {
-    height: 4;
 }
 
 .field-label {
