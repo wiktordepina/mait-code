@@ -57,12 +57,30 @@ def run_board_tui(db_path: Path | None = None) -> None:
     BoardApp(db_path=db_path).run()
 
 
+#: Leading glyph that marks a blocked card. A trailing ``#blocked`` tag is
+#: truncated off the narrow column, and the ``bold red`` colour is overridden by
+#: the DataTable cursor highlight on the *selected* row — but a leading marker
+#: survives both, so a blocked card always reads as blocked.
+_BLOCKED_MARK = "⊘ "
+
+
 def _card_row(card: dict, *, show_project: bool) -> Text:
-    """Render one card as a single-column DataTable cell."""
-    text = Text(f"#{card['id']} ({card['priority']}) {card['title']}")
+    """Render one card as a single-column DataTable cell.
+
+    A blocked card gets a leading :data:`_BLOCKED_MARK` and its whole row is
+    styled ``bold red``. The marker is the robust signal (it survives truncation
+    and the cursor highlight); the colour is the emphasis on top.
+    """
+    tags = card.get("tags", [])
+    blocked = BLOCKED_TAG in tags
+    mark = _BLOCKED_MARK if blocked else ""
+    text = Text(
+        f"{mark}#{card['id']} ({card['priority']}) {card['title']}",
+        style="bold red" if blocked else "",
+    )
     if show_project:
         text.append(f"  {card['project']}", style="dim")
-    for tag in card.get("tags", []):
+    for tag in tags:
         style = "bold red" if tag == BLOCKED_TAG else "dim"
         text.append(f" #{tag}", style=style)
     return text
@@ -116,6 +134,9 @@ class DetailScreen(ModalScreen[None]):
                 ),
                 classes="detail-meta",
             )
+            if card.get("tags"):
+                yield Label("Tags", classes="detail-head")
+                yield Static(escape(", ".join(card["tags"])))
             if card["description"]:
                 yield Label("Description", classes="detail-head")
                 yield Static(escape(card["description"]))

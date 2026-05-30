@@ -15,7 +15,13 @@ from pathlib import Path
 import pytest
 from textual.widgets import Input, Label, Static
 
-from mait_code.cli._board_tui import BoardApp, CommentScreen, DetailScreen, TagScreen
+from mait_code.cli._board_tui import (
+    BoardApp,
+    CommentScreen,
+    DetailScreen,
+    TagScreen,
+    _card_row,
+)
 from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
@@ -391,6 +397,54 @@ class TestDetail:
         rendered = _run(scenario)
         assert "first note" in rendered
         assert "claude" in rendered
+
+    def test_detail_renders_tags(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+        conn = get_connection(board_path)
+        service.add_tag(conn, ids["card"], "urgent")
+        conn.close()
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                assert isinstance(app.screen, DetailScreen)
+                return " ".join(str(s.render()) for s in app.screen.query(Static))
+
+        assert "urgent" in _run(scenario)
+
+
+class TestCardRow:
+    """Direct unit tests for the card-row renderer (truncation-proof signals)."""
+
+    def _card(self, **over):
+        base = {"id": 1, "priority": "high", "title": "x", "tags": []}
+        base.update(over)
+        return base
+
+    def test_blocked_card_title_is_bold_red(self) -> None:
+        # The whole row is styled, not just the appended tag, so the blocked
+        # signal survives column truncation.
+        row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
+        assert row.style == "bold red"
+
+    def test_blocked_card_has_leading_marker(self) -> None:
+        # Leading marker survives both truncation and the cursor-row highlight
+        # (which overrides the red foreground on the selected row).
+        row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
+        assert row.plain.startswith("⊘ ")
+
+    def test_unblocked_card_unstyled_and_unmarked(self) -> None:
+        row = _card_row(self._card(tags=[]), show_project=False)
+        assert row.style != "bold red"
+        assert not row.plain.startswith("⊘")
+
+    def test_tags_appended_to_row(self) -> None:
+        row = _card_row(self._card(tags=["urgent"]), show_project=False)
+        assert "#urgent" in row.plain
 
 
 class TestLayout:
