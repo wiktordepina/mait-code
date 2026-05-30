@@ -10,6 +10,41 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.25.4] — 2026-05-30
+
+### Fixed
+
+- **The test suite wrote into the developer's real log.** Tests that drive a
+  `@log_invocation`-decorated entry point ran `setup_logging()`, which writes to
+  `$XDG_STATE_HOME/mait-code/mait-code.log` — the dev's *real* log — recording
+  pytest's argv as the command and inflating ERROR counts with test fixtures.
+  The root autouse fixture now isolates `XDG_STATE_HOME` (and, belt-and-braces,
+  `MAIT_CODE_DATA_DIR`) to a temp dir per test and re-initialises logging there,
+  so a full run leaves the real log untouched.
+- **The observe hook logged a vanished transcript as an ERROR.** When the
+  stdin event named a transcript that no longer existed on disk (a brand-new or
+  already-cleaned session), `open()` raised and surfaced as a generic
+  `observe: [Errno 2] ...` ERROR. That window has nothing to observe — the hook
+  now detects the missing file up front and skips with a WARNING, leaving the
+  cursor untouched.
+
+### Changed
+
+- **Expected user-input and empty-state conditions log at WARNING, not ERROR.**
+  The task/reminder/board/decision/memory tools logged routine outcomes — "#N
+  not found", "title cannot be empty", "invalid type", "no observation logs
+  found" — at ERROR, even though the user already sees the message on stderr.
+  These are now WARNING; genuine faults (embedding failure, fetch failure) stay
+  ERROR.
+
+### Internal
+
+- **Regression test for the local-embedding cache path.** Pins that
+  `LocalProvider` hands fastembed an expanded model-cache path — guarding the
+  consumer that broke when `MAIT_CODE_DATA_DIR` held a literal `~` (a load
+  failure that silently degraded semantic search until the 0.25.1/0.25.2 tilde
+  fixes).
+
 ## [0.25.3] — 2026-05-30
 
 ### Fixed
