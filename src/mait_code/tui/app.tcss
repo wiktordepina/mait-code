@@ -40,3 +40,10 @@ ModalScreen {
 .modal-buttons Button {
     margin-left: 2;
 }
+
+/* Shared help screen: a scrolling key→description cheat-sheet. */
+#help-dialog {
+    width: auto;
+    max-width: 80%;
+    max-height: 80%;
+}

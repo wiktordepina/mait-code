@@ -565,3 +565,28 @@ class TestMutationModals:
         card = _run(scenario)
         assert card["status"] == DONE
         assert card["completion_summary"] == "shipped it"
+
+
+class TestHelp:
+    def test_question_mark_opens_help_with_live_bindings(
+        self, board_path: Path
+    ) -> None:
+        from mait_code.tui.help import HelpScreen
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("question_mark")
+                await pilot.pause()
+                is_help = isinstance(app.screen, HelpScreen)
+                descs = [d for _, d in app.screen._rows] if is_help else []
+                await pilot.press("escape")
+                await pilot.pause()
+                closed = not isinstance(app.screen, HelpScreen)
+                return is_help, descs, closed
+
+        is_help, descs, closed = _run(scenario)
+        assert is_help
+        assert "New" in descs and "Help" in descs
+        assert closed
