@@ -1,8 +1,9 @@
 """Rich-text render helpers for domain chips in the TUIs.
 
 Rich-only (no Textual import), so this is cheap and &mdash; crucially &mdash; usable
-inside ``DataTable`` cells, which render Rich ``Text`` and cannot read CSS
-``$``-variables. Colours come from :mod:`mait_code.tui.palette`: this is the one
+inside ``DataTable`` cells and ``OptionList`` options, which render Rich ``Text``
+and cannot read CSS ``$``-variables. Colours come from
+:mod:`mait_code.tui.palette`: this is the one
 sanctioned place palette hexes flow into Rich text, and because it reads the same
 palette as the Textual theme, the chips stay in step with the active identity.
 """
