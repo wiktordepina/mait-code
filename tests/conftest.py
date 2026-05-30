@@ -2,23 +2,54 @@
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 
 @pytest.fixture(autouse=True)
-def _isolate_mait_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stop tests from reading the developer's real mait-code settings file.
+def _isolate_mait_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[None]:
+    """Isolate every test from the developer's real mait-code config, data, and logs.
 
-    ``config.resolve`` / ``collect_settings`` read ``$XDG_CONFIG_HOME/
-    mait-code/settings.toml`` (cached at module level). Without isolation a
-    real settings file on the dev's machine bleeds in, so "unset → default"
-    assertions flip to ``source == "settings"``. Point ``XDG_CONFIG_HOME`` at
-    a throwaway dir and clear the cache before every test; tests that need a
-    settings file (e.g. ``fake_home``) override this afterwards.
+    Three things are pointed at throwaway dirs under ``tmp_path``:
+
+    * ``XDG_CONFIG_HOME`` — ``config.resolve`` / ``collect_settings`` read
+      ``$XDG_CONFIG_HOME/mait-code/settings.toml`` (cached at module level).
+      Without isolation a real settings file on the dev's machine bleeds in, so
+      "unset → default" assertions flip to ``source == "settings"``.
+    * ``XDG_STATE_HOME`` — where logs land. ``@log_invocation`` calls
+      ``setup_logging()``, which adds a ``TimedRotatingFileHandler`` to the
+      global ``mait_code`` logger. Without isolation every test that drives a
+      decorated ``main()`` writes into the dev's real ``mait-code.log`` (with
+      pytest's argv logged as the "command"). ``_setup_done`` is reset and the
+      handlers swapped so logging re-initialises against the temp dir per test
+      and never leaks a handler pointing at the real log.
+    * ``MAIT_CODE_DATA_DIR`` — the data dir (DBs, model cache). Belt-and-braces
+      so a test that reaches ``get_data_dir()`` without a tool fixture can't
+      touch the real stores. The dev's own ``MAIT_CODE_DATA_DIR`` is otherwise
+      inherited by the pytest process.
+
+    Tests that need a real settings file or a specific data dir override these
+    afterwards (their ``monkeypatch`` calls run after this autouse setup).
     """
     import mait_code.config as _config
+    import mait_code.logging as _logging
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setattr(_config, "_settings_cache", None)
+
+    logger = logging.getLogger("mait_code")
+    saved_handlers = logger.handlers[:]
+    logger.handlers = []
+    _logging._setup_done = False
+    yield
+    for handler in logger.handlers[:]:
+        handler.close()
+    logger.handlers = saved_handlers
+    _logging._setup_done = False
