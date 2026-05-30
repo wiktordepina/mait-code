@@ -30,6 +30,7 @@ def test_ensure_schema_creates_tables(board_db: sqlite3.Connection):
     names = [t[0] for t in tables]
     assert "cards" in names
     assert "card_comments" in names
+    assert "card_tags" in names
     assert "schema_version" in names
 
 
@@ -37,8 +38,40 @@ def test_ensure_schema_idempotent(board_db: sqlite3.Connection):
     ensure_schema(board_db)
     ensure_schema(board_db)
     versions = board_db.execute("SELECT version FROM schema_version").fetchall()
-    assert len(versions) == 1
-    assert versions[-1][0] == 1
+    assert len(versions) == 2
+    assert versions[-1][0] == 2
+
+
+def test_migration_blocked_becomes_refined_with_tag(tmp_path):
+    """Migration #2 tags legacy blocked cards and moves them to refined."""
+    from mait_code.tools.board.migrate import MIGRATIONS
+
+    # Build a v1 database by applying only migration #1, then stamping the
+    # schema at version 1 — the state a pre-tags board would be in on disk.
+    conn = sqlite3.connect(tmp_path / "v1.db")
+    conn.execute("PRAGMA foreign_keys = ON")
+    for sql in MIGRATIONS[0][2]:
+        conn.execute(sql)
+    conn.execute(
+        "CREATE TABLE schema_version (version INTEGER PRIMARY KEY, "
+        "applied_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT)"
+    )
+    conn.execute("INSERT INTO schema_version (version) VALUES (1)")
+    cid = _insert_card(conn, "stuck", status=BLOCKED)
+    conn.commit()
+
+    ensure_schema(conn)
+
+    status = conn.execute("SELECT status FROM cards WHERE id = ?", (cid,)).fetchone()[0]
+    tags = [
+        r[0]
+        for r in conn.execute(
+            "SELECT tag FROM card_tags WHERE card_id = ?", (cid,)
+        ).fetchall()
+    ]
+    conn.close()
+    assert status == REFINED
+    assert tags == [BLOCKED]
 
 
 def test_cards_columns(board_db: sqlite3.Connection):
