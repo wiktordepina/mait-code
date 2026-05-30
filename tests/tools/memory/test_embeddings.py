@@ -2,6 +2,7 @@
 
 import os
 import struct
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from mait_code.tools.memory.embeddings import (
@@ -312,6 +313,39 @@ class TestBedrockProvider:
                     body = json.loads(call_kwargs.kwargs["body"])
                     assert body["inputText"] == "test text"
                     assert body["dimensions"] == 1024
+
+
+class TestLocalProviderCacheDir:
+    """Regression: the local embedder must get an expanded model cache path.
+
+    ``LocalProvider`` builds its fastembed ``cache_dir`` from
+    ``get_data_dir() / "models"``. When ``MAIT_CODE_DATA_DIR`` held a literal,
+    unexpanded ``~`` the path reached ONNX Runtime as ``~/.claude/...`` and the
+    model load failed with ``NO_SUCHFILE`` even though the model existed —
+    silently degrading local semantic search. ``config.data_dir()`` now expands
+    the tilde; this pins the consumer so the expansion can't regress here.
+    """
+
+    def test_cache_dir_is_expanded(self, monkeypatch):
+        from mait_code.tools.memory.embeddings import LocalProvider
+
+        monkeypatch.setenv("MAIT_CODE_DATA_DIR", "~/.claude/mait-code-data")
+
+        captured = {}
+        fake_fastembed = MagicMock()
+
+        def _capture(*args, **kwargs):
+            captured.update(kwargs)
+            return MagicMock()
+
+        fake_fastembed.TextEmbedding.side_effect = _capture
+
+        with patch.dict("sys.modules", {"fastembed": fake_fastembed}):
+            LocalProvider()
+
+        cache_dir = captured["cache_dir"]
+        assert "~" not in cache_dir
+        assert cache_dir == str(Path.home() / ".claude" / "mait-code-data" / "models")
 
 
 class TestDimensionCheck:
