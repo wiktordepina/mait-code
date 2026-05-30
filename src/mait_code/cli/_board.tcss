@@ -37,6 +37,7 @@
 .detail-title {
     text-style: bold;
     color: $text-primary;
+    width: 100%;
 }
 
 .detail-meta {
@@ -44,9 +45,29 @@
     margin-bottom: 1;
 }
 
-.detail-head {
+/* Section headers (Description / Acceptance / Comments): accent, set off by a
+ * Rule below. */
+.section-head {
     text-style: bold;
+    color: $primary;
     margin-top: 1;
+}
+
+#detail-dialog Rule {
+    margin: 0 0 1 0;
+    color: $primary 40%;
+}
+
+/* Each comment is its own block: a left accent bar plus spacing. */
+.comment {
+    height: auto;
+    margin-top: 1;
+    padding: 0 1;
+    border-left: solid $primary;
+}
+
+.comment-head {
+    color: $text-muted;
 }
 
 .detail-dim {

@@ -10,6 +10,16 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.29.1] — 2026-05-30
+
+### Changed
+
+- **The board TUI's card-detail view is now readable with real content.** The
+  title wraps instead of clipping; project/status show with priority and tags as
+  chips; each section (Description / Acceptance / Completion / Comments) has a
+  clear header set off by a rule; and comments render as distinct blocks with an
+  author + timestamp, rather than running together.
+
 ## [0.29.0] — 2026-05-30
 
 ### Added
@@ -970,7 +980,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.29.1...HEAD
+[0.29.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.1
 [0.29.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.0
 [0.28.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.28.0
 [0.27.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.27.0
