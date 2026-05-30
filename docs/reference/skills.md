@@ -164,8 +164,8 @@ View and drive the manually-driven kanban board for the current project. Claude 
 2. Teaches Claude the verb vocabulary so conversational requests map to `mc-tool-board` calls:
    - "pick up the next refined card" → `mc-tool-board next --claim` (top refined card → `in_progress`)
    - "refine card N" → draft description + acceptance criteria, confirm, then `mc-tool-board refine N ...`
-   - complete / block / unblock / archive / move / add / edit / comment via the matching subcommands
-3. Cards flow through fixed columns: backlog → refined → in_progress → done, with `blocked` and hidden `archived` side-states
+   - complete / block / unblock / tag / untag / archive / move / add / edit / comment via the matching subcommands
+3. Cards flow through fixed columns: backlog → refined → in_progress → done, plus a hidden `archived` side-state; `blocked` is a tag carried in place, not a column
 4. Never moves, completes, or archives cards without the user's confirmation
 
 ### /commit

@@ -2,7 +2,7 @@
 
 A full-screen, on-demand board: one column-pane per status laid side by side,
 every project's cards visible with a project filter, keyboard navigation, and
-move / comment / block gestures. It runs in the foreground and exits on ``q``
+move / comment / tag / block gestures. It runs in the foreground and exits on ``q``
 &mdash; no background process &mdash; mirroring the ``mait-code settings`` editor.
 
 Every query and mutation delegates to
@@ -32,6 +32,7 @@ from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
+    BLOCKED_TAG,
     BOARD_ORDER,
     DONE,
     IN_PROGRESS,
@@ -42,12 +43,12 @@ from mait_code.tools.board.db import get_connection
 
 __all__ = ["BoardApp", "run_board_tui"]
 
-#: Every pane shown, in left-to-right order. ``archived`` is the hidden 6th
+#: Every pane shown, in left-to-right order. ``archived`` is the hidden last
 #: pane, revealed by the ``a`` toggle.
 _PANES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
 
-#: The linear flow the ``<``/``>`` keys move a card along. ``blocked`` is a
-#: side-state (reached via ``b``/``u``), so it is deliberately not on the line.
+#: The linear flow the ``<``/``>`` keys move a card along — every real status
+#: except the hidden ``archived`` side-state, which is reached only via the CLI.
 _MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
 
 
@@ -56,11 +57,32 @@ def run_board_tui(db_path: Path | None = None) -> None:
     BoardApp(db_path=db_path).run()
 
 
+#: Leading glyph that marks a blocked card. A trailing ``#blocked`` tag is
+#: truncated off the narrow column, and the ``bold red`` colour is overridden by
+#: the DataTable cursor highlight on the *selected* row — but a leading marker
+#: survives both, so a blocked card always reads as blocked.
+_BLOCKED_MARK = "⊘ "
+
+
 def _card_row(card: dict, *, show_project: bool) -> Text:
-    """Render one card as a single-column DataTable cell."""
-    text = Text(f"#{card['id']} ({card['priority']}) {card['title']}")
+    """Render one card as a single-column DataTable cell.
+
+    A blocked card gets a leading :data:`_BLOCKED_MARK` and its whole row is
+    styled ``bold red``. The marker is the robust signal (it survives truncation
+    and the cursor highlight); the colour is the emphasis on top.
+    """
+    tags = card.get("tags", [])
+    blocked = BLOCKED_TAG in tags
+    mark = _BLOCKED_MARK if blocked else ""
+    text = Text(
+        f"{mark}#{card['id']} ({card['priority']}) {card['title']}",
+        style="bold red" if blocked else "",
+    )
     if show_project:
         text.append(f"  {card['project']}", style="dim")
+    for tag in tags:
+        style = "bold red" if tag == BLOCKED_TAG else "dim"
+        text.append(f" #{tag}", style=style)
     return text
 
 
@@ -80,6 +102,7 @@ class BoardColumn(DataTable):
         Binding("greater_than_sign", "app.move_right", "Move →"),
         Binding("enter", "app.detail", "Detail"),
         Binding("c", "app.comment", "Comment"),
+        Binding("t", "app.tag", "Tag"),
         Binding("b", "app.block", "Block"),
         Binding("u", "app.unblock", "Unblock"),
         Binding("p", "app.cycle_project", "Project"),
@@ -111,6 +134,9 @@ class DetailScreen(ModalScreen[None]):
                 ),
                 classes="detail-meta",
             )
+            if card.get("tags"):
+                yield Label("Tags", classes="detail-head")
+                yield Static(escape(", ".join(card["tags"])))
             if card["description"]:
                 yield Label("Description", classes="detail-head")
                 yield Static(escape(card["description"]))
@@ -168,6 +194,46 @@ class CommentScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
+class TagScreen(ModalScreen[str | None]):
+    """A single-line tag input; resolves to the tag, or ``None`` on cancel.
+
+    The app *toggles* the returned tag: present → removed, absent → added.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, card_id: int) -> None:
+        super().__init__()
+        self._card_id = card_id
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="tag-dialog"):
+            yield Label(f"Tag card #{self._card_id} (toggles)", id="tag-title")
+            yield Input(placeholder="tag…", id="tag-input")
+            with Horizontal(id="tag-buttons"):
+                yield Button("Apply", id="tag-apply", variant="primary")
+                yield Button("Cancel", id="tag-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#tag-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "tag-apply":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        tag = self.query_one("#tag-input", Input).value.strip()
+        self.dismiss(tag or None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 class BoardApp(App[None]):
     """Full-screen kanban over every project's cards."""
 
@@ -195,6 +261,14 @@ class BoardApp(App[None]):
     CommentScreen #comment-title { text-style: bold; margin-bottom: 1; }
     CommentScreen #comment-buttons { height: auto; margin-top: 1; align-horizontal: right; }
     CommentScreen Button { margin-left: 2; }
+    TagScreen { align: center middle; }
+    TagScreen #tag-dialog {
+        width: 60; height: auto; padding: 1 2;
+        border: thick $accent; background: $surface;
+    }
+    TagScreen #tag-title { text-style: bold; margin-bottom: 1; }
+    TagScreen #tag-buttons { height: auto; margin-top: 1; align-horizontal: right; }
+    TagScreen Button { margin-left: 2; }
     """
 
     BINDINGS = [("q", "quit", "Quit")]
@@ -325,7 +399,7 @@ class BoardApp(App[None]):
             return
         status = self._card_status.get(card_id)
         if status not in _MOVE_FLOW:
-            self.notify("Blocked is a side-state — use u to unblock.")
+            self.notify("Archived cards aren't on the move line.")
             return
         idx = _MOVE_FLOW.index(status) + delta
         if idx < 0 or idx >= len(_MOVE_FLOW):
@@ -401,5 +475,21 @@ class BoardApp(App[None]):
         if not body:
             return
         service.add_comment(self._conn, card_id, body)
+        self._reload()
+        self._select_card(card_id)
+
+    @work
+    async def action_tag(self) -> None:
+        card_id = self._selected_card_id()
+        if card_id is None:
+            return
+        tag = await self.push_screen_wait(TagScreen(card_id))
+        if not tag:
+            return
+        # Toggle: a tag already on the card is removed, otherwise added.
+        if tag in service.list_tags(self._conn, card_id):
+            service.remove_tag(self._conn, card_id, tag)
+        else:
+            service.add_tag(self._conn, card_id, tag)
         self._reload()
         self._select_card(card_id)

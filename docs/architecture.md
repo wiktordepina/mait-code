@@ -281,7 +281,7 @@ The board database (`board.db`) stores a single cross-project kanban board. Card
 | `title` | TEXT | Card title |
 | `description` | TEXT | The what/why |
 | `acceptance_criteria` | TEXT | Definition-of-done; filled by the refine step |
-| `status` | TEXT | Column: `backlog`, `refined`, `in_progress`, `blocked`, `done`, or `archived` (default `backlog`) |
+| `status` | TEXT | Column: `backlog`, `refined`, `in_progress`, `done`, or `archived` (default `backlog`) |
 | `priority` | TEXT | `low`, `medium`, or `high` (default `medium`) |
 | `completion_summary` | TEXT | Handoff summary, set when moved to `done` |
 | `created_at` | DATETIME | Timestamp of creation |
@@ -298,7 +298,16 @@ The board database (`board.db`) stores a single cross-project kanban board. Card
 | `body` | TEXT | Comment text |
 | `created_at` | DATETIME | Timestamp of creation |
 
-**Columns are fixed, not configurable.** `backlog → refined → in_progress → done` is the main flow; `blocked` is a side-state reachable from anywhere (returns to `refined` on unblock); `archived` is a hidden terminal excluded from default views. The constants live in `src/mait_code/tools/board/columns.py`. Project detection uses `mait_code.context.get_project()`; pass `--project` for work with no git repo (e.g. an app idea).
+**Tags table: `card_tags`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `card_id` | INTEGER FK | References `cards(id)`; `ON DELETE CASCADE` |
+| `tag` | TEXT | Free-form tag value; `UNIQUE(card_id, tag)` makes adding idempotent |
+
+Free-form tags ride alongside a card's status. `blocked` is the first consumer: blocking tags a card in place rather than moving it, so the card keeps its real flow position. Each card dict carries a sorted `tags` list.
+
+**Columns are fixed, not configurable.** `backlog → refined → in_progress → done` is the whole flow; `archived` is a hidden terminal excluded from default views. `blocked` is **not** a column — it is a tag carried in place (via `block`/`unblock`), so a blocked card keeps its real status. The constants live in `src/mait_code/tools/board/columns.py`. Project detection uses `mait_code.context.get_project()`; pass `--project` for work with no git repo (e.g. an app idea).
 
 ## Board CLI Tool (`mc-tool-board`)
 
@@ -313,8 +322,10 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `refine` | id, --description?, --acceptance? | Set description/acceptance and move to `refined` |
 | `next` | --project?, --claim?, --json? | Show the next refined card (priority, then oldest); `--claim` moves it to `in_progress` |
 | `complete` | id, --summary? | Move to `done` with a completion summary |
-| `block` | id, reason? | Move to `blocked`; an optional reason is recorded as a comment |
-| `unblock` | id | Return a blocked card to `refined` |
+| `block` | id, reason? | Tag the card `blocked` in place (keeps its column); an optional reason is recorded as a comment |
+| `unblock` | id | Remove the `blocked` tag (keeps the card's flow position) |
+| `tag` | id, tag | Add a free-form tag to a card |
+| `untag` | id, tag | Remove a tag from a card |
 | `archive` | id | Archive a card (hidden, not deleted) |
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance? | Edit card fields |
@@ -325,7 +336,7 @@ Every query and mutation — including the done-invariant (`completed_at` is set
 
 ## Board TUI (`mait-code board`)
 
-`mait-code board` opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a `p`-cycle project filter, arrow-key navigation, `<`/`>` to move a card along the flow (`backlog → refined → in_progress → done`; `blocked` is reached via `b`/`u`, not the move line), a card-detail modal with the comment thread, and `c` to comment. It is built on Textual and reuses the board `service.py`, mirroring the `mait-code settings` editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.
+`mait-code board` opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a `p`-cycle project filter, arrow-key navigation, `<`/`>` to move a card along the flow (`backlog → refined → in_progress → done`), a card-detail modal with the comment thread, `c` to comment, `t` to toggle a tag, and `b`/`u` to tag/untag `blocked` in place. Tags render on the card rows (`blocked` styled distinctly). It is built on Textual and reuses the board `service.py`, mirroring the `mait-code settings` editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.
 
 The board TUI is **on-demand and foreground** — it is launched explicitly, runs until you quit with `q`, and leaves nothing behind. The *No background services* principle is intact: there is no daemon polling the board, only a short-lived app you open when you want to see it.
 

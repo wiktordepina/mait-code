@@ -10,6 +10,38 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-05-30
+
+### Added
+
+- **A general card-tagging system for the board.** Cards now carry free-form
+  tags: `mc-tool-board tag N <tag>` adds one and `untag N <tag>` removes it,
+  `list` and `show` render a card's tags, and `list_cards` gained a single-tag
+  filter. In the board TUI, `t` toggles a tag on the selected card (present →
+  removed, absent → added) and tags paint on the card rows.
+
+### Changed
+
+- **`blocked` is now a tag, not a column.** Blocking a card tags it `blocked`
+  *in place* instead of moving it, so the card keeps its real flow position
+  (`backlog` / `refined` / `in_progress` / `done`). `block` / `unblock` (and the
+  TUI `b` / `u` keys) survive as thin aliases over the `blocked` tag, and a
+  blocked card now moves along the flow normally. The board drops from six panes
+  to five.
+
+### Migration
+
+- Existing `blocked` cards are migrated automatically on first board open
+  (schema migration #2): each is moved to `refined` and gains a `blocked` tag.
+  The pre-block column was never stored, so `refined` matches the previous
+  unblock behaviour.
+
+### Removed
+
+- The `mait_code.tools.board` package no longer exports the `BLOCKED` status
+  constant (replaced by `BLOCKED_TAG`), and `blocked` is no longer a valid
+  `move` / `list --status` target.
+
 ## [0.25.4] — 2026-05-30
 
 ### Fixed

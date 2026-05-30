@@ -458,6 +458,87 @@ unknown key, invalid value, or a missing required follow-up flag.
 
 ---
 
+## `mait-code board`
+
+**Synopsis**
+
+```
+mait-code board                             # interactive kanban (TTY) / text render (piped)
+```
+
+**Description**
+
+Open the project kanban board. Attached to a terminal, it launches a
+full-screen [Textual](https://textual.textualize.io/) TUI; when piped or
+redirected it falls back to a read-only text render, so scripts and the
+session-start summary are unaffected.
+
+The board has a single fixed workflow shared by every project — the columns
+are not configurable. Cards flow left-to-right through four visible columns:
+
+| Column | Status | Meaning |
+|--------|--------|---------|
+| Backlog | `backlog` | Captured, not yet refined. |
+| Refined | `refined` | Scoped and ready to pick up. |
+| In Progress | `in_progress` | Being worked on. |
+| Done | `done` | Completed. |
+
+A fifth status, `archived`, is hidden from the board by default (toggle it
+into view with `a` in the TUI).
+
+`blocked` is **not** a column — it is a free-form *tag* carried in place, so a
+blocked card keeps its real flow position. Blocking is the first consumer of a
+general tagging system (`tag` / `untag` on the CLI, `t` in the TUI).
+
+### The interactive board
+
+A column-per-status layout you navigate by card. Movement keys reslot the
+highlighted card; the rest open detail, annotate, tag, or change what's shown.
+
+| Key | Action |
+|-----|--------|
+| `←` / `→` | Move focus between columns |
+| `<` / `>` | Move the highlighted card to the previous / next column |
+| `Enter` | Open the card detail view |
+| `c` | Add a comment to the highlighted card |
+| `t` | Toggle a tag on the highlighted card (type the tag; present → removed, absent → added) |
+| `b` / `u` | Add / remove the `blocked` tag on the highlighted card (in place) |
+| `p` | Cycle the project filter |
+| `a` | Toggle visibility of archived cards |
+| `r` | Reload the board from the database |
+| `q` | Quit |
+
+### The non-TTY render
+
+Off a TTY, the board prints every project's cards grouped by column in
+board order, skipping empty columns:
+
+```
+Backlog (5):
+  [#12] (high) Wire up the reflection batch gate [mait-code]
+  ...
+
+In Progress (1):
+  [#9] (med) Document the board subcommand [mait-code]
+```
+
+Each line is `[#<id>] (<priority>) <title> [<project>]`. When there are no
+cards at all it prints `No cards on the board.`
+
+**Examples**
+
+```bash
+mait-code board            # drive the board interactively
+mait-code board | cat      # plain text render (e.g. for piping or logs)
+```
+
+**Exit code:** always `0`.
+
+> The board is also reachable mid-session through the `board` skill — see
+> [Skills](skills.md). The CLI tool behind both is `mc-tool-board`.
+
+---
+
 ## `mait-code version`
 
 **Synopsis**

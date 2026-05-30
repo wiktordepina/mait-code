@@ -14,7 +14,7 @@ View and drive the kanban board for the current project.
 
 ## Instructions
 
-The board is a **manually-driven** kanban — *you (Claude) are the worker*. There is no autonomous dispatcher; you act only when the user asks. Drive it through `mc-tool-board` via Bash. Cards flow through fixed columns: **backlog → refined → in_progress → done**, with **blocked** and a hidden **archived** side-state.
+The board is a **manually-driven** kanban — *you (Claude) are the worker*. There is no autonomous dispatcher; you act only when the user asks. Drive it through `mc-tool-board` via Bash. Cards flow through fixed columns: **backlog → refined → in_progress → done**, plus a hidden **archived** side-state. **blocked** is a tag carried in place (not a column), so a blocked card keeps its real column.
 
 Present the board above clearly, then act on what the user asks.
 
@@ -30,9 +30,10 @@ Present the board above clearly, then act on what the user asks.
 ### Finishing & parking
 
 - Complete: `mc-tool-board complete N --summary "what was done"` (moves to `done`, records a handoff summary).
-- Block: `mc-tool-board block N <reason>` — the reason is recorded as a comment. Unblock: `mc-tool-board unblock N` (returns it to `refined`).
+- Block: `mc-tool-board block N <reason>` — tags the card `blocked` **in place** (keeps its column); the reason is recorded as a comment. Unblock: `mc-tool-board unblock N` removes the tag. These are thin aliases over the tag system below.
+- Tag / untag: `mc-tool-board tag N <tag>` / `mc-tool-board untag N <tag>` — free-form tags that ride alongside a card's status.
 - Archive (hide, don't delete): `mc-tool-board archive N`.
-- Arbitrary move: `mc-tool-board move N <backlog|refined|in_progress|blocked|done|archived>`.
+- Arbitrary move: `mc-tool-board move N <backlog|refined|in_progress|done|archived>`.
 
 ### Adding & editing
 

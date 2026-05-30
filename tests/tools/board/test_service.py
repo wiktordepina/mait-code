@@ -15,7 +15,7 @@ from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
-    BLOCKED,
+    BLOCKED_TAG,
     DONE,
     IN_PROGRESS,
     REFINED,
@@ -136,6 +136,59 @@ def test_summary_counts_project_scoped(board_db: sqlite3.Connection):
     assert counts[REFINED] == 1
 
 
+# --- Tags ---
+
+
+def test_add_tag_idempotent(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "urgent")
+    service.add_tag(board_db, cid, "urgent")
+    assert service.list_tags(board_db, cid) == ["urgent"]
+
+
+def test_list_tags_sorted(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "zeta")
+    service.add_tag(board_db, cid, "alpha")
+    assert service.list_tags(board_db, cid) == ["alpha", "zeta"]
+
+
+def test_remove_tag_no_op_when_absent(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.remove_tag(board_db, cid, "ghost")  # must not raise
+    assert service.list_tags(board_db, cid) == []
+
+
+def test_remove_tag_deletes(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "urgent")
+    service.remove_tag(board_db, cid, "urgent")
+    assert service.list_tags(board_db, cid) == []
+
+
+def test_cards_carry_tags_key(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "b")
+    service.add_tag(board_db, cid, "a")
+    assert service.get_card(board_db, cid)["tags"] == ["a", "b"]
+    assert service.list_cards(board_db)[0]["tags"] == ["a", "b"]
+
+
+def test_cards_tags_key_empty_when_untagged(board_db: sqlite3.Connection):
+    _insert(board_db, "x")
+    assert service.list_cards(board_db)[0]["tags"] == []
+    cid = _insert(board_db, "y")
+    assert service.get_card(board_db, cid)["tags"] == []
+
+
+def test_list_cards_tag_filter(board_db: sqlite3.Connection):
+    tagged = _insert(board_db, "tagged")
+    _insert(board_db, "plain")
+    service.add_tag(board_db, tagged, "keep")
+    titles = [c["title"] for c in service.list_cards(board_db, tag="keep")]
+    assert titles == ["tagged"]
+
+
 # --- next_refined ---
 
 
@@ -216,10 +269,13 @@ def test_complete_card_sets_summary_and_stamp(board_db: sqlite3.Connection):
     assert card["completed_at"] is not None
 
 
-def test_block_card_records_reason_comment(board_db: sqlite3.Connection):
-    cid = _insert(board_db, "x")
+def test_block_card_tags_in_place(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x", status=REFINED)
     service.block_card(board_db, cid, reason="waiting on review")
-    assert service.get_card(board_db, cid)["status"] == BLOCKED
+    card = service.get_card(board_db, cid)
+    # Status is unchanged — blocking is now an in-place tag, not a move.
+    assert card["status"] == REFINED
+    assert BLOCKED_TAG in card["tags"]
     comments = service.get_comments(board_db, cid)
     assert comments[0]["body"] == "Blocked: waiting on review"
 
@@ -227,13 +283,18 @@ def test_block_card_records_reason_comment(board_db: sqlite3.Connection):
 def test_block_card_no_reason_no_comment(board_db: sqlite3.Connection):
     cid = _insert(board_db, "x")
     service.block_card(board_db, cid)
+    assert service.list_tags(board_db, cid) == [BLOCKED_TAG]
     assert service.get_comments(board_db, cid) == []
 
 
-def test_unblock_card_returns_to_refined(board_db: sqlite3.Connection):
-    cid = _insert(board_db, "x", status=BLOCKED)
+def test_unblock_card_removes_tag(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x", status=IN_PROGRESS)
+    service.block_card(board_db, cid)
     service.unblock_card(board_db, cid)
-    assert service.get_card(board_db, cid)["status"] == REFINED
+    card = service.get_card(board_db, cid)
+    # Tag gone, flow position preserved (not forced back to refined).
+    assert card["status"] == IN_PROGRESS
+    assert BLOCKED_TAG not in card["tags"]
 
 
 def test_archive_card(board_db: sqlite3.Connection):
@@ -284,6 +345,8 @@ def test_remove_card_cascades_comments(board_db: sqlite3.Connection):
         lambda c: service.add_comment(c, 999, "x"),
         lambda c: service.edit_card(c, 999, title="x"),
         lambda c: service.remove_card(c, 999),
+        lambda c: service.add_tag(c, 999, "x"),
+        lambda c: service.remove_tag(c, 999, "x"),
     ],
 )
 def test_mutations_raise_card_not_found(board_db: sqlite3.Connection, mutation):

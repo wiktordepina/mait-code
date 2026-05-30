@@ -15,12 +15,18 @@ from pathlib import Path
 import pytest
 from textual.widgets import Input, Label, Static
 
-from mait_code.cli._board_tui import BoardApp, CommentScreen, DetailScreen
+from mait_code.cli._board_tui import (
+    BoardApp,
+    CommentScreen,
+    DetailScreen,
+    TagScreen,
+    _card_row,
+)
 from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
-    BLOCKED,
+    BLOCKED_TAG,
     DONE,
     IN_PROGRESS,
     REFINED,
@@ -171,7 +177,7 @@ class TestMoving:
 
 
 class TestBlocking:
-    def test_block_moves_to_blocked_pane(self, board_path: Path) -> None:
+    def test_block_tags_in_place(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "card", "status": REFINED}])
 
         async def scenario():
@@ -181,38 +187,106 @@ class TestBlocking:
                 app._focus_status(REFINED)
                 await pilot.press("b")
                 await pilot.pause()
-                return service.get_card(app._conn, ids["card"])["status"]
+                card = service.get_card(app._conn, ids["card"])
+                # Cursor stayed in the refined pane (the card didn't move).
+                pane = app._visible_statuses()[app._focused_col]
+                return card, pane
 
-        assert _run(scenario) == BLOCKED
+        card, pane = _run(scenario)
+        assert card["status"] == REFINED
+        assert BLOCKED_TAG in card["tags"]
+        assert pane == REFINED
 
-    def test_blocked_card_not_on_move_line(self, board_path: Path) -> None:
-        ids = _seed(board_path, [{"title": "card", "status": BLOCKED}])
-
-        async def scenario():
-            app = BoardApp(db_path=board_path)
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                app._focus_status(BLOCKED)
-                await pilot.press("greater_than_sign")
-                await pilot.pause()
-                return service.get_card(app._conn, ids["card"])["status"]
-
-        # A blocked card is a side-state: > does not move it.
-        assert _run(scenario) == BLOCKED
-
-    def test_unblock_returns_to_refined(self, board_path: Path) -> None:
-        ids = _seed(board_path, [{"title": "card", "status": BLOCKED}])
+    def test_blocked_card_still_moves(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
 
         async def scenario():
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                app._focus_status(BLOCKED)
+                app._focus_status(REFINED)
+                await pilot.press("b")  # tag it blocked, in place
+                await pilot.pause()
+                await pilot.press("greater_than_sign")  # still on the flow line
+                await pilot.pause()
+                return service.get_card(app._conn, ids["card"])
+
+        card = _run(scenario)
+        # A blocked card now has a real status, so > advances it normally...
+        assert card["status"] == IN_PROGRESS
+        # ...and keeps its tag through the move.
+        assert BLOCKED_TAG in card["tags"]
+
+    def test_unblock_removes_tag(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("b")
+                await pilot.pause()
                 await pilot.press("u")
                 await pilot.pause()
-                return service.get_card(app._conn, ids["card"])["status"]
+                return service.get_card(app._conn, ids["card"])
 
-        assert _run(scenario) == REFINED
+        card = _run(scenario)
+        assert card["status"] == REFINED
+        assert BLOCKED_TAG not in card["tags"]
+
+
+class TestTagging:
+    def test_tag_gesture_toggles(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                # First toggle adds the tag.
+                await pilot.press("t")
+                await pilot.pause()
+                assert isinstance(app.screen, TagScreen)
+                app.screen.query_one("#tag-input", Input).value = "urgent"
+                await pilot.click("#tag-apply")
+                await pilot.pause()
+                await pilot.pause()
+                added = service.list_tags(app._conn, ids["card"])
+                # Second toggle of the same tag removes it.
+                await pilot.press("t")
+                await pilot.pause()
+                app.screen.query_one("#tag-input", Input).value = "urgent"
+                await pilot.click("#tag-apply")
+                await pilot.pause()
+                await pilot.pause()
+                removed = service.list_tags(app._conn, ids["card"])
+                return added, removed
+
+        added, removed = _run(scenario)
+        assert added == ["urgent"]
+        assert removed == []
+
+    def test_blocked_tag_paints_on_row(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "x", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            # Wide terminal so the column is broad enough that the tag suffix
+            # isn't truncated off the card row.
+            async with app.run_test(size=(220, 30)) as pilot:
+                await pilot.pause()
+                service.block_card(app._conn, ids["x"])
+                app._reload()
+                await pilot.pause()
+                strips = app.screen._compositor.render_strips()
+                painted = "\n".join(
+                    "".join(seg.text for seg in strip) for strip in strips
+                )
+                return painted
+
+        assert f"#{BLOCKED_TAG}" in _run(scenario)
 
 
 class TestProjectFilter:
@@ -323,6 +397,54 @@ class TestDetail:
         rendered = _run(scenario)
         assert "first note" in rendered
         assert "claude" in rendered
+
+    def test_detail_renders_tags(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+        conn = get_connection(board_path)
+        service.add_tag(conn, ids["card"], "urgent")
+        conn.close()
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                assert isinstance(app.screen, DetailScreen)
+                return " ".join(str(s.render()) for s in app.screen.query(Static))
+
+        assert "urgent" in _run(scenario)
+
+
+class TestCardRow:
+    """Direct unit tests for the card-row renderer (truncation-proof signals)."""
+
+    def _card(self, **over):
+        base = {"id": 1, "priority": "high", "title": "x", "tags": []}
+        base.update(over)
+        return base
+
+    def test_blocked_card_title_is_bold_red(self) -> None:
+        # The whole row is styled, not just the appended tag, so the blocked
+        # signal survives column truncation.
+        row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
+        assert row.style == "bold red"
+
+    def test_blocked_card_has_leading_marker(self) -> None:
+        # Leading marker survives both truncation and the cursor-row highlight
+        # (which overrides the red foreground on the selected row).
+        row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
+        assert row.plain.startswith("⊘ ")
+
+    def test_unblocked_card_unstyled_and_unmarked(self) -> None:
+        row = _card_row(self._card(tags=[]), show_project=False)
+        assert row.style != "bold red"
+        assert not row.plain.startswith("⊘")
+
+    def test_tags_appended_to_row(self) -> None:
+        row = _card_row(self._card(tags=["urgent"]), show_project=False)
+        assert "#urgent" in row.plain
 
 
 class TestLayout:

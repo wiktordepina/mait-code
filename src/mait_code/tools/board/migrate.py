@@ -42,6 +42,27 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "CREATE INDEX IF NOT EXISTS idx_card_comments_card ON card_comments(card_id)",
         ],
     ),
+    (
+        2,
+        "Add card_tags; migrate blocked cards to refined + a 'blocked' tag",
+        [
+            """CREATE TABLE IF NOT EXISTS card_tags (
+                card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                tag TEXT NOT NULL,
+                UNIQUE(card_id, tag)
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_card_tags_tag ON card_tags(tag)",
+            # Data migration: 'blocked' is no longer a valid status. Tag each
+            # blocked card, then move it to refined (its pre-block column was
+            # never stored, so refined matches the old unblock behaviour). The
+            # 'blocked' literal is hardcoded, not imported from columns — a
+            # migration is a frozen snapshot and must not drift when the
+            # constants later change.
+            "INSERT OR IGNORE INTO card_tags (card_id, tag) "
+            "SELECT id, 'blocked' FROM cards WHERE status = 'blocked'",
+            "UPDATE cards SET status = 'refined' WHERE status = 'blocked'",
+        ],
+    ),
 ]
 
 

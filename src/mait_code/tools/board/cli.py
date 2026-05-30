@@ -2,7 +2,8 @@
 
 A single cross-project kanban board stored in ``board.db``. Cards carry a
 ``project`` field and move through a fixed workflow: backlog → refined →
-in_progress → done, with ``blocked`` and hidden ``archived`` side-states.
+in_progress → done, with a hidden ``archived`` side-state. ``blocked`` is a tag
+carried in place (via ``block``/``unblock``), not a column.
 
 The handlers here are thin: argument parsing, the not-found/exit helper, and
 presentation (text vs ``--json``). Every query and mutation — including the
@@ -100,7 +101,10 @@ def cmd_list(args):
         print(f"{label(status)} ({len(group)}):")
         for card in group:
             project = f" [{card['project']}]" if args.all else ""
-            print(f"  [#{card['id']}] ({card['priority']}) {card['title']}{project}")
+            tags = "".join(f"  #{t}" for t in card["tags"])
+            print(
+                f"  [#{card['id']}] ({card['priority']}) {card['title']}{project}{tags}"
+            )
         print()
 
 
@@ -118,6 +122,8 @@ def cmd_show(args):
 
     print(f"#{card['id']} ({card['priority']}) {card['title']}")
     print(f"  project: {card['project']}   status: {label(card['status'])}")
+    if card["tags"]:
+        print(f"  tags: {', '.join(card['tags'])}")
     if card["description"]:
         print(f"\nDescription:\n{card['description']}")
     if card["acceptance_criteria"]:
@@ -251,7 +257,7 @@ def cmd_block(args):
         except service.CardNotFound:
             _not_found(args.id)
 
-    print(f"Card #{args.id} → {label('blocked')}.")
+    print(f"Card #{args.id} tagged 'blocked'.")
 
 
 def cmd_unblock(args):
@@ -261,7 +267,34 @@ def cmd_unblock(args):
         except service.CardNotFound:
             _not_found(args.id)
 
-    print(f"Card #{args.id} → {label(REFINED)}.")
+    print(f"Card #{args.id}: 'blocked' tag removed.")
+
+
+def cmd_tag(args):
+    tag = args.tag.strip()
+    if not tag:
+        logger.warning("tag cannot be empty")
+        print("Error: tag cannot be empty.", file=sys.stderr)
+        sys.exit(1)
+
+    with connection() as conn:
+        try:
+            service.add_tag(conn, args.id, tag)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    print(f"Card #{args.id} tagged '{tag}'.")
+
+
+def cmd_untag(args):
+    tag = args.tag.strip()
+    with connection() as conn:
+        try:
+            service.remove_tag(conn, args.id, tag)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    print(f"Card #{args.id}: '{tag}' tag removed.")
 
 
 def cmd_archive(args):
@@ -343,14 +376,26 @@ def main():
     p_complete.add_argument("--summary", nargs="+", default=[], help="Handoff summary")
     p_complete.set_defaults(func=cmd_complete)
 
-    p_block = sub.add_parser("block", help="Block a card, optionally with a reason")
+    p_block = sub.add_parser(
+        "block", help="Tag a card 'blocked' in place, optionally with a reason"
+    )
     p_block.add_argument("id", type=int, help="Card ID")
     p_block.add_argument("reason", nargs="*", help="Reason (recorded as a comment)")
     p_block.set_defaults(func=cmd_block)
 
-    p_unblock = sub.add_parser("unblock", help="Return a blocked card to refined")
+    p_unblock = sub.add_parser("unblock", help="Remove the 'blocked' tag from a card")
     p_unblock.add_argument("id", type=int, help="Card ID")
     p_unblock.set_defaults(func=cmd_unblock)
+
+    p_tag = sub.add_parser("tag", help="Add a tag to a card")
+    p_tag.add_argument("id", type=int, help="Card ID")
+    p_tag.add_argument("tag", help="Tag to add")
+    p_tag.set_defaults(func=cmd_tag)
+
+    p_untag = sub.add_parser("untag", help="Remove a tag from a card")
+    p_untag.add_argument("id", type=int, help="Card ID")
+    p_untag.add_argument("tag", help="Tag to remove")
+    p_untag.set_defaults(func=cmd_untag)
 
     p_archive = sub.add_parser("archive", help="Archive a card (hide it)")
     p_archive.add_argument("id", type=int, help="Card ID")

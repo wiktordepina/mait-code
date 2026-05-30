@@ -10,7 +10,7 @@ from mait_code.tools.board.cli import _now
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
-    BLOCKED,
+    BLOCKED_TAG,
     DONE,
     IN_PROGRESS,
     REFINED,
@@ -30,6 +30,7 @@ def test_ensure_schema_creates_tables(board_db: sqlite3.Connection):
     names = [t[0] for t in tables]
     assert "cards" in names
     assert "card_comments" in names
+    assert "card_tags" in names
     assert "schema_version" in names
 
 
@@ -37,8 +38,41 @@ def test_ensure_schema_idempotent(board_db: sqlite3.Connection):
     ensure_schema(board_db)
     ensure_schema(board_db)
     versions = board_db.execute("SELECT version FROM schema_version").fetchall()
-    assert len(versions) == 1
-    assert versions[-1][0] == 1
+    assert len(versions) == 2
+    assert versions[-1][0] == 2
+
+
+def test_migration_blocked_becomes_refined_with_tag(tmp_path):
+    """Migration #2 tags legacy blocked cards and moves them to refined."""
+    from mait_code.tools.board.migrate import MIGRATIONS
+
+    # Build a v1 database by applying only migration #1, then stamping the
+    # schema at version 1 — the state a pre-tags board would be in on disk.
+    conn = sqlite3.connect(tmp_path / "v1.db")
+    conn.execute("PRAGMA foreign_keys = ON")
+    for sql in MIGRATIONS[0][2]:
+        conn.execute(sql)
+    conn.execute(
+        "CREATE TABLE schema_version (version INTEGER PRIMARY KEY, "
+        "applied_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT)"
+    )
+    conn.execute("INSERT INTO schema_version (version) VALUES (1)")
+    # 'blocked' as a *status* is the legacy v1 shape the migration fixes up.
+    cid = _insert_card(conn, "stuck", status="blocked")
+    conn.commit()
+
+    ensure_schema(conn)
+
+    status = conn.execute("SELECT status FROM cards WHERE id = ?", (cid,)).fetchone()[0]
+    tags = [
+        r[0]
+        for r in conn.execute(
+            "SELECT tag FROM card_tags WHERE card_id = ?", (cid,)
+        ).fetchall()
+    ]
+    conn.close()
+    assert status == REFINED
+    assert tags == [BLOCKED_TAG]
 
 
 def test_cards_columns(board_db: sqlite3.Connection):
@@ -442,8 +476,15 @@ def test_cmd_block(mock_conn):
     from mait_code.tools.board.cli import cmd_block
 
     cmd_block(_ns(id=cid, reason=[]))
-    row = mock_conn.execute("SELECT status FROM cards WHERE id = ?", (cid,)).fetchone()
-    assert row[0] == BLOCKED
+    # Blocking tags the card in place; its status is untouched.
+    status = mock_conn.execute(
+        "SELECT status FROM cards WHERE id = ?", (cid,)
+    ).fetchone()[0]
+    tag = mock_conn.execute(
+        "SELECT tag FROM card_tags WHERE card_id = ?", (cid,)
+    ).fetchone()
+    assert status == IN_PROGRESS
+    assert tag[0] == BLOCKED_TAG
 
 
 def test_cmd_block_records_reason_as_comment(mock_conn):
@@ -458,12 +499,81 @@ def test_cmd_block_records_reason_as_comment(mock_conn):
 
 
 def test_cmd_unblock(mock_conn):
-    cid = _insert_card(mock_conn, "u", status=BLOCKED)
+    from mait_code.tools.board import service
     from mait_code.tools.board.cli import cmd_unblock
 
+    cid = _insert_card(mock_conn, "u", status=IN_PROGRESS)
+    service.block_card(mock_conn, cid)
     cmd_unblock(_ns(id=cid))
-    row = mock_conn.execute("SELECT status FROM cards WHERE id = ?", (cid,)).fetchone()
-    assert row[0] == REFINED
+    # Tag removed; flow position preserved.
+    status = mock_conn.execute(
+        "SELECT status FROM cards WHERE id = ?", (cid,)
+    ).fetchone()[0]
+    remaining = mock_conn.execute(
+        "SELECT COUNT(*) FROM card_tags WHERE card_id = ? AND tag = ?",
+        (cid, BLOCKED_TAG),
+    ).fetchone()[0]
+    assert status == IN_PROGRESS
+    assert remaining == 0
+
+
+def test_cmd_tag(mock_conn):
+    cid = _insert_card(mock_conn, "t")
+    from mait_code.tools.board.cli import cmd_tag
+
+    cmd_tag(_ns(id=cid, tag="urgent"))
+    row = mock_conn.execute(
+        "SELECT tag FROM card_tags WHERE card_id = ?", (cid,)
+    ).fetchone()
+    assert row[0] == "urgent"
+
+
+def test_cmd_tag_empty(mock_conn):
+    cid = _insert_card(mock_conn, "t")
+    from mait_code.tools.board.cli import cmd_tag
+
+    with pytest.raises(SystemExit):
+        cmd_tag(_ns(id=cid, tag="   "))
+
+
+def test_cmd_tag_not_found(mock_conn):
+    from mait_code.tools.board.cli import cmd_tag
+
+    with pytest.raises(SystemExit):
+        cmd_tag(_ns(id=999, tag="urgent"))
+
+
+def test_cmd_untag(mock_conn):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_untag
+
+    cid = _insert_card(mock_conn, "t")
+    service.add_tag(mock_conn, cid, "urgent")
+    cmd_untag(_ns(id=cid, tag="urgent"))
+    remaining = mock_conn.execute(
+        "SELECT COUNT(*) FROM card_tags WHERE card_id = ?", (cid,)
+    ).fetchone()[0]
+    assert remaining == 0
+
+
+def test_cmd_show_renders_tags(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_show
+
+    cid = _insert_card(mock_conn, "t")
+    service.add_tag(mock_conn, cid, "urgent")
+    cmd_show(_ns(id=cid, json=False))
+    assert "tags: urgent" in capsys.readouterr().out
+
+
+def test_cmd_list_renders_tags(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_list
+
+    cid = _insert_card(mock_conn, "t", status=REFINED)
+    service.add_tag(mock_conn, cid, "urgent")
+    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    assert "#urgent" in capsys.readouterr().out
 
 
 def test_cmd_archive_then_excluded_from_next(mock_conn, capsys):
