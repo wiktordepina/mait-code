@@ -162,15 +162,19 @@ class TestFindTranscript:
 class TestRunCursorAdvance:
     """_run advances the cursor only when a window is handled, never on failure."""
 
-    TPATH = "/fake/transcript.jsonl"
     NEW_OFFSET = 100
 
-    def _run_once(self, monkeypatch, extraction):
+    def _run_once(self, data_dir: Path, monkeypatch, extraction):
         """Drive _run once with a mocked transcript read and extraction result.
 
+        The transcript file is created on disk so ``_run``'s existence guard
+        passes — ``read_new_lines`` is mocked, so its contents are irrelevant.
         Cursor functions are left real (backed by the temp data dir) so the
         persisted offset reflects the actual decision.
         """
+        tpath = data_dir / "transcript.jsonl"
+        tpath.touch()
+        self.tpath = str(tpath)
         monkeypatch.setattr(
             sys, "argv", ["mc-hook-observe", "--trigger", "session-end"]
         )
@@ -178,7 +182,7 @@ class TestRunCursorAdvance:
             patch.object(
                 observe_cli,
                 "_read_event",
-                return_value={"transcript_path": self.TPATH},
+                return_value={"transcript_path": self.tpath},
             ),
             patch.object(
                 observe_cli,
@@ -201,27 +205,64 @@ class TestRunCursorAdvance:
         return mock_raw, mock_store, mock_ent
 
     def test_transport_failure_does_not_advance(self, data_dir: Path, monkeypatch):
-        self._run_once(monkeypatch, None)
+        self._run_once(data_dir, monkeypatch, None)
         # Cursor stays put so the next session re-attempts the same window.
-        assert get_cursor(self.TPATH) == 0
+        assert get_cursor(self.tpath) == 0
 
     def test_advances_after_max_failures(self, data_dir: Path, monkeypatch):
         for _ in range(observe_cli.MAX_EXTRACTION_FAILURES):
-            self._run_once(monkeypatch, None)
+            self._run_once(data_dir, monkeypatch, None)
         # The poison window is finally skipped rather than stalling forever.
-        assert get_cursor(self.TPATH) == self.NEW_OFFSET
+        assert get_cursor(self.tpath) == self.NEW_OFFSET
 
     def test_empty_result_advances_without_storing(self, data_dir: Path, monkeypatch):
-        mock_raw, mock_store, mock_ent = self._run_once(monkeypatch, {})
-        assert get_cursor(self.TPATH) == self.NEW_OFFSET
+        mock_raw, mock_store, mock_ent = self._run_once(data_dir, monkeypatch, {})
+        assert get_cursor(self.tpath) == self.NEW_OFFSET
         mock_raw.assert_not_called()
         mock_store.assert_not_called()
         mock_ent.assert_not_called()
 
     def test_populated_result_advances_and_stores(self, data_dir: Path, monkeypatch):
         extraction = {"facts": [{"content": "x", "importance": 5}]}
-        mock_raw, mock_store, mock_ent = self._run_once(monkeypatch, extraction)
-        assert get_cursor(self.TPATH) == self.NEW_OFFSET
+        mock_raw, mock_store, mock_ent = self._run_once(
+            data_dir, monkeypatch, extraction
+        )
+        assert get_cursor(self.tpath) == self.NEW_OFFSET
         mock_raw.assert_called_once()
         mock_store.assert_called_once()
         mock_ent.assert_called_once()
+
+
+class TestRunMissingTranscript:
+    """A transcript path that doesn't exist on disk is skipped cleanly.
+
+    The stdin event can name a transcript that was never written or already
+    cleaned up (a brand-new or ended session). That's expected and
+    non-actionable — _run logs a WARNING and returns without touching the
+    cursor or the extraction pipeline, rather than letting open() raise and
+    surface as a generic ERROR.
+    """
+
+    def test_missing_transcript_skips_without_error(
+        self, data_dir: Path, monkeypatch, caplog
+    ):
+        missing = str(data_dir / "gone.jsonl")  # never created
+        monkeypatch.setattr(
+            sys, "argv", ["mc-hook-observe", "--trigger", "session-end"]
+        )
+        with (
+            patch.object(
+                observe_cli, "_read_event", return_value={"transcript_path": missing}
+            ),
+            patch.object(observe_cli, "read_new_lines") as mock_read,
+            patch.object(observe_cli, "set_cursor") as mock_set_cursor,
+            caplog.at_level("WARNING", logger="mait_code.hooks.observe.cli"),
+        ):
+            observe_cli._run()
+
+        # Never opened the transcript, never advanced the cursor, warned (not errored).
+        mock_read.assert_not_called()
+        mock_set_cursor.assert_not_called()
+        assert any(r.levelname == "WARNING" for r in caplog.records)
+        assert not any(r.levelname == "ERROR" for r in caplog.records)
+        assert "transcript not found" in caplog.text

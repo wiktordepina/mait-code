@@ -138,6 +138,15 @@ def _run():
         logger.warning("no transcript_path available (stdin and fallback both failed)")
         return
 
+    # The path from the stdin event can point at a transcript that no longer
+    # exists on disk (e.g. a brand-new or already-cleaned session at
+    # precompact/session-end). That's an expected, non-actionable condition —
+    # this window simply has nothing to observe — so skip cleanly rather than
+    # letting open() raise and surface as a generic ERROR.
+    if not Path(transcript_path).is_file():
+        logger.warning("transcript not found, skipping: %s", transcript_path)
+        return
+
     byte_offset = get_cursor(transcript_path)
     messages, new_offset, metadata = read_new_lines(transcript_path, byte_offset)
 
