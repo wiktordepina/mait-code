@@ -592,3 +592,27 @@ class TestHelp:
         assert is_help
         assert "New" in descs and "Help" in descs
         assert closed
+
+
+class TestPaletteAndJumps:
+    def test_system_commands_expose_actions(self, board_path: Path) -> None:
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                return [c.title for c in app.get_system_commands(app.screen)]
+
+        titles = _run(scenario)
+        assert "New card" in titles
+        assert any(t.startswith("Jump to") for t in titles)
+
+    def test_number_key_jumps_to_column(self, board_path: Path) -> None:
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("3")
+                await pilot.pause()
+                return app._focused_col
+
+        assert _run(scenario) == 2

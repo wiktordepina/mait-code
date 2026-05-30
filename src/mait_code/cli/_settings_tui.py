@@ -21,9 +21,10 @@ from pathlib import Path
 
 from rich.text import Text
 from textual import work
-from textual.app import ComposeResult
+from textual.app import ComposeResult, SystemCommand
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import ModalScreen
+from textual.screen import ModalScreen, Screen
 from textual.validation import ValidationResult, Validator
 from textual.widgets import (
     Button,
@@ -223,6 +224,8 @@ class SettingsApp(MaitApp):
     BINDINGS = [
         ("ctrl+s", "apply", "Apply"),
         ("escape", "focus_list", "Back to list"),
+        Binding("1", "focus_list", "List", show=False),
+        Binding("2", "focus_editor", "Editor", show=False),
     ]
 
     def __init__(self) -> None:
@@ -410,6 +413,20 @@ class SettingsApp(MaitApp):
 
     def action_focus_list(self) -> None:
         self.query_one("#list", DataTable).focus()
+
+    def action_focus_editor(self) -> None:
+        self._focus_editor()
+
+    def get_system_commands(self, screen: Screen):
+        """Expose the settings editor's actions in the Ctrl+P command palette."""
+        yield from super().get_system_commands(screen)
+        yield SystemCommand("Apply", "Apply the current edit", self.action_apply)
+        yield SystemCommand(
+            "Focus list", "Jump to the settings list", self.action_focus_list
+        )
+        yield SystemCommand(
+            "Focus editor", "Jump to the detail editor", self.action_focus_editor
+        )
 
     @work
     async def _edit_weights(self) -> None:

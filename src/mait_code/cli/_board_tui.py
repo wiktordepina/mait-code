@@ -16,16 +16,17 @@ one, falling back to a read-only render otherwise.
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 
 from rich.markup import escape
 from rich.text import Text
 from textual import work
-from textual.app import ComposeResult
+from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
-from textual.screen import ModalScreen
+from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
     DataTable,
@@ -115,6 +116,12 @@ class BoardColumn(DataTable):
         Binding("less_than_sign", "app.move_left", "Move ←"),
         Binding("greater_than_sign", "app.move_right", "Move →"),
         Binding("enter", "app.detail", "Detail"),
+        # Number keys jump straight to a column (discoverable via the palette).
+        Binding("1", "app.focus_col(0)", "Col 1", show=False),
+        Binding("2", "app.focus_col(1)", "Col 2", show=False),
+        Binding("3", "app.focus_col(2)", "Col 3", show=False),
+        Binding("4", "app.focus_col(3)", "Col 4", show=False),
+        Binding("5", "app.focus_col(4)", "Col 5", show=False),
         Binding("n", "app.new", "New"),
         Binding("e", "app.edit", "Edit"),
         Binding("C", "app.complete", "Complete"),
@@ -529,6 +536,45 @@ class BoardApp(MaitApp):
         table.focus()
 
     # -- navigation --------------------------------------------------------
+
+    def get_system_commands(self, screen: Screen):
+        """Expose the board's actions in the Ctrl+P command palette."""
+        yield from super().get_system_commands(screen)
+        yield SystemCommand("New card", "Create a card in backlog", self.action_new)
+        yield SystemCommand("Edit card", "Edit the focused card", self.action_edit)
+        yield SystemCommand(
+            "Complete card",
+            "Complete the focused card with a summary",
+            self.action_complete,
+        )
+        yield SystemCommand(
+            "Toggle archived",
+            "Show or hide the archived pane",
+            self.action_toggle_archived,
+        )
+        yield SystemCommand(
+            "Change project filter",
+            "Cycle the project filter",
+            self.action_cycle_project,
+        )
+        yield SystemCommand(
+            "Reload board", "Re-read the board from disk", self.action_reload_board
+        )
+        for idx, status in enumerate(BOARD_ORDER):
+            yield SystemCommand(
+                f"Jump to {col_label(status)}",
+                "Focus this column",
+                partial(self._jump_to, idx),
+            )
+
+    def _jump_to(self, index: int) -> None:
+        statuses = self._visible_statuses()
+        if 0 <= index < len(statuses):
+            self._focused_col = index
+            self._focus_current()
+
+    def action_focus_col(self, index: int) -> None:
+        self._jump_to(index)
 
     def action_focus_prev_col(self) -> None:
         n = len(self._visible_statuses())
