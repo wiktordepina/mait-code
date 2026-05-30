@@ -11,7 +11,7 @@
 
 ::: mait_code.tools.board.BACKLOG
 
-::: mait_code.tools.board.BLOCKED
+::: mait_code.tools.board.BLOCKED_TAG
 
 ::: mait_code.tools.board.BOARD_ORDER
 
@@ -49,6 +49,8 @@
 
 ::: mait_code.tools.board.add_comment
 
+::: mait_code.tools.board.add_tag
+
 ::: mait_code.tools.board.archive_card
 
 ::: mait_code.tools.board.block_card
@@ -65,6 +67,8 @@
 
 ::: mait_code.tools.board.list_projects
 
+::: mait_code.tools.board.list_tags
+
 ::: mait_code.tools.board.move_card
 
 ::: mait_code.tools.board.next_refined
@@ -72,6 +76,8 @@
 ::: mait_code.tools.board.refine_card
 
 ::: mait_code.tools.board.remove_card
+
+::: mait_code.tools.board.remove_tag
 
 ::: mait_code.tools.board.summary_counts
 
