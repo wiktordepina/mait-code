@@ -52,6 +52,7 @@ from mait_code.tools.board.columns import (
 )
 from mait_code.tools.board.db import get_connection, get_project
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.render import priority_chip, tag_badge
 
 __all__ = ["BoardApp", "run_board_tui"]
 
@@ -79,22 +80,23 @@ _BLOCKED_MARK = "⊘ "
 def _card_row(card: dict, *, show_project: bool) -> Text:
     """Render one card as a single-column DataTable cell.
 
-    A blocked card gets a leading :data:`_BLOCKED_MARK` and its whole row is
-    styled ``bold red``. The marker is the robust signal (it survives truncation
-    and the cursor highlight); the colour is the emphasis on top.
+    Priority and tags render as domain-coloured chips (see
+    :mod:`mait_code.tui.render`). A blocked card keeps the leading
+    :data:`_BLOCKED_MARK` — the robust signal that survives column truncation and
+    the cursor-row highlight — and its ``#blocked`` badge stands out in the error
+    colour.
     """
     tags = card.get("tags", [])
     blocked = BLOCKED_TAG in tags
     mark = _BLOCKED_MARK if blocked else ""
-    text = Text(
-        f"{mark}#{card['id']} ({card['priority']}) {card['title']}",
-        style="bold red" if blocked else "",
-    )
+    text = Text(f"{mark}#{card['id']} ")
+    text.append_text(priority_chip(card["priority"]))
+    text.append(f" {card['title']}")
     if show_project:
         text.append(f"  {card['project']}", style="dim")
     for tag in tags:
-        style = "bold red" if tag == BLOCKED_TAG else "dim"
-        text.append(f" #{tag}", style=style)
+        text.append(" ")
+        text.append_text(tag_badge(tag, blocked=(tag == BLOCKED_TAG)))
     return text
 
 

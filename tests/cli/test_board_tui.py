@@ -428,11 +428,13 @@ class TestCardRow:
         base.update(over)
         return base
 
-    def test_blocked_card_title_is_bold_red(self) -> None:
-        # The whole row is styled, not just the appended tag, so the blocked
-        # signal survives column truncation.
+    def test_blocked_badge_uses_error_colour(self) -> None:
+        # The blocked signal now rides on the leading marker plus a #blocked
+        # badge in the error colour (a chip span), not a whole-row style.
+        from mait_code.tui import palette as p
+
         row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
-        assert row.style == "bold red"
+        assert any(p.ERROR in str(span.style) for span in row.spans)
 
     def test_blocked_card_has_leading_marker(self) -> None:
         # Leading marker survives both truncation and the cursor-row highlight
