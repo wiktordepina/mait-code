@@ -36,6 +36,7 @@ from textual.widgets import (
     Label,
     RadioButton,
     RadioSet,
+    Rule,
     Static,
     TextArea,
 )
@@ -148,37 +149,57 @@ class DetailScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         card = self._card
         with VerticalScroll(id="detail-dialog", classes="modal-dialog"):
-            yield Label(
-                escape(f"#{card['id']} ({card['priority']}) {card['title']}"),
-                classes="detail-title",
-            )
+            # Title wraps (a Static, not a clipping Label); priority/tags move to
+            # the meta line as chips.
             yield Static(
-                escape(
-                    f"project: {card['project']}   status: {col_label(card['status'])}"
-                ),
-                classes="detail-meta",
+                escape(f"#{card['id']}  {card['title']}"), classes="detail-title"
             )
-            if card.get("tags"):
-                yield Label("Tags", classes="detail-head")
-                yield Static(escape(", ".join(card["tags"])))
-            if card["description"]:
-                yield Label("Description", classes="detail-head")
-                yield Static(escape(card["description"]))
-            if card["acceptance_criteria"]:
-                yield Label("Acceptance criteria", classes="detail-head")
-                yield Static(escape(card["acceptance_criteria"]))
-            if card["completion_summary"]:
-                yield Label("Completion summary", classes="detail-head")
-                yield Static(escape(card["completion_summary"]))
-            yield Label(f"Comments ({len(self._comments)})", classes="detail-head")
+            yield Static(self._meta(card), classes="detail-meta")
+            for heading, body in (
+                ("Description", card["description"]),
+                ("Acceptance criteria", card["acceptance_criteria"]),
+                ("Completion summary", card["completion_summary"]),
+            ):
+                if body:
+                    yield Static(heading, classes="section-head")
+                    yield Rule()
+                    yield Static(escape(body))
+            yield Static(f"Comments ({len(self._comments)})", classes="section-head")
+            yield Rule()
             if self._comments:
                 for comment in self._comments:
-                    # Escape so a body or author containing brackets isn't
-                    # parsed as Rich console markup (Textual 8's Content system
-                    # parses "[...]" even from a Text, dropping the span text).
-                    yield Static(escape(f"[{comment['author']}] {comment['body']}"))
+                    with Vertical(classes="comment"):
+                        yield Static(
+                            self._comment_head(comment), classes="comment-head"
+                        )
+                        # Escape the body so brackets aren't parsed as markup
+                        # (Textual 8's Content system parses "[...]").
+                        yield Static(escape(comment["body"]))
             else:
                 yield Static("(none)", classes="detail-dim")
+
+    @staticmethod
+    def _meta(card: dict) -> Text:
+        """One line: project · status, then priority and tags as chips."""
+        meta = Text()
+        meta.append(card["project"], style="dim")
+        meta.append("  ·  ")
+        meta.append(col_label(card["status"]))
+        meta.append("  ")
+        meta.append_text(priority_chip(card["priority"]))
+        for tag in card.get("tags", []):
+            meta.append(" ")
+            meta.append_text(tag_badge(tag, blocked=(tag == BLOCKED_TAG)))
+        return meta
+
+    @staticmethod
+    def _comment_head(comment: dict) -> Text:
+        head = Text(comment["author"], style="dim")
+        created = comment.get("created_at")
+        if created:
+            # Trim the stored ISO timestamp to a readable "YYYY-MM-DD HH:MM".
+            head.append(f"  ·  {created[:16].replace('T', ' ')}", style="dim")
+        return head
 
 
 class CommentScreen(ModalScreen[str | None]):

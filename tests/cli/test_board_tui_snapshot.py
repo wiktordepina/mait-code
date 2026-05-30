@@ -58,3 +58,62 @@ def test_help_screen_snapshot(snap_compare, tmp_path: Path) -> None:
         press=["question_mark"],
         terminal_size=(120, 40),
     )
+
+
+def _seed_detail(db_path: Path) -> None:
+    """A content-rich card (long title, sections, tags, comments) for the modal.
+
+    Comments are inserted with fixed timestamps so the snapshot is stable.
+    """
+    conn = get_connection(db_path)
+    try:
+        cid = service.add_card(
+            conn,
+            project="mait-code",
+            title="Replace the blocked column with a tags system in the board TUI",
+            priority="high",
+        )
+        service.move_card(conn, cid, "refined")
+        service.edit_card(
+            conn,
+            cid,
+            description=(
+                "Drop blocked as a board column and introduce a general "
+                "free-form tag system."
+            ),
+            acceptance_criteria="- tag/untag verbs\n- a TUI toggle\n- render on rows",
+        )
+        service.add_tag(conn, cid, "tui")
+        for author, body, ts in (
+            (
+                "claude",
+                "Research complete; recommends staying on Textual.",
+                "2026-05-30T09:00:00+00:00",
+            ),
+            ("me", "Agreed — let's lock the approach.", "2026-05-30T10:30:00+00:00"),
+        ):
+            conn.execute(
+                "INSERT INTO card_comments (card_id, author, body, created_at) "
+                "VALUES (?, ?, ?, ?)",
+                (cid, author, body, ts),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_detail_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the redesigned card-detail modal (wrap, sections, comment blocks)."""
+    db_path = tmp_path / "board.db"
+    _seed_detail(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app._focus_status("refined")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
