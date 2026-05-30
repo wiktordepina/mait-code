@@ -17,14 +17,30 @@
 }
 
 /* Each column's card list carries the focus signal: a muted border when
- * blurred, the house cyan when focused. */
-.col DataTable {
+ * blurred, the house cyan when focused. The cards themselves are boxed
+ * (Rich Panels), so the list sits flush with no extra padding. */
+.col OptionList {
     height: 1fr;
+    padding: 0;
     border: round $border-blurred;
 }
 
-.col DataTable:focus {
+.col OptionList:focus {
     border: round $border;
+}
+
+/* Selected card: a tinted slab, NOT a solid cyan fill. The default block-cursor
+ * background is $primary (cyan), which would swallow the cyan #id and tags (same
+ * hue) — a tint keeps every coloured glyph legible while still reading as
+ * "selected". The focused column tints stronger than a blurred one. */
+.col OptionList > .option-list--option-highlighted {
+    background: $primary 12%;
+    color: $foreground;
+}
+
+.col OptionList:focus > .option-list--option-highlighted {
+    background: $primary 25%;
+    color: $foreground;
 }
 
 /* The detail modal is wider and scrolls; geometry otherwise from .modal-dialog.
@@ -92,4 +108,27 @@
 .field-label {
     color: $text-muted;
     margin-top: 1;
+}
+
+/* Tag modal: the row of current-tag chips, each a compact "✕ tag" remove
+ * button. Auto width so chips sit side by side and wrap as needed. */
+#tag-current {
+    height: auto;
+    margin-top: 1;
+}
+
+.tag-remove {
+    width: auto;
+    height: 1;
+    min-width: 0;
+    margin: 0 1 0 0;
+    border: none;
+    padding: 0 1;
+    color: $text-muted;
+    background: $panel;
+}
+
+.tag-remove:hover {
+    color: $text;
+    background: $error 30%;
 }

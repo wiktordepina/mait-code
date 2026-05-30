@@ -20,7 +20,11 @@ from mait_code.tools.board.db import get_connection
 
 
 def _seed_demo(db_path: Path) -> None:
-    """A small board spanning every column, with a blocked card, for the shot."""
+    """A small board spanning every column, with a blocked card, for the shot.
+
+    Note: the Done column is hidden by default, so the ``did`` card below does
+    not appear in the board snapshot — that's intended, not a missing card.
+    """
     conn = get_connection(db_path)
     try:
         service.add_card(

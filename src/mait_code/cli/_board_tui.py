@@ -19,27 +19,31 @@ from __future__ import annotations
 from functools import partial
 from pathlib import Path
 
+import rich.box
+from rich.console import Group, RenderableType
 from rich.markup import escape
+from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 from textual import work
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.coordinate import Coordinate
 from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
-    DataTable,
     Footer,
     Header,
     Input,
     Label,
+    OptionList,
     RadioButton,
     RadioSet,
     Rule,
     Static,
     TextArea,
 )
+from textual.widgets.option_list import Option, OptionDoesNotExist
 
 from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
@@ -53,6 +57,7 @@ from mait_code.tools.board.columns import (
     label as col_label,
 )
 from mait_code.tools.board.db import get_connection, get_project
+from mait_code.tui import palette as p
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.render import priority_chip, tag_badge
 
@@ -72,43 +77,68 @@ def run_board_tui(db_path: Path | None = None) -> None:
     BoardApp(db_path=db_path).run()
 
 
-#: Leading glyph that marks a blocked card. A trailing ``#blocked`` tag is
-#: truncated off the narrow column, and the ``bold red`` colour is overridden by
-#: the DataTable cursor highlight on the *selected* row — but a leading marker
-#: survives both, so a blocked card always reads as blocked.
+#: Leading glyph that marks a blocked card. A blocked box already carries a red
+#: border, but the marker (and the ``#blocked`` badge) are redundant signals that
+#: survive the highlighted-option tint and read without colour — belt-and-braces,
+#: colourblind-safe.
 _BLOCKED_MARK = "⊘ "
 
 
-def _card_row(card: dict, *, show_project: bool) -> Text:
-    """Render one card as a single-column DataTable cell.
+def _card_box(card: dict, *, show_project: bool) -> RenderableType:
+    """Render one card as a bordered box for an :class:`OptionList` option.
 
-    Priority and tags render as domain-coloured chips (see
-    :mod:`mait_code.tui.render`). A blocked card keeps the leading
-    :data:`_BLOCKED_MARK` — the robust signal that survives column truncation and
-    the cursor-row highlight — and its ``#blocked`` badge stands out in the error
-    colour.
+    The box is a rounded :class:`~rich.panel.Panel` whose body stacks three
+    parts: a header grid (``#id`` left, project right), the priority chip plus
+    the full title (wraps to the column width, so the box grows in height), and a
+    right-justified tag line. A blocked card gets a red border, keeps the leading
+    :data:`_BLOCKED_MARK`, and its ``#blocked`` badge stands out in the error
+    colour. Colours flow from :mod:`mait_code.tui.palette` via
+    :mod:`mait_code.tui.render`, so the box tracks the active theme.
     """
     tags = card.get("tags", [])
     blocked = BLOCKED_TAG in tags
-    mark = _BLOCKED_MARK if blocked else ""
-    text = Text(f"{mark}#{card['id']} ")
-    text.append_text(priority_chip(card["priority"]))
-    text.append(f" {card['title']}")
-    if show_project:
-        text.append(f"  {card['project']}", style="dim")
-    for tag in tags:
-        text.append(" ")
-        text.append_text(tag_badge(tag, blocked=(tag == BLOCKED_TAG)))
-    return text
+
+    # Header line: #id (left) and the project (right, muted) when unfiltered.
+    header = Table.grid(expand=True)
+    header.add_column(justify="left")
+    header.add_column(justify="right")
+    header.add_row(
+        Text(f"#{card['id']}", style=f"bold {p.PRIMARY}"),
+        Text(card["project"], style="dim") if show_project else Text(""),
+    )
+
+    # Title line: leading marker (blocked) + priority chip + the wrapping title.
+    title = Text()
+    if blocked:
+        title.append(_BLOCKED_MARK, style=f"bold {p.ERROR}")
+    title.append_text(priority_chip(card["priority"]))
+    title.append(f" {card['title']}")
+
+    parts: list[RenderableType] = [header, title]
+
+    # Tag line: right-justified badges, omitted when the card carries no tags.
+    if tags:
+        tagline = Text(justify="right")
+        for i, tag in enumerate(tags):
+            if i:
+                tagline.append(" ")
+            tagline.append_text(tag_badge(tag, blocked=(tag == BLOCKED_TAG)))
+        parts.append(tagline)
+
+    return Panel(
+        Group(*parts),
+        box=rich.box.ROUNDED,
+        border_style=p.ERROR if blocked else "",
+        padding=(0, 1),
+    )
 
 
-class BoardColumn(DataTable):
+class BoardColumn(OptionList):
     """A status column's card list.
 
-    Routes its navigation/action keys to the parent app so the focused table
-    drives the whole board. ``up``/``down`` stay native (row cursor); ``left``/
-    ``right`` are rebound off the table's own column-cursor moves onto the app's
-    pane focus.
+    Routes its navigation/action keys to the parent app so the focused list
+    drives the whole board. ``up``/``down`` stay native (the option highlight);
+    ``left``/``right`` are rebound onto the app's pane focus.
     """
 
     BINDINGS = [
@@ -131,6 +161,7 @@ class BoardColumn(DataTable):
         Binding("b", "app.block", "Block"),
         Binding("u", "app.unblock", "Unblock"),
         Binding("p", "app.cycle_project", "Project"),
+        Binding("d", "app.toggle_done", "Done"),
         Binding("a", "app.toggle_archived", "Archived"),
         Binding("r", "app.reload_board", "Reload"),
     ]
@@ -240,21 +271,32 @@ class CommentScreen(ModalScreen[str | None]):
 
 
 class TagScreen(ModalScreen[str | None]):
-    """A single-line tag input; resolves to the tag, or ``None`` on cancel.
+    """Add a tag, or pick a current tag to remove.
 
-    The app *toggles* the returned tag: present → removed, absent → added.
+    Resolves to a single tag (or ``None`` on cancel) which the app *toggles*:
+    a tag absent from the card is added, one already present is removed. Typing
+    a name and applying toggles it; the current-tag chips give removal an
+    explicit, discoverable path (click a chip → that tag toggles off).
     """
 
     BINDINGS = [("escape", "cancel", "Cancel")]
 
-    def __init__(self, card_id: int) -> None:
+    def __init__(self, card_id: int, tags: list[str] | None = None) -> None:
         super().__init__()
         self._card_id = card_id
+        self._tags = tags or []
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label(f"Tag card #{self._card_id} (toggles)", classes="modal-title")
-            yield Input(placeholder="tag…", id="tag-input")
+            yield Label(f"Tag card #{self._card_id}", classes="modal-title")
+            yield Input(placeholder="add a tag…", id="tag-input")
+            if self._tags:
+                yield Label("Current tags (select to remove):", classes="field-label")
+                with Horizontal(id="tag-current"):
+                    for idx, tag in enumerate(self._tags):
+                        yield Button(
+                            f"✕ {tag}", id=f"tag-rm-{idx}", classes="tag-remove"
+                        )
             with Horizontal(classes="modal-buttons"):
                 yield Button("Apply", id="tag-apply", variant="primary")
                 yield Button("Cancel", id="tag-cancel")
@@ -266,8 +308,12 @@ class TagScreen(ModalScreen[str | None]):
         self._submit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "tag-apply":
+        button_id = event.button.id or ""
+        if button_id == "tag-apply":
             self._submit()
+        elif button_id.startswith("tag-rm-"):
+            # A current-tag chip: return that tag so the app toggles it off.
+            self.dismiss(self._tags[int(button_id.removeprefix("tag-rm-"))])
         else:
             self.dismiss(None)
 
@@ -461,6 +507,7 @@ class BoardApp(MaitApp):
         self._conn = get_connection(db_path)  # one connection for the app's life
         self._project_filter: str | None = None  # None == all projects
         self._projects: list[str] = []
+        self._show_done = False  # Done is hidden by default to widen the flow
         self._show_archived = False
         self._focused_col = 0
         self._card_status: dict[int, str] = {}
@@ -473,16 +520,13 @@ class BoardApp(MaitApp):
                     yield Label(
                         col_label(status), classes="col-head", id=f"head-{status}"
                     )
-                    yield BoardColumn(
-                        id=f"tbl-{status}", cursor_type="row", show_header=False
-                    )
+                    yield BoardColumn(id=f"tbl-{status}")
         yield Footer()
 
     def on_mount(self) -> None:
         self._projects = service.list_projects(self._conn)
-        for status in _PANES:
-            self.query_one(f"#tbl-{status}", BoardColumn).add_column("card")
-        # The archived pane stays hidden until the `a` toggle reveals it.
+        # Done and archived stay hidden until their toggles (`d` / `a`) reveal them.
+        self.query_one("#col-done", Vertical).display = False
         self.query_one("#col-archived", Vertical).display = False
         self._update_subtitle()
         self._reload()
@@ -494,7 +538,12 @@ class BoardApp(MaitApp):
     # -- layout helpers ----------------------------------------------------
 
     def _visible_statuses(self) -> list[str]:
-        return list(BOARD_ORDER) + ([ARCHIVED] if self._show_archived else [])
+        statuses = [BACKLOG, REFINED, IN_PROGRESS]
+        if self._show_done:
+            statuses.append(DONE)
+        if self._show_archived:
+            statuses.append(ARCHIVED)
+        return statuses
 
     def _update_subtitle(self) -> None:
         self.sub_title = f"project: {self._project_filter or 'all'}  (p to cycle)"
@@ -512,19 +561,24 @@ class BoardApp(MaitApp):
             by_status.setdefault(card["status"], []).append(card)
         show_project = self._project_filter is None
         for status in _PANES:
-            table = self.query_one(f"#tbl-{status}", BoardColumn)
-            table.clear()
+            column = self.query_one(f"#tbl-{status}", BoardColumn)
+            column.clear_options()
             group = by_status.get(status, [])
-            for card in group:
-                table.add_row(
-                    _card_row(card, show_project=show_project), key=str(card["id"])
-                )
+            column.add_options(
+                Option(_card_box(card, show_project=show_project), id=str(card["id"]))
+                for card in group
+            )
             head = self.query_one(f"#head-{status}", Label)
             head.update(f"{col_label(status)} ({len(group)})")
 
     def _focus_current(self) -> None:
         status = self._visible_statuses()[self._focused_col]
-        self.query_one(f"#tbl-{status}", BoardColumn).focus()
+        column = self.query_one(f"#tbl-{status}", BoardColumn)
+        # OptionList doesn't auto-highlight on focus (unlike a DataTable cursor),
+        # so default to the first card — otherwise actions have nothing selected.
+        if column.highlighted is None and column.option_count:
+            column.highlighted = 0
+        column.focus()
 
     def _focus_status(self, status: str) -> None:
         """Focus the pane for *status* (used by tests and card-following)."""
@@ -534,12 +588,11 @@ class BoardApp(MaitApp):
 
     def _selected_card_id(self) -> int | None:
         status = self._visible_statuses()[self._focused_col]
-        table = self.query_one(f"#tbl-{status}", BoardColumn)
-        if table.row_count == 0:
+        column = self.query_one(f"#tbl-{status}", BoardColumn)
+        if column.highlighted is None:  # empty column
             return None
-        cell_key = table.coordinate_to_cell_key(Coordinate(table.cursor_row, 0))
-        value = cell_key.row_key.value
-        return int(value) if value is not None else None
+        option = column.get_option_at_index(column.highlighted)
+        return int(option.id) if option.id is not None else None
 
     def _select_card(self, card_id: int) -> None:
         """Follow a card to its (possibly new) pane and highlight it."""
@@ -548,13 +601,12 @@ class BoardApp(MaitApp):
         if status is None or status not in statuses:
             return
         self._focused_col = statuses.index(status)
-        table = self.query_one(f"#tbl-{status}", BoardColumn)
-        key = str(card_id)
-        for idx, row in enumerate(table.ordered_rows):
-            if row.key.value == key:
-                table.move_cursor(row=idx)
-                break
-        table.focus()
+        column = self.query_one(f"#tbl-{status}", BoardColumn)
+        try:
+            column.highlighted = column.get_option_index(str(card_id))
+        except OptionDoesNotExist:
+            return
+        column.focus()
 
     # -- navigation --------------------------------------------------------
 
@@ -567,6 +619,11 @@ class BoardApp(MaitApp):
             "Complete card",
             "Complete the focused card with a summary",
             self.action_complete,
+        )
+        yield SystemCommand(
+            "Toggle Done",
+            "Show or hide the Done column",
+            self.action_toggle_done,
         )
         yield SystemCommand(
             "Toggle archived",
@@ -665,12 +722,19 @@ class BoardApp(MaitApp):
         self._update_subtitle()
         self._reload()
 
+    def action_toggle_done(self) -> None:
+        self._show_done = not self._show_done
+        self.query_one("#col-done", Vertical).display = self._show_done
+        # If a now-hidden pane was focused, fall back to the last visible one.
+        self._focused_col = min(self._focused_col, len(self._visible_statuses()) - 1)
+        self._reload()
+        self._focus_current()
+
     def action_toggle_archived(self) -> None:
         self._show_archived = not self._show_archived
         self.query_one("#col-archived", Vertical).display = self._show_archived
-        # If archived was focused and we just hid it, fall back to the last pane.
-        if not self._show_archived and self._focused_col >= len(BOARD_ORDER):
-            self._focused_col = len(BOARD_ORDER) - 1
+        # If a now-hidden pane was focused, fall back to the last visible one.
+        self._focused_col = min(self._focused_col, len(self._visible_statuses()) - 1)
         self._reload()
         self._focus_current()
 
@@ -709,7 +773,8 @@ class BoardApp(MaitApp):
         card_id = self._selected_card_id()
         if card_id is None:
             return
-        tag = await self.push_screen_wait(TagScreen(card_id))
+        current = service.list_tags(self._conn, card_id)
+        tag = await self.push_screen_wait(TagScreen(card_id, current))
         if not tag:
             return
         # Toggle: a tag already on the card is removed, otherwise added.

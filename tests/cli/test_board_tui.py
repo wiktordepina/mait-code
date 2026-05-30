@@ -13,7 +13,7 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from textual.widgets import Input, Label, Static, TextArea
+from textual.widgets import Button, Input, Label, Static, TextArea
 
 from mait_code.cli._board_tui import (
     BoardApp,
@@ -23,7 +23,7 @@ from mait_code.cli._board_tui import (
     EditCardScreen,
     NewCardScreen,
     TagScreen,
-    _card_row,
+    _card_box,
 )
 from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
@@ -155,6 +155,8 @@ class TestMoving:
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
+                await pilot.press("d")  # Done is hidden by default — reveal it
+                await pilot.pause()
                 app._focus_status(DONE)
                 await pilot.press("greater_than_sign")
                 await pilot.pause()
@@ -271,6 +273,36 @@ class TestTagging:
         assert added == ["urgent"]
         assert removed == []
 
+    def test_current_tag_chip_removes_tag(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                service.add_tag(app._conn, ids["card"], "alpha")
+                service.add_tag(app._conn, ids["card"], "beta")
+                app._reload()
+                app._focus_status(REFINED)
+                # The tag modal lists current tags as removable chips.
+                await pilot.press("t")
+                await pilot.pause()
+                assert isinstance(app.screen, TagScreen)
+                labels = {
+                    str(b.label)
+                    for b in app.screen.query(Button)
+                    if (b.id or "").startswith("tag-rm-")
+                }
+                # Click the chip for "alpha" (tags are sorted → tag-rm-0).
+                await pilot.click("#tag-rm-0")
+                await pilot.pause()
+                await pilot.pause()
+                return labels, service.list_tags(app._conn, ids["card"])
+
+        labels, remaining = _run(scenario)
+        assert labels == {"✕ alpha", "✕ beta"}
+        assert remaining == ["beta"]
+
     def test_blocked_tag_paints_on_row(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "x", "status": REFINED}])
 
@@ -307,10 +339,10 @@ class TestProjectFilter:
             async with app.run_test() as pilot:
                 await pilot.pause()
                 # all projects → both refined cards visible
-                before = app.query_one("#tbl-refined").row_count
+                before = app.query_one("#tbl-refined").option_count
                 await pilot.press("p")  # → first project (alpha, sorted)
                 await pilot.pause()
-                after = app.query_one("#tbl-refined").row_count
+                after = app.query_one("#tbl-refined").option_count
                 return before, after, app._project_filter
 
         before, after, filt = _run(scenario)
@@ -332,12 +364,74 @@ class TestArchivedToggle:
                 from textual.containers import Vertical
 
                 shown = app.query_one("#col-archived", Vertical).display
-                count = app.query_one("#tbl-archived").row_count
+                count = app.query_one("#tbl-archived").option_count
                 return shown, count
 
         shown, count = _run(scenario)
         assert shown is True
         assert count == 1
+
+
+class TestDoneToggle:
+    def test_done_pane_hidden_by_default(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "shipped", "status": DONE}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                from textual.containers import Vertical
+
+                # Hidden column, and dropped from the focus ring entirely.
+                return (
+                    app.query_one("#col-done", Vertical).display,
+                    DONE in app._visible_statuses(),
+                )
+
+        displayed, in_ring = _run(scenario)
+        assert displayed is False
+        assert in_ring is False
+
+    def test_toggle_reveals_done(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "shipped", "status": DONE}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.press("d")
+                await pilot.pause()
+                from textual.containers import Vertical
+
+                shown = app.query_one("#col-done", Vertical).display
+                count = app.query_one("#tbl-done").option_count
+                in_ring = DONE in app._visible_statuses()
+                return shown, count, in_ring
+
+        shown, count, in_ring = _run(scenario)
+        assert shown is True
+        assert count == 1
+        assert in_ring is True
+
+    def test_move_to_done_keeps_done_hidden(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "wip", "status": IN_PROGRESS}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(IN_PROGRESS)
+                await pilot.press("greater_than_sign")  # → Done (hidden)
+                await pilot.pause()
+                from textual.containers import Vertical
+
+                card = service.get_card(app._conn, ids["wip"])
+                # Card moved, but Done stays hidden and focus didn't crash.
+                return card["status"], app.query_one("#col-done", Vertical).display
+
+        status, done_shown = _run(scenario)
+        assert status == DONE
+        assert done_shown is False
 
 
 class TestComment:
@@ -420,36 +514,60 @@ class TestDetail:
         assert "urgent" in _run(scenario)
 
 
-class TestCardRow:
-    """Direct unit tests for the card-row renderer (truncation-proof signals)."""
+class TestCardBox:
+    """Direct unit tests for the boxed card renderer (the OptionList option)."""
 
     def _card(self, **over):
-        base = {"id": 1, "priority": "high", "title": "x", "tags": []}
+        base = {
+            "id": 1,
+            "project": "demo",
+            "priority": "high",
+            "title": "x",
+            "tags": [],
+        }
         base.update(over)
         return base
 
-    def test_blocked_badge_uses_error_colour(self) -> None:
-        # The blocked signal now rides on the leading marker plus a #blocked
-        # badge in the error colour (a chip span), not a whole-row style.
+    def _plain(self, renderable) -> str:
+        """Render the box to plain text at a card-width console."""
+        from rich.console import Console
+
+        console = Console(width=40, record=True)
+        console.print(renderable)
+        return console.export_text()
+
+    def test_blocked_box_has_error_border(self) -> None:
+        # The strongest blocked signal is now the box border in the error colour.
         from mait_code.tui import palette as p
 
-        row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
-        assert any(p.ERROR in str(span.style) for span in row.spans)
+        box = _card_box(self._card(tags=[BLOCKED_TAG]), show_project=False)
+        assert box.border_style == p.ERROR
 
-    def test_blocked_card_has_leading_marker(self) -> None:
-        # Leading marker survives both truncation and the cursor-row highlight
-        # (which overrides the red foreground on the selected row).
-        row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
-        assert row.plain.startswith("⊘ ")
+    def test_blocked_box_keeps_marker_and_badge(self) -> None:
+        # The leading marker and the #blocked badge are redundant signals that
+        # read without colour and survive the highlighted-option tint.
+        text = self._plain(
+            _card_box(self._card(tags=[BLOCKED_TAG]), show_project=False)
+        )
+        assert "⊘" in text
+        assert f"#{BLOCKED_TAG}" in text
 
-    def test_unblocked_card_unstyled_and_unmarked(self) -> None:
-        row = _card_row(self._card(tags=[]), show_project=False)
-        assert row.style != "bold red"
-        assert not row.plain.startswith("⊘")
+    def test_unblocked_box_has_no_error_border_or_marker(self) -> None:
+        from mait_code.tui import palette as p
 
-    def test_tags_appended_to_row(self) -> None:
-        row = _card_row(self._card(tags=["urgent"]), show_project=False)
-        assert "#urgent" in row.plain
+        box = _card_box(self._card(tags=[]), show_project=False)
+        assert box.border_style != p.ERROR
+        assert "⊘" not in self._plain(box)
+
+    def test_tags_render_in_box(self) -> None:
+        text = self._plain(_card_box(self._card(tags=["urgent"]), show_project=False))
+        assert "#urgent" in text
+
+    def test_project_shown_only_when_unfiltered(self) -> None:
+        shown = self._plain(_card_box(self._card(project="acme"), show_project=True))
+        hidden = self._plain(_card_box(self._card(project="acme"), show_project=False))
+        assert "acme" in shown
+        assert "acme" not in hidden
 
 
 class TestLayout:
@@ -486,6 +604,31 @@ class TestLayout:
                 return "Find me" in painted
 
         assert _run(scenario) is True
+
+    def test_selected_card_id_stays_legible(self, board_path: Path) -> None:
+        # Regression: the highlighted option's background was solid $primary
+        # (cyan), the same hue as the #id and tag glyphs — they vanished on the
+        # selected card. The fix tints the slab instead, so fg != bg.
+        _seed(board_path, [{"title": "Pick me", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)  # focus + highlight the card
+                await pilot.pause()
+                strips = app.screen._compositor.render_strips()
+                for strip in strips:
+                    for seg in strip:
+                        if "#1" in seg.text and seg.style and seg.style.color:
+                            return seg.style.color.triplet, (
+                                seg.style.bgcolor.triplet if seg.style.bgcolor else None
+                            )
+                return None
+
+        fg, bg = _run(scenario)
+        assert fg is not None and bg is not None
+        assert fg != bg  # the id is not painted in its own background colour
 
 
 class TestMutationModals:
