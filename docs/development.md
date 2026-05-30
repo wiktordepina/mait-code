@@ -266,7 +266,13 @@ def mem_db(tmp_path):
    buttons clip off-screen on a short terminal.
 4. Drive every colour off theme `$`-variables (e.g. `$text-primary`; `$border`
    vs `$border-blurred` for a focus signal) — never hard-code a hex in a `.tcss`.
-5. Add a snapshot test (see "Snapshot tests" above).
+   For Rich `Text` in a `DataTable` cell (which can't read `$`-variables), use the
+   palette-coloured chip helpers in `mait_code.tui.render`.
+5. A `?` help screen comes free from `MaitApp` — it lists the app's live
+   key-bindings, so new bindings appear automatically. Expose the app's actions
+   in the Ctrl+P palette by overriding `get_system_commands` and yielding
+   `SystemCommand`s after `yield from super().get_system_commands(screen)`.
+6. Add a snapshot test (see "Snapshot tests" above).
 
 ## Adding a New Skill
 

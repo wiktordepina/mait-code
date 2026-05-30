@@ -10,6 +10,22 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.29.0] — 2026-05-30
+
+### Added
+
+- **Interaction polish across the board and settings TUIs.** A `Ctrl+P` command
+  palette exposes each app's actions; `?` opens a context help screen built from
+  the live key-bindings; number keys jump straight to a column (board) or
+  between the list and editor (settings); and actions raise toasts.
+
+### Changed
+
+- **Priority and tags render as domain-coloured chips** on the board card rows
+  (a heat scale for priority, the blocked tag bold in the error colour),
+  replacing the previous plain text. The leading `⊘` marker remains the
+  truncation-proof blocked signal.
+
 ## [0.28.0] — 2026-05-30
 
 ### Added
@@ -954,7 +970,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.29.0...HEAD
+[0.29.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.0
 [0.28.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.28.0
 [0.27.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.27.0
 [0.26.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.26.0

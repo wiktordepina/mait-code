@@ -428,11 +428,13 @@ class TestCardRow:
         base.update(over)
         return base
 
-    def test_blocked_card_title_is_bold_red(self) -> None:
-        # The whole row is styled, not just the appended tag, so the blocked
-        # signal survives column truncation.
+    def test_blocked_badge_uses_error_colour(self) -> None:
+        # The blocked signal now rides on the leading marker plus a #blocked
+        # badge in the error colour (a chip span), not a whole-row style.
+        from mait_code.tui import palette as p
+
         row = _card_row(self._card(tags=[BLOCKED_TAG]), show_project=False)
-        assert row.style == "bold red"
+        assert any(p.ERROR in str(span.style) for span in row.spans)
 
     def test_blocked_card_has_leading_marker(self) -> None:
         # Leading marker survives both truncation and the cursor-row highlight
@@ -565,3 +567,52 @@ class TestMutationModals:
         card = _run(scenario)
         assert card["status"] == DONE
         assert card["completion_summary"] == "shipped it"
+
+
+class TestHelp:
+    def test_question_mark_opens_help_with_live_bindings(
+        self, board_path: Path
+    ) -> None:
+        from mait_code.tui.help import HelpScreen
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("question_mark")
+                await pilot.pause()
+                is_help = isinstance(app.screen, HelpScreen)
+                descs = [d for _, d in app.screen._rows] if is_help else []
+                await pilot.press("escape")
+                await pilot.pause()
+                closed = not isinstance(app.screen, HelpScreen)
+                return is_help, descs, closed
+
+        is_help, descs, closed = _run(scenario)
+        assert is_help
+        assert "New" in descs and "Help" in descs
+        assert closed
+
+
+class TestPaletteAndJumps:
+    def test_system_commands_expose_actions(self, board_path: Path) -> None:
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                return [c.title for c in app.get_system_commands(app.screen)]
+
+        titles = _run(scenario)
+        assert "New card" in titles
+        assert any(t.startswith("Jump to") for t in titles)
+
+    def test_number_key_jumps_to_column(self, board_path: Path) -> None:
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("3")
+                await pilot.pause()
+                return app._focused_col
+
+        assert _run(scenario) == 2

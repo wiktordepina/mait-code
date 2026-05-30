@@ -16,16 +16,17 @@ one, falling back to a read-only render otherwise.
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 
 from rich.markup import escape
 from rich.text import Text
 from textual import work
-from textual.app import ComposeResult
+from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
-from textual.screen import ModalScreen
+from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
     DataTable,
@@ -52,6 +53,7 @@ from mait_code.tools.board.columns import (
 )
 from mait_code.tools.board.db import get_connection, get_project
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.render import priority_chip, tag_badge
 
 __all__ = ["BoardApp", "run_board_tui"]
 
@@ -79,22 +81,23 @@ _BLOCKED_MARK = "⊘ "
 def _card_row(card: dict, *, show_project: bool) -> Text:
     """Render one card as a single-column DataTable cell.
 
-    A blocked card gets a leading :data:`_BLOCKED_MARK` and its whole row is
-    styled ``bold red``. The marker is the robust signal (it survives truncation
-    and the cursor highlight); the colour is the emphasis on top.
+    Priority and tags render as domain-coloured chips (see
+    :mod:`mait_code.tui.render`). A blocked card keeps the leading
+    :data:`_BLOCKED_MARK` — the robust signal that survives column truncation and
+    the cursor-row highlight — and its ``#blocked`` badge stands out in the error
+    colour.
     """
     tags = card.get("tags", [])
     blocked = BLOCKED_TAG in tags
     mark = _BLOCKED_MARK if blocked else ""
-    text = Text(
-        f"{mark}#{card['id']} ({card['priority']}) {card['title']}",
-        style="bold red" if blocked else "",
-    )
+    text = Text(f"{mark}#{card['id']} ")
+    text.append_text(priority_chip(card["priority"]))
+    text.append(f" {card['title']}")
     if show_project:
         text.append(f"  {card['project']}", style="dim")
     for tag in tags:
-        style = "bold red" if tag == BLOCKED_TAG else "dim"
-        text.append(f" #{tag}", style=style)
+        text.append(" ")
+        text.append_text(tag_badge(tag, blocked=(tag == BLOCKED_TAG)))
     return text
 
 
@@ -113,6 +116,12 @@ class BoardColumn(DataTable):
         Binding("less_than_sign", "app.move_left", "Move ←"),
         Binding("greater_than_sign", "app.move_right", "Move →"),
         Binding("enter", "app.detail", "Detail"),
+        # Number keys jump straight to a column (discoverable via the palette).
+        Binding("1", "app.focus_col(0)", "Col 1", show=False),
+        Binding("2", "app.focus_col(1)", "Col 2", show=False),
+        Binding("3", "app.focus_col(2)", "Col 3", show=False),
+        Binding("4", "app.focus_col(3)", "Col 4", show=False),
+        Binding("5", "app.focus_col(4)", "Col 5", show=False),
         Binding("n", "app.new", "New"),
         Binding("e", "app.edit", "Edit"),
         Binding("C", "app.complete", "Complete"),
@@ -528,6 +537,45 @@ class BoardApp(MaitApp):
 
     # -- navigation --------------------------------------------------------
 
+    def get_system_commands(self, screen: Screen):
+        """Expose the board's actions in the Ctrl+P command palette."""
+        yield from super().get_system_commands(screen)
+        yield SystemCommand("New card", "Create a card in backlog", self.action_new)
+        yield SystemCommand("Edit card", "Edit the focused card", self.action_edit)
+        yield SystemCommand(
+            "Complete card",
+            "Complete the focused card with a summary",
+            self.action_complete,
+        )
+        yield SystemCommand(
+            "Toggle archived",
+            "Show or hide the archived pane",
+            self.action_toggle_archived,
+        )
+        yield SystemCommand(
+            "Change project filter",
+            "Cycle the project filter",
+            self.action_cycle_project,
+        )
+        yield SystemCommand(
+            "Reload board", "Re-read the board from disk", self.action_reload_board
+        )
+        for idx, status in enumerate(BOARD_ORDER):
+            yield SystemCommand(
+                f"Jump to {col_label(status)}",
+                "Focus this column",
+                partial(self._jump_to, idx),
+            )
+
+    def _jump_to(self, index: int) -> None:
+        statuses = self._visible_statuses()
+        if 0 <= index < len(statuses):
+            self._focused_col = index
+            self._focus_current()
+
+    def action_focus_col(self, index: int) -> None:
+        self._jump_to(index)
+
     def action_focus_prev_col(self) -> None:
         n = len(self._visible_statuses())
         self._focused_col = (self._focused_col - 1) % n
@@ -558,9 +606,11 @@ class BoardApp(MaitApp):
         if idx < 0 or idx >= len(_MOVE_FLOW):
             self.notify("Already at the end of the flow.")
             return
-        service.move_card(self._conn, card_id, _MOVE_FLOW[idx])
+        new_status = _MOVE_FLOW[idx]
+        service.move_card(self._conn, card_id, new_status)
         self._reload()
         self._select_card(card_id)
+        self.notify(f"Card #{card_id} → {col_label(new_status)}")
 
     # -- block / unblock ---------------------------------------------------
 
@@ -571,6 +621,7 @@ class BoardApp(MaitApp):
         service.block_card(self._conn, card_id)
         self._reload()
         self._select_card(card_id)
+        self.notify(f"Card #{card_id} blocked", severity="warning")
 
     def action_unblock(self) -> None:
         card_id = self._selected_card_id()
@@ -579,6 +630,7 @@ class BoardApp(MaitApp):
         service.unblock_card(self._conn, card_id)
         self._reload()
         self._select_card(card_id)
+        self.notify(f"Card #{card_id} unblocked")
 
     # -- filter / archived / reload ---------------------------------------
 
@@ -642,8 +694,10 @@ class BoardApp(MaitApp):
         # Toggle: a tag already on the card is removed, otherwise added.
         if tag in service.list_tags(self._conn, card_id):
             service.remove_tag(self._conn, card_id, tag)
+            self.notify(f"Removed #{tag} from card #{card_id}")
         else:
             service.add_tag(self._conn, card_id, tag)
+            self.notify(f"Tagged card #{card_id} #{tag}")
         self._reload()
         self._select_card(card_id)
 

@@ -40,3 +40,9 @@ ModalScreen {
 .modal-buttons Button {
     margin-left: 2;
 }
+
+/* Shared help screen: a scrolling key→description cheat-sheet. Keep the
+ * inherited .modal-dialog width (auto collapses the Rich table to a sliver). */
+#help-dialog {
+    max-height: 80%;
+}
