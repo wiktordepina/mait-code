@@ -52,3 +52,23 @@
 .detail-dim {
     color: $text-muted;
 }
+
+/* Edit modal: wider, with a capped scrolling field area so the buttons (which
+ * sit outside the scroll) are never pushed off-screen. */
+#edit-dialog {
+    width: 70;
+}
+
+#edit-fields {
+    height: auto;
+    max-height: 18;
+}
+
+#edit-dialog TextArea {
+    height: 4;
+}
+
+.field-label {
+    color: $text-muted;
+    margin-top: 1;
+}

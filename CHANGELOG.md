@@ -10,6 +10,16 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.28.0] — 2026-05-30
+
+### Added
+
+- **In-place card mutation in the board TUI.** Create (`n`), edit (`e`) and
+  complete-with-summary (`C`) without leaving the board — each a modal over the
+  shared service layer, with a toast on success. The complete gesture captures a
+  handoff summary (distinct from a bare move into done), so done cards are never
+  summary-less.
+
 ## [0.27.0] — 2026-05-30
 
 ### Added
@@ -944,7 +954,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.28.0
 [0.27.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.27.0
 [0.26.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.26.0
 [0.25.4]: https://github.com/wiktordepina/mait-code/releases/tag/v0.25.4
