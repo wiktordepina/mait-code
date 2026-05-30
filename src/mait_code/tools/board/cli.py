@@ -40,7 +40,7 @@ def _now() -> datetime:
 
 def _not_found(card_id: int) -> NoReturn:
     """Print a not-found error to stderr and exit(1)."""
-    logger.error("card #%d not found", card_id)
+    logger.warning("card #%d not found", card_id)
     print(f"Error: card #{card_id} not found.", file=sys.stderr)
     sys.exit(1)
 
@@ -51,7 +51,7 @@ def _not_found(card_id: int) -> NoReturn:
 def cmd_add(args):
     title = " ".join(args.title).strip()
     if not title:
-        logger.error("card title cannot be empty")
+        logger.warning("card title cannot be empty")
         print("Error: card title cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
