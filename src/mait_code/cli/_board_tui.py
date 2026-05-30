@@ -42,12 +42,12 @@ from mait_code.tools.board.db import get_connection
 
 __all__ = ["BoardApp", "run_board_tui"]
 
-#: Every pane shown, in left-to-right order. ``archived`` is the hidden 6th
+#: Every pane shown, in left-to-right order. ``archived`` is the hidden last
 #: pane, revealed by the ``a`` toggle.
 _PANES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
 
-#: The linear flow the ``<``/``>`` keys move a card along. ``blocked`` is a
-#: side-state (reached via ``b``/``u``), so it is deliberately not on the line.
+#: The linear flow the ``<``/``>`` keys move a card along — every real status
+#: except the hidden ``archived`` side-state, which is reached only via the CLI.
 _MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
 
 
@@ -325,7 +325,7 @@ class BoardApp(App[None]):
             return
         status = self._card_status.get(card_id)
         if status not in _MOVE_FLOW:
-            self.notify("Blocked is a side-state — use u to unblock.")
+            self.notify("Archived cards aren't on the move line.")
             return
         idx = _MOVE_FLOW.index(status) + delta
         if idx < 0 or idx >= len(_MOVE_FLOW):

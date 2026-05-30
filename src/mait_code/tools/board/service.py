@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
-    BLOCKED,
+    BLOCKED_TAG,
     BOARD_ORDER,
     DONE,
     IN_PROGRESS,
@@ -380,36 +380,29 @@ def complete_card(
 def block_card(
     conn: sqlite3.Connection, card_id: int, *, reason: str | None = None
 ) -> None:
-    """Move a card to ``blocked``; record *reason* as a comment if given.
+    """Tag a card ``blocked`` in place; record *reason* as a comment if given.
 
-    Raises :class:`CardNotFound` if the id is unknown.
+    Blocking no longer moves the card — it keeps its real flow position and
+    gains a :data:`BLOCKED_TAG` tag. Raises :class:`CardNotFound` if the id is
+    unknown.
     """
     _require_row(conn, card_id)
-    now = _now()
-    conn.execute(
-        "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
-        (BLOCKED, now, card_id),
-    )
+    add_tag(conn, card_id, BLOCKED_TAG)
     if reason:
         conn.execute(
             "INSERT INTO card_comments (card_id, author, body, created_at) "
             "VALUES (?, ?, ?, ?)",
-            (card_id, "me", f"Blocked: {reason}", now),
+            (card_id, "me", f"Blocked: {reason}", _now()),
         )
-    conn.commit()
+        conn.commit()
 
 
 def unblock_card(conn: sqlite3.Connection, card_id: int) -> None:
-    """Return a blocked card to ``refined``.
+    """Remove the ``blocked`` tag from a card (keeps its flow position).
 
     Raises :class:`CardNotFound` if the id is unknown.
     """
-    _require_row(conn, card_id)
-    conn.execute(
-        "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
-        (REFINED, _now(), card_id),
-    )
-    conn.commit()
+    remove_tag(conn, card_id, BLOCKED_TAG)
 
 
 def archive_card(conn: sqlite3.Connection, card_id: int) -> None:

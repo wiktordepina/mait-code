@@ -15,7 +15,7 @@ from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
-    BLOCKED,
+    BLOCKED_TAG,
     DONE,
     IN_PROGRESS,
     REFINED,
@@ -269,10 +269,13 @@ def test_complete_card_sets_summary_and_stamp(board_db: sqlite3.Connection):
     assert card["completed_at"] is not None
 
 
-def test_block_card_records_reason_comment(board_db: sqlite3.Connection):
-    cid = _insert(board_db, "x")
+def test_block_card_tags_in_place(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x", status=REFINED)
     service.block_card(board_db, cid, reason="waiting on review")
-    assert service.get_card(board_db, cid)["status"] == BLOCKED
+    card = service.get_card(board_db, cid)
+    # Status is unchanged — blocking is now an in-place tag, not a move.
+    assert card["status"] == REFINED
+    assert BLOCKED_TAG in card["tags"]
     comments = service.get_comments(board_db, cid)
     assert comments[0]["body"] == "Blocked: waiting on review"
 
@@ -280,13 +283,18 @@ def test_block_card_records_reason_comment(board_db: sqlite3.Connection):
 def test_block_card_no_reason_no_comment(board_db: sqlite3.Connection):
     cid = _insert(board_db, "x")
     service.block_card(board_db, cid)
+    assert service.list_tags(board_db, cid) == [BLOCKED_TAG]
     assert service.get_comments(board_db, cid) == []
 
 
-def test_unblock_card_returns_to_refined(board_db: sqlite3.Connection):
-    cid = _insert(board_db, "x", status=BLOCKED)
+def test_unblock_card_removes_tag(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x", status=IN_PROGRESS)
+    service.block_card(board_db, cid)
     service.unblock_card(board_db, cid)
-    assert service.get_card(board_db, cid)["status"] == REFINED
+    card = service.get_card(board_db, cid)
+    # Tag gone, flow position preserved (not forced back to refined).
+    assert card["status"] == IN_PROGRESS
+    assert BLOCKED_TAG not in card["tags"]
 
 
 def test_archive_card(board_db: sqlite3.Connection):

@@ -20,7 +20,7 @@ from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
-    BLOCKED,
+    BLOCKED_TAG,
     DONE,
     IN_PROGRESS,
     REFINED,
@@ -171,7 +171,7 @@ class TestMoving:
 
 
 class TestBlocking:
-    def test_block_moves_to_blocked_pane(self, board_path: Path) -> None:
+    def test_block_tags_in_place(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "card", "status": REFINED}])
 
         async def scenario():
@@ -181,38 +181,53 @@ class TestBlocking:
                 app._focus_status(REFINED)
                 await pilot.press("b")
                 await pilot.pause()
-                return service.get_card(app._conn, ids["card"])["status"]
+                card = service.get_card(app._conn, ids["card"])
+                # Cursor stayed in the refined pane (the card didn't move).
+                pane = app._visible_statuses()[app._focused_col]
+                return card, pane
 
-        assert _run(scenario) == BLOCKED
+        card, pane = _run(scenario)
+        assert card["status"] == REFINED
+        assert BLOCKED_TAG in card["tags"]
+        assert pane == REFINED
 
-    def test_blocked_card_not_on_move_line(self, board_path: Path) -> None:
-        ids = _seed(board_path, [{"title": "card", "status": BLOCKED}])
-
-        async def scenario():
-            app = BoardApp(db_path=board_path)
-            async with app.run_test() as pilot:
-                await pilot.pause()
-                app._focus_status(BLOCKED)
-                await pilot.press("greater_than_sign")
-                await pilot.pause()
-                return service.get_card(app._conn, ids["card"])["status"]
-
-        # A blocked card is a side-state: > does not move it.
-        assert _run(scenario) == BLOCKED
-
-    def test_unblock_returns_to_refined(self, board_path: Path) -> None:
-        ids = _seed(board_path, [{"title": "card", "status": BLOCKED}])
+    def test_blocked_card_still_moves(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
 
         async def scenario():
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                app._focus_status(BLOCKED)
+                app._focus_status(REFINED)
+                await pilot.press("b")  # tag it blocked, in place
+                await pilot.pause()
+                await pilot.press("greater_than_sign")  # still on the flow line
+                await pilot.pause()
+                return service.get_card(app._conn, ids["card"])
+
+        card = _run(scenario)
+        # A blocked card now has a real status, so > advances it normally...
+        assert card["status"] == IN_PROGRESS
+        # ...and keeps its tag through the move.
+        assert BLOCKED_TAG in card["tags"]
+
+    def test_unblock_removes_tag(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("b")
+                await pilot.pause()
                 await pilot.press("u")
                 await pilot.pause()
-                return service.get_card(app._conn, ids["card"])["status"]
+                return service.get_card(app._conn, ids["card"])
 
-        assert _run(scenario) == REFINED
+        card = _run(scenario)
+        assert card["status"] == REFINED
+        assert BLOCKED_TAG not in card["tags"]
 
 
 class TestProjectFilter:

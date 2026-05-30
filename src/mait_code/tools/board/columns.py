@@ -8,13 +8,18 @@ truth for status validation, board ordering, and display labels.
 BACKLOG = "backlog"
 REFINED = "refined"
 IN_PROGRESS = "in_progress"
-BLOCKED = "blocked"
 DONE = "done"
 ARCHIVED = "archived"
 
+#: The tag value that marks a card blocked. ``blocked`` is no longer a status —
+#: it is carried as a tag alongside a card's real flow position, so a blocked
+#: card keeps its column. The ``block``/``unblock`` verbs are thin aliases over
+#: this tag.
+BLOCKED_TAG = "blocked"
+
 #: Columns in left-to-right board order. ``archived`` is a hidden state and is
 #: deliberately excluded.
-BOARD_ORDER: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, BLOCKED, DONE)
+BOARD_ORDER: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
 
 #: Every valid ``cards.status`` value, including the hidden ``archived``.
 ALL_STATUSES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
@@ -24,7 +29,6 @@ LABELS: dict[str, str] = {
     BACKLOG: "Backlog",
     REFINED: "Refined",
     IN_PROGRESS: "In Progress",
-    BLOCKED: "Blocked",
     DONE: "Done",
     ARCHIVED: "Archived",
 }
@@ -44,7 +48,7 @@ __all__ = [
     "ALL_STATUSES",
     "ARCHIVED",
     "BACKLOG",
-    "BLOCKED",
+    "BLOCKED_TAG",
     "BOARD_ORDER",
     "DONE",
     "IN_PROGRESS",

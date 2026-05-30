@@ -4,7 +4,8 @@ A single SQLite board (``board.db``) of cards tagged by ``project``. The CLI
 (``main``) handles create / refine / pick-up / move / complete operations, all
 sitting on the presentation-agnostic :mod:`~mait_code.tools.board.service` core
 that the interactive TUI shares. Columns are fixed: backlog → refined →
-in_progress → blocked → done, plus a hidden archived state.
+in_progress → done, plus a hidden archived state. ``blocked`` is a tag carried
+in place, not a column.
 """
 
 from mait_code.tools.board.cli import main
@@ -12,7 +13,7 @@ from mait_code.tools.board.columns import (
     ALL_STATUSES,
     ARCHIVED,
     BACKLOG,
-    BLOCKED,
+    BLOCKED_TAG,
     BOARD_ORDER,
     DONE,
     IN_PROGRESS,
@@ -57,7 +58,7 @@ __all__ = [
     "ALL_STATUSES",
     "ARCHIVED",
     "BACKLOG",
-    "BLOCKED",
+    "BLOCKED_TAG",
     "BOARD_ORDER",
     "DONE",
     "IN_PROGRESS",
