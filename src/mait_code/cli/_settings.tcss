@@ -1,0 +1,58 @@
+/* Settings TUI layout. The house theme and the shared .modal-dialog styling
+ * come from tui/app.tcss; only settings-specific layout lives here. */
+
+#body {
+    height: 1fr;
+}
+
+#list {
+    width: 1fr;
+    border-right: solid $panel;
+}
+
+#list > .datatable--header {
+    text-style: bold;
+    color: $text-muted;
+}
+
+#detail {
+    width: 1fr;
+    padding: 1 2;
+}
+
+#detail .title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+#detail .help {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#detail .warn-note {
+    color: $warning;
+    margin-bottom: 1;
+}
+
+#detail #source {
+    color: $text-muted;
+    margin-top: 1;
+}
+
+#detail #msg {
+    margin-top: 1;
+}
+
+#detail #apply {
+    margin-top: 1;
+}
+
+/* Weights modal: per-field bits; container geometry from .modal-dialog. */
+.weight-label {
+    color: $text-muted;
+}
+
+#weights-sum {
+    margin-top: 1;
+}

@@ -27,9 +27,11 @@
     border: round $border;
 }
 
-/* The detail modal is wider and scrolls; geometry otherwise from .modal-dialog. */
+/* The detail modal is wider and scrolls; geometry otherwise from .modal-dialog.
+ * It caps its height (it's a VerticalScroll) so a long thread stays on-screen. */
 #detail-dialog {
     width: 70;
+    max-height: 80%;
 }
 
 .detail-title {
