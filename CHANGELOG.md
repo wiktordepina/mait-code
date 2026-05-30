@@ -10,6 +10,32 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.30.0] — 2026-05-30
+
+### Added
+
+- **Tag removal is now discoverable in the board TUI.** The tag modal lists a
+  card's current tags as `✕ tag` chips — select one to remove it — rather than
+  making you retype the exact tag name to toggle it off.
+
+### Changed
+
+- **The board columns now show cards as boxed widgets.** Each column is an
+  `OptionList` of bordered card boxes: `#id` top-left, project top-right, the
+  full title wrapped to the column width (so it no longer clips, and the
+  mouse-only horizontal scrollbar is gone), and tags bottom-right. Blocked cards
+  carry a red border alongside the `⊘` marker and `#blocked` badge.
+- **The Done column is hidden by default**, behind a `d` toggle (mirroring the
+  `a` archived toggle), to widen the active flow (backlog / refined / in
+  progress). Moving or completing a card into a hidden Done leaves it hidden and
+  confirms with a toast.
+
+### Fixed
+
+- **The selected card stays legible.** The highlighted card's background was a
+  solid cyan fill — the same hue as its `#id` and tags, which made them vanish
+  on selection; it now uses a tint so every glyph stays readable.
+
 ## [0.29.1] — 2026-05-30
 
 ### Changed
@@ -980,7 +1006,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.29.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.30.0
 [0.29.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.1
 [0.29.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.0
 [0.28.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.28.0
