@@ -32,6 +32,7 @@ __all__ = [
     "CardNotFound",
     "add_card",
     "add_comment",
+    "add_tag",
     "archive_card",
     "block_card",
     "complete_card",
@@ -40,10 +41,12 @@ __all__ = [
     "get_comments",
     "list_cards",
     "list_projects",
+    "list_tags",
     "move_card",
     "next_refined",
     "refine_card",
     "remove_card",
+    "remove_tag",
     "summary_counts",
     "unblock_card",
 ]
@@ -98,6 +101,30 @@ def _require_row(conn: sqlite3.Connection, card_id: int):
     return row
 
 
+def _attach_tags(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
+    """Populate each card dict's ``tags`` key (sorted, possibly empty).
+
+    One grouped query rather than ``GROUP_CONCAT`` in the main SELECT — ordered
+    ``GROUP_CONCAT`` needs SQLite ≥ 3.44, while a second ``card_id IN (…)`` query
+    is version-agnostic and keeps :func:`_card_dict` a pure row-mapper.
+    """
+    if not cards:
+        return cards
+    ids = [c["id"] for c in cards]
+    placeholders = ", ".join("?" for _ in ids)
+    rows = conn.execute(
+        f"SELECT card_id, tag FROM card_tags WHERE card_id IN ({placeholders}) "
+        f"ORDER BY tag",
+        ids,
+    ).fetchall()
+    by_card: dict[int, list[str]] = {}
+    for card_id, tag in rows:
+        by_card.setdefault(card_id, []).append(tag)
+    for card in cards:
+        card["tags"] = by_card.get(card["id"], [])
+    return cards
+
+
 # --- Queries ---
 
 
@@ -107,6 +134,7 @@ def list_cards(
     project: str | None = None,
     statuses: Iterable[str] | None = None,
     include_archived: bool = False,
+    tag: str | None = None,
 ) -> list[dict]:
     """Return cards ordered priority-then-oldest.
 
@@ -117,6 +145,7 @@ def list_cards(
             it takes precedence over *include_archived*.
         include_archived: When no *statuses* filter is set, whether to include
             archived cards (default excludes them).
+        tag: Restrict to cards carrying this tag, or ``None`` for no tag filter.
     """
     where: list[str] = []
     params: list = []
@@ -131,19 +160,24 @@ def list_cards(
     elif not include_archived:
         where.append("status != ?")
         params.append(ARCHIVED)
+    if tag is not None:
+        where.append("id IN (SELECT card_id FROM card_tags WHERE tag = ?)")
+        params.append(tag)
     clause = (" WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
         f"SELECT {_CARD_COLS} FROM cards{clause} "
         f"ORDER BY {_PRIORITY_ORDER}, created_at, id",
         params,
     ).fetchall()
-    return [_card_dict(r) for r in rows]
+    return _attach_tags(conn, [_card_dict(r) for r in rows])
 
 
 def get_card(conn: sqlite3.Connection, card_id: int) -> dict | None:
     """Return one card as a dict, or ``None`` if no card has that id."""
     row = _fetch_card_row(conn, card_id)
-    return _card_dict(row) if row is not None else None
+    if row is None:
+        return None
+    return _attach_tags(conn, [_card_dict(row)])[0]
 
 
 def get_comments(conn: sqlite3.Connection, card_id: int) -> list[dict]:
@@ -214,7 +248,41 @@ def next_refined(
         )
         conn.commit()
         row = _fetch_card_row(conn, row[0])
-    return _card_dict(row)
+    return _attach_tags(conn, [_card_dict(row)])[0]
+
+
+# --- Tags ---
+
+
+def add_tag(conn: sqlite3.Connection, card_id: int, tag: str) -> None:
+    """Add a tag to a card (idempotent).
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    conn.execute(
+        "INSERT OR IGNORE INTO card_tags (card_id, tag) VALUES (?, ?)",
+        (card_id, tag),
+    )
+    conn.commit()
+
+
+def remove_tag(conn: sqlite3.Connection, card_id: int, tag: str) -> None:
+    """Remove a tag from a card (no-op if the tag is absent).
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    conn.execute("DELETE FROM card_tags WHERE card_id = ? AND tag = ?", (card_id, tag))
+    conn.commit()
+
+
+def list_tags(conn: sqlite3.Connection, card_id: int) -> list[str]:
+    """Return a card's tags, sorted."""
+    rows = conn.execute(
+        "SELECT tag FROM card_tags WHERE card_id = ? ORDER BY tag", (card_id,)
+    ).fetchall()
+    return [r[0] for r in rows]
 
 
 # --- Mutations ---

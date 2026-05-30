@@ -136,6 +136,59 @@ def test_summary_counts_project_scoped(board_db: sqlite3.Connection):
     assert counts[REFINED] == 1
 
 
+# --- Tags ---
+
+
+def test_add_tag_idempotent(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "urgent")
+    service.add_tag(board_db, cid, "urgent")
+    assert service.list_tags(board_db, cid) == ["urgent"]
+
+
+def test_list_tags_sorted(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "zeta")
+    service.add_tag(board_db, cid, "alpha")
+    assert service.list_tags(board_db, cid) == ["alpha", "zeta"]
+
+
+def test_remove_tag_no_op_when_absent(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.remove_tag(board_db, cid, "ghost")  # must not raise
+    assert service.list_tags(board_db, cid) == []
+
+
+def test_remove_tag_deletes(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "urgent")
+    service.remove_tag(board_db, cid, "urgent")
+    assert service.list_tags(board_db, cid) == []
+
+
+def test_cards_carry_tags_key(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "b")
+    service.add_tag(board_db, cid, "a")
+    assert service.get_card(board_db, cid)["tags"] == ["a", "b"]
+    assert service.list_cards(board_db)[0]["tags"] == ["a", "b"]
+
+
+def test_cards_tags_key_empty_when_untagged(board_db: sqlite3.Connection):
+    _insert(board_db, "x")
+    assert service.list_cards(board_db)[0]["tags"] == []
+    cid = _insert(board_db, "y")
+    assert service.get_card(board_db, cid)["tags"] == []
+
+
+def test_list_cards_tag_filter(board_db: sqlite3.Connection):
+    tagged = _insert(board_db, "tagged")
+    _insert(board_db, "plain")
+    service.add_tag(board_db, tagged, "keep")
+    titles = [c["title"] for c in service.list_cards(board_db, tag="keep")]
+    assert titles == ["tagged"]
+
+
 # --- next_refined ---
 
 
@@ -284,6 +337,8 @@ def test_remove_card_cascades_comments(board_db: sqlite3.Connection):
         lambda c: service.add_comment(c, 999, "x"),
         lambda c: service.edit_card(c, 999, title="x"),
         lambda c: service.remove_card(c, 999),
+        lambda c: service.add_tag(c, 999, "x"),
+        lambda c: service.remove_tag(c, 999, "x"),
     ],
 )
 def test_mutations_raise_card_not_found(board_db: sqlite3.Connection, mutation):
