@@ -29,7 +29,9 @@ from textual import work
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.message import Message
 from textual.screen import ModalScreen, Screen
+from textual.widget import Widget
 from textual.widgets import (
     Button,
     Footer,
@@ -167,47 +169,209 @@ class BoardColumn(OptionList):
     ]
 
 
-class DetailScreen(ModalScreen[None]):
-    """Read-only card detail: fields plus the comment thread. Esc closes."""
+class CardScreen(ModalScreen[None]):
+    """A near-fullscreen card surface with a view↔edit toggle.
 
-    BINDINGS = [("escape", "dismiss", "Close")]
+    One screen, two modes. *view* is read-only — the card's fields and its
+    comment thread. *edit* is a form over title / priority / description /
+    acceptance. ``e`` flips view→edit; **Save** persists in place and flips back
+    to view (so an edit lands without a round-trip to the board); ``escape``
+    cancels an edit back to view, or closes the screen from view.
 
-    def __init__(self, card: dict, comments: list[dict]) -> None:
+    The frame is near-fullscreen for room, but the content column stays capped
+    (see ``_board.tcss``) so running prose keeps a readable measure — the win
+    from the detail-readability pass.
+
+    The screen never touches the database itself: saving posts a
+    :class:`CardScreen.Saved` message that the app persists, after which the app
+    feeds the refreshed card back via :meth:`show_card`. Mutation stays in the
+    service layer, mirroring the rest of the board.
+    """
+
+    class Saved(Message):
+        """Posted when an edit is saved; carries the new field values.
+
+        The app persists these (via the service layer) and then refreshes the
+        open screen — the screen deliberately doesn't write to the DB itself.
+        """
+
+        def __init__(self, card_id: int, fields: dict) -> None:
+            self.card_id = card_id
+            self.fields = fields
+            super().__init__()
+
+    BINDINGS = [
+        Binding("escape", "close", "Close"),
+        Binding("e", "edit", "Edit"),
+    ]
+
+    def __init__(self, card: dict, comments: list[dict], *, mode: str = "view") -> None:
         super().__init__()
         self._card = card
         self._comments = comments
+        self._mode = mode
 
     def compose(self) -> ComposeResult:
         card = self._card
-        with VerticalScroll(id="detail-dialog", classes="modal-dialog"):
-            # Title wraps (a Static, not a clipping Label); priority/tags move to
-            # the meta line as chips.
-            yield Static(
-                escape(f"#{card['id']}  {card['title']}"), classes="detail-title"
+        with Vertical(id="card-dialog", classes="modal-dialog"):
+            # View mode: read-only fields + thread, capped to a readable measure.
+            with VerticalScroll(id="card-view"):
+                with Vertical(id="card-view-content"):
+                    yield from self._view_widgets()
+            # Edit mode: the form. Buttons sit outside the scroll so they're
+            # always reachable; fields share the same capped measure.
+            with Vertical(id="card-edit"):
+                yield Label(f"Edit card #{card['id']}", classes="modal-title")
+                with VerticalScroll(id="edit-fields"):
+                    yield Label("Title", classes="field-label")
+                    yield Input(value=card["title"], id="edit-title")
+                    yield Label("Priority", classes="field-label")
+                    yield RadioSet(
+                        *(
+                            RadioButton(p, value=(p == card["priority"]))
+                            for p in _PRIORITIES
+                        ),
+                        id="edit-priority",
+                    )
+                    yield Label("Description", classes="field-label")
+                    yield TextArea(card.get("description") or "", id="edit-description")
+                    yield Label("Acceptance criteria", classes="field-label")
+                    yield TextArea(
+                        card.get("acceptance_criteria") or "", id="edit-acceptance"
+                    )
+                with Horizontal(classes="modal-buttons"):
+                    yield Button("Save", id="edit-save", variant="primary")
+                    yield Button("Cancel", id="edit-cancel")
+            yield Footer()
+
+    def on_mount(self) -> None:
+        self._apply_mode()
+
+    # -- view content ------------------------------------------------------
+
+    def _view_widgets(self) -> list[Widget]:
+        """The read-only content as a flat widget list (built fresh each time so
+        a save can re-render the view in place)."""
+        card = self._card
+        # Title wraps (a Static, not a clipping Label); priority/tags move to the
+        # meta line as chips.
+        widgets: list[Widget] = [
+            Static(escape(f"#{card['id']}  {card['title']}"), classes="detail-title"),
+            Static(self._meta(card), classes="detail-meta"),
+        ]
+        for heading, body in (
+            ("Description", card["description"]),
+            ("Acceptance criteria", card["acceptance_criteria"]),
+            ("Completion summary", card["completion_summary"]),
+        ):
+            if body:
+                widgets.append(Static(heading, classes="section-head"))
+                widgets.append(Rule())
+                widgets.append(Static(escape(body)))
+        widgets.append(
+            Static(f"Comments ({len(self._comments)})", classes="section-head")
+        )
+        widgets.append(Rule())
+        if self._comments:
+            for comment in self._comments:
+                # Each comment is its own block; escape the body so brackets
+                # aren't parsed as markup (Textual 8's Content system parses
+                # "[...]").
+                widgets.append(
+                    Vertical(
+                        Static(self._comment_head(comment), classes="comment-head"),
+                        Static(escape(comment["body"])),
+                        classes="comment",
+                    )
+                )
+        else:
+            widgets.append(Static("(none)", classes="detail-dim"))
+        return widgets
+
+    # -- mode handling -----------------------------------------------------
+
+    def _apply_mode(self) -> None:
+        """Show the active mode's container; focus the title when editing."""
+        self.query_one("#card-view").display = self._mode == "view"
+        self.query_one("#card-edit").display = self._mode == "edit"
+        if self._mode == "edit":
+            self.query_one("#edit-title", Input).focus()
+
+    def action_edit(self) -> None:
+        """``e`` in view mode opens the form (no-op while already editing)."""
+        if self._mode == "view":
+            self._reset_edit_fields()
+            self._mode = "edit"
+            self._apply_mode()
+
+    def action_close(self) -> None:
+        """Esc backs an edit out to view first, then closes from view."""
+        if self._mode == "edit":
+            self._mode = "view"
+            self._apply_mode()
+        else:
+            self.dismiss(None)
+
+    async def show_card(self, card: dict, comments: list[dict]) -> None:
+        """Re-render with a freshly-saved card and return to view mode.
+
+        Called by the app after it persists a :class:`Saved`, so the edit lands
+        visibly without bouncing back to the board.
+        """
+        self._card = card
+        self._comments = comments
+        content = self.query_one("#card-view-content", Vertical)
+        await content.remove_children()
+        await content.mount(*self._view_widgets())
+        self._reset_edit_fields()
+        self._mode = "view"
+        self._apply_mode()
+
+    # -- edit form ---------------------------------------------------------
+
+    def _reset_edit_fields(self) -> None:
+        """Sync the form widgets to the current card (covers a re-open after a
+        save changed the values)."""
+        card = self._card
+        self.query_one("#edit-title", Input).value = card["title"]
+        radio = self.query_one("#edit-priority", RadioSet)
+        for index, button in enumerate(radio.query(RadioButton)):
+            if _PRIORITIES[index] == card["priority"]:
+                button.value = True  # RadioSet unsets the others
+        self.query_one("#edit-description", TextArea).text = (
+            card.get("description") or ""
+        )
+        self.query_one("#edit-acceptance", TextArea).text = (
+            card.get("acceptance_criteria") or ""
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "edit-save":
+            self._submit()
+        elif event.button.id == "edit-cancel":
+            self.action_close()
+
+    def _submit(self) -> None:
+        title = self.query_one("#edit-title", Input).value.strip()
+        if not title:
+            return  # title required; stay in the form
+        idx = self.query_one("#edit-priority", RadioSet).pressed_index
+        priority = _PRIORITIES[idx] if idx >= 0 else self._card["priority"]
+        # Don't dismiss: the app persists this, then calls show_card() to flip
+        # us back to view with the saved values.
+        self.post_message(
+            self.Saved(
+                self._card["id"],
+                {
+                    "title": title,
+                    "priority": priority,
+                    "description": self.query_one("#edit-description", TextArea).text,
+                    "acceptance_criteria": self.query_one(
+                        "#edit-acceptance", TextArea
+                    ).text,
+                },
             )
-            yield Static(self._meta(card), classes="detail-meta")
-            for heading, body in (
-                ("Description", card["description"]),
-                ("Acceptance criteria", card["acceptance_criteria"]),
-                ("Completion summary", card["completion_summary"]),
-            ):
-                if body:
-                    yield Static(heading, classes="section-head")
-                    yield Rule()
-                    yield Static(escape(body))
-            yield Static(f"Comments ({len(self._comments)})", classes="section-head")
-            yield Rule()
-            if self._comments:
-                for comment in self._comments:
-                    with Vertical(classes="comment"):
-                        yield Static(
-                            self._comment_head(comment), classes="comment-head"
-                        )
-                        # Escape the body so brackets aren't parsed as markup
-                        # (Textual 8's Content system parses "[...]").
-                        yield Static(escape(comment["body"]))
-            else:
-                yield Static("(none)", classes="detail-dim")
+        )
 
     @staticmethod
     def _meta(card: dict) -> Text:
@@ -380,74 +544,6 @@ class NewCardScreen(ModalScreen[dict | None]):
         idx = self.query_one("#new-priority", RadioSet).pressed_index
         priority = _PRIORITIES[idx] if idx >= 0 else "medium"
         self.dismiss({"title": title, "project": project, "priority": priority})
-
-    def action_cancel(self) -> None:
-        self.dismiss(None)
-
-
-class EditCardScreen(ModalScreen[dict | None]):
-    """Edit the focused card's title/priority/description/acceptance.
-
-    Resolves to a dict of the edited fields, or ``None`` on cancel. Title is
-    required; escape cancels.
-    """
-
-    BINDINGS = [("escape", "cancel", "Cancel")]
-
-    def __init__(self, card: dict) -> None:
-        super().__init__()
-        self._card = card
-
-    def compose(self) -> ComposeResult:
-        card = self._card
-        with Vertical(classes="modal-dialog", id="edit-dialog"):
-            yield Label(f"Edit card #{card['id']}", classes="modal-title")
-            with VerticalScroll(id="edit-fields"):
-                yield Label("Title", classes="field-label")
-                yield Input(value=card["title"], id="edit-title")
-                yield Label("Priority", classes="field-label")
-                yield RadioSet(
-                    *(
-                        RadioButton(p, value=(p == card["priority"]))
-                        for p in _PRIORITIES
-                    ),
-                    id="edit-priority",
-                )
-                yield Label("Description", classes="field-label")
-                yield TextArea(card.get("description") or "", id="edit-description")
-                yield Label("Acceptance criteria", classes="field-label")
-                yield TextArea(
-                    card.get("acceptance_criteria") or "", id="edit-acceptance"
-                )
-            with Horizontal(classes="modal-buttons"):
-                yield Button("Save", id="edit-save", variant="primary")
-                yield Button("Cancel", id="edit-cancel")
-
-    def on_mount(self) -> None:
-        self.query_one("#edit-title", Input).focus()
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "edit-save":
-            self._submit()
-        else:
-            self.dismiss(None)
-
-    def _submit(self) -> None:
-        title = self.query_one("#edit-title", Input).value.strip()
-        if not title:
-            return  # title required; stay open
-        idx = self.query_one("#edit-priority", RadioSet).pressed_index
-        priority = _PRIORITIES[idx] if idx >= 0 else self._card["priority"]
-        self.dismiss(
-            {
-                "title": title,
-                "priority": priority,
-                "description": self.query_one("#edit-description", TextArea).text,
-                "acceptance_criteria": self.query_one(
-                    "#edit-acceptance", TextArea
-                ).text,
-            }
-        )
 
     def action_cancel(self) -> None:
         self.dismiss(None)
@@ -747,6 +843,14 @@ class BoardApp(MaitApp):
 
     @work
     async def action_detail(self) -> None:
+        await self._open_card("view")
+
+    async def _open_card(self, mode: str) -> None:
+        """Open the focused card in the unified view/edit screen.
+
+        Stays open across an in-place save (handled by ``on_card_screen_saved``);
+        on close, re-reads the board and refollows the (possibly edited) card.
+        """
         card_id = self._selected_card_id()
         if card_id is None:
             return
@@ -754,7 +858,19 @@ class BoardApp(MaitApp):
         if card is None:
             return
         comments = service.get_comments(self._conn, card_id)
-        await self.push_screen_wait(DetailScreen(card, comments))
+        await self.push_screen_wait(CardScreen(card, comments, mode=mode))
+        self._reload()
+        self._select_card(card_id)
+
+    async def on_card_screen_saved(self, message: CardScreen.Saved) -> None:
+        """Persist an in-place edit, then refresh the still-open card screen."""
+        service.edit_card(self._conn, message.card_id, **message.fields)
+        self._reload()
+        card = service.get_card(self._conn, message.card_id)
+        comments = service.get_comments(self._conn, message.card_id)
+        if card is not None and isinstance(self.screen, CardScreen):
+            await self.screen.show_card(card, comments)
+        self.notify(f"Updated card #{message.card_id}")
 
     @work
     async def action_comment(self) -> None:
@@ -808,19 +924,7 @@ class BoardApp(MaitApp):
 
     @work
     async def action_edit(self) -> None:
-        card_id = self._selected_card_id()
-        if card_id is None:
-            return
-        card = service.get_card(self._conn, card_id)
-        if card is None:
-            return
-        result = await self.push_screen_wait(EditCardScreen(card))
-        if not result:
-            return
-        service.edit_card(self._conn, card_id, **result)
-        self._reload()
-        self._select_card(card_id)
-        self.notify(f"Updated card #{card_id}")
+        await self._open_card("edit")
 
     @work
     async def action_complete(self) -> None:

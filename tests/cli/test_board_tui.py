@@ -17,10 +17,9 @@ from textual.widgets import Button, Input, Label, Static, TextArea
 
 from mait_code.cli._board_tui import (
     BoardApp,
+    CardScreen,
     CommentScreen,
     CompleteScreen,
-    DetailScreen,
-    EditCardScreen,
     NewCardScreen,
     TagScreen,
     _card_box,
@@ -482,12 +481,13 @@ class TestDetail:
 
         async def scenario():
             app = BoardApp(db_path=board_path)
-            async with app.run_test() as pilot:
+            async with app.run_test(size=(120, 40)) as pilot:
                 await pilot.pause()
                 app._focus_status(REFINED)
                 await pilot.press("enter")
                 await pilot.pause()
-                assert isinstance(app.screen, DetailScreen)
+                assert isinstance(app.screen, CardScreen)
+                assert app.screen._mode == "view"
                 rendered = " ".join(str(s.render()) for s in app.screen.query(Static))
                 return rendered
 
@@ -503,15 +503,64 @@ class TestDetail:
 
         async def scenario():
             app = BoardApp(db_path=board_path)
-            async with app.run_test() as pilot:
+            async with app.run_test(size=(120, 40)) as pilot:
                 await pilot.pause()
                 app._focus_status(REFINED)
                 await pilot.press("enter")
                 await pilot.pause()
-                assert isinstance(app.screen, DetailScreen)
+                assert isinstance(app.screen, CardScreen)
                 return " ".join(str(s.render()) for s in app.screen.query(Static))
 
         assert "urgent" in _run(scenario)
+
+    def test_enter_then_e_switches_to_edit_in_place(self, board_path: Path) -> None:
+        """Detail→edit without leaving the card screen (the headline gesture)."""
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                assert isinstance(app.screen, CardScreen)
+                assert app.screen._mode == "view"
+                await pilot.press("e")
+                await pilot.pause()
+                # Same screen, now in edit mode (no separate modal pushed).
+                assert isinstance(app.screen, CardScreen)
+                return app.screen._mode
+
+        assert _run(scenario) == "edit"
+
+    def test_escape_from_edit_returns_to_view_then_closes(
+        self, board_path: Path
+    ) -> None:
+        """Esc backs an edit out to view first, and only then closes the card."""
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("e")  # straight into edit
+                await pilot.pause()
+                assert app.screen._mode == "edit"
+                await pilot.press("escape")
+                await pilot.pause()
+                # First Esc: edit→view, screen still open.
+                assert isinstance(app.screen, CardScreen)
+                first = app.screen._mode
+                await pilot.press("escape")
+                await pilot.pause()
+                # Second Esc: closed, back on the board.
+                return first, isinstance(app.screen, CardScreen)
+
+        mode_after_first, still_open = _run(scenario)
+        assert mode_after_first == "view"
+        assert still_open is False
 
 
 class TestCardBox:
@@ -678,17 +727,30 @@ class TestMutationModals:
                 app._focus_status(REFINED)
                 await pilot.press("e")
                 await pilot.pause()
-                assert isinstance(app.screen, EditCardScreen)
+                assert isinstance(app.screen, CardScreen)
+                assert app.screen._mode == "edit"
                 app.screen.query_one("#edit-title", Input).value = "new title"
                 app.screen.query_one("#edit-description", TextArea).text = "a desc"
                 await pilot.click("#edit-save")
                 await pilot.pause()
                 await pilot.pause()
-                return service.get_card(app._conn, ids["old"])
+                # Saving flips back to view in place (the round-trip), and the
+                # refreshed view shows the new title.
+                view_mode = (
+                    app.screen._mode if isinstance(app.screen, CardScreen) else None
+                )
+                rendered = (
+                    " ".join(str(s.render()) for s in app.screen.query(Static))
+                    if isinstance(app.screen, CardScreen)
+                    else ""
+                )
+                return service.get_card(app._conn, ids["old"]), view_mode, rendered
 
-        card = _run(scenario)
+        card, view_mode, rendered = _run(scenario)
         assert card["title"] == "new title"
         assert card["description"] == "a desc"
+        assert view_mode == "view"
+        assert "new title" in rendered
 
     def test_complete_with_summary_records_handoff(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "wip", "status": IN_PROGRESS}])

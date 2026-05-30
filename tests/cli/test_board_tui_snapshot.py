@@ -107,13 +107,34 @@ def _seed_detail(db_path: Path) -> None:
 
 
 def test_detail_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the redesigned card-detail modal (wrap, sections, comment blocks)."""
+    """Lock the near-fullscreen card screen in view mode (wrap, sections,
+    capped content column, comment blocks)."""
     db_path = tmp_path / "board.db"
     _seed_detail(db_path)
 
     async def run_before(pilot) -> None:
         pilot.app._focus_status("refined")
         await pilot.press("enter")
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
+
+
+def test_card_edit_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the edit mode of the card screen (form fields on the same frame),
+    reached in-place from view via ``e``."""
+    db_path = tmp_path / "board.db"
+    _seed_detail(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app._focus_status("refined")
+        await pilot.press("enter")
+        await pilot.pause()
+        await pilot.press("e")
         await pilot.pause()
 
     assert snap_compare(

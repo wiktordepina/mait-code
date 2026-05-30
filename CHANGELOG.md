@@ -10,6 +10,24 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.31.0] — 2026-05-31
+
+### Added
+
+- **The board TUI's card view is now near-fullscreen, and you can edit in
+  place.** Pressing `Enter` opens a card on a roomy screen; `e` flips it from
+  reading to an edit form without leaving — and saving lands the change and
+  drops you back into the view, rather than bouncing to the board. `Esc` backs
+  an edit out to the view first, then closes. The two modes share one screen, so
+  there's no longer a separate read-only modal and edit modal to juggle.
+
+### Changed
+
+- **The card screen's width hugs its text.** The frame is tall for room but caps
+  its width to the readable content column instead of sprawling across wide
+  terminals, so the card stays a comfortable measure and centres rather than
+  leaving large empty gutters.
+
 ## [0.30.0] — 2026-05-30
 
 ### Added
@@ -1006,7 +1024,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.30.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.31.0
 [0.30.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.30.0
 [0.29.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.1
 [0.29.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.0
