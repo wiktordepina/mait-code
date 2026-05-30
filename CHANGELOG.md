@@ -10,6 +10,27 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.25.3] — 2026-05-30
+
+### Fixed
+
+- **Session-start hook produced no companion context and logged a validation
+  error.** The `SessionStart` hook emitted `hookSpecificOutput` with a `context`
+  key and no `hookEventName`, so Claude Code rejected the payload
+  (`hookSpecificOutput is missing required field "hookEventName"`) and the
+  reminders / tasks / board summary never reached the session. The hook now
+  emits the correct schema (`hookEventName: "SessionStart"` and
+  `additionalContext`). The regression slipped through because the test asserted
+  the same wrong key; it now checks the correct contract.
+
+### Internal
+
+- **Shared hook-output schema test.** Added a single validator for the Claude
+  Code `hookSpecificOutput` contract that every hook's actual stdout is checked
+  against, replacing per-hook ad-hoc shape assertions. Catches missing
+  `hookEventName`, mislabelled context keys, and unknown events for any current
+  or future hook.
+
 ## [0.25.2] — 2026-05-29
 
 ### Fixed

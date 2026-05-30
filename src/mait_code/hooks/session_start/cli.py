@@ -87,5 +87,10 @@ def main():
 
     if sections:
         context = "# Session Context\n\n" + "\n\n".join(sections) + "\n"
-        result = {"hookSpecificOutput": {"context": context}}
+        result = {
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": context,
+            }
+        }
         print(json.dumps(result))
