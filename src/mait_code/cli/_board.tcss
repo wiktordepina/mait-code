@@ -43,11 +43,14 @@
     color: $foreground;
 }
 
-/* The card screen is near-fullscreen — a roomy frame for reading and editing —
- * but the *content* column stays capped (max-width below) so running prose keeps
- * a readable measure. Geometry otherwise from .modal-dialog. */
+/* The card screen is tall (near-fullscreen height) for room, but its *width*
+ * hugs the capped content column rather than sprawling — a 90%-wide frame around
+ * 100-col text left ugly empty gutters. max-width 106 = 100-col content + the
+ * .modal-dialog padding (2 each side) + border (1 each side); on a narrow
+ * terminal the 90% kicks in first and everything shrinks together. */
 #card-dialog {
     width: 90%;
+    max-width: 106;
     height: 90%;
 }
 
