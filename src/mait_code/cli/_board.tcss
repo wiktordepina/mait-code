@@ -1,0 +1,52 @@
+/* Board TUI layout. The house theme and the shared .modal-dialog styling come
+ * from tui/app.tcss; only board-specific layout lives here. */
+
+#body {
+    height: 1fr;
+}
+
+.col {
+    width: 1fr;
+    height: 100%;
+}
+
+.col-head {
+    text-style: bold;
+    color: $text-primary;
+    padding: 0 1;
+}
+
+/* Each column's card list carries the focus signal: a muted border when
+ * blurred, the house cyan when focused. */
+.col DataTable {
+    height: 1fr;
+    border: round $border-blurred;
+}
+
+.col DataTable:focus {
+    border: round $border;
+}
+
+/* The detail modal is wider and scrolls; geometry otherwise from .modal-dialog. */
+#detail-dialog {
+    width: 70;
+}
+
+.detail-title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+.detail-meta {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+.detail-head {
+    text-style: bold;
+    margin-top: 1;
+}
+
+.detail-dim {
+    color: $text-muted;
+}

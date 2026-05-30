@@ -21,7 +21,7 @@ from pathlib import Path
 from rich.markup import escape
 from rich.text import Text
 from textual import work
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
@@ -40,6 +40,7 @@ from mait_code.tools.board.columns import (
     label as col_label,
 )
 from mait_code.tools.board.db import get_connection
+from mait_code.tui.app import SHARED_TCSS, MaitApp
 
 __all__ = ["BoardApp", "run_board_tui"]
 
@@ -123,7 +124,7 @@ class DetailScreen(ModalScreen[None]):
 
     def compose(self) -> ComposeResult:
         card = self._card
-        with VerticalScroll(id="detail-dialog"):
+        with VerticalScroll(id="detail-dialog", classes="modal-dialog"):
             yield Label(
                 escape(f"#{card['id']} ({card['priority']}) {card['title']}"),
                 classes="detail-title",
@@ -154,7 +155,7 @@ class DetailScreen(ModalScreen[None]):
                     # parses "[...]" even from a Text, dropping the span text).
                     yield Static(escape(f"[{comment['author']}] {comment['body']}"))
             else:
-                yield Static("(none)", classes="dim")
+                yield Static("(none)", classes="detail-dim")
 
 
 class CommentScreen(ModalScreen[str | None]):
@@ -167,10 +168,10 @@ class CommentScreen(ModalScreen[str | None]):
         self._card_id = card_id
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="comment-dialog"):
-            yield Label(f"Comment on card #{self._card_id}", id="comment-title")
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Comment on card #{self._card_id}", classes="modal-title")
             yield Input(placeholder="Your comment…", id="comment-input")
-            with Horizontal(id="comment-buttons"):
+            with Horizontal(classes="modal-buttons"):
                 yield Button("Add", id="comment-add", variant="primary")
                 yield Button("Cancel", id="comment-cancel")
 
@@ -207,10 +208,10 @@ class TagScreen(ModalScreen[str | None]):
         self._card_id = card_id
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="tag-dialog"):
-            yield Label(f"Tag card #{self._card_id} (toggles)", id="tag-title")
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Tag card #{self._card_id} (toggles)", classes="modal-title")
             yield Input(placeholder="tag…", id="tag-input")
-            with Horizontal(id="tag-buttons"):
+            with Horizontal(classes="modal-buttons"):
                 yield Button("Apply", id="tag-apply", variant="primary")
                 yield Button("Cancel", id="tag-cancel")
 
@@ -234,44 +235,11 @@ class TagScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-class BoardApp(App[None]):
+class BoardApp(MaitApp):
     """Full-screen kanban over every project's cards."""
 
     TITLE = "mait-code board"
-
-    CSS = """
-    #body { height: 1fr; }
-    .col { width: 1fr; height: 100%; border-right: solid $panel; }
-    .col-head { text-style: bold; color: $accent; padding: 0 1; }
-    .col DataTable { height: 1fr; }
-    DetailScreen { align: center middle; }
-    DetailScreen #detail-dialog {
-        width: 70; max-height: 80%; padding: 1 2;
-        border: thick $accent; background: $surface;
-    }
-    DetailScreen .detail-title { text-style: bold; color: $accent; }
-    DetailScreen .detail-meta { color: $text-muted; margin-bottom: 1; }
-    DetailScreen .detail-head { text-style: bold; margin-top: 1; }
-    DetailScreen .dim { color: $text-muted; }
-    CommentScreen { align: center middle; }
-    CommentScreen #comment-dialog {
-        width: 60; height: auto; padding: 1 2;
-        border: thick $accent; background: $surface;
-    }
-    CommentScreen #comment-title { text-style: bold; margin-bottom: 1; }
-    CommentScreen #comment-buttons { height: auto; margin-top: 1; align-horizontal: right; }
-    CommentScreen Button { margin-left: 2; }
-    TagScreen { align: center middle; }
-    TagScreen #tag-dialog {
-        width: 60; height: auto; padding: 1 2;
-        border: thick $accent; background: $surface;
-    }
-    TagScreen #tag-title { text-style: bold; margin-bottom: 1; }
-    TagScreen #tag-buttons { height: auto; margin-top: 1; align-horizontal: right; }
-    TagScreen Button { margin-left: 2; }
-    """
-
-    BINDINGS = [("q", "quit", "Quit")]
+    CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_board.tcss"]
 
     def __init__(self, db_path: Path | None = None) -> None:
         super().__init__()
