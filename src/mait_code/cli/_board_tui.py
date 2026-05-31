@@ -329,6 +329,11 @@ class CardScreen(ModalScreen[None]):
         self._comments = comments
         self._mode = mode
         self._chip_colours = chip_colours
+        # The edit form's working copy of the list-valued fields: edits stay
+        # here until Save, so Cancel discards them. Re-snapshotted from the card
+        # whenever the form opens (see _reset_edit_fields).
+        self._edit_tags: list[str] = list(card.get("tags", []))
+        self._edit_refs: list[dict] = [dict(r) for r in card.get("references", [])]
 
     def compose(self) -> ComposeResult:
         card = self._card
@@ -352,6 +357,24 @@ class CardScreen(ModalScreen[None]):
                         ),
                         id="edit-priority",
                     )
+                    yield Label("Status", classes="field-label")
+                    yield Select(
+                        [(col_label(s), s) for s in _PANES],
+                        value=card["status"],
+                        allow_blank=False,
+                        id="edit-status",
+                    )
+                    yield Label("Tags", classes="field-label")
+                    yield Input(placeholder="add a tag…", id="edit-tag-input")
+                    yield Horizontal(id="edit-tag-chips", classes="chip-row")
+                    yield Label("References", classes="field-label")
+                    with Horizontal(id="edit-ref-add", classes="edit-add-row"):
+                        yield Input(placeholder="label", id="edit-ref-label")
+                        yield Input(
+                            placeholder="value (URL, file://, ID)", id="edit-ref-value"
+                        )
+                        yield Button("Add", id="edit-ref-add-btn")
+                    yield Vertical(id="edit-ref-rows")
                     yield Label("Description", classes="field-label")
                     yield TextArea(card.get("description") or "", id="edit-description")
                     yield Label("Acceptance criteria", classes="field-label")
@@ -429,10 +452,10 @@ class CardScreen(ModalScreen[None]):
             self.query_one("#edit-title", Input).focus()
         self.refresh_bindings()
 
-    def action_edit(self) -> None:
+    async def action_edit(self) -> None:
         """``e`` in view mode opens the form (no-op while already editing)."""
         if self._mode == "view":
-            self._reset_edit_fields()
+            await self._reset_edit_fields()
             self._mode = "edit"
             self._apply_mode()
 
@@ -541,27 +564,66 @@ class CardScreen(ModalScreen[None]):
         content = self.query_one("#card-view-content", Vertical)
         await content.remove_children()
         await content.mount(*self._view_widgets())
-        self._reset_edit_fields()
+        await self._reset_edit_fields()
         self._mode = "view"
         self._apply_mode()
 
     # -- edit form ---------------------------------------------------------
 
-    def _reset_edit_fields(self) -> None:
-        """Sync the form widgets to the current card (covers a re-open after a
-        save changed the values)."""
+    async def _reset_edit_fields(self) -> None:
+        """Sync the form widgets to the current card, re-snapshotting the tag
+        and reference working copies (covers a re-open after a save changed the
+        values, and discards any uncommitted edits on the next open)."""
         card = self._card
         self.query_one("#edit-title", Input).value = card["title"]
         radio = self.query_one("#edit-priority", RadioSet)
         for index, button in enumerate(radio.query(RadioButton)):
             if _PRIORITIES[index] == card["priority"]:
                 button.value = True  # RadioSet unsets the others
+        self.query_one("#edit-status", Select).value = card["status"]
         self.query_one("#edit-description", TextArea).text = (
             card.get("description") or ""
         )
         self.query_one("#edit-acceptance", TextArea).text = (
             card.get("acceptance_criteria") or ""
         )
+        self._edit_tags = list(card.get("tags", []))
+        self._edit_refs = [dict(r) for r in card.get("references", [])]
+        self.query_one("#edit-tag-input", Input).value = ""
+        self.query_one("#edit-ref-label", Input).value = ""
+        self.query_one("#edit-ref-value", Input).value = ""
+        await self._render_tag_chips()
+        await self._render_ref_rows()
+
+    async def _render_tag_chips(self) -> None:
+        """Re-render the working-copy tag chips, one removable ``✕ tag`` button
+        each. ``blocked`` is deliberately not shown — it's carried through a save
+        untouched and stays driven by ``b``/``u`` (see the class docstring)."""
+        row = self.query_one("#edit-tag-chips", Horizontal)
+        await row.remove_children()
+        chips = [
+            Button(f"✕ {tag}", id=f"edit-tag-rm-{i}", classes="tag-remove")
+            for i, tag in enumerate(self._edit_tags)
+            if tag != BLOCKED_TAG
+        ]
+        if chips:
+            await row.mount(*chips)
+
+    async def _render_ref_rows(self) -> None:
+        """Re-render the working-copy reference rows, one removable
+        ``✕ label: value`` button each (stacked, like the old RefScreen)."""
+        rows = self.query_one("#edit-ref-rows", Vertical)
+        await rows.remove_children()
+        widgets = [
+            Button(
+                f"✕ {ref['label']}: {ref['value']}",
+                id=f"edit-ref-rm-{i}",
+                classes="tag-remove",
+            )
+            for i, ref in enumerate(self._edit_refs)
+        ]
+        if widgets:
+            await rows.mount(*widgets)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "edit-save":
@@ -575,10 +637,11 @@ class CardScreen(ModalScreen[None]):
             return  # title required; stay in the form
         idx = self.query_one("#edit-priority", RadioSet).pressed_index
         priority = _PRIORITIES[idx] if idx >= 0 else self._card["priority"]
+        status_val = self.query_one("#edit-status", Select).value
+        status = status_val if isinstance(status_val, str) else self._card["status"]
         # Don't dismiss: the app persists this, then calls show_card() to flip
-        # us back to view with the saved values. Status/tags/references carry
-        # the card's current values here; the form widgets that drive them are
-        # wired in a later commit.
+        # us back to view with the saved values. Status comes from the Select;
+        # tags/references come from the working copy the form maintains.
         self.post_message(
             self.Saved(
                 self._card["id"],
@@ -590,9 +653,9 @@ class CardScreen(ModalScreen[None]):
                         "#edit-acceptance", TextArea
                     ).text,
                 },
-                status=self._card["status"],
-                tags=list(self._card.get("tags", [])),
-                references=list(self._card.get("references", [])),
+                status=status,
+                tags=list(self._edit_tags),
+                references=[dict(r) for r in self._edit_refs],
             )
         )
 
