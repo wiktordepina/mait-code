@@ -10,6 +10,18 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.39.0] — 2026-05-31
+
+### Changed
+
+- **The card's title and badge line now stay pinned as you scroll.** In a card's
+  detail view, the title and the meta line beneath it (project · status ·
+  priority · tags) are lifted out of the scroll region into a fixed header, so a
+  long description, acceptance criteria and comment thread scroll underneath them
+  — you keep a constant reference to which card you're reading. The title's
+  underline now doubles as the divider between the pinned header and the scrolling
+  body. Edit mode is unchanged.
+
 ## [0.38.0] — 2026-05-31
 
 ### Added
@@ -1199,7 +1211,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.38.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.39.0...HEAD
+[0.39.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.39.0
 [0.38.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.38.0
 [0.37.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.1
 [0.37.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.0

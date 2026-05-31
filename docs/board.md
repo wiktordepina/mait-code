@@ -142,6 +142,11 @@ which is exactly why refining *before* picking up is worth the small ceremony.
 
 ![A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread.](assets/board/card-detail.svg)
 
+The title and the meta line beneath it (project · status · priority · tags) are
+**pinned** above the scroll: as you page through a long description, acceptance
+criteria and comment thread, they stay put — a constant reference to which card
+you're reading.
+
 Every card carries:
 
 | Field | Notes |
