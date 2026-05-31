@@ -25,6 +25,8 @@
 
 ::: mait_code.config.write_settings_file
 
+::: mait_code.config.reset_cache
+
 ## Resolvers
 
 ::: mait_code.config.data_dir
@@ -54,3 +56,5 @@
 ::: mait_code.config.DEFAULT_BEDROCK_MODEL_ID
 
 ::: mait_code.config.DEFAULT_BEDROCK_REGION
+
+::: mait_code.config.DEFAULT_THEME
