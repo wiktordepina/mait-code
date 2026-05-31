@@ -255,15 +255,30 @@ class CardScreen(ModalScreen[None]):
     """
 
     class Saved(Message):
-        """Posted when an edit is saved; carries the new field values.
+        """Posted when an edit is saved; carries the whole working copy.
 
-        The app persists these (via the service layer) and then refreshes the
-        open screen — the screen deliberately doesn't write to the DB itself.
+        The form is the single place a card is changed, so a save carries every
+        editable facet: ``fields`` (title/priority/description/acceptance for
+        :func:`edit_card`), the target ``status``, and the full ``tags`` and
+        ``references`` sets (set-replace). The app persists these via the
+        service layer and refreshes the open screen — the screen deliberately
+        doesn't write to the DB itself.
         """
 
-        def __init__(self, card_id: int, fields: dict) -> None:
+        def __init__(
+            self,
+            card_id: int,
+            fields: dict,
+            *,
+            status: str,
+            tags: list[str],
+            references: list[dict],
+        ) -> None:
             self.card_id = card_id
             self.fields = fields
+            self.status = status
+            self.tags = tags
+            self.references = references
             super().__init__()
 
     class Mutate(Message):
@@ -561,7 +576,9 @@ class CardScreen(ModalScreen[None]):
         idx = self.query_one("#edit-priority", RadioSet).pressed_index
         priority = _PRIORITIES[idx] if idx >= 0 else self._card["priority"]
         # Don't dismiss: the app persists this, then calls show_card() to flip
-        # us back to view with the saved values.
+        # us back to view with the saved values. Status/tags/references carry
+        # the card's current values here; the form widgets that drive them are
+        # wired in a later commit.
         self.post_message(
             self.Saved(
                 self._card["id"],
@@ -573,6 +590,9 @@ class CardScreen(ModalScreen[None]):
                         "#edit-acceptance", TextArea
                     ).text,
                 },
+                status=self._card["status"],
+                tags=list(self._card.get("tags", [])),
+                references=list(self._card.get("references", [])),
             )
         )
 
@@ -1359,8 +1379,21 @@ class BoardApp(MaitApp):
         self._select_card(card_id)
 
     async def on_card_screen_saved(self, message: CardScreen.Saved) -> None:
-        """Persist an in-place edit, then refresh the still-open card screen."""
+        """Persist an in-place edit, then refresh the still-open card screen.
+
+        Applies the whole working copy: the text fields via ``edit_card``, then
+        the set-replace of tags and references, then a status move *only* if it
+        actually changed — so the done-invariant is maintained by ``move_card``
+        without re-stamping ``completed_at`` on an unchanged status.
+        """
+        existing = service.get_card(self._conn, message.card_id)
+        if existing is None:
+            return
         service.edit_card(self._conn, message.card_id, **message.fields)
+        service.set_tags(self._conn, message.card_id, message.tags)
+        service.set_references(self._conn, message.card_id, message.references)
+        if message.status != existing["status"]:
+            service.move_card(self._conn, message.card_id, message.status)
         self._reload()
         card = service.get_card(self._conn, message.card_id)
         comments = service.get_comments(self._conn, message.card_id)
