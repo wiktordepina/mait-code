@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /board<br/>/decision, /decisions<br/>/web-fetch<br/>memory-store"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /board, /triage<br/>/decision, /decisions<br/>/web-fetch<br/>memory-store"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -30,6 +30,7 @@ graph TD
             reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
             tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
             board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns"]
+            inbox_tool["inbox/ <i>(CLI)</i><br/>cli, db, migrate, service"]
             decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
             web_fetch_tool["web_fetch/ <i>(CLI)</i><br/>cli, fetch, convert"]
         end
@@ -39,7 +40,7 @@ graph TD
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md<br/>user_context.md"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>memory.db <i>(SQLite)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
-        other_dbs["reminders.db<br/>tasks.db<br/>board.db<br/>decisions.db"]
+        other_dbs["reminders.db<br/>tasks.db<br/>board.db<br/>inbox.db<br/>decisions.db"]
     end
 
     HOOKS --> mait_code
@@ -343,6 +344,27 @@ Every query and mutation — including the done-invariant (`completed_at` is set
 
 The board TUI is **on-demand and foreground** — it is launched explicitly, runs until you quit with `q`, and leaves nothing behind. The *No background services* principle is intact: there is no daemon polling the board, only a short-lived app you open when you want to see it.
 
+## Inbox Database
+
+The inbox database (`inbox.db`) backs a single frictionless quick-capture holding pen — a "capture now, sort later" store so a thought can be dumped without deciding upfront whether it is a task, a card, a decision, or a memory.
+
+**Inbox table: `inbox_items`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-incrementing identifier |
+| `body` | TEXT | The captured thought |
+| `project` | TEXT | Capture-context project (a routing hint; nullable — the store is global) |
+| `created_at` | TEXT | Timestamp of capture |
+
+Unlike the board and tasks, the inbox is **global, not project-scoped** — `project` is only a hint to help triage route the item later.
+
+## Inbox CLI Tool (`mc-tool-inbox`)
+
+A thin capture-and-drain CLI over `inbox.db`. `add "<text>"` captures an item (frictionless — no flags required), `list [--json]` shows the inbox oldest-first, `remove <id>` drains an item out, and `count` prints the item total (consumed by the session-start hook). Queries and mutations live in `src/mait_code/tools/inbox/service.py`, the presentation-agnostic layer mirroring the board's `cli`/`service`/`db` split.
+
+The intended lifecycle is **capture → triage → empty**: the `/triage` skill walks the captured items, proposes a destination for each (board card, task, decision, or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.
+
 ## Decisions Database
 
 The decisions database (`decisions.db`) stores project-scoped technical decision records (ADR-lite).
@@ -410,7 +432,7 @@ Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed
 
 | Hook | Trigger | Mode | Purpose |
 |------|---------|------|---------|
-| `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks, board summary) |
+| `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks, board summary, inbox count) |
 | `observe` | PreCompact | async | Extract observations before context compaction |
 | `observe` | SessionEnd | async | Final observation extraction |
 | `auto_format` | *not registered* | — | Placeholder package — entry point exists (`mc-hook-format`) but no settings.json registration and no implementation |
@@ -532,6 +554,7 @@ Adding a new migration:
 ├── reminders.db              # Reminder database
 ├── tasks.db                  # Per-project tasks database
 ├── board.db                  # Cross-project kanban board database
+├── inbox.db                  # Quick-capture inbox database
 └── decisions.db              # Decision records database
 ```
 
