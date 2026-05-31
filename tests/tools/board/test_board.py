@@ -203,7 +203,7 @@ def test_cmd_list_project_scoped(mock_conn, capsys):
     _insert_card(mock_conn, "theirs", project="other")
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search=None))
     out = capsys.readouterr().out
     assert "mine" in out
     assert "theirs" not in out
@@ -214,7 +214,7 @@ def test_cmd_list_excludes_archived_by_default(mock_conn, capsys):
     _insert_card(mock_conn, "old", status=ARCHIVED)
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search=None))
     out = capsys.readouterr().out
     assert "live" in out
     assert "old" not in out
@@ -224,7 +224,7 @@ def test_cmd_list_archived_flag(mock_conn, capsys):
     _insert_card(mock_conn, "old", status=ARCHIVED)
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=False, status=None, archived=True, json=False))
+    cmd_list(_ns(all=False, status=None, archived=True, json=False, search=None))
     assert "old" in capsys.readouterr().out
 
 
@@ -233,7 +233,7 @@ def test_cmd_list_all_projects(mock_conn, capsys):
     _insert_card(mock_conn, "b", project="proj-b")
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=True, status=None, archived=False, json=False))
+    cmd_list(_ns(all=True, status=None, archived=False, json=False, search=None))
     out = capsys.readouterr().out
     assert "a" in out and "b" in out
     assert "[proj-a]" in out and "[proj-b]" in out
@@ -244,7 +244,7 @@ def test_cmd_list_priority_order(mock_conn, capsys):
     _insert_card(mock_conn, "high one", priority="high")
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search=None))
     out = capsys.readouterr().out
     assert out.index("high one") < out.index("low one")
 
@@ -254,7 +254,7 @@ def test_cmd_list_grouped_headers(mock_conn, capsys):
     _insert_card(mock_conn, "r1", status=REFINED)
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search=None))
     out = capsys.readouterr().out
     assert "Backlog (1):" in out
     assert "Refined (1):" in out
@@ -264,7 +264,7 @@ def test_cmd_list_json(mock_conn, capsys):
     _insert_card(mock_conn, "j1")
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=False, status=None, archived=False, json=True))
+    cmd_list(_ns(all=False, status=None, archived=False, json=True, search=None))
     data = json.loads(capsys.readouterr().out)
     assert isinstance(data, list)
     assert data[0]["title"] == "j1"
@@ -273,7 +273,26 @@ def test_cmd_list_json(mock_conn, capsys):
 def test_cmd_list_empty(mock_conn, capsys):
     from mait_code.tools.board.cli import cmd_list
 
-    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search=None))
+    assert "No cards" in capsys.readouterr().out
+
+
+def test_cmd_list_search_filters_by_title(mock_conn, capsys):
+    _insert_card(mock_conn, "board tui polish")
+    _insert_card(mock_conn, "memory backlinks")
+    from mait_code.tools.board.cli import cmd_list
+
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search="TUI"))
+    out = capsys.readouterr().out
+    assert "board tui polish" in out
+    assert "memory backlinks" not in out
+
+
+def test_cmd_list_search_no_match(mock_conn, capsys):
+    _insert_card(mock_conn, "alpha")
+    from mait_code.tools.board.cli import cmd_list
+
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search="zzz"))
     assert "No cards" in capsys.readouterr().out
 
 
@@ -573,7 +592,7 @@ def test_cmd_list_renders_tags(mock_conn, capsys):
 
     cid = _insert_card(mock_conn, "t", status=REFINED)
     service.add_tag(mock_conn, cid, "urgent")
-    cmd_list(_ns(all=False, status=None, archived=False, json=False))
+    cmd_list(_ns(all=False, status=None, archived=False, json=False, search=None))
     assert "#urgent" in capsys.readouterr().out
 
 

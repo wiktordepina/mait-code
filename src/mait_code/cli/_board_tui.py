@@ -187,6 +187,7 @@ class BoardColumn(OptionList):
         Binding("b", "app.block", "Block"),
         Binding("u", "app.unblock", "Unblock"),
         Binding("p", "app.cycle_project", "Project"),
+        Binding("slash", "app.search", "Search"),
         Binding("d", "app.toggle_done", "Done"),
         Binding("a", "app.toggle_archived", "Archived"),
         Binding("r", "app.reload_board", "Reload"),
@@ -786,6 +787,54 @@ class RefScreen(ModalScreen[tuple | None]):
         self.dismiss(None)
 
 
+class SearchScreen(ModalScreen[str | None]):
+    """Capture a title-search query for the board.
+
+    Resolves to the typed query (possibly ``""`` to clear an active filter), or
+    ``None`` on escape/cancel — which leaves the current filter untouched. The
+    input is pre-filled with the active query so editing or clearing it is one
+    gesture.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, current: str | None = None) -> None:
+        super().__init__()
+        self._current = current or ""
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label("Search cards by title", classes="modal-title")
+            yield Input(
+                value=self._current,
+                placeholder="title contains…  (empty to clear)",
+                id="search-input",
+            )
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Search", id="search-apply", variant="primary")
+                yield Button("Cancel", id="search-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#search-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if (event.button.id or "") == "search-apply":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        # Empty is a meaningful result (clear the filter), distinct from the
+        # ``None`` that escape/cancel returns, so dismiss the raw stripped value.
+        self.dismiss(self.query_one("#search-input", Input).value.strip())
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 #: Priority choices, low→high, as offered in the new/edit modals.
 _PRIORITIES: tuple[str, ...] = ("low", "medium", "high")
 
@@ -899,6 +948,7 @@ class BoardApp(MaitApp):
         super().__init__()
         self._conn = get_connection(db_path)  # one connection for the app's life
         self._project_filter: str | None = None  # None == all projects
+        self._search: str | None = None  # None == no title filter
         self._projects: list[str] = []
         self._show_done = False  # Done is hidden by default to widen the flow
         self._show_archived = False
@@ -980,7 +1030,10 @@ class BoardApp(MaitApp):
         return statuses
 
     def _update_subtitle(self) -> None:
-        self.sub_title = f"project: {self._project_filter or 'all'}  (p to cycle)"
+        parts = [f"project: {self._project_filter or 'all'}"]
+        if self._search:
+            parts.append(f"search: {self._search!r}")
+        self.sub_title = "  ".join(parts) + "  (p to cycle, / to search)"
 
     def _reload(self) -> None:
         """Re-query with the active filter and repaint every pane."""
@@ -988,6 +1041,7 @@ class BoardApp(MaitApp):
             self._conn,
             project=self._project_filter,
             include_archived=self._show_archived,
+            search=self._search,
         )
         self._card_status = {c["id"]: c["status"] for c in cards}
         by_status: dict[str, list[dict]] = {}
@@ -1081,6 +1135,11 @@ class BoardApp(MaitApp):
             "Change project filter",
             "Cycle the project filter",
             self.action_cycle_project,
+        )
+        yield SystemCommand(
+            "Search cards",
+            "Filter cards by a title substring",
+            self.action_search,
         )
         yield SystemCommand(
             "Reload board", "Re-read the board from disk", self.action_reload_board
@@ -1178,6 +1237,16 @@ class BoardApp(MaitApp):
         self._project_filter = options[(current + 1) % len(options)]
         self._update_subtitle()
         self._reload()
+
+    @work
+    async def action_search(self) -> None:
+        result = await self.push_screen_wait(SearchScreen(self._search))
+        if result is None:
+            return  # escape/cancel — leave the active filter as-is
+        self._search = result or None  # empty query clears the filter
+        self._update_subtitle()
+        self._reload()
+        self._focus_current()
 
     def action_toggle_done(self) -> None:
         self._show_done = not self._show_done

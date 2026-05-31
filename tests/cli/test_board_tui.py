@@ -352,6 +352,93 @@ class TestProjectFilter:
         assert filt == "alpha"
 
 
+class TestSearch:
+    def test_search_filters_by_title(self, board_path: Path) -> None:
+        _seed(
+            board_path,
+            [
+                {"title": "board tui polish", "status": REFINED},
+                {"title": "memory backlinks", "status": REFINED},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                before = app.query_one("#tbl-refined").option_count
+                await pilot.press("slash")  # open search modal
+                await pilot.pause()
+                await pilot.press(*"tui")
+                await pilot.press("enter")
+                await pilot.pause()
+                after = app.query_one("#tbl-refined").option_count
+                return before, after, app._search
+
+        before, after, search = _run(scenario)
+        assert before == 2
+        assert after == 1
+        assert search == "tui"
+
+    def test_empty_query_clears_filter(self, board_path: Path) -> None:
+        _seed(
+            board_path,
+            [
+                {"title": "alpha", "status": REFINED},
+                {"title": "beta", "status": REFINED},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._search = "alpha"
+                app._reload()
+                await pilot.pause()
+                filtered = app.query_one("#tbl-refined").option_count
+                # Re-open search and submit an empty query to clear.
+                await pilot.press("slash")
+                await pilot.pause()
+                # Clear the pre-filled "alpha" (5 chars) before submitting.
+                await pilot.press(*(["backspace"] * len("alpha")))
+                await pilot.press("enter")
+                await pilot.pause()
+                cleared = app.query_one("#tbl-refined").option_count
+                return filtered, cleared, app._search
+
+        filtered, cleared, search = _run(scenario)
+        assert filtered == 1
+        assert cleared == 2
+        assert search is None
+
+    def test_escape_keeps_active_filter(self, board_path: Path) -> None:
+        _seed(
+            board_path,
+            [
+                {"title": "alpha", "status": REFINED},
+                {"title": "beta", "status": REFINED},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._search = "alpha"
+                app._reload()
+                await pilot.pause()
+                await pilot.press("slash")
+                await pilot.pause()
+                await pilot.press("escape")  # cancel — filter untouched
+                await pilot.pause()
+                return app.query_one("#tbl-refined").option_count, app._search
+
+        count, search = _run(scenario)
+        assert count == 1
+        assert search == "alpha"
+
+
 class TestArchivedToggle:
     def test_toggle_reveals_archived(self, board_path: Path) -> None:
         _seed(board_path, [{"title": "old", "status": ARCHIVED}])

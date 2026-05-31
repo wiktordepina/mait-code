@@ -189,6 +189,39 @@ def test_list_cards_tag_filter(board_db: sqlite3.Connection):
     assert titles == ["tagged"]
 
 
+def test_list_cards_search_substring(board_db: sqlite3.Connection):
+    _insert(board_db, "board TUI polish")
+    _insert(board_db, "memory backlinks")
+    titles = [c["title"] for c in service.list_cards(board_db, search="tui")]
+    assert titles == ["board TUI polish"]
+
+
+def test_list_cards_search_case_insensitive(board_db: sqlite3.Connection):
+    _insert(board_db, "Search the Board")
+    titles = [c["title"] for c in service.list_cards(board_db, search="SEARCH")]
+    assert titles == ["Search the Board"]
+
+
+def test_list_cards_search_no_match(board_db: sqlite3.Connection):
+    _insert(board_db, "alpha")
+    assert service.list_cards(board_db, search="zzz") == []
+
+
+def test_list_cards_search_treats_wildcards_literally(board_db: sqlite3.Connection):
+    # '%'/'_' in a query must match literally, not act as LIKE wildcards.
+    _insert(board_db, "100% done")
+    _insert(board_db, "100 nearly")
+    titles = [c["title"] for c in service.list_cards(board_db, search="100%")]
+    assert titles == ["100% done"]
+
+
+def test_list_cards_search_composes_with_project(board_db: sqlite3.Connection):
+    _insert(board_db, "shared name", project="a")
+    _insert(board_db, "shared name", project="b")
+    cards = service.list_cards(board_db, project="a", search="shared")
+    assert [c["project"] for c in cards] == ["a"]
+
+
 # --- next_refined ---
 
 

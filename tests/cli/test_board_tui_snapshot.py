@@ -198,6 +198,29 @@ def test_board_rich_snapshot(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def test_board_search_snapshot(snap_compare, tmp_path: Path) -> None:
+    """The busy board filtered to a title query via ``/`` → type → submit.
+
+    ``config`` matches a backlog card (Neovim config) and a refined card
+    (Prometheus scrape configs); the other panes empty out, and the subtitle
+    shows the active query."""
+    db_path = tmp_path / "board.db"
+    _seed_board_rich(db_path)
+
+    async def run_before(pilot) -> None:
+        await pilot.press("slash")  # open the search modal
+        await pilot.pause()
+        await pilot.press(*"config")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(132, 46),
+    )
+
+
 def test_board_rich_expanded_snapshot(snap_compare, tmp_path: Path) -> None:
     """The same busy board uncollapsed — all five columns revealed via ``d`` and
     ``a`` — the docs review-layout shot."""
