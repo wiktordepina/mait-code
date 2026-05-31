@@ -161,6 +161,27 @@
     margin-top: 1;
 }
 
+/* Edit form: the tag-chip row and reference-row stack mirror the modal layouts
+ * above (auto height, slight top gap), now living inline in the form. */
+#edit-tag-chips,
+#edit-ref-rows {
+    height: auto;
+    margin-top: 1;
+}
+
+/* The reference add-row: label + value inputs and an Add button on one line. */
+#edit-ref-add {
+    height: auto;
+}
+
+#edit-ref-add #edit-ref-label {
+    width: 1fr;
+}
+
+#edit-ref-add #edit-ref-value {
+    width: 2fr;
+}
+
 .tag-remove {
     width: auto;
     height: 1;

@@ -992,99 +992,6 @@ class TestCardScreenActions:
         assert mode == "view"
         assert "in place" in rendered
 
-    def test_reference_add_from_card_screen_refreshes_in_place(
-        self, board_path: Path
-    ) -> None:
-        from mait_code.cli._board_tui import RefScreen
-
-        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
-
-        async def scenario():
-            app = BoardApp(db_path=board_path)
-            async with app.run_test(size=(120, 40)) as pilot:
-                await pilot.pause()
-                app._focus_status(REFINED)
-                await pilot.press("enter")
-                await pilot.pause()
-                assert isinstance(app.screen, CardScreen)
-                # 'r' pushes the reference modal on top of the card screen.
-                await pilot.press("r")
-                await pilot.pause()
-                assert isinstance(app.screen, RefScreen)
-                app.screen.query_one("#ref-label", Input).value = "PR"
-                app.screen.query_one("#ref-value", Input).value = "https://example.com"
-                await pilot.click("#ref-apply")
-                await pilot.pause()
-                await pilot.pause()
-                still_card = isinstance(app.screen, CardScreen)
-                rendered = self._rendered(app.screen) if still_card else ""
-                return (
-                    service.list_references(app._conn, ids["card"]),
-                    still_card,
-                    rendered,
-                )
-
-        refs, still_card, rendered = _run(scenario)
-        assert refs == [{"label": "PR", "value": "https://example.com"}]
-        assert still_card is True
-        # The References section renders the new link in place.
-        assert "PR" in rendered
-        assert "https://example.com" in rendered
-
-    def test_reference_chip_removes_from_card_screen(self, board_path: Path) -> None:
-        from mait_code.cli._board_tui import RefScreen
-
-        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
-
-        async def scenario():
-            app = BoardApp(db_path=board_path)
-            async with app.run_test(size=(120, 40)) as pilot:
-                await pilot.pause()
-                service.add_reference(app._conn, ids["card"], "a", "1")
-                service.add_reference(app._conn, ids["card"], "b", "2")
-                app._reload()
-                app._focus_status(REFINED)
-                await pilot.press("enter")
-                await pilot.pause()
-                await pilot.press("r")
-                await pilot.pause()
-                assert isinstance(app.screen, RefScreen)
-                # Click the chip for the first reference (display position 1).
-                await pilot.click("#ref-rm-0")
-                await pilot.pause()
-                await pilot.pause()
-                return service.list_references(app._conn, ids["card"])
-
-        remaining = _run(scenario)
-        assert remaining == [{"label": "b", "value": "2"}]
-
-    def test_move_from_card_screen_updates_in_place(self, board_path: Path) -> None:
-        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
-
-        async def scenario():
-            app = BoardApp(db_path=board_path)
-            async with app.run_test(size=(120, 40)) as pilot:
-                await pilot.pause()
-                app._focus_status(REFINED)
-                await pilot.press("enter")
-                await pilot.pause()
-                await pilot.press("greater_than_sign")  # advance along the flow
-                await pilot.pause()
-                await pilot.pause()
-                still_card = isinstance(app.screen, CardScreen)
-                rendered = self._rendered(app.screen) if still_card else ""
-                return (
-                    service.get_card(app._conn, ids["card"])["status"],
-                    still_card,
-                    rendered,
-                )
-
-        status, still_card, rendered = _run(scenario)
-        assert status == IN_PROGRESS
-        assert still_card is True
-        # The meta line reflects the card's new status without leaving the screen.
-        assert label(IN_PROGRESS) in rendered
-
     def test_block_from_card_screen_in_place(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "card", "status": REFINED}])
 
@@ -1210,7 +1117,7 @@ class TestCardScreenFooter:
                 screen = app.screen
                 hidden = {
                     a: screen.check_action(a, ())
-                    for a in ("comment", "tag", "complete", "edit")
+                    for a in ("comment", "complete", "edit")
                 }
                 save = screen.check_action("save", ())
                 close = screen.check_action("close", ())
@@ -1222,7 +1129,7 @@ class TestCardScreenFooter:
         assert save is True
         assert close is True
         assert "save" in actions
-        assert "comment" not in actions and "tag" not in actions
+        assert "comment" not in actions and "complete" not in actions
 
     def test_block_unblock_mutual_exclusion(self, board_path: Path) -> None:
         _seed(board_path, [{"title": "card", "status": REFINED}])
@@ -1394,3 +1301,197 @@ class TestToasts:
         count, exc = _run(scenario)
         assert exc is None
         assert count == 3
+
+
+class TestCardFormEditing:
+    """#16 — tags, references and status edited in the card's edit form as one
+    working copy, applied on Save and discarded on Cancel."""
+
+    async def _open_edit(self, pilot) -> None:
+        pilot.app._focus_status(REFINED)
+        await pilot.press("enter")  # open the card screen
+        await pilot.pause()
+        await pilot.press("e")  # view → edit
+        await pilot.pause()
+
+    async def _add_tag(self, pilot, tag: str) -> None:
+        field = pilot.app.screen.query_one("#edit-tag-input", Input)
+        field.value = tag
+        field.focus()
+        await pilot.press("enter")
+        await pilot.pause()
+
+    async def _add_ref(self, pilot, label_: str, value: str) -> None:
+        pilot.app.screen.query_one("#edit-ref-label", Input).value = label_
+        field = pilot.app.screen.query_one("#edit-ref-value", Input)
+        field.value = value
+        field.focus()
+        await pilot.press("enter")  # Enter in the value field adds the reference
+        await pilot.pause()
+
+    def test_form_exposes_status_select_and_editors(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                service.add_tag(app._conn, ids["card"], "tui")
+                service.add_reference(app._conn, ids["card"], "PR", "https://x/1")
+                app._reload()
+                await self._open_edit(pilot)
+                screen = app.screen
+                status = screen.query_one("#edit-status", Select).value
+                # The current tag shows as a removable chip; the ref as a row.
+                chips = [str(b.label) for b in screen.query("#edit-tag-chips Button")]
+                rows = [str(b.label) for b in screen.query("#edit-ref-rows Button")]
+                return status, chips, rows
+
+        status, chips, rows = _run(scenario)
+        assert status == REFINED
+        assert chips == ["✕ tui"]
+        assert rows == ["✕ PR: https://x/1"]
+
+    def test_form_save_applies_status_tags_refs_together(
+        self, board_path: Path
+    ) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await self._open_edit(pilot)
+                app.screen.query_one("#edit-status", Select).value = IN_PROGRESS
+                await self._add_tag(pilot, "urgent")
+                await self._add_ref(pilot, "PR", "https://x/2")
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                card = service.get_card(app._conn, ids["card"])
+                return (
+                    card["status"],
+                    service.list_tags(app._conn, ids["card"]),
+                    service.list_references(app._conn, ids["card"]),
+                    isinstance(app.screen, CardScreen),
+                    app.screen._mode,
+                )
+
+        status, tags, refs, still_card, mode = _run(scenario)
+        assert status == IN_PROGRESS
+        assert tags == ["urgent"]
+        assert refs == [{"label": "PR", "value": "https://x/2"}]
+        # Save lands in place: back on the card screen, view mode.
+        assert still_card is True
+        assert mode == "view"
+
+    def test_form_cancel_discards_working_copy(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                service.add_tag(app._conn, ids["card"], "keep")
+                app._reload()
+                await self._open_edit(pilot)
+                app.screen.query_one("#edit-status", Select).value = DONE
+                await self._add_tag(pilot, "throwaway")
+                await self._add_ref(pilot, "PR", "https://x/3")
+                await pilot.press("escape")  # cancel edit → view, discard
+                await pilot.pause()
+                card = service.get_card(app._conn, ids["card"])
+                return (
+                    card["status"],
+                    service.list_tags(app._conn, ids["card"]),
+                    service.list_references(app._conn, ids["card"]),
+                )
+
+        status, tags, refs = _run(scenario)
+        assert status == REFINED  # status move discarded
+        assert tags == ["keep"]  # added tag discarded
+        assert refs == []  # added ref discarded
+
+    def test_form_status_done_sets_completed_at(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await self._open_edit(pilot)
+                app.screen.query_one("#edit-status", Select).value = DONE
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                return service.get_card(app._conn, ids["card"])
+
+        card = _run(scenario)
+        assert card["status"] == DONE
+        assert card["completed_at"] is not None  # done-invariant via move_card
+
+    def test_form_tag_input_rejects_blocked(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await self._open_edit(pilot)
+                await self._add_tag(pilot, BLOCKED_TAG)  # reserved for b/u
+                # Not added to the working copy, so no chip and a clean save.
+                chips = [
+                    str(b.label) for b in app.screen.query("#edit-tag-chips Button")
+                ]
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                return chips, service.list_tags(app._conn, ids["card"])
+
+        chips, tags = _run(scenario)
+        assert chips == []
+        assert BLOCKED_TAG not in tags
+
+    def test_form_blocked_tag_survives_save(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                service.block_card(app._conn, ids["card"])
+                app._reload()
+                await self._open_edit(pilot)
+                # blocked isn't shown as an editable chip...
+                chips = [
+                    str(b.label) for b in app.screen.query("#edit-tag-chips Button")
+                ]
+                await self._add_tag(pilot, "extra")
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                return chips, service.list_tags(app._conn, ids["card"])
+
+        chips, tags = _run(scenario)
+        assert chips == []  # blocked not rendered as a removable chip
+        assert BLOCKED_TAG in tags  # ...but carried through the save
+        assert "extra" in tags
+
+    def test_form_chip_removes_tag_from_working_copy(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                service.add_tag(app._conn, ids["card"], "drop")
+                app._reload()
+                await self._open_edit(pilot)
+                await pilot.click("#edit-tag-rm-0")  # ✕ on the only chip
+                await pilot.pause()
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                return service.list_tags(app._conn, ids["card"])
+
+        assert _run(scenario) == []

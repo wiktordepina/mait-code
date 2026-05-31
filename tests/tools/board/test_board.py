@@ -637,6 +637,35 @@ def test_remove_reference_out_of_range_returns_false(board_db):
     assert len(service.list_references(board_db, cid)) == 1
 
 
+def test_set_references_replaces_and_renumbers(board_db):
+    from mait_code.tools.board import service
+
+    cid = _insert_card(board_db, "r")
+    service.add_reference(board_db, cid, "old", "0")
+    service.set_references(
+        board_db,
+        cid,
+        [{"label": "PR", "value": "p"}, {"label": "JIRA", "value": "j"}],
+    )
+    refs = service.list_references(board_db, cid)
+    assert refs == [
+        {"label": "PR", "value": "p"},
+        {"label": "JIRA", "value": "j"},
+    ]
+    # Positions renumber from 1, so display-order removal stays stable.
+    assert service.remove_reference(board_db, cid, 1) is True
+    assert [r["label"] for r in service.list_references(board_db, cid)] == ["JIRA"]
+
+
+def test_set_references_to_empty_clears(board_db):
+    from mait_code.tools.board import service
+
+    cid = _insert_card(board_db, "r")
+    service.add_reference(board_db, cid, "gone", "x")
+    service.set_references(board_db, cid, [])
+    assert service.list_references(board_db, cid) == []
+
+
 def test_add_reference_card_not_found(board_db):
     from mait_code.tools.board import service
 

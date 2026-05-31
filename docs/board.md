@@ -159,8 +159,8 @@ Every card carries:
 **References** deserve a mention: they're a recent addition for keeping a card's
 links structured rather than buried in prose. A value that looks like a URL
 (`https://…`, `file://…`) renders as a clickable link in the TUI; a bare
-identifier like `JIRA-2342` stays as plain text. Manage them with the `r` key on
-a card's detail screen, or the `ref` CLI commands.
+identifier like `JIRA-2342` stays as plain text. Manage them in a card's edit
+form (press <kbd>e</kbd> on the detail screen), or with the `ref` CLI commands.
 
 ## TUI reference
 
@@ -193,11 +193,16 @@ a card's detail screen, or the `ref` CLI commands.
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save changes (in edit mode) |
 | <kbd>Esc</kbd> | Close the screen / cancel an edit |
 | <kbd>c</kbd> | Add a comment |
-| <kbd>t</kbd> | Manage tags |
-| <kbd>r</kbd> | Manage references |
 | <kbd>C</kbd> | Complete the card |
 | <kbd>b</kbd> / <kbd>u</kbd> | Block / unblock |
-| <kbd>&lt;</kbd> / <kbd>&gt;</kbd> | Move left / right |
+
+The edit form (<kbd>e</kbd>) is the single place a card is changed: title,
+priority, **status**, **tags**, **references**, description and acceptance
+criteria all live on one form. Tags, references and status are a working copy —
+**Save** (<kbd>Ctrl</kbd>+<kbd>S</kbd>) applies them all at once, and <kbd>Esc</kbd>
+discards every pending change. Block / unblock stay outside the form (they carry
+a reason comment a plain tag can't), so the form's tag editor leaves the
+`blocked` tag alone.
 
 !!! tip "Theming"
     The board ships several house themes (`mait-dark`, `mait-ember`,

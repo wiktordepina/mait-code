@@ -50,6 +50,8 @@ __all__ = [
     "remove_card",
     "remove_reference",
     "remove_tag",
+    "set_references",
+    "set_tags",
     "summary_counts",
     "unblock_card",
 ]
@@ -332,6 +334,24 @@ def list_tags(conn: sqlite3.Connection, card_id: int) -> list[str]:
     return [r[0] for r in rows]
 
 
+def set_tags(conn: sqlite3.Connection, card_id: int, tags: list[str]) -> None:
+    """Replace a card's entire tag set with *tags* (set-replace, one txn).
+
+    The whole set is rewritten — any tag absent from *tags* is dropped, so the
+    caller owns the full membership (including service-managed tags like
+    ``blocked``, which must be carried through if it should survive). Duplicates
+    in *tags* collapse via the table's uniqueness. Raises :class:`CardNotFound`
+    if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    conn.execute("DELETE FROM card_tags WHERE card_id = ?", (card_id,))
+    conn.executemany(
+        "INSERT OR IGNORE INTO card_tags (card_id, tag) VALUES (?, ?)",
+        [(card_id, tag) for tag in tags],
+    )
+    conn.commit()
+
+
 # --- References ---
 
 
@@ -384,6 +404,29 @@ def list_references(conn: sqlite3.Connection, card_id: int) -> list[dict]:
         (card_id,),
     ).fetchall()
     return [{"label": label, "value": value} for label, value in rows]
+
+
+def set_references(
+    conn: sqlite3.Connection, card_id: int, references: list[dict]
+) -> None:
+    """Replace a card's references with *references* (set-replace, one txn).
+
+    Each entry is a ``{"label", "value"}`` dict; the list order becomes the new
+    display order (positions renumbered from 1). The whole set is rewritten, so
+    any reference absent from *references* is dropped. Raises
+    :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    conn.execute("DELETE FROM card_references WHERE card_id = ?", (card_id,))
+    conn.executemany(
+        "INSERT INTO card_references (card_id, position, label, value) "
+        "VALUES (?, ?, ?, ?)",
+        [
+            (card_id, position, ref["label"], ref["value"])
+            for position, ref in enumerate(references, 1)
+        ],
+    )
+    conn.commit()
 
 
 # --- Mutations ---
