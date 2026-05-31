@@ -10,6 +10,30 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.36.0] — 2026-05-31
+
+### Added
+
+- **Search the board by title.** Both surfaces gained a case-insensitive
+  title-substring filter sharing one query path. On the CLI, `mc-tool-board
+  list --search`/`-q <text>` filters the listing and composes with the existing
+  `--all`, `--status`, `--archived`, and `--json` flags — pair it with `--all`
+  to sweep every project's board at once. In the TUI, `/` opens a search box;
+  the active query rides in the subtitle and clears on an empty submit (escape
+  leaves it untouched). Literal `%` and `_` in a query match as themselves
+  rather than acting as wildcards.
+
+### Changed
+
+- **The card detail title now reads as a heading.** It carries a heavy
+  underline in the theme's primary hue — its own separator above the meta line,
+  distinct from the thinner accent rules under each section — so it stands out
+  rather than blurring into the surrounding bold text.
+- **The `/board` skill guide is back in sync with the tool.** It now documents
+  the card references subcommands (`ref add`/`remove`/`list`) and References
+  field, the new title-search flag, and `remove` (a permanent delete, distinct
+  from archiving).
+
 ## [0.35.0] — 2026-05-31
 
 ### Added
@@ -1120,7 +1144,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.36.0...HEAD
+[0.36.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.36.0
 [0.35.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.35.0
 [0.34.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.1
 [0.34.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.0
