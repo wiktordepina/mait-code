@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.40.0] — 2026-05-31
+
+### Changed
+
+- **The `mait-code settings` editor now groups its settings into a collapsible
+  tree.** The flat table is gone: settings are filed under expandable categories
+  — General, Logging, Embeddings, Models, Scoring & dedup, and Paths (derived).
+  Common groups open on launch while advanced and derived ones start collapsed,
+  so the list opens short instead of as one long scroll. Each row shows its key
+  with the current value inline (defaults dimmed, the re-embed ⚠ marker kept);
+  the separate Source column folds away since the detail pane already reports it.
+  Editing is unchanged — highlight a setting to edit it, Enter to focus the
+  editor, Ctrl+S to apply.
+
 ## [0.39.0] — 2026-05-31
 
 ### Changed
@@ -1211,7 +1225,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.40.0...HEAD
+[0.40.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.0
 [0.39.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.39.0
 [0.38.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.38.0
 [0.37.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.1

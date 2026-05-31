@@ -15,10 +15,16 @@ import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
-from textual.widgets import Button, DataTable, Input, RadioButton, RadioSet, Static
+from textual.widgets import Button, Input, RadioButton, RadioSet, Static, Tree
 
 from mait_code import config
-from mait_code.cli._settings_tui import _WEIGHTS_KEY, SettingsApp, _row_cells
+from mait_code.cli._settings_tui import (
+    _EXPANDED_GROUPS,
+    _GROUPS,
+    _WEIGHTS_KEY,
+    SettingsApp,
+    _leaf_label,
+)
 
 
 def _run(coro_factory):
@@ -34,9 +40,19 @@ def _select_radio(app: SettingsApp, label: str) -> None:
 
 
 async def _goto(pilot, app: SettingsApp, key: str) -> None:
-    """Move the table cursor to *key*'s row and let the detail panel build."""
-    table = app.query_one("#list", DataTable)
-    table.move_cursor(row=app._row_order.index(key))
+    """Move the tree cursor to *key*'s leaf and let the detail panel build.
+
+    Expands the leaf's (possibly collapsed) category first so the cursor can
+    land on it.
+    """
+    tree: Tree[str] = app.query_one("#list", Tree)
+    node = app._setting_nodes[key]
+    if node.parent is not None and node.parent is not tree.root:
+        node.parent.expand()
+        # Let the tree rebuild its visible-line map before move_cursor indexes
+        # into it, or the cursor won't land on a freshly-revealed leaf.
+        await pilot.pause()
+    tree.move_cursor(node)
     await pilot.pause()
     await pilot.pause()
 
@@ -107,7 +123,7 @@ class TestNavigation:
             app = SettingsApp()
             async with app.run_test() as pilot:
                 await _goto(pilot, app, "bedrock-region")
-                app.query_one("#list", DataTable).focus()
+                app.query_one("#list", Tree).focus()
                 await pilot.press("enter")
                 await pilot.pause()
                 return type(app.focused).__name__, getattr(app.focused, "id", None)
@@ -122,7 +138,7 @@ class TestNavigation:
             app = SettingsApp()
             async with app.run_test() as pilot:
                 await _goto(pilot, app, "bedrock-region")
-                app.query_one("#list", DataTable).focus()
+                app.query_one("#list", Tree).focus()
                 await pilot.press("enter")  # focus the editor
                 await pilot.pause()
                 in_editor = getattr(app.focused, "id", None)
@@ -130,7 +146,7 @@ class TestNavigation:
                 await pilot.pause()
                 return in_editor, type(app.focused).__name__
 
-        assert _run(scenario) == ("editor", "DataTable")
+        assert _run(scenario) == ("editor", "Tree")
 
     def test_single_tab_reaches_editor(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
@@ -139,7 +155,7 @@ class TestNavigation:
             app = SettingsApp()
             async with app.run_test() as pilot:
                 await _goto(pilot, app, "bedrock-region")
-                app.query_one("#list", DataTable).focus()
+                app.query_one("#list", Tree).focus()
                 await pilot.press("tab")
                 await pilot.pause()
                 return getattr(app.focused, "id", None)
@@ -161,16 +177,16 @@ class TestNavigation:
 
 
 class TestMigrationMarker:
-    def test_marker_on_setting_not_source(self, fake_home: Path) -> None:
+    def test_marker_on_migration_setting(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
-        setting_cell, _value, source_cell = _row_cells("embedding-provider")
-        assert "⚠" in str(setting_cell)
-        assert "⚠" not in str(source_cell)
+        label = _leaf_label("embedding-provider")
+        # The marker rides next to the key, ahead of the inline value.
+        assert "⚠" in str(label)
+        assert str(label).index("⚠") < str(label).index("local")
 
     def test_no_marker_on_plain_setting(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
-        setting_cell, _value, _source = _row_cells("log-level")
-        assert "⚠" not in str(setting_cell)
+        assert "⚠" not in str(_leaf_label("log-level"))
 
     def test_detail_explains_marker(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
@@ -372,6 +388,52 @@ class TestWeights:
         _run(scenario)
         config._settings_cache = None
         assert "score-weight-recency" not in config.read_settings_file()
+
+
+class TestGrouping:
+    def test_taxonomy_covers_every_setting_exactly_once(self) -> None:
+        """Every config setting is categorised once; weights collapse to one."""
+        grouped: list[str] = [key for _label, keys in _GROUPS for key in keys]
+        assert len(grouped) == len(set(grouped)), "a key is listed in two groups"
+
+        expected = {_WEIGHTS_KEY}
+        for setting in config.SETTINGS:
+            if setting.key not in config._WEIGHT_KEYS:
+                expected.add(setting.key)
+        assert set(grouped) == expected
+
+    def test_common_groups_expand_advanced_collapse(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                tree = app.query_one("#list", Tree)
+                return {str(n.label): n.is_expanded for n in tree.root.children}
+
+        states = _run(scenario)
+        for label in _EXPANDED_GROUPS:
+            assert states[label] is True
+        for label in set(states) - set(_EXPANDED_GROUPS):
+            assert states[label] is False
+
+    def test_category_node_is_read_only(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                tree = app.query_one("#list", Tree)
+                tree.move_cursor(tree.root.children[0])  # the "General" header
+                await pilot.pause()
+                await pilot.pause()
+                return app._current_key, bool(app.query("#editor"))
+
+        current_key, has_editor = _run(scenario)
+        assert current_key is None  # category carries no editable setting
+        assert has_editor is False
 
 
 class TestFollowupsDataDir:
