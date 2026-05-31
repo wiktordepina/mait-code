@@ -76,9 +76,15 @@ class TestUpdateDetachedHead:
 
         # Must NOT run a bare `git pull` (the original bug).
         assert not git.ran(["git", "pull"])
-        # Should fetch then checkout the latest tag.
+        # Should fetch then force-checkout the latest tag. The checkout is
+        # forced because the tool-managed clone's symlinked skills can be
+        # edited in place (write-through), dirtying tracked files; a plain
+        # checkout would abort with "local changes would be overwritten".
         assert git.ran(["git", "fetch", "origin", "--tags"])
-        assert (["git", "checkout", "v0.15.1"], fake_source.resolve()) in git.run_calls
+        assert (
+            ["git", "checkout", "--force", "v0.15.1"],
+            fake_source.resolve(),
+        ) in git.run_calls
         assert summary.landed_on == "v0.15.1"
 
     def test_detached_head_no_tags_raises(
@@ -347,3 +353,25 @@ class TestUpdateCommand:
         result = runner.invoke(app, ["update", "--no-pull"])
         assert result.exit_code == 1
         assert "mait-code install" in result.output
+
+    def test_cli_subprocess_failure_exits_1_without_traceback(
+        self, fake_home: Path, fake_source: Path, monkeypatch
+    ) -> None:
+        # A failing git/uv subprocess must produce a clean error line and
+        # exit 1, not a Python traceback (the symptom of the wedged-update
+        # bug, where a forbidden checkout raised CalledProcessError uncaught).
+        import subprocess
+
+        _install_first(fake_source)
+
+        def boom(cmd: list[str], *, cwd: Path | None = None) -> None:
+            raise subprocess.CalledProcessError(1, cmd)
+
+        git = _FakeGit(branch="main", tags=[])
+        monkeypatch.setattr("mait_code.cli._update.default_runner", boom)
+        monkeypatch.setattr("mait_code.cli._update.default_capture", git.capture)
+
+        result = runner.invoke(app, ["update", "--no-pull"])
+        assert result.exit_code == 1
+        assert "error: command failed" in result.output
+        assert "Traceback" not in result.output
