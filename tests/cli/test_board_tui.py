@@ -1136,3 +1136,48 @@ class TestTheming:
         assert exc is None  # the card screen painted without MissingStyle
         assert screen == "CardScreen"
         assert colours == PALETTE_CHIPS  # chips fell back to the hex palette
+
+
+class TestToasts:
+    """The house notification styling layered on Textual's Toast."""
+
+    def test_notify_prefixes_severity_glyph(self, board_path: Path) -> None:
+        """MaitApp.notify() leads each toast title with its severity glyph."""
+        from textual.widgets._toast import Toast
+
+        from mait_code.tui.app import TOAST_GLYPHS
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(notifications=True) as pilot:
+                await pilot.pause()
+                app.notify("created", severity="information")
+                app.notify("blocked", severity="warning")
+                app.notify("failed", severity="error")
+                await pilot.pause()
+                return [t._notification.title for t in app.query(Toast)]
+
+        titles = _run(scenario)
+        assert {t[0] for t in titles} == set(TOAST_GLYPHS.values())
+
+    def test_notify_renders_under_ansi_theme(self, board_path: Path) -> None:
+        """Toasts paint (don't crash) under an ANSI theme, where colours resolve
+        to named tokens rather than hex — the border/title roles must degrade
+        gracefully."""
+        from textual.widgets._toast import Toast
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(notifications=True) as pilot:
+                await pilot.pause()
+                app.theme = "ansi-dark"
+                await pilot.pause()
+                app.notify("created", severity="information")
+                app.notify("blocked", severity="warning")
+                app.notify("failed", severity="error")
+                await pilot.pause()
+                return len(app.query(Toast)), app._exception
+
+        count, exc = _run(scenario)
+        assert exc is None
+        assert count == 3

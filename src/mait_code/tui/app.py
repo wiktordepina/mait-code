@@ -24,18 +24,30 @@ override ``on_mount`` don't have to remember to call ``super()``.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Final
 
 from textual.app import App
 from textual.binding import Binding
+from textual.notifications import SeverityLevel
 
 from mait_code.tui.help import HelpScreen
 from mait_code.tui.theme import HOUSE_THEMES
 
-__all__ = ["MaitApp", "SHARED_TCSS"]
+__all__ = ["MaitApp", "SHARED_TCSS", "TOAST_GLYPHS"]
 
 #: Absolute path to the shared stylesheet. Subclasses put this in their
 #: ``CSS_PATH`` list alongside their own layout sheet.
 SHARED_TCSS = Path(__file__).parent / "app.tcss"
+
+#: Per-severity leading glyph prefixed to a toast's title, so every mait-code
+#: notification carries a consistent house marker. Each glyph's colour is the
+#: ``.toast--title`` rule for that severity in ``app.tcss``, so it tracks the
+#: active theme. Keyed by Textual's three severity levels.
+TOAST_GLYPHS: Final[dict[str, str]] = {
+    "information": "\N{INFORMATION SOURCE}",
+    "warning": "\N{WARNING SIGN}",
+    "error": "\N{HEAVY BALLOT X}",
+}
 
 
 class MaitApp(App[None]):
@@ -55,6 +67,30 @@ class MaitApp(App[None]):
         for theme in HOUSE_THEMES:
             self.register_theme(theme)
         self.theme = self.HOUSE_THEME
+
+    def notify(
+        self,
+        message: str,
+        *,
+        title: str = "",
+        severity: SeverityLevel = "information",
+        timeout: float | None = None,
+        markup: bool = True,
+    ) -> None:
+        """Show a toast, prefixing its title with a per-severity house glyph.
+
+        Extends :meth:`textual.app.App.notify` so every mait-code toast carries a
+        consistent leading marker (``\N{INFORMATION SOURCE}``/``\N{WARNING SIGN}``/``\N{HEAVY BALLOT X}``).
+        The glyph's colour comes from the per-severity ``.toast--title`` rules in
+        ``app.tcss``, so it re-skins with the active theme like the rest of the
+        TUI. Behaviour is otherwise identical to the base method.
+        """
+        glyph = TOAST_GLYPHS.get(severity, "")
+        if glyph:
+            title = f"{glyph} {title}".rstrip()
+        super().notify(
+            message, title=title, severity=severity, timeout=timeout, markup=markup
+        )
 
     def action_help(self) -> None:
         """Show a cheat-sheet of the currently active key-bindings.

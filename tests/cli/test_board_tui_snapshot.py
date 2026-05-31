@@ -168,6 +168,50 @@ def test_detail_snapshot_syntax(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def _show_toasts(pilot) -> None:
+    """Fire one toast per severity so the snapshot captures all three styles."""
+    pilot.app.notify("Card #3 created", severity="information")
+    pilot.app.notify("Card #3 blocked", severity="warning")
+    pilot.app.notify("Could not reach the board", severity="error")
+
+
+def test_toast_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the house toast styling: a rounded, severity-keyed border with a
+    leading glyph per severity (information / warning / error), under the
+    mait-dark default."""
+    db_path = tmp_path / "board.db"
+    _seed_demo(db_path)
+
+    async def run_before(pilot) -> None:
+        _show_toasts(pilot)
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
+
+
+def test_toast_snapshot_ember(snap_compare, tmp_path: Path) -> None:
+    """Lock the toast styling under mait-ember, proving severity colours track
+    a theme switch (amber primary, gold warning, red error)."""
+    db_path = tmp_path / "board.db"
+    _seed_demo(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app.theme = "mait-ember"
+        await pilot.pause()
+        _show_toasts(pilot)
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
+
+
 def test_card_edit_snapshot(snap_compare, tmp_path: Path) -> None:
     """Lock the edit mode of the card screen (form fields on the same frame),
     reached in-place from view via ``e``."""
