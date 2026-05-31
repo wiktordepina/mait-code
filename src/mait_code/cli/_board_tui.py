@@ -207,13 +207,9 @@ _VIEW_ACTIONS: frozenset[str] = frozenset(
     {
         "edit",
         "comment",
-        "tag",
-        "reference",
         "complete",
         "block",
         "unblock",
-        "move_left",
-        "move_right",
     }
 )
 
@@ -232,22 +228,28 @@ class CardScreen(ModalScreen[None]):
     """A near-fullscreen card surface with a view↔edit toggle.
 
     One screen, two modes. *view* is read-only — the card's fields and its
-    comment thread, with the full action set (comment / tag / move / complete /
-    block) reachable in place. *edit* is a form over title / priority /
-    description / acceptance. ``e`` flips view→edit; **Save** (or ``ctrl+s``)
-    persists in place and flips back to view (so an edit lands without a
-    round-trip to the board); ``escape`` cancels an edit back to view, or closes
-    the screen from view.
+    comment thread, with comment / complete / block reachable in place. *edit*
+    is the comprehensive form: title, priority, status, tags, references,
+    description and acceptance, all in one place. Tags, references and status
+    are a working copy applied only on **Save**, so the form is the single,
+    cohesive editor and ``escape`` discards every pending change. ``e`` flips
+    view→edit; **Save** (or ``ctrl+s``) persists in place and flips back to view
+    (so an edit lands without a round-trip to the board); ``escape`` cancels an
+    edit back to view, or closes the screen from view.
 
     The frame is near-fullscreen for room, but the content column stays capped
     (see ``_board.tcss``) so running prose keeps a readable measure — the win
     from the detail-readability pass.
 
-    The screen never touches the database itself: every action posts a message
-    (:class:`Saved` for an edit, :class:`Mutate` for the rest) that the app
-    persists, after which the app feeds the refreshed card back via
-    :meth:`show_card`. Mutation stays in the service layer, mirroring the rest of
-    the board.
+    The screen never touches the database itself: every change posts a message
+    (:class:`Saved` for the form, :class:`Mutate` for comment / complete /
+    block) that the app persists, after which the app feeds the refreshed card
+    back via :meth:`show_card`. Mutation stays in the service layer, mirroring
+    the rest of the board.
+
+    Block/unblock (``b``/``u``) stay view-mode gestures — they carry a reason
+    comment a plain tag can't — so the form's tag editor leaves the ``blocked``
+    tag alone, carrying it through a save untouched.
 
     The footer is contextual: :meth:`check_action` gates the bindings to the
     active mode and the card's tag state, so the binding bar advertises only what
@@ -284,16 +286,15 @@ class CardScreen(ModalScreen[None]):
     class Mutate(Message):
         """Posted to ask the app to apply an in-place action, then refresh.
 
-        Covers every non-edit action reachable from the card screen — comment,
-        tag, move, block/unblock, complete. Like :class:`Saved`, the screen never
-        writes to the DB itself: it posts the intent (with any gathered input),
-        the app persists via the service layer and feeds the refreshed card back
-        through :meth:`show_card`, so the action lands in place without bouncing
-        to the board.
+        Covers the view-mode actions that stay outside the edit form — comment,
+        block/unblock and complete. Like :class:`Saved`, the screen never writes
+        to the DB itself: it posts the intent (with any gathered input), the app
+        persists via the service layer and feeds the refreshed card back through
+        :meth:`show_card`, so the action lands in place without bouncing to the
+        board.
 
         ``op`` is the action name; ``value`` carries its payload — the comment
-        body, the tag to toggle, the move delta (``-1``/``+1``) or the completion
-        summary — and is ``None`` for block/unblock.
+        body or the completion summary — and is ``None`` for block/unblock.
         """
 
         def __init__(self, card_id: int, op: str, value: object = None) -> None:
@@ -306,13 +307,9 @@ class CardScreen(ModalScreen[None]):
         Binding("e", "edit", "Edit"),
         Binding("ctrl+s", "save", "Save"),
         Binding("c", "comment", "Comment"),
-        Binding("t", "tag", "Tag"),
-        Binding("r", "reference", "Refs"),
         Binding("C", "complete", "Complete"),
         Binding("b", "block", "Block"),
         Binding("u", "unblock", "Unblock"),
-        Binding("less_than_sign", "move_left", "Move ←"),
-        Binding("greater_than_sign", "move_right", "Move →"),
         Binding("escape", "close", "Close"),
     ]
 
@@ -488,26 +485,6 @@ class CardScreen(ModalScreen[None]):
             self.post_message(self.Mutate(self._card["id"], "comment", body))
 
     @work
-    async def action_tag(self) -> None:
-        if self._mode != "view":
-            return
-        tag = await self.app.push_screen_wait(
-            TagScreen(self._card["id"], self._card.get("tags", []))
-        )
-        if tag:
-            self.post_message(self.Mutate(self._card["id"], "tag", tag))
-
-    @work
-    async def action_reference(self) -> None:
-        if self._mode != "view":
-            return
-        result = await self.app.push_screen_wait(
-            RefScreen(self._card["id"], self._card.get("references", []))
-        )
-        if result:
-            self.post_message(self.Mutate(self._card["id"], "ref", result))
-
-    @work
     async def action_complete(self) -> None:
         if self._mode != "view":
             return
@@ -523,23 +500,15 @@ class CardScreen(ModalScreen[None]):
         if self._mode == "view":
             self.post_message(self.Mutate(self._card["id"], "unblock"))
 
-    def action_move_left(self) -> None:
-        if self._mode == "view":
-            self.post_message(self.Mutate(self._card["id"], "move", -1))
-
-    def action_move_right(self) -> None:
-        if self._mode == "view":
-            self.post_message(self.Mutate(self._card["id"], "move", 1))
-
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         """Gate the footer/bindings to the active mode and card state.
 
         Edit mode exposes only Save + Close — the view actions don't apply with
-        the form up. View mode hides Save and shows whichever of block / unblock
-        matches the card's current tag (they're mutually exclusive). Move arrows
-        always show, matching the board (the out-of-bounds notify handles the
-        ends). Paired with :meth:`refresh_bindings` so the footer updates on every
-        mode flip and in-place change.
+        the form up (tags, references and status are edited *in* the form now).
+        View mode hides Save and shows whichever of block / unblock matches the
+        card's current tag (they're mutually exclusive). Paired with
+        :meth:`refresh_bindings` so the footer updates on every mode flip and
+        in-place change.
         """
         editing = self._mode == "edit"
         if action == "save":
@@ -858,70 +827,6 @@ class TagScreen(ModalScreen[str | None]):
     def _submit(self) -> None:
         tag = self.query_one("#tag-input", Input).value.strip()
         self.dismiss(tag or None)
-
-    def action_cancel(self) -> None:
-        self.dismiss(None)
-
-
-class RefScreen(ModalScreen[tuple | None]):
-    """Add a reference (label + value), or pick a current one to remove.
-
-    Resolves to ``("add", label, value)`` or ``("remove", position)`` — with
-    *position* 1-based in display order — or ``None`` on cancel. Unlike
-    :class:`TagScreen` there's no toggle: a reference is two free-form fields, so
-    add and remove are distinct gestures (type both fields and apply to add;
-    click a current-reference chip to remove it).
-    """
-
-    BINDINGS = [("escape", "cancel", "Cancel")]
-
-    def __init__(self, card_id: int, references: list[dict] | None = None) -> None:
-        super().__init__()
-        self._card_id = card_id
-        self._references = references or []
-
-    def compose(self) -> ComposeResult:
-        with Vertical(classes="modal-dialog"):
-            yield Label(f"Reference on card #{self._card_id}", classes="modal-title")
-            yield Input(placeholder="label (e.g. PR)…", id="ref-label")
-            yield Input(placeholder="value (URL, file:// path, or ID)…", id="ref-value")
-            if self._references:
-                yield Label(
-                    "Current references (select to remove):", classes="field-label"
-                )
-                with Vertical(id="ref-current"):
-                    for idx, ref in enumerate(self._references):
-                        yield Button(
-                            f"✕ {ref['label']}: {ref['value']}",
-                            id=f"ref-rm-{idx}",
-                            classes="tag-remove",
-                        )
-            with Horizontal(classes="modal-buttons"):
-                yield Button("Add", id="ref-apply", variant="primary")
-                yield Button("Cancel", id="ref-cancel")
-
-    def on_mount(self) -> None:
-        self.query_one("#ref-label", Input).focus()
-
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        self._submit()
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id or ""
-        if button_id == "ref-apply":
-            self._submit()
-        elif button_id.startswith("ref-rm-"):
-            # A current-reference chip: remove by its 1-based display position.
-            self.dismiss(("remove", int(button_id.removeprefix("ref-rm-")) + 1))
-        else:
-            self.dismiss(None)
-
-    def _submit(self) -> None:
-        label_ = self.query_one("#ref-label", Input).value.strip()
-        value = self.query_one("#ref-value", Input).value.strip()
-        if not label_ or not value:
-            return  # both fields required; stay in the form
-        self.dismiss(("add", label_, value))
 
     def action_cancel(self) -> None:
         self.dismiss(None)
@@ -1530,37 +1435,6 @@ class BoardApp(MaitApp):
         op = message.op
         if op == "comment":
             service.add_comment(self._conn, cid, str(message.value))
-        elif op == "tag":
-            tag = str(message.value)
-            # Toggle: a tag already on the card is removed, otherwise added —
-            # mirrors the board-level tag gesture.
-            if tag in service.list_tags(self._conn, cid):
-                service.remove_tag(self._conn, cid, tag)
-                self.notify(f"Removed #{tag} from card #{cid}")
-            else:
-                service.add_tag(self._conn, cid, tag)
-                self.notify(f"Tagged card #{cid} #{tag}")
-        elif op == "ref":
-            action = message.value
-            assert isinstance(action, tuple)
-            if action[0] == "add":
-                _, ref_label, value = action
-                service.add_reference(self._conn, cid, ref_label, value)
-                self.notify(f"Added reference to card #{cid}")
-            else:  # ("remove", position)
-                position = int(action[1])
-                if service.remove_reference(self._conn, cid, position):
-                    self.notify(f"Removed reference {position} from card #{cid}")
-                else:
-                    self.notify(
-                        f"Card #{cid} has no reference {position}", severity="warning"
-                    )
-        elif op == "move":
-            new_status = self._move_target(card["status"], int(message.value))  # type: ignore[arg-type]
-            if new_status is None:
-                return  # off-flow / at an end; _move_target already notified
-            service.move_card(self._conn, cid, new_status)
-            self.notify(f"Card #{cid} → {col_label(new_status)}")
         elif op == "block":
             service.block_card(self._conn, cid)
             self.notify(f"Card #{cid} blocked", severity="warning")
