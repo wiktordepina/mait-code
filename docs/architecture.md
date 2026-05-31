@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect<br/>/remind, /reminders<br/>/task, /tasks, /board, /triage<br/>/decision, /decisions<br/>/web-fetch<br/>memory-store"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders, /task, /tasks<br/>/board, /triage<br/>/commit, /standup, /work-history<br/>/today, /status, /prs<br/>/decision, /decisions<br/>/web-fetch"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -29,7 +29,7 @@ graph TD
             memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect"]
             reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
             tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
-            board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns"]
+            board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns, service"]
             inbox_tool["inbox/ <i>(CLI)</i><br/>cli, db, migrate, service"]
             decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
             web_fetch_tool["web_fetch/ <i>(CLI)</i><br/>cli, fetch, convert"]
@@ -465,6 +465,7 @@ Primary knobs:
 | `MAIT_CODE_DATA_DIR` | `~/.claude/mait-code-data` | Data directory (memories, personalised files) |
 | `MAIT_CODE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `MAIT_CODE_LOG_FILE` | `~/.local/state/mait-code/mait-code.log` | Override log file path |
+| `MAIT_CODE_THEME` | `mait-dark` | TUI colour theme; unknown names fall back to `mait-dark` |
 | `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | Embedding provider: `local` (fastembed) or `bedrock` (AWS) |
 | `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local embedding provider |
 | `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock embedding provider |

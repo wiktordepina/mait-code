@@ -16,8 +16,8 @@ uv run pytest -v       # verbose
 uv run pytest tests/tools/memory/   # narrow to a package
 ```
 
-The suite covers every package under `src/mait_code/` (~845 tests at the time of
-writing). Fixtures live in tool-specific `tests/<area>/conftest.py` files; the
+The suite covers every package under `src/mait_code/` (close to a thousand tests
+and growing). Fixtures live in tool-specific `tests/<area>/conftest.py` files; the
 root `tests/conftest.py` keeps cross-cutting setup. See the "Writing Tests for
 Memory Components" section below for the established patterns.
 
@@ -38,8 +38,8 @@ uv run pytest tests/cli/test_board_tui_snapshot.py --snapshot-update
 
 Keep snapshots deterministic: pin `terminal_size`, seed fixed data, and
 neutralise anything environment-dependent (e.g. the settings snapshot clears
-`MAIT_CODE_*` so every row resolves to its default source). The `mait-dark`
-theme is applied by `MaitApp`, so there's no need to pin it.
+`MAIT_CODE_*` so every row resolves to its default source). `MaitApp` applies
+`mait-dark` as the default, so there's no need to pin it.
 
 ## Linting, formatting, typechecking
 
@@ -90,12 +90,15 @@ The Textual TUIs share one identity through `src/mait_code/tui/`:
 src/mait_code/tui/
 ├── __init__.py    # Re-exports palette only (kept Textual-free)
 ├── palette.py     # Canonical role→hex colours — the single source of truth
-├── theme.py       # The mait-dark Textual Theme, built from palette
+├── theme.py       # The mait-* house Textual Themes, built from palette
+├── render.py      # Palette-coloured Rich chip helpers (for DataTable/OptionList cells)
+├── help.py        # Shared `?` HelpScreen (live key-binding cheat-sheet)
 ├── app.py         # MaitApp base class + SHARED_TCSS path
 └── app.tcss       # Shared stylesheet (modal geometry, conventions)
 ```
 
-**Dependency order:** `palette.py` ← `theme.py` ← `app.py`. The one hard rule:
+**Dependency order:** `palette.py` ← `theme.py` ← `app.py`; `render.py` and
+`help.py` sit on top of `palette.py`/`app.py` respectively. The one hard rule:
 **`palette.py` imports nothing from Textual or the rest of `mait_code`.** It
 sits on the CLI hot path — `console.py` imports it to colour plain output — so
 pulling Textual in there would slow every CLI invocation. `theme.py` and
@@ -108,11 +111,15 @@ both the Rich CLI theme (`console.py`) and the Textual TUI theme (`theme.py`),
 so plain CLI output and the TUIs share a colour identity. Tune a colour once and
 both follow. Every value clears WCAG AA (≥4.5:1) against the dark backgrounds.
 
-**Theming model.** `MaitApp` registers the `mait-dark` house theme as the
-default and leaves Textual's built-in themes registered, so the Ctrl+P command
-palette's "Change theme" offers the house theme alongside them. Because every
-style is driven off `$`-variables, a user *can* drop in their own theme file and
-it works mechanically — but arbitrary themes are not a supported surface.
+**Theming model.** `MaitApp` registers the five house themes in `HOUSE_THEMES`
+(`mait-dark`, `mait-bubblegum`, `mait-aurora`, `mait-ember`, `mait-syntax`),
+defaults to `mait-dark`, and leaves Textual's built-in themes registered — so the
+Ctrl+P command palette's "Change theme" offers all of them. A user's pick is
+persisted across sessions via the `theme` setting (`MAIT_CODE_THEME`), so the TUIs
+reopen in the last-chosen theme. Because every style is driven off `$`-variables,
+adding a house theme is just another `Theme` in `theme.py`; a user can also drop in
+their own theme file and it works mechanically, though only the house themes are
+maintained.
 
 ## Logging
 
@@ -274,6 +281,11 @@ def mem_db(tmp_path):
    in the Ctrl+P palette by overriding `get_system_commands` and yielding
    `SystemCommand`s after `yield from super().get_system_commands(screen)`.
 6. Add a snapshot test (see "Snapshot tests" above).
+
+The two shipped surfaces are worked examples: `cli/_board_tui.py` (the board) and
+`cli/_settings_tui.py` (the settings editor, a master–detail tree). Theme
+persistence is free — `MaitApp.on_unmount` writes the active theme back to the
+`theme` setting for every surface, so a user's pick survives across sessions.
 
 ## Adding a New Skill
 

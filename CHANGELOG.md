@@ -10,6 +10,19 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.40.1] — 2026-05-31
+
+### Changed
+
+- **Docs caught up with the recent shipping wave.** The hand-written guides had
+  drifted behind the board overhaul, the multi-theme system and the settings
+  tree. The architecture diagram now lists all the skills and shows the board's
+  `service` layer; the development guide's theming section covers the five house
+  themes and notes that a chosen theme persists across sessions; the board guide
+  documents the `/` title-search key; the settings reference table gains
+  `MAIT_CODE_THEME`; the skills tree includes `/triage`; and the stale test
+  counts are gone.
+
 ## [0.40.0] — 2026-05-31
 
 ### Changed
@@ -1225,7 +1238,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.40.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.40.1...HEAD
+[0.40.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.1
 [0.40.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.0
 [0.39.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.39.0
 [0.38.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.38.0
