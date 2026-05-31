@@ -64,6 +64,159 @@ def test_help_screen_snapshot(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def _seed_board_rich(db_path: Path) -> None:
+    """A busy, multi-project board for the docs board shots.
+
+    Spans three projects with long titles that wrap, several tags per card, a
+    blocked card, and cards in every column — Done and Archived included, so the
+    expanded view has content in all five panes.
+    """
+    conn = get_connection(db_path)
+    try:
+        # (project, title, priority, status, tags, blocked, summary)
+        cards = [
+            (
+                "mait-code",
+                "Persist the board's collapsed / expanded layout across sessions",
+                "high",
+                "backlog",
+                ["tui", "enhancement"],
+                False,
+                None,
+            ),
+            (
+                "homelab",
+                "Rotate the Restic backup encryption keys and document the runbook",
+                "medium",
+                "backlog",
+                ["infra", "security"],
+                False,
+                None,
+            ),
+            (
+                "dotfiles",
+                "Switch the Neovim config over to the lazy.nvim plugin loader",
+                "low",
+                "backlog",
+                ["chore"],
+                False,
+                None,
+            ),
+            (
+                "mait-code",
+                "Add a shortcut to jump straight to a card by its ID number",
+                "medium",
+                "refined",
+                ["tui"],
+                False,
+                None,
+            ),
+            (
+                "homelab",
+                "Migrate the Prometheus scrape configs to the node-exporter v2 layout",
+                "high",
+                "refined",
+                ["infra", "urgent"],
+                False,
+                None,
+            ),
+            (
+                "mait-code",
+                "Render card references as a collapsible section in the detail view",
+                "high",
+                "in_progress",
+                ["tui"],
+                True,
+                None,
+            ),
+            (
+                "homelab",
+                "Debug intermittent DNS resolution failures on the Pi-hole container",
+                "medium",
+                "in_progress",
+                ["bug", "infra"],
+                False,
+                None,
+            ),
+            (
+                "mait-code",
+                "Persist the chosen theme across TUI sessions",
+                "medium",
+                "done",
+                ["tui"],
+                False,
+                "Saved on unmount, restored on launch.",
+            ),
+            (
+                "homelab",
+                "Set up nightly off-site backup sync to Backblaze B2",
+                "low",
+                "done",
+                ["infra"],
+                False,
+                "Cron + Restic to B2, alerting on failure.",
+            ),
+            (
+                "dotfiles",
+                "Spike: experiment with a fish-shell prompt",
+                "low",
+                "archived",
+                ["spike"],
+                False,
+                None,
+            ),
+        ]
+        for project, title, priority, status, tags, blocked, summary in cards:
+            cid = service.add_card(
+                conn, project=project, title=title, priority=priority
+            )
+            if status == "done":
+                service.complete_card(conn, cid, summary=summary)
+            elif status == "archived":
+                service.archive_card(conn, cid)
+            elif status != "backlog":
+                service.move_card(conn, cid, status)
+            for tag in tags:
+                service.add_tag(conn, cid, tag)
+            if blocked:
+                service.block_card(conn, cid)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_board_rich_snapshot(snap_compare, tmp_path: Path) -> None:
+    """A busy multi-project board in the default collapsed view — the docs hero
+    shot: wrapping titles, multiple tags, a blocked card, per-card project
+    labels (shown because the filter is on ``all``)."""
+    db_path = tmp_path / "board.db"
+    _seed_board_rich(db_path)
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        terminal_size=(132, 46),
+    )
+
+
+def test_board_rich_expanded_snapshot(snap_compare, tmp_path: Path) -> None:
+    """The same busy board uncollapsed — all five columns revealed via ``d`` and
+    ``a`` — the docs review-layout shot."""
+    db_path = tmp_path / "board.db"
+    _seed_board_rich(db_path)
+
+    async def run_before(pilot) -> None:
+        await pilot.press("d")  # reveal Done
+        await pilot.press("a")  # reveal Archived
+        await pilot.pause()
+
+    # Wider than the three-column shot: five panes need the extra columns.
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(176, 46),
+    )
+
+
 def _seed_detail(db_path: Path) -> None:
     """A content-rich card (long title, sections, tags, comments) for the modal.
 
@@ -244,6 +397,80 @@ def test_detail_references_snapshot(snap_compare, tmp_path: Path) -> None:
         BoardApp(db_path=db_path),
         run_before=run_before,
         terminal_size=(120, 40),
+    )
+
+
+def _seed_detail_full(db_path: Path) -> None:
+    """A fully-populated card for the docs hero shot: title, two tags,
+    description, acceptance criteria, a mix of references, and a comment thread.
+
+    Comments use fixed timestamps so the snapshot is stable.
+    """
+    conn = get_connection(db_path)
+    try:
+        cid = service.add_card(
+            conn,
+            project="mait-code",
+            title="Add a References field to cards",
+            priority="high",
+        )
+        service.move_card(conn, cid, "refined")
+        service.edit_card(
+            conn,
+            cid,
+            description=(
+                "Cards accumulate links — PRs, tickets, specs — buried in the "
+                "description. Give each card a structured, ordered list of "
+                "label → value references instead."
+            ),
+            acceptance_criteria=(
+                "- ref add/remove/list CLI verbs\n"
+                "- an `r` key on the detail screen\n"
+                "- URLs render as clickable links, bare IDs stay plain"
+            ),
+        )
+        service.add_tag(conn, cid, "tui")
+        service.add_tag(conn, cid, "enhancement")
+        service.add_reference(conn, cid, "PR", "https://github.com/example/pr/66")
+        service.add_reference(conn, cid, "Plan", "file:///home/me/plan.html")
+        service.add_reference(conn, cid, "JIRA", "WIKTOR-2342")
+        for author, body, ts in (
+            (
+                "claude",
+                "Drafted the schema migration — references live in their own "
+                "table, ordered by position.",
+                "2026-05-31T09:00:00+00:00",
+            ),
+            ("me", "Looks good — ship it.", "2026-05-31T10:15:00+00:00"),
+        ):
+            conn.execute(
+                "INSERT INTO card_comments (card_id, author, body, created_at) "
+                "VALUES (?, ?, ?, ?)",
+                (cid, author, body, ts),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_detail_full_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the card detail view with every section populated at once — title,
+    tags, description, acceptance criteria, references, and comments. Doubles as
+    the docs screenshot for a fully-filled card."""
+    db_path = tmp_path / "board.db"
+    _seed_detail_full(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app._focus_status("refined")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    # A taller terminal than the other shots: this card fills every section, so
+    # the extra rows keep the whole thread above the fold for the docs image.
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 50),
     )
 
 

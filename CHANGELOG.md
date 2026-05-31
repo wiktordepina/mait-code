@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.34.1] — 2026-05-31
+
+### Added
+
+- **A dedicated guide for the kanban board.** The board now has its own page in
+  the documentation, rather than being scattered across command mentions: the
+  working model (manually driven, with Claude as the worker), the card lifecycle,
+  the collapsed-for-work versus expanded-for-review layouts, card anatomy, and
+  full TUI and CLI references — illustrated with screenshots of a busy
+  multi-project board and a fully-populated card.
+
 ## [0.34.0] — 2026-05-31
 
 ### Added
@@ -1091,7 +1102,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.34.1...HEAD
+[0.34.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.1
 [0.34.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.0
 [0.33.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.33.0
 [0.32.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.32.0
