@@ -28,7 +28,6 @@ from textual.screen import ModalScreen, Screen
 from textual.validation import ValidationResult, Validator
 from textual.widgets import (
     Button,
-    DataTable,
     Footer,
     Header,
     Input,
@@ -36,8 +35,9 @@ from textual.widgets import (
     RadioButton,
     RadioSet,
     Static,
+    Tree,
 )
-from textual.widgets.data_table import ColumnKey
+from textual.widgets.tree import TreeNode
 
 from mait_code import config
 from mait_code.cli._settings_edit import (
@@ -74,11 +74,69 @@ class _LiveValidator(Validator):
         return self.success() if msg is None else self.failure(msg)
 
 
-# Source only ever holds these words, so the column is sized to the longest
-# ("settings"). The migration marker rides on the Setting column instead, so it
-# costs the wider Value column nothing.
-_SETTING_WIDTH = 26
-_SOURCE_WIDTH = 8
+# Settings grouped into the tree's top-level categories, in display order.
+# Every settable/derived key lands under exactly one group; the three scoring
+# weights collapse into the single _WEIGHTS_KEY row under "Scoring & dedup".
+# A test pins this taxonomy against config.SETTINGS so a new setting can't slip
+# in uncategorised.
+_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("General", ("data-dir", "theme")),
+    ("Logging", ("log-level", "log-file", "log-backup-count")),
+    (
+        "Embeddings",
+        (
+            "embedding-provider",
+            "embedding-model",
+            "bedrock-model-id",
+            "bedrock-region",
+        ),
+    ),
+    (
+        "Models",
+        (
+            "extraction-model",
+            "reflection-model",
+            "llm-timeout",
+            "git-timeout",
+            "reflection-batch-size",
+            "reflection-novelty-gate",
+        ),
+    ),
+    (
+        "Scoring & dedup",
+        (
+            _WEIGHTS_KEY,
+            "half-life-episodic",
+            "half-life-semantic",
+            "dedup-string-threshold",
+            "dedup-vector-threshold",
+            "scope-boost-global",
+            "scope-boost-cross-project",
+        ),
+    ),
+    (
+        "Paths (derived)",
+        (
+            "embedding-dim",
+            "memory-db-path",
+            "tasks-db-path",
+            "decisions-db-path",
+            "reminders-db-path",
+            "model-cache-dir",
+            "observations-dir",
+            "project-aliases-path",
+        ),
+    ),
+)
+
+# Common groups open on boot; advanced/derived groups start collapsed to keep
+# the initial list short.
+_EXPANDED_GROUPS = frozenset({"General", "Logging", "Embeddings"})
+
+# Leaf labels render "<key>  <value>" on one line. The key column is padded to
+# this width so values line up down the tree; the value is then truncated to
+# what's left of a comfortable half-pane.
+_KEY_WIDTH = 26
 _VALUE_WIDTH = 26
 _MIGRATION_MARK = " ⚠"
 
@@ -88,19 +146,21 @@ def _truncate(text: str, width: int = _VALUE_WIDTH) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
-def _row_cells(key: str, value_width: int = _VALUE_WIDTH) -> tuple[Text, Text, Text]:
-    """Return the (setting, value, source) cells for a settings-table row.
+def _leaf_label(key: str, value_width: int = _VALUE_WIDTH) -> Text:
+    """Build a tree leaf's one-line label: padded key + inline current value.
 
-    *value_width* is the current width of the (flexing) Value column, used to
-    truncate the value with an ellipsis so it never overflows.
+    Defaults (and derived values) render dimmed; the migration ⚠ marker rides
+    next to the key, included in the padding so values stay column-aligned.
     """
+    label = Text(no_wrap=True)
+
     if key == _WEIGHTS_KEY:
         weights = " / ".join(config.get(k) for k in config._WEIGHT_KEYS)
-        return (
-            Text("scoring weights…"),
-            Text(_truncate(weights, value_width)),
-            Text("grouped", style="cyan"),
-        )
+        name = "scoring weights…"
+        label.append(name)
+        label.append(" " * max(2, _KEY_WIDTH - len(name)))
+        label.append(_truncate(weights, value_width), style="dim")
+        return label
 
     setting = _by_key()[key]
     value, source = config.resolve(setting)
@@ -108,22 +168,21 @@ def _row_cells(key: str, value_width: int = _VALUE_WIDTH) -> tuple[Text, Text, T
     if not setting.settable:
         # Derived rows stay navigable (the detail pane explains them) but read
         # as muted and reject edits.
-        return (
-            Text(setting.key, style="dim"),
-            Text(_truncate(value, value_width), style="dim"),
-            Text("derived", style="dim"),
-        )
+        label.append(setting.key, style="dim")
+        label.append(" " * max(2, _KEY_WIDTH - len(setting.key)))
+        label.append(_truncate(value, value_width), style="dim")
+        return label
 
-    setting_cell = Text(setting.key)
+    label.append(setting.key)
+    visible = len(setting.key)
     if setting.requires_migration:
-        setting_cell.append(_MIGRATION_MARK, style="yellow")
-    value_style = "dim" if source == "default" else ""
-    source_cell = Text(source, style="dim" if source == "default" else "")
-    return (
-        setting_cell,
-        Text(_truncate(value, value_width), style=value_style),
-        source_cell,
+        label.append(_MIGRATION_MARK, style="yellow")
+        visible += len(_MIGRATION_MARK)
+    label.append(" " * max(2, _KEY_WIDTH - visible))
+    label.append(
+        _truncate(value, value_width), style="dim" if source == "default" else ""
     )
+    return label
 
 
 class ConfirmScreen(ModalScreen[bool]):
@@ -232,13 +291,12 @@ class SettingsApp(MaitApp):
         super().__init__()
         self._current_key: str | None = None
         self._row_order: list[str] = []
-        self._value_width = _VALUE_WIDTH
-        self._value_col: ColumnKey | None = None
+        self._setting_nodes: dict[str, TreeNode[str]] = {}
 
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal(id="body"):
-            yield DataTable(id="list", cursor_type="row", zebra_stripes=True)
+            yield Tree("settings", id="list")
             yield VerticalScroll(id="detail")
         yield Footer()
 
@@ -246,66 +304,49 @@ class SettingsApp(MaitApp):
         # The detail pane scrolls but shouldn't be a Tab stop — Tab should land
         # straight on the editor widget, not the container around it.
         self.query_one("#detail", VerticalScroll).can_focus = False
-        table = self.query_one("#list", DataTable)
-        table.add_column("Setting", width=_SETTING_WIDTH, key="k")
-        self._value_col = table.add_column("Value", width=self._value_width, key="v")
-        table.add_column("Source", width=_SOURCE_WIDTH, key="s")
-        for key in self._ordered_keys():
-            table.add_row(*_row_cells(key, self._value_width), key=key)
-            self._row_order.append(key)
-        table.focus()
-        # Size the Value column to fill the half once the layout is known.
-        self.call_after_refresh(self._fit_value_column)
+        tree: Tree[str] = self.query_one("#list", Tree)
+        tree.show_root = False
+        tree.guide_depth = 2
+        for label, keys in _GROUPS:
+            group = tree.root.add(label, expand=label in _EXPANDED_GROUPS)
+            for key in keys:
+                node = group.add_leaf(_leaf_label(key), data=key)
+                self._setting_nodes[key] = node
+                self._row_order.append(key)
+        tree.focus()
+        # Land on the first real setting rather than a category header, so the
+        # detail pane shows an editor on boot. Deferred until after the first
+        # refresh: the tree's visible-line map (which move_cursor indexes into)
+        # isn't built until then.
+        self.call_after_refresh(tree.move_cursor, self._setting_nodes["data-dir"])
 
-    def on_resize(self) -> None:
-        self._fit_value_column()
-
-    def _fit_value_column(self) -> None:
-        """Flex the Value column to fill the list pane's remaining width."""
-        if not self._row_order or self._value_col is None:
-            return
-        table = self.query_one("#list", DataTable)
-        available = table.scrollable_content_region.width
-        if available <= 0:
-            return
-        # Reserve the two fixed columns (and per-column padding) and give the
-        # rest to Value. A small floor keeps Source visible rather than letting
-        # Value push it off the edge on a narrow pane.
-        pad = table.cell_padding * 2
-        value_width = max(
-            8, available - (_SETTING_WIDTH + pad) - (_SOURCE_WIDTH + pad) - pad
-        )
-        if value_width == self._value_width:
-            return
-        self._value_width = value_width
-        table.columns[self._value_col].width = value_width
-        for key in self._row_order:
-            table.update_cell(key, "v", _row_cells(key, value_width)[1])
-        table.refresh(layout=True)
-
-    def _ordered_keys(self) -> list[str]:
-        """Row keys in display order: the three weights collapse into one row."""
-        keys: list[str] = []
-        weights_added = False
-        for setting in config.SETTINGS:
-            if setting.key in config._WEIGHT_KEYS:
-                if not weights_added:
-                    keys.append(_WEIGHTS_KEY)
-                    weights_added = True
-                continue
-            keys.append(setting.key)
-        return keys
-
-    async def on_data_table_row_highlighted(
-        self, event: DataTable.RowHighlighted
-    ) -> None:
-        key = event.row_key.value
-        if key is not None:
+    async def on_tree_node_highlighted(self, event: Tree.NodeHighlighted) -> None:
+        # Leaves carry their setting key as node data; category nodes carry
+        # None and get a read-only summary instead of an editor.
+        key = event.node.data
+        if key is None:
+            await self._show_group_detail(event.node)
+        else:
             await self._show_detail(key)
 
-    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        # Enter on a row hands focus to the detail pane's editor.
-        self._focus_editor()
+    def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
+        # Enter on a setting leaf hands focus to the detail pane's editor;
+        # on a category node Tree handles expand/collapse itself.
+        if event.node.data is not None:
+            self._focus_editor()
+
+    async def _show_group_detail(self, node: TreeNode[str]) -> None:
+        """Render a category node's read-only summary in the detail pane."""
+        self._current_key = None
+        detail = self.query_one("#detail", VerticalScroll)
+        await detail.remove_children()
+        await detail.mount(
+            Label(str(node.label), classes="title"),
+            Label(
+                f"{len(node.children)} settings — expand and pick one to edit.",
+                classes="help",
+            ),
+        )
 
     def _focus_editor(self) -> None:
         for selector in ("#editor", "#edit-weights", "#apply"):
@@ -433,7 +474,7 @@ class SettingsApp(MaitApp):
             self._apply(self._current_key)
 
     def action_focus_list(self) -> None:
-        self.query_one("#list", DataTable).focus()
+        self.query_one("#list", Tree).focus()
 
     def action_focus_editor(self) -> None:
         self._focus_editor()
@@ -458,11 +499,8 @@ class SettingsApp(MaitApp):
         await self._show_detail(_WEIGHTS_KEY)
 
     def _refresh_row(self, key: str) -> None:
-        """Re-render a single table row's cells in place after a change."""
-        table = self.query_one("#list", DataTable)
-        cells = _row_cells(key, self._value_width)
-        for column_key, cell in zip(("k", "v", "s"), cells):
-            table.update_cell(key, column_key, cell)
+        """Re-render a single tree leaf's label in place after a change."""
+        self._setting_nodes[key].set_label(_leaf_label(key))
 
     @work
     async def _apply(self, key: str) -> None:
