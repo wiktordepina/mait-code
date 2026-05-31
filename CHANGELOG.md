@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.37.0] — 2026-05-31
+
+### Changed
+
+- **The board's project filter is now a dropdown picker.** Pressing `p` opens a
+  `Select` listing every project plus "All projects", pre-set to the active
+  filter; choosing an entry applies it straight away. This replaces the
+  round-robin cycling, which grew unwieldy once more than a handful of projects
+  were in play — "All projects" clears the filter, and escape leaves it
+  untouched.
+
 ## [0.36.0] — 2026-05-31
 
 ### Added
@@ -1144,7 +1155,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.36.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.37.0...HEAD
+[0.37.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.0
 [0.36.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.36.0
 [0.35.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.35.0
 [0.34.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.1

@@ -13,7 +13,7 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from textual.widgets import Button, Input, Label, Static, TextArea
+from textual.widgets import Button, Input, Label, Select, Static, TextArea
 
 from mait_code.cli._board_tui import (
     BoardApp,
@@ -22,6 +22,7 @@ from mait_code.cli._board_tui import (
     CompleteScreen,
     NewCardScreen,
     TagScreen,
+    _ALL_PROJECTS,
     _card_box,
 )
 from mait_code.tools.board import service
@@ -326,7 +327,7 @@ class TestTagging:
 
 
 class TestProjectFilter:
-    def test_cycle_filters_to_one_project(self, board_path: Path) -> None:
+    def test_picker_filters_to_one_project(self, board_path: Path) -> None:
         _seed(
             board_path,
             [
@@ -341,7 +342,10 @@ class TestProjectFilter:
                 await pilot.pause()
                 # all projects → both refined cards visible
                 before = app.query_one("#tbl-refined").option_count
-                await pilot.press("p")  # → first project (alpha, sorted)
+                await pilot.press("p")  # open the project picker
+                await pilot.pause()
+                # Pick a specific project from the Select (drives Changed → apply).
+                app.screen.query_one("#project-select", Select).value = "alpha"
                 await pilot.pause()
                 after = app.query_one("#tbl-refined").option_count
                 return before, after, app._project_filter
@@ -350,6 +354,62 @@ class TestProjectFilter:
         assert before == 2
         assert after == 1
         assert filt == "alpha"
+
+    def test_picker_all_projects_clears_filter(self, board_path: Path) -> None:
+        _seed(
+            board_path,
+            [
+                {"title": "a", "status": REFINED, "project": "alpha"},
+                {"title": "b", "status": REFINED, "project": "beta"},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                # Filter to a single project first…
+                await pilot.press("p")
+                await pilot.pause()
+                app.screen.query_one("#project-select", Select).value = "alpha"
+                await pilot.pause()
+                filtered = app.query_one("#tbl-refined").option_count
+                # …then reopen and choose "All projects" to clear it.
+                await pilot.press("p")
+                await pilot.pause()
+                app.screen.query_one("#project-select", Select).value = _ALL_PROJECTS
+                await pilot.pause()
+                cleared = app.query_one("#tbl-refined").option_count
+                return filtered, cleared, app._project_filter
+
+        filtered, cleared, filt = _run(scenario)
+        assert filtered == 1
+        assert cleared == 2
+        assert filt is None
+
+    def test_picker_escape_leaves_filter_unchanged(self, board_path: Path) -> None:
+        _seed(
+            board_path,
+            [
+                {"title": "a", "status": REFINED, "project": "alpha"},
+                {"title": "b", "status": REFINED, "project": "beta"},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.press("p")  # open the picker…
+                await pilot.pause()
+                await pilot.press("escape")  # …then bail without choosing
+                await pilot.pause()
+                after = app.query_one("#tbl-refined").option_count
+                return after, app._project_filter
+
+        after, filt = _run(scenario)
+        assert after == 2  # still all projects
+        assert filt is None
 
 
 class TestSearch:

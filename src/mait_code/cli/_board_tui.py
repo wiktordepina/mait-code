@@ -44,6 +44,7 @@ from textual.widgets import (
     RadioButton,
     RadioSet,
     Rule,
+    Select,
     Static,
     TextArea,
 )
@@ -79,6 +80,11 @@ _PANES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
 #: The linear flow the ``<``/``>`` keys move a card along — every real status
 #: except the hidden ``archived`` side-state, which is reached only via the CLI.
 _MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
+
+#: Sentinel ``Select`` value for the "show every project" option in the project
+#: filter picker. A distinct object (not ``None``) so the picker can tell "all
+#: projects" apart from the ``None`` that escape/cancel dismisses with.
+_ALL_PROJECTS = object()
 
 
 def run_board_tui(db_path: Path | None = None) -> None:
@@ -186,7 +192,7 @@ class BoardColumn(OptionList):
         Binding("t", "app.tag", "Tag"),
         Binding("b", "app.block", "Block"),
         Binding("u", "app.unblock", "Unblock"),
-        Binding("p", "app.cycle_project", "Project"),
+        Binding("p", "app.filter_project", "Project"),
         Binding("slash", "app.search", "Search"),
         Binding("d", "app.toggle_done", "Done"),
         Binding("a", "app.toggle_archived", "Archived"),
@@ -835,6 +841,59 @@ class SearchScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
+class ProjectFilterScreen(ModalScreen[object | None]):
+    """Pick the project to filter the board by, via a ``Select`` dropdown.
+
+    Resolves to one of three outcomes, kept distinct so "all" never collapses
+    into the cancel ``None``:
+
+    * a project name — filter to that project;
+    * :data:`_ALL_PROJECTS` — clear the filter (show every project);
+    * ``None`` — escape/cancel, leave the active filter untouched.
+
+    The dropdown auto-expands and applies on selection (no Apply button): the
+    chosen value dismisses the modal straight away. The one wrinkle is that
+    ``Select`` posts a :class:`Select.Changed` for its *initial* value on mount,
+    which would dismiss instantly — so a change back to the value we opened with
+    (the mount echo, and equally a no-op re-pick) is ignored.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, projects: list[str], current: str | None = None) -> None:
+        super().__init__()
+        self._projects = projects
+        self._initial: object = _ALL_PROJECTS if current is None else current
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label("Filter by project", classes="modal-title")
+            yield Select(
+                [
+                    ("All projects", _ALL_PROJECTS),
+                    *((proj, proj) for proj in self._projects),
+                ],
+                value=self._initial,
+                allow_blank=False,
+                id="project-select",
+            )
+
+    def on_mount(self) -> None:
+        select = self.query_one("#project-select", Select)
+        select.focus()
+        select.expanded = True  # open the dropdown so picking is one gesture
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        # ``Select`` echoes its initial value as a Changed on mount; ignore that
+        # (and a no-op re-pick of the same value) — only a real change applies.
+        if event.value == self._initial:
+            return
+        self.dismiss(event.value)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
 #: Priority choices, low→high, as offered in the new/edit modals.
 _PRIORITIES: tuple[str, ...] = ("low", "medium", "high")
 
@@ -1033,7 +1092,7 @@ class BoardApp(MaitApp):
         parts = [f"project: {self._project_filter or 'all'}"]
         if self._search:
             parts.append(f"search: {self._search!r}")
-        self.sub_title = "  ".join(parts) + "  (p to cycle, / to search)"
+        self.sub_title = "  ".join(parts) + "  (p to filter, / to search)"
 
     def _reload(self) -> None:
         """Re-query with the active filter and repaint every pane."""
@@ -1133,8 +1192,8 @@ class BoardApp(MaitApp):
         )
         yield SystemCommand(
             "Change project filter",
-            "Cycle the project filter",
-            self.action_cycle_project,
+            "Filter cards by project",
+            self.action_filter_project,
         )
         yield SystemCommand(
             "Search cards",
@@ -1228,15 +1287,20 @@ class BoardApp(MaitApp):
 
     # -- filter / archived / reload ---------------------------------------
 
-    def action_cycle_project(self) -> None:
-        options: list[str | None] = [None, *self._projects]
-        try:
-            current = options.index(self._project_filter)
-        except ValueError:
-            current = 0
-        self._project_filter = options[(current + 1) % len(options)]
+    @work
+    async def action_filter_project(self) -> None:
+        # Refresh the project list first, so a project added this session shows.
+        self._projects = service.list_projects(self._conn)
+        result = await self.push_screen_wait(
+            ProjectFilterScreen(self._projects, self._project_filter)
+        )
+        if result is None:
+            return  # escape/cancel — leave the active filter as-is
+        # A project name filters to it; the _ALL_PROJECTS sentinel clears it.
+        self._project_filter = result if isinstance(result, str) else None
         self._update_subtitle()
         self._reload()
+        self._focus_current()
 
     @work
     async def action_search(self) -> None:
