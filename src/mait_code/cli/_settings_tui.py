@@ -357,7 +357,19 @@ class SettingsApp(MaitApp):
             await detail.mount(*widgets)
             return
 
-        if setting.choices:
+        if setting.key == "theme":
+            # The valid set is every registered theme — known only at runtime,
+            # so it can't live in the (Textual-free) config schema as `choices`.
+            widgets.append(
+                RadioSet(
+                    *(
+                        RadioButton(name, value=(name == current))
+                        for name in self._theme_names()
+                    ),
+                    id="editor",
+                )
+            )
+        elif setting.choices:
             widgets.append(
                 RadioSet(
                     *(RadioButton(c, value=(c == current)) for c in setting.choices),
@@ -375,7 +387,16 @@ class SettingsApp(MaitApp):
 
     # -- editing -----------------------------------------------------------
 
+    def _theme_names(self) -> list[str]:
+        """Every registered theme name, sorted — the theme picker's options."""
+        return sorted(self.available_themes)
+
     def _editor_value(self, setting: config.Setting) -> str | None:
+        if setting.key == "theme":
+            radio = self.query_one("#editor", RadioSet)
+            idx = radio.pressed_index
+            names = self._theme_names()
+            return names[idx] if 0 <= idx < len(names) else None
         if setting.choices:
             radio = self.query_one("#editor", RadioSet)
             idx = radio.pressed_index
@@ -482,6 +503,11 @@ class SettingsApp(MaitApp):
 
         if run_reindex_after:
             self._run_reindex_suspended()
+
+        # Apply a theme change live too — apply_setting persisted it, so the
+        # theme_changed_signal write is a no-op; this just recolours the editor.
+        if key == "theme":
+            self.theme = value
 
         self._after_apply(setting, outcome)
 

@@ -37,6 +37,7 @@ __all__ = [
     # Settings file I/O
     "read_settings_file",
     "write_settings_file",
+    "reset_cache",
     # Resolvers
     "data_dir",
     # Settings view
@@ -52,6 +53,7 @@ __all__ = [
     "DEFAULT_EMBEDDING_MODEL",
     "DEFAULT_BEDROCK_MODEL_ID",
     "DEFAULT_BEDROCK_REGION",
+    "DEFAULT_THEME",
 ]
 
 
@@ -63,6 +65,7 @@ DEFAULT_EMBEDDING_PROVIDER = "local"
 DEFAULT_EMBEDDING_MODEL = "nomic-ai/nomic-embed-text-v1.5"
 DEFAULT_BEDROCK_MODEL_ID = "amazon.titan-embed-text-v2:0"
 DEFAULT_BEDROCK_REGION = "eu-west-2"
+DEFAULT_THEME = "mait-dark"
 
 
 @dataclass(frozen=True)
@@ -160,6 +163,10 @@ def _non_negative_int(value: str) -> str | None:
     return None if n >= 0 else f"must be zero or greater, got {n}"
 
 
+def _non_empty(value: str) -> str | None:
+    return None if value.strip() else "must not be empty"
+
+
 _LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 
 
@@ -220,6 +227,13 @@ SETTINGS: tuple[Setting, ...] = (
         "MAIT_CODE_LOG_FILE",
         "<state-dir>/mait-code.log",
         help="Override the log file path.",
+    ),
+    Setting(
+        "theme",
+        "MAIT_CODE_THEME",
+        DEFAULT_THEME,
+        help="TUI colour theme; any registered theme, unknown names fall back to mait-dark.",
+        validate=_non_empty,
     ),
     Setting(
         "embedding-provider",
@@ -470,6 +484,16 @@ def _load_settings() -> dict[str, str]:
     if _settings_cache is None:
         _settings_cache = read_settings_file()
     return _settings_cache
+
+
+def reset_cache() -> None:
+    """Forget the cached settings-file contents.
+
+    Call after writing the settings file in-process so a subsequent
+    :func:`get` reflects the new value rather than the stale cache.
+    """
+    global _settings_cache
+    _settings_cache = None
 
 
 def resolve(setting: Setting) -> tuple[str, str]:

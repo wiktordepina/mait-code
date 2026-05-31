@@ -59,14 +59,63 @@ class MaitApp(App[None]):
         Binding("question_mark", "help", "Help"),
     ]
 
-    #: The house theme applied by default; override to ship a different default.
+    #: The house theme applied as the fallback default; override to ship a
+    #: different default. The active theme is the persisted ``theme`` setting
+    #: when it names a registered theme, otherwise this.
     HOUSE_THEME = "mait-dark"
 
     def __init__(self) -> None:
         super().__init__()
         for theme in HOUSE_THEMES:
             self.register_theme(theme)
-        self.theme = self.HOUSE_THEME
+        # Remember the theme we booted with so on_unmount only writes the file
+        # when the user actually changed it (and so the default — which isn't in
+        # the file — doesn't get persisted on every exit).
+        self._startup_theme = self._initial_theme()
+        self.theme = self._startup_theme
+
+    def _initial_theme(self) -> str:
+        """The saved ``theme`` setting if it's registered, else the house default.
+
+        An unknown name (a theme that was renamed or removed since it was saved)
+        falls back rather than leaving the app on Textual's stock theme.
+        """
+        from mait_code import config
+
+        name = config.get("theme")
+        return name if name in self.available_themes else self.HOUSE_THEME
+
+    def on_unmount(self) -> None:
+        """Persist the active theme on exit, if it changed this session.
+
+        Subclasses that override ``on_unmount`` must call ``super().on_unmount()``
+        to keep theme persistence working.
+        """
+        self._persist_theme()
+
+    def _persist_theme(self) -> None:
+        """Write the active theme to the settings file when it differs from the
+        boot theme.
+
+        The Ctrl+P palette commits a selection immediately (no preview-on-
+        highlight), so ``self.theme`` at exit is the user's committed choice.
+        Best-effort: a write failure must never break shutdown, so I/O errors
+        are swallowed.
+        """
+        name = self.theme
+        if name == self._startup_theme:
+            return
+        from mait_code import config
+
+        try:
+            values = config.read_settings_file()
+            if values.get("theme") == name:
+                return
+            values["theme"] = name
+            config.write_settings_file(values)
+            config.reset_cache()
+        except OSError:
+            pass
 
     def notify(
         self,

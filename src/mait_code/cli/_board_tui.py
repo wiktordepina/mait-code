@@ -929,6 +929,7 @@ class BoardApp(MaitApp):
         self._focus_current()
 
     def on_unmount(self) -> None:
+        super().on_unmount()  # persists the active theme (MaitApp)
         self._conn.close()
 
     # -- theming -----------------------------------------------------------

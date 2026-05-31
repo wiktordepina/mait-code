@@ -22,6 +22,10 @@ don't change the public surface. Everything is still in flux.
   border and a leading glyph (`ℹ`/`⚠`/`✘`) keyed to their colour — information in
   the primary hue, warnings amber, errors red — so they read as part of the same
   family as the chips and recolour with the active theme.
+- **The TUI theme now sticks.** Pick a theme with `Ctrl+P` and it's remembered
+  across sessions (a new `theme` setting). Any registered theme persists — the
+  house themes or a Textual built-in — and an unknown saved name falls back to
+  `mait-dark`. The `mait-code settings` editor offers it as a theme picker too.
 
 ## [0.33.0] — 2026-05-31
 

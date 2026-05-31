@@ -67,6 +67,39 @@ class TestNavigation:
 
         _run(scenario)
 
+    def test_theme_setting_uses_a_theme_picker(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "theme")
+                rs = app.query_one("#editor", RadioSet)
+                labels = {str(rb.label) for rb in rs.query(RadioButton)}
+                return labels, set(app.available_themes)
+
+        labels, themes = _run(scenario)
+        # The picker lists every registered theme, house and built-in alike.
+        assert labels == themes
+        assert {"mait-dark", "mait-ember", "gruvbox"} <= labels
+
+    def test_apply_theme_persists_and_applies_live(self, fake_home: Path) -> None:
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, "theme")
+                _select_radio(app, "mait-ember")
+                await pilot.pause()
+                app.action_apply()
+                await pilot.pause()
+                await pilot.pause()
+                config.reset_cache()
+                return app.theme, config.read_settings_file().get("theme")
+
+        live, saved = _run(scenario)
+        assert live == "mait-ember"  # applied to the running app
+        assert saved == "mait-ember"  # and persisted to the settings file
+
     def test_enter_focuses_editor(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
 
