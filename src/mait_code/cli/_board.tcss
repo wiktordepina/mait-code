@@ -94,11 +94,15 @@
 }
 
 /* The title is the loudest element: a strong neutral, not the primary tint —
- * so it reads as the heading rather than blurring into the cyan frame/#id. */
+ * so it reads as the heading rather than blurring into the cyan frame/#id. A
+ * heavy primary-hue underline (bound to the title, not a separate Rule) gives it
+ * its own heading separator above the meta — heavier and a different hue than the
+ * thin accent section rules, so the two don't blur together. */
 .detail-title {
     text-style: bold;
     color: $foreground;
     width: 100%;
+    border-bottom: heavy $primary;
 }
 
 .detail-meta {

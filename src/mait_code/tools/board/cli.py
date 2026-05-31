@@ -78,6 +78,7 @@ def cmd_list(args):
             project=project,
             statuses=statuses,
             include_archived=args.archived,
+            search=args.search,
         )
 
     if args.json:
@@ -403,6 +404,12 @@ def main():
     p_list.add_argument("--all", action="store_true", help="Span all projects")
     p_list.add_argument("--status", choices=ALL_STATUSES, help="Filter to one column")
     p_list.add_argument("--archived", action="store_true", help="Include archived")
+    p_list.add_argument(
+        "--search",
+        "-q",
+        metavar="TEXT",
+        help="Filter by title substring (case-insensitive)",
+    )
     p_list.add_argument("--json", action="store_true", help="Emit JSON")
     p_list.set_defaults(func=cmd_list)
 

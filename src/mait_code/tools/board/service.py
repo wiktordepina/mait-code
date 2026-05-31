@@ -86,6 +86,15 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _escape_like(text: str) -> str:
+    """Escape LIKE wildcards so a query is matched literally.
+
+    Pairs with ``LIKE ? ESCAPE '\\'`` — ``\\``, ``%`` and ``_`` are escaped so a
+    search for e.g. ``100%`` doesn't turn ``%`` into a match-anything wildcard.
+    """
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def _card_dict(row: Sequence) -> dict:
     """Map a row selected with ``_CARD_COLS`` to a JSON-friendly dict."""
     return dict(zip(_CARD_KEYS, row))
@@ -167,6 +176,7 @@ def list_cards(
     statuses: Iterable[str] | None = None,
     include_archived: bool = False,
     tag: str | None = None,
+    search: str | None = None,
 ) -> list[dict]:
     """Return cards ordered priority-then-oldest.
 
@@ -178,6 +188,8 @@ def list_cards(
         include_archived: When no *statuses* filter is set, whether to include
             archived cards (default excludes them).
         tag: Restrict to cards carrying this tag, or ``None`` for no tag filter.
+        search: Restrict to cards whose title contains this substring,
+            case-insensitively, or ``None`` for no title filter.
     """
     where: list[str] = []
     params: list = []
@@ -195,6 +207,9 @@ def list_cards(
     if tag is not None:
         where.append("id IN (SELECT card_id FROM card_tags WHERE tag = ?)")
         params.append(tag)
+    if search:
+        where.append("title LIKE ? ESCAPE '\\' COLLATE NOCASE")
+        params.append(f"%{_escape_like(search)}%")
     clause = (" WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
         f"SELECT {_CARD_COLS} FROM cards{clause} "
