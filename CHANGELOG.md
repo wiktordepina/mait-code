@@ -14,11 +14,13 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
-- **Two new board themes, and the board now recolours fully when you switch.**
+- **Four new board themes, and the board now recolours fully when you switch.**
   Press `Ctrl+P` to pick a theme: **mait-bubblegum** (a vivid neon palette — hot
-  pink, purple and mint on a deep aubergine base) or **mait-aurora** (a calmer
-  spread of teal, periwinkle and violet). `mait-dark` stays the default. A switch
-  now repaints the whole screen — including the priority and tag chips, which
+  pink, purple and mint on a deep aubergine base), **mait-aurora** (a calmer
+  spread of teal, periwinkle and violet), **mait-ember** (warm amber and gold on
+  a roasted-brown base), or **mait-syntax** (a vivid code-editor palette — teal,
+  gold, violet, green and pink). `mait-dark` stays the default. A switch now
+  repaints the whole screen — including the priority and tag chips, which
   previously stayed on the old palette.
 
 ### Changed
@@ -27,6 +29,9 @@ don't change the public surface. Everything is still in flux.
   a strong neutral, section headers take the accent colour, tags and the comment
   bar take the secondary — so the frame, headings, tags and body no longer blur
   together. Every theme inherits the separation.
+- **Low-priority cards read as the quiet end of the scale.** The `low` chip now
+  recedes to a muted grey rather than a saturated blue, so it stays clearly
+  distinct from a card's tags.
 - **The card-detail meta line has a consistent rhythm.** Project, status,
   priority and tags are now set off by the same separator
   (`project · status · priority · #tag`), rather than the priority and tags

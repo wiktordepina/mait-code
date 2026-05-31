@@ -10,7 +10,14 @@ from textual.theme import Theme
 
 from mait_code.tui import palette as p
 
-__all__ = ["MAIT_DARK", "MAIT_BUBBLEGUM", "MAIT_AURORA", "HOUSE_THEMES"]
+__all__ = [
+    "MAIT_DARK",
+    "MAIT_BUBBLEGUM",
+    "MAIT_AURORA",
+    "MAIT_EMBER",
+    "MAIT_SYNTAX",
+    "HOUSE_THEMES",
+]
 
 
 def _house_variables(primary: str) -> dict[str, str]:
@@ -82,7 +89,45 @@ MAIT_AURORA = Theme(
     variables=_house_variables("#5CC8E0"),
 )
 
+#: A warm dark theme: amber and gold over a roasted-brown base, with a teal
+#: secondary and mauve accent for cool relief. The counterpoint to the cool
+#: mait-dark/aurora and the neon bubblegum.
+MAIT_EMBER = Theme(
+    name="mait-ember",
+    primary="#F2A65A",  # amber — frame, hints, #id
+    secondary="#6FB3B8",  # teal — comment bar
+    accent="#C98BB9",  # mauve — section heads
+    foreground="#ECE3D8",  # warm off-white
+    background="#1A1512",  # roasted brown-charcoal
+    surface="#241D18",
+    panel="#2F2620",
+    success="#9DBF6E",
+    warning="#E8C547",
+    error="#E5604D",
+    dark=True,
+    variables=_house_variables("#F2A65A"),
+)
+
+#: A theme drawn from a syntax-highlighted code screenshot: teal, gold, orange,
+#: violet, green and pink on a near-black base &mdash; the vivid multi-hue look of
+#: a code editor.
+MAIT_SYNTAX = Theme(
+    name="mait-syntax",
+    primary="#45BFA8",  # teal — frame, hints, #id (the `def` colour)
+    secondary="#E8975C",  # orange — comment bar (params)
+    accent="#C08CE0",  # violet — section heads (types)
+    foreground="#D7DAD2",
+    background="#181C1B",  # near-black with a faint teal cast
+    surface="#20251F",
+    panel="#2A302A",
+    success="#8FBF6F",  # green (strings)
+    warning="#E6C07B",  # gold (function names)
+    error="#F06595",  # pink (keywords)
+    dark=True,
+    variables=_house_variables("#45BFA8"),
+)
+
 #: Themes every :class:`~mait_code.tui.app.MaitApp` registers, in addition to
 #: Textual's built-ins (which stay available in the Ctrl+P theme switcher).
 #: ``mait-dark`` stays the default (see ``MaitApp.HOUSE_THEME``).
-HOUSE_THEMES = (MAIT_DARK, MAIT_BUBBLEGUM, MAIT_AURORA)
+HOUSE_THEMES = (MAIT_DARK, MAIT_BUBBLEGUM, MAIT_AURORA, MAIT_EMBER, MAIT_SYNTAX)
