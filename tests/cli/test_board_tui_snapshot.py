@@ -124,6 +124,30 @@ def test_detail_snapshot(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def test_detail_snapshot_bubblegum(snap_compare, tmp_path: Path) -> None:
+    """Lock the card screen under the mait-bubblegum theme.
+
+    Proves a theme switch recolours the whole screen — including the Rich-text
+    chips (priority/tags), which are baked at render time and don't read CSS
+    variables, so they'd otherwise stay on the default palette.
+    """
+    db_path = tmp_path / "board.db"
+    _seed_detail(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app.theme = "mait-bubblegum"
+        await pilot.pause()
+        pilot.app._focus_status("refined")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
+
+
 def test_card_edit_snapshot(snap_compare, tmp_path: Path) -> None:
     """Lock the edit mode of the card screen (form fields on the same frame),
     reached in-place from view via ``e``."""
