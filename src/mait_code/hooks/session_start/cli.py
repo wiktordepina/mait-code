@@ -65,6 +65,31 @@ def _check_board() -> str:
     return " · ".join(f"{n} {status.replace('_', ' ')}" for status, n in live)
 
 
+def _check_inbox() -> str:
+    """Return the quick-capture inbox count as a compact label.
+
+    Returns ``"N inbox"`` when there are captured items waiting to be triaged,
+    or "" when the inbox is empty — so the session context stays silent when
+    there's nothing to sort.
+    """
+    try:
+        result = subprocess.run(
+            ["mc-tool-inbox", "count"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return ""
+
+    try:
+        count = int(result.stdout.strip())
+    except ValueError:
+        return ""
+
+    return f"{count} inbox" if count else ""
+
+
 @log_invocation(name="mc-hook-session-start")
 def main():
     """Read session start event from stdin and output companion context."""
@@ -84,6 +109,10 @@ def main():
     board = _check_board()
     if board:
         sections.append(f"## Board\n\n{board}")
+
+    inbox = _check_inbox()
+    if inbox:
+        sections.append(f"## Inbox\n\n{inbox}")
 
     if sections:
         context = "# Session Context\n\n" + "\n\n".join(sections) + "\n"

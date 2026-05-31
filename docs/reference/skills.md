@@ -20,6 +20,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
 | Tasks | `/tasks` | Show open tasks for the current project | **Implemented** |
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
+| Triage | `/triage` | Route quick-capture inbox items to board, tasks, decisions, or memory | **Implemented** |
 | Decision | `/decision [--status ...] [--tags ...] <title>` | Record a technical decision | **Implemented** |
 | Decisions | `/decisions` | Browse and search decision records | **Implemented** |
 | Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
@@ -167,6 +168,24 @@ View and drive the manually-driven kanban board for the current project. Claude 
    - complete / block / unblock / tag / untag / archive / move / add / edit / comment via the matching subcommands
 3. Cards flow through fixed columns: backlog → refined → in_progress → done, plus a hidden `archived` side-state; `blocked` is a tag carried in place, not a column
 4. Never moves, completes, or archives cards without the user's confirmation
+
+### /triage
+
+Drain the quick-capture inbox by routing each captured item to where it belongs. Suggestion-based — Claude proposes a destination per item; the user decides.
+
+**Usage:**
+```
+/triage                                 # Walk the inbox, route each item out
+```
+
+**How it works:**
+
+1. Preprocesses the current inbox via `mc-tool-inbox list` (injected before Claude sees the skill)
+2. For each item, proposes the best destination and, on confirmation, creates it there:
+   - Board card → `mc-tool-board add ...` · Task → `mc-tool-tasks add ...`
+   - Decision → `mc-tool-decisions record ...` · Memory → `/remember`
+3. After an item lands in its destination, drains it with `mc-tool-inbox remove <id>` so the inbox stays near-empty
+4. Never routes or removes an item without the user's confirmation
 
 ### /commit
 

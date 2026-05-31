@@ -61,6 +61,7 @@ REFERENCE_MODULES: dict[str, list[tuple[str, str]]] = {
         ("tools.reminders", "Reminders"),
         ("tools.tasks", "Tasks"),
         ("tools.board", "Board"),
+        ("tools.inbox", "Inbox"),
         ("tools.decisions", "Decisions"),
         ("tools.web_fetch", "Web fetch"),
     ],
