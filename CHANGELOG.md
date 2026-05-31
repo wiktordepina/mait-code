@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.34.0] — 2026-05-31
+
 ### Added
 
 - **References on cards — a structured list of label→value links.** Point a card
@@ -1089,7 +1091,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.0
 [0.33.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.33.0
 [0.32.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.32.0
 [0.31.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.31.0
