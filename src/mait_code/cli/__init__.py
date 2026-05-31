@@ -26,6 +26,7 @@ Typer command callables themselves are private (their docs live in
 from __future__ import annotations
 
 import importlib.metadata
+import subprocess
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -315,6 +316,11 @@ def update_cmd(
         raise typer.Exit(code=1) from None
     except ValueError as exc:
         typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+    except subprocess.CalledProcessError as exc:
+        # A git/uv subprocess failed (its own stderr has already printed).
+        # Surface a clean error line instead of dumping a Python traceback.
+        typer.echo(f"error: command failed: {exc}", err=True)
         raise typer.Exit(code=1) from None
 
     _render_update_summary(summary)

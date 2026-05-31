@@ -13,8 +13,17 @@ local-clone dev install sits on a **branch**:
 
 * ``--ref <X>`` given &rarr; checkout ``X`` (after a fetch).
 * On a branch &rarr; fast-forward it (``git merge --ff-only``).
-* Detached HEAD (typical post-bootstrap) &rarr; checkout the latest
-  ``v*`` tag.
+* Detached HEAD (typical post-bootstrap) &rarr; **force**-checkout the
+  latest ``v*`` tag.
+
+The detached-HEAD checkout is forced (``git checkout --force``) because
+the bootstrap clone is tool-managed and its skills are symlinked into
+``~/.claude`` &mdash; editing a skill in place writes *through* the
+symlink into this working tree, leaving tracked files modified. A plain
+checkout would then abort with "local changes would be overwritten",
+wedging every subsequent update. Those write-through edits are not user
+work (the committed release is authoritative), so they are discarded. The
+branch (dev) path is *not* forced: local edits there are intentional.
 
 This is the fix for the bug where ``git pull`` was run unconditionally
 and failed on a tag-pinned (detached HEAD) install with "You are not
@@ -235,7 +244,15 @@ def update(
                     f"{source_dir} is in detached HEAD and has no v* tags to "
                     f"update to. Check out a branch, or pass --ref."
                 )
-            runner(["git", "checkout", latest], cwd=source_dir)
+            # `--force` so the checkout succeeds even when the working tree
+            # has locally-modified tracked files. This is the tool-managed
+            # bootstrap clone, and its skills are symlinked into ~/.claude
+            # (e.g. ~/.claude/skills/board -> source/skills/board), so editing
+            # a skill in place writes *through* the symlink into this working
+            # tree. Those write-through edits are not user work — the committed
+            # release is authoritative — so discard them rather than letting
+            # git abort with "local changes would be overwritten by checkout".
+            runner(["git", "checkout", "--force", latest], cwd=source_dir)
             landed_on = latest
 
     head_after = _head(capture, source_dir)

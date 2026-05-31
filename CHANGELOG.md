@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.37.1] — 2026-05-31
+
+### Fixed
+
+- **`mait-code update` no longer wedges itself on a dirty source clone.** The
+  bootstrap clone sits in detached HEAD and its skills are symlinked into
+  `~/.claude`, so editing a skill in place writes back through the symlink and
+  leaves a tracked file modified. The tag checkout then aborted with "local
+  changes would be overwritten", and the error surfaced as a raw traceback that
+  broke every subsequent update. The detached-HEAD checkout is now forced — the
+  clone is tool-managed and the committed release is authoritative, so
+  write-through edits are discarded — and a failing git/uv subprocess prints a
+  clean error line instead of a traceback.
+
 ## [0.37.0] — 2026-05-31
 
 ### Changed
@@ -1155,7 +1169,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.37.1...HEAD
+[0.37.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.1
 [0.37.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.0
 [0.36.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.36.0
 [0.35.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.35.0
