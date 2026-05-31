@@ -179,7 +179,7 @@ a card's detail screen, or the `ref` CLI commands.
 | <kbd>t</kbd> | Add / remove a tag |
 | <kbd>b</kbd> / <kbd>u</kbd> | Block / unblock |
 | <kbd>&lt;</kbd> / <kbd>&gt;</kbd> | Move the card left / right through the flow |
-| <kbd>p</kbd> | Cycle the project filter |
+| <kbd>p</kbd> | Filter by project (dropdown picker) |
 | <kbd>d</kbd> | Toggle the **Done** column |
 | <kbd>a</kbd> | Toggle the **Archived** pane |
 | <kbd>r</kbd> | Reload the board from disk |

@@ -503,7 +503,7 @@ highlighted card; the rest open detail, annotate, tag, or change what's shown.
 | `c` | Add a comment to the highlighted card |
 | `t` | Toggle a tag on the highlighted card (type the tag; present → removed, absent → added) |
 | `b` / `u` | Add / remove the `blocked` tag on the highlighted card (in place) |
-| `p` | Cycle the project filter |
+| `p` | Filter by project (dropdown picker) |
 | `a` | Toggle visibility of archived cards |
 | `r` | Reload the board from the database |
 | `q` | Quit |

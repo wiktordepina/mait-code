@@ -221,6 +221,25 @@ def test_board_search_snapshot(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def test_board_project_filter_snapshot(snap_compare, tmp_path: Path) -> None:
+    """The project filter picker open over the busy board via ``p``.
+
+    The ``Select`` auto-expands on mount, so the dropdown lists "All projects"
+    plus every seeded project — the gesture that replaced round-robin cycling."""
+    db_path = tmp_path / "board.db"
+    _seed_board_rich(db_path)
+
+    async def run_before(pilot) -> None:
+        await pilot.press("p")  # open the project picker (auto-expands)
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(132, 46),
+    )
+
+
 def test_board_rich_expanded_snapshot(snap_compare, tmp_path: Path) -> None:
     """The same busy board uncollapsed — all five columns revealed via ``d`` and
     ``a`` — the docs review-layout shot."""
