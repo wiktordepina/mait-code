@@ -166,6 +166,40 @@ def test_remove_tag_deletes(board_db: sqlite3.Connection):
     assert service.list_tags(board_db, cid) == []
 
 
+def test_set_tags_replaces_whole_set(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "old")
+    service.set_tags(board_db, cid, ["alpha", "beta"])
+    assert service.list_tags(board_db, cid) == ["alpha", "beta"]
+
+
+def test_set_tags_from_empty(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.set_tags(board_db, cid, ["solo"])
+    assert service.list_tags(board_db, cid) == ["solo"]
+
+
+def test_set_tags_to_empty_clears(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.add_tag(board_db, cid, "gone")
+    service.set_tags(board_db, cid, [])
+    assert service.list_tags(board_db, cid) == []
+
+
+def test_set_tags_collapses_duplicates(board_db: sqlite3.Connection):
+    cid = _insert(board_db, "x")
+    service.set_tags(board_db, cid, ["dup", "dup", "keep"])
+    assert service.list_tags(board_db, cid) == ["dup", "keep"]
+
+
+def test_set_tags_preserves_blocked_when_carried(board_db: sqlite3.Connection):
+    # The TUI carries 'blocked' through so a form save can't silently unblock.
+    cid = _insert(board_db, "x")
+    service.block_card(board_db, cid)
+    service.set_tags(board_db, cid, ["blocked", "new"])
+    assert service.list_tags(board_db, cid) == ["blocked", "new"]
+
+
 def test_cards_carry_tags_key(board_db: sqlite3.Connection):
     cid = _insert(board_db, "x")
     service.add_tag(board_db, cid, "b")
@@ -380,6 +414,8 @@ def test_remove_card_cascades_comments(board_db: sqlite3.Connection):
         lambda c: service.remove_card(c, 999),
         lambda c: service.add_tag(c, 999, "x"),
         lambda c: service.remove_tag(c, 999, "x"),
+        lambda c: service.set_tags(c, 999, ["x"]),
+        lambda c: service.set_references(c, 999, [{"label": "a", "value": "1"}]),
     ],
 )
 def test_mutations_raise_card_not_found(board_db: sqlite3.Connection, mutation):
