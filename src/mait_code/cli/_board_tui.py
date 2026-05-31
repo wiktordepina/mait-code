@@ -625,11 +625,62 @@ class CardScreen(ModalScreen[None]):
         if widgets:
             await rows.mount(*widgets)
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "edit-save":
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        bid = event.button.id or ""
+        if bid == "edit-save":
             self._submit()
-        elif event.button.id == "edit-cancel":
+        elif bid == "edit-cancel":
             self.action_close()
+        elif bid == "edit-ref-add-btn":
+            await self._add_ref_from_inputs()
+        elif bid.startswith("edit-tag-rm-"):
+            await self._remove_tag(int(bid.rsplit("-", 1)[1]))
+        elif bid.startswith("edit-ref-rm-"):
+            await self._remove_ref(int(bid.rsplit("-", 1)[1]))
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Enter in the tag input adds a tag; Enter in the ref value adds the
+        reference — quick keyboard paths that mirror the buttons."""
+        if event.input.id == "edit-tag-input":
+            await self._add_tag_from_input()
+        elif event.input.id == "edit-ref-value":
+            await self._add_ref_from_inputs()
+
+    async def _add_tag_from_input(self) -> None:
+        field = self.query_one("#edit-tag-input", Input)
+        tag = field.value.strip()
+        if not tag:
+            return
+        if tag == BLOCKED_TAG:
+            # blocked is a status-like flag owned by b/u, not a free tag.
+            self.notify("Use b / u to block or unblock", severity="warning")
+            return
+        if tag in self._edit_tags:
+            field.value = ""
+            return
+        self._edit_tags.append(tag)
+        field.value = ""
+        await self._render_tag_chips()
+
+    async def _remove_tag(self, index: int) -> None:
+        if 0 <= index < len(self._edit_tags):
+            del self._edit_tags[index]
+            await self._render_tag_chips()
+
+    async def _add_ref_from_inputs(self) -> None:
+        label = self.query_one("#edit-ref-label", Input).value.strip()
+        value = self.query_one("#edit-ref-value", Input).value.strip()
+        if not label or not value:
+            return  # both halves are required
+        self._edit_refs.append({"label": label, "value": value})
+        self.query_one("#edit-ref-label", Input).value = ""
+        self.query_one("#edit-ref-value", Input).value = ""
+        await self._render_ref_rows()
+
+    async def _remove_ref(self, index: int) -> None:
+        if 0 <= index < len(self._edit_refs):
+            del self._edit_refs[index]
+            await self._render_ref_rows()
 
     def _submit(self) -> None:
         title = self.query_one("#edit-title", Input).value.strip()
