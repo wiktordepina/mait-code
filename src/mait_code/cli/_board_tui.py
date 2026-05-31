@@ -838,13 +838,22 @@ class BoardApp(MaitApp):
         t = theme or self.current_theme
         # Only `primary` is guaranteed on a Theme; the rest are optional, so
         # coalesce each role to primary when a stray theme leaves it unset.
-        # `low` recedes to a muted grey (foreground blended toward the
-        # background) so it reads as the quiet end of the heat scale *and* stays
-        # distinct from the tags, which take the secondary hue.
+        # `low` recedes to a muted grey (foreground blended toward the background)
+        # so it reads as the quiet end of the heat scale *and* stays distinct from
+        # the tags, which take the secondary hue. The ANSI passthrough themes use
+        # named tokens ("ansi_default") rather than hex, which can't be blended —
+        # fall back to the terminal's own grey there.
+        fg = t.foreground or p.FOREGROUND
+        bg = t.background or p.BACKGROUND
+        low = (
+            _mix(fg, bg, 0.45)
+            if fg.startswith("#") and bg.startswith("#")
+            else "bright_black"
+        )
         return ChipColours(
             high=t.error or t.primary,
             medium=t.warning or t.primary,
-            low=_mix(t.foreground or p.FOREGROUND, t.background or p.BACKGROUND, 0.45),
+            low=low,
             tag=t.secondary or t.primary,
             blocked=t.error or t.primary,
         )

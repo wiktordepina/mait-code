@@ -1111,3 +1111,19 @@ class TestTheming:
         # The open card screen picked up the new theme's chip palette.
         assert after == expected
         assert after != before
+
+    def test_ansi_theme_does_not_crash(self, board_path: Path) -> None:
+        """ANSI themes use named tokens ('ansi_default') not hex, so muting the
+        low chip can't blend them — it must fall back, not raise."""
+        # A low-priority card forces the muted-low path through a full repaint.
+        _seed(board_path, [{"title": "card", "priority": "low", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app.theme = "ansi-dark"  # would crash _mix before the guard
+                await pilot.pause()
+                return app._chip_colours().low
+
+        assert _run(scenario) == "bright_black"
