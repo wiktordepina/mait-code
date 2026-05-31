@@ -10,6 +10,24 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.35.0] — 2026-05-31
+
+### Added
+
+- **A quick-capture inbox — capture now, sort later.** A new `mc-tool-inbox`
+  gives you one frictionless verb to dump a thought without deciding upfront
+  whether it's a task, a card, a decision, or a memory: `add` captures it,
+  `list` shows the inbox oldest-first, and `remove` drains an item out. The
+  inbox is global rather than project-scoped — capture shouldn't make you stop
+  and classify. The session-start brief now surfaces the waiting count, so an
+  unsorted pile stays visible rather than forgotten.
+- **A `/triage` skill to drain the inbox.** It walks the captured items and
+  proposes a destination for each — board card, task, decision, or memory —
+  creating it on your say-so and then removing the item, so the inbox stays
+  near-empty rather than becoming a second backlog. Suggestion-based throughout:
+  the companion proposes, you decide; nothing is routed or removed without
+  confirmation.
+
 ## [0.34.1] — 2026-05-31
 
 ### Added
@@ -1102,7 +1120,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.34.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.35.0
 [0.34.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.1
 [0.34.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.0
 [0.33.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.33.0
