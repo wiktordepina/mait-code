@@ -33,6 +33,7 @@ Present the board above clearly, then act on what the user asks.
 - Block: `mc-tool-board block N <reason>` — tags the card `blocked` **in place** (keeps its column); the reason is recorded as a comment. Unblock: `mc-tool-board unblock N` removes the tag. These are thin aliases over the tag system below.
 - Tag / untag: `mc-tool-board tag N <tag>` / `mc-tool-board untag N <tag>` — free-form tags that ride alongside a card's status.
 - Archive (hide, don't delete): `mc-tool-board archive N`.
+- Delete permanently: `mc-tool-board remove N` — destructive and unrecoverable; prefer `archive` to hide a card. Only delete when the user explicitly asks.
 - Arbitrary move: `mc-tool-board move N <backlog|refined|in_progress|done|archived>`.
 
 ### Adding & editing
@@ -40,11 +41,12 @@ Present the board above clearly, then act on what the user asks.
 - Add: `mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project <name>]`. New cards land in `backlog`. Use `--project` for work with no git repo yet (e.g. an app idea).
 - Edit: `mc-tool-board edit N [--title ...] [--description ...] [--priority ...] [--acceptance ...]`.
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
-- Show one card with its thread: `mc-tool-board show N`.
+- References (label→value links on a card): `mc-tool-board ref add N <label> <value>` — *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
+- Show one card with its comments and references: `mc-tool-board show N`.
 
 ### Viewing
 
-- This project: `mc-tool-board list`. All projects: `mc-tool-board list --all`. Include archived: add `--archived`. Machine-readable: add `--json`.
+- This project: `mc-tool-board list`. All projects: `mc-tool-board list --all`. Include archived: add `--archived`. Filter by title: `--search`/`-q <text>` (case-insensitive substring; composes with the others — pair with `--all` to sweep every project). Machine-readable: add `--json`.
 
 ## Proactive behaviour
 
