@@ -81,6 +81,24 @@
     padding: 0 2;
 }
 
+/* The pinned header carries the title + meta above the scroll so they stay in
+ * view as a reference while the body scrolls. height:auto takes just its content,
+ * leaving the 1fr below to #card-view. It mirrors the view's centred, capped
+ * measure (align-horizontal + max-width 100 + matching padding) so the title
+ * sits squarely over the body. The title's heavy underline and the meta's
+ * margin-bottom carry the separation from the scrolling content — no extra rule. */
+#card-header {
+    height: auto;
+    align-horizontal: center;
+}
+
+#card-header-content {
+    width: 100%;
+    max-width: 100;
+    height: auto;
+    padding: 0 2;
+}
+
 /* Edit mode: the scrolling field area fills the frame (buttons sit outside it),
  * sharing the same capped, centred measure as the view. */
 #edit-fields {

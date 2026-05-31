@@ -335,7 +335,13 @@ class CardScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         card = self._card
         with Vertical(id="card-dialog", classes="modal-dialog"):
-            # View mode: read-only fields + thread, capped to a readable measure.
+            # View mode: a static title+meta header pinned above a scrolling body,
+            # so you keep a reference to which card you're reading as the content
+            # scrolls past. Header and body share the same capped, centred measure
+            # so the title sits squarely over the content rather than flush-left.
+            with Vertical(id="card-header"):
+                with Vertical(id="card-header-content"):
+                    yield from self._header_widgets()
             with VerticalScroll(id="card-view"):
                 with Vertical(id="card-view-content"):
                     yield from self._view_widgets()
@@ -388,16 +394,24 @@ class CardScreen(ModalScreen[None]):
 
     # -- view content ------------------------------------------------------
 
-    def _view_widgets(self) -> list[Widget]:
-        """The read-only content as a flat widget list (built fresh each time so
-        a save can re-render the view in place)."""
+    def _header_widgets(self) -> list[Widget]:
+        """The pinned header: the wrapping title and the meta/badges line. Built
+        fresh each time so a save re-renders it in place — title, status, priority
+        and tags can all change on save."""
         card = self._card
         # Title wraps (a Static, not a clipping Label); priority/tags move to the
         # meta line as chips.
-        widgets: list[Widget] = [
+        return [
             Static(escape(f"#{card['id']}  {card['title']}"), classes="detail-title"),
             Static(self._meta(card), classes="detail-meta"),
         ]
+
+    def _view_widgets(self) -> list[Widget]:
+        """The scrolling body as a flat widget list (built fresh each time so a
+        save can re-render the view in place). The title and meta live in the
+        pinned header (:meth:`_header_widgets`), not here."""
+        card = self._card
+        widgets: list[Widget] = []
         for heading, body in (
             ("Description", card["description"]),
             ("Acceptance criteria", card["acceptance_criteria"]),
@@ -443,6 +457,7 @@ class CardScreen(ModalScreen[None]):
         Re-runs :meth:`refresh_bindings` so the footer tracks the mode flip —
         the view actions drop out in edit mode, Save appears.
         """
+        self.query_one("#card-header").display = self._mode == "view"
         self.query_one("#card-view").display = self._mode == "view"
         self.query_one("#card-edit").display = self._mode == "edit"
         if self._mode == "edit":
@@ -530,6 +545,9 @@ class CardScreen(ModalScreen[None]):
         """
         self._card = card
         self._comments = comments
+        header = self.query_one("#card-header-content", Vertical)
+        await header.remove_children()
+        await header.mount(*self._header_widgets())
         content = self.query_one("#card-view-content", Vertical)
         await content.remove_children()
         await content.mount(*self._view_widgets())
