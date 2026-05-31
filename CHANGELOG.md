@@ -10,6 +10,36 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.38.0] — 2026-05-31
+
+### Added
+
+- **The card edit form is now the single place to change a card.** Open a card
+  and press `e`: alongside title, priority, description and acceptance criteria,
+  the form now carries a **status** selector (backlog → refined → in_progress →
+  done, plus archived), a **tag** editor (type to add, `✕` a chip to remove) and
+  a **references** editor (label + value rows, each removable). Tags, references
+  and status are a working copy — **Save** applies them all at once, and cancel
+  (`Esc`) discards every pending change, so editing a card is one cohesive form
+  rather than a form plus a scatter of modals.
+- **`set_tags` / `set_references` on the board service** — set-replace operations
+  that rewrite a card's whole tag or reference set in one transaction, backing
+  the form's working-copy save.
+
+### Changed
+
+- **A status change from the form maintains the done-invariant.** Moving a card
+  to (or out of) `done` via the new selector routes through the same path as the
+  move keys, so `completed_at` is stamped and cleared correctly; an unchanged
+  status is left alone.
+
+### Removed
+
+- **The card screen's `t` (tag), `r` (references) and `<` / `>` (move) gestures**
+  and the standalone reference modal — that editing now lives in the card's edit
+  form. Block / unblock (`b` / `u`) stay as in-place gestures (they carry a reason
+  comment a plain tag can't), and the board-level tag and move keys are unchanged.
+
 ## [0.37.1] — 2026-05-31
 
 ### Fixed
@@ -1169,7 +1199,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.37.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.38.0
 [0.37.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.1
 [0.37.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.37.0
 [0.36.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.36.0
