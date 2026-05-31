@@ -361,6 +361,8 @@ skills/
 │   └── SKILL.md     # Show project tasks
 ├── board/
 │   └── SKILL.md     # View and drive the kanban board
+├── triage/
+│   └── SKILL.md     # Route the quick-capture inbox to board/task/decision/memory
 ├── commit/
 │   └── SKILL.md     # Smart commit with conventional message
 ├── standup/

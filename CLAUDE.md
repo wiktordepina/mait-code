@@ -40,7 +40,7 @@ The point is a strict separation between polished, shipped artefacts (committed,
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
 uv run pyright                 # Typecheck (standard mode, src/ only)
-uv run pytest                  # Test suite (~460 tests)
+uv run pytest                  # Test suite (close to a thousand tests)
 ```
 
 `pyright` reads the optional `boto3` import in `tools/memory/embeddings.py`,

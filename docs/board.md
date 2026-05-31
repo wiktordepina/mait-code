@@ -185,6 +185,7 @@ form (press <kbd>e</kbd> on the detail screen), or with the `ref` CLI commands.
 | <kbd>b</kbd> / <kbd>u</kbd> | Block / unblock |
 | <kbd>&lt;</kbd> / <kbd>&gt;</kbd> | Move the card left / right through the flow |
 | <kbd>p</kbd> | Filter by project (dropdown picker) |
+| <kbd>/</kbd> | Search cards by title |
 | <kbd>d</kbd> | Toggle the **Done** column |
 | <kbd>a</kbd> | Toggle the **Archived** pane |
 | <kbd>r</kbd> | Reload the board from disk |
