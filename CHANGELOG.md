@@ -10,6 +10,25 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.34.0] — 2026-05-31
+
+### Added
+
+- **References on cards — a structured list of label→value links.** Point a card
+  at the things it relates to (a PR URL, a `file://` plan, a bare JIRA key)
+  instead of burying them in the description. Manage them from the CLI with
+  `mait-code board ref add/remove/list`, or in the board TUI's card screen with
+  `r`; the card screen shows a References section where URL and `file://` values
+  are clickable. References are kept in order and identified by position.
+- **Toasts now carry the house look.** Notifications get a rounded, severity-keyed
+  border and a leading glyph (`ℹ`/`⚠`/`✘`) keyed to their colour — information in
+  the primary hue, warnings amber, errors red — so they read as part of the same
+  family as the chips and recolour with the active theme.
+- **The TUI theme now sticks.** Pick a theme with `Ctrl+P` and it's remembered
+  across sessions (a new `theme` setting). Any registered theme persists — the
+  house themes or a Textual built-in — and an unknown saved name falls back to
+  `mait-dark`. The `mait-code settings` editor offers it as a theme picker too.
+
 ## [0.33.0] — 2026-05-31
 
 ### Added
@@ -1072,7 +1091,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.34.0
 [0.33.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.33.0
 [0.32.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.32.0
 [0.31.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.31.0

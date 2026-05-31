@@ -63,6 +63,21 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "UPDATE cards SET status = 'refined' WHERE status = 'blocked'",
         ],
     ),
+    (
+        3,
+        "Add card_references for ordered label→value links on cards",
+        [
+            """CREATE TABLE IF NOT EXISTS card_references (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                position INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                value TEXT NOT NULL
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_card_references_card "
+            "ON card_references(card_id)",
+        ],
+    ),
 ]
 
 

@@ -30,6 +30,23 @@ def test_migration_sensitive_knobs_are_flagged() -> None:
         assert by_key[key].requires_migration is False
 
 
+def test_theme_setting_registered_with_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    setting = next((s for s in config.SETTINGS if s.key == "theme"), None)
+    assert setting is not None
+    assert setting.env == "MAIT_CODE_THEME"
+    assert setting.default == config.DEFAULT_THEME == "mait-dark"
+    assert setting.settable is True
+    assert setting.choices is None  # free text: valid themes are runtime-only
+    # The validator rejects an empty value but accepts any non-empty name.
+    assert setting.validate is not None
+    assert setting.validate("") is not None
+    assert setting.validate("anything") is None
+    monkeypatch.delenv("MAIT_CODE_THEME", raising=False)
+    assert config.resolve(setting) == (config.DEFAULT_THEME, "default")
+
+
 def test_resolve_reports_env_then_default(monkeypatch: pytest.MonkeyPatch) -> None:
     setting = next(s for s in config.SETTINGS if s.key == "log-level")
 

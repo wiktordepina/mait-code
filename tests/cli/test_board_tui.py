@@ -845,6 +845,72 @@ class TestCardScreenActions:
         assert mode == "view"
         assert "in place" in rendered
 
+    def test_reference_add_from_card_screen_refreshes_in_place(
+        self, board_path: Path
+    ) -> None:
+        from mait_code.cli._board_tui import RefScreen
+
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                assert isinstance(app.screen, CardScreen)
+                # 'r' pushes the reference modal on top of the card screen.
+                await pilot.press("r")
+                await pilot.pause()
+                assert isinstance(app.screen, RefScreen)
+                app.screen.query_one("#ref-label", Input).value = "PR"
+                app.screen.query_one("#ref-value", Input).value = "https://example.com"
+                await pilot.click("#ref-apply")
+                await pilot.pause()
+                await pilot.pause()
+                still_card = isinstance(app.screen, CardScreen)
+                rendered = self._rendered(app.screen) if still_card else ""
+                return (
+                    service.list_references(app._conn, ids["card"]),
+                    still_card,
+                    rendered,
+                )
+
+        refs, still_card, rendered = _run(scenario)
+        assert refs == [{"label": "PR", "value": "https://example.com"}]
+        assert still_card is True
+        # The References section renders the new link in place.
+        assert "PR" in rendered
+        assert "https://example.com" in rendered
+
+    def test_reference_chip_removes_from_card_screen(self, board_path: Path) -> None:
+        from mait_code.cli._board_tui import RefScreen
+
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                service.add_reference(app._conn, ids["card"], "a", "1")
+                service.add_reference(app._conn, ids["card"], "b", "2")
+                app._reload()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("r")
+                await pilot.pause()
+                assert isinstance(app.screen, RefScreen)
+                # Click the chip for the first reference (display position 1).
+                await pilot.click("#ref-rm-0")
+                await pilot.pause()
+                await pilot.pause()
+                return service.list_references(app._conn, ids["card"])
+
+        remaining = _run(scenario)
+        assert remaining == [{"label": "b", "value": "2"}]
+
     def test_move_from_card_screen_updates_in_place(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "card", "status": REFINED}])
 
@@ -1136,3 +1202,48 @@ class TestTheming:
         assert exc is None  # the card screen painted without MissingStyle
         assert screen == "CardScreen"
         assert colours == PALETTE_CHIPS  # chips fell back to the hex palette
+
+
+class TestToasts:
+    """The house notification styling layered on Textual's Toast."""
+
+    def test_notify_prefixes_severity_glyph(self, board_path: Path) -> None:
+        """MaitApp.notify() leads each toast title with its severity glyph."""
+        from textual.widgets._toast import Toast
+
+        from mait_code.tui.app import TOAST_GLYPHS
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(notifications=True) as pilot:
+                await pilot.pause()
+                app.notify("created", severity="information")
+                app.notify("blocked", severity="warning")
+                app.notify("failed", severity="error")
+                await pilot.pause()
+                return [t._notification.title for t in app.query(Toast)]
+
+        titles = _run(scenario)
+        assert {t[0] for t in titles} == set(TOAST_GLYPHS.values())
+
+    def test_notify_renders_under_ansi_theme(self, board_path: Path) -> None:
+        """Toasts paint (don't crash) under an ANSI theme, where colours resolve
+        to named tokens rather than hex — the border/title roles must degrade
+        gracefully."""
+        from textual.widgets._toast import Toast
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(notifications=True) as pilot:
+                await pilot.pause()
+                app.theme = "ansi-dark"
+                await pilot.pause()
+                app.notify("created", severity="information")
+                app.notify("blocked", severity="warning")
+                app.notify("failed", severity="error")
+                await pilot.pause()
+                return len(app.query(Toast)), app._exception
+
+        count, exc = _run(scenario)
+        assert exc is None
+        assert count == 3

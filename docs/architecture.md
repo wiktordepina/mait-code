@@ -326,6 +326,9 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `unblock` | id | Remove the `blocked` tag (keeps the card's flow position) |
 | `tag` | id, tag | Add a free-form tag to a card |
 | `untag` | id, tag | Remove a tag from a card |
+| `ref add` | id, label, value | Append a label→value reference (URL, `file://` path, or bare ID) to a card |
+| `ref remove` | id, position | Remove a reference by its 1-based position (see `ref list`) |
+| `ref list` | id, --json? | List a card's references in order |
 | `archive` | id | Archive a card (hidden, not deleted) |
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance? | Edit card fields |
@@ -336,7 +339,7 @@ Every query and mutation — including the done-invariant (`completed_at` is set
 
 ## Board TUI (`mait-code board`)
 
-`mait-code board` opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a `p`-cycle project filter, arrow-key navigation, `<`/`>` to move a card along the flow (`backlog → refined → in_progress → done`), a near-fullscreen card screen (`Enter`) that shows the card with its comment thread and flips to an edit form in place with `e` (saving lands the change and returns to the view), `n` to create a card, `C` to complete a card with a handoff summary, `c` to comment, `t` to toggle a tag, and `b`/`u` to tag/untag `blocked` in place. Priority and tags render as domain-coloured chips on the card rows (`blocked` distinct in the error colour). A `Ctrl+P` command palette exposes every action, `?` opens a context help screen built from the live key-bindings, number keys jump between columns, and actions raise toasts. It is built on Textual and reuses the board `service.py`, mirroring the `mait-code settings` editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.
+`mait-code board` opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a `p`-cycle project filter, arrow-key navigation, `<`/`>` to move a card along the flow (`backlog → refined → in_progress → done`), a near-fullscreen card screen (`Enter`) that shows the card with its comment thread and flips to an edit form in place with `e` (saving lands the change and returns to the view), `n` to create a card, `C` to complete a card with a handoff summary, `c` to comment, `t` to toggle a tag, `r` to add or remove references, and `b`/`u` to tag/untag `blocked` in place. The card screen carries a References section — a list of label→value links, clickable where the value is a URL or `file://` path. Priority and tags render as domain-coloured chips on the card rows (`blocked` distinct in the error colour). A `Ctrl+P` command palette exposes every action, `?` opens a context help screen built from the live key-bindings, number keys jump between columns, and actions raise toasts. It is built on Textual and reuses the board `service.py`, mirroring the `mait-code settings` editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.
 
 The board TUI is **on-demand and foreground** — it is launched explicitly, runs until you quit with `q`, and leaves nothing behind. The *No background services* principle is intact: there is no daemon polling the board, only a short-lived app you open when you want to see it.
 

@@ -32,6 +32,7 @@ __all__ = [
     "CardNotFound",
     "add_card",
     "add_comment",
+    "add_reference",
     "add_tag",
     "archive_card",
     "block_card",
@@ -41,11 +42,13 @@ __all__ = [
     "get_comments",
     "list_cards",
     "list_projects",
+    "list_references",
     "list_tags",
     "move_card",
     "next_refined",
     "refine_card",
     "remove_card",
+    "remove_reference",
     "remove_tag",
     "summary_counts",
     "unblock_card",
@@ -125,6 +128,35 @@ def _attach_tags(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     return cards
 
 
+def _attach_references(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
+    """Populate each card dict's ``references`` key, ordered by position.
+
+    Each reference is a ``{"label": str, "value": str}`` dict. Same one-grouped-
+    query shape as :func:`_attach_tags`, so a card list costs a single extra
+    round-trip regardless of card count.
+    """
+    if not cards:
+        return cards
+    ids = [c["id"] for c in cards]
+    placeholders = ", ".join("?" for _ in ids)
+    rows = conn.execute(
+        f"SELECT card_id, label, value FROM card_references "
+        f"WHERE card_id IN ({placeholders}) ORDER BY position, id",
+        ids,
+    ).fetchall()
+    by_card: dict[int, list[dict]] = {}
+    for card_id, label, value in rows:
+        by_card.setdefault(card_id, []).append({"label": label, "value": value})
+    for card in cards:
+        card["references"] = by_card.get(card["id"], [])
+    return cards
+
+
+def _attach(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
+    """Attach both tags and references to each card dict."""
+    return _attach_references(conn, _attach_tags(conn, cards))
+
+
 # --- Queries ---
 
 
@@ -169,7 +201,7 @@ def list_cards(
         f"ORDER BY {_PRIORITY_ORDER}, created_at, id",
         params,
     ).fetchall()
-    return _attach_tags(conn, [_card_dict(r) for r in rows])
+    return _attach(conn, [_card_dict(r) for r in rows])
 
 
 def get_card(conn: sqlite3.Connection, card_id: int) -> dict | None:
@@ -177,7 +209,7 @@ def get_card(conn: sqlite3.Connection, card_id: int) -> dict | None:
     row = _fetch_card_row(conn, card_id)
     if row is None:
         return None
-    return _attach_tags(conn, [_card_dict(row)])[0]
+    return _attach(conn, [_card_dict(row)])[0]
 
 
 def get_comments(conn: sqlite3.Connection, card_id: int) -> list[dict]:
@@ -248,7 +280,7 @@ def next_refined(
         )
         conn.commit()
         row = _fetch_card_row(conn, row[0])
-    return _attach_tags(conn, [_card_dict(row)])[0]
+    return _attach(conn, [_card_dict(row)])[0]
 
 
 # --- Tags ---
@@ -283,6 +315,60 @@ def list_tags(conn: sqlite3.Connection, card_id: int) -> list[str]:
         "SELECT tag FROM card_tags WHERE card_id = ? ORDER BY tag", (card_id,)
     ).fetchall()
     return [r[0] for r in rows]
+
+
+# --- References ---
+
+
+def add_reference(
+    conn: sqlite3.Connection, card_id: int, label: str, value: str
+) -> None:
+    """Append a label→value reference to a card (kept in insertion order).
+
+    Labels needn't be unique — a card may carry two ``PR`` links. Raises
+    :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    next_position = conn.execute(
+        "SELECT COALESCE(MAX(position), 0) + 1 FROM card_references WHERE card_id = ?",
+        (card_id,),
+    ).fetchone()[0]
+    conn.execute(
+        "INSERT INTO card_references (card_id, position, label, value) "
+        "VALUES (?, ?, ?, ?)",
+        (card_id, next_position, label, value),
+    )
+    conn.commit()
+
+
+def remove_reference(conn: sqlite3.Connection, card_id: int, index: int) -> bool:
+    """Remove the reference at 1-based *index* in display order.
+
+    Returns ``True`` if a reference was removed, ``False`` if *index* is out of
+    range (so the caller can report it). Indexing the displayed order — not the
+    stored ``position`` — keeps removal stable even after earlier deletions leave
+    gaps. Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    rows = conn.execute(
+        "SELECT id FROM card_references WHERE card_id = ? ORDER BY position, id",
+        (card_id,),
+    ).fetchall()
+    if index < 1 or index > len(rows):
+        return False
+    conn.execute("DELETE FROM card_references WHERE id = ?", (rows[index - 1][0],))
+    conn.commit()
+    return True
+
+
+def list_references(conn: sqlite3.Connection, card_id: int) -> list[dict]:
+    """Return a card's references as ``{"label", "value"}`` dicts, in order."""
+    rows = conn.execute(
+        "SELECT label, value FROM card_references WHERE card_id = ? "
+        "ORDER BY position, id",
+        (card_id,),
+    ).fetchall()
+    return [{"label": label, "value": value} for label, value in rows]
 
 
 # --- Mutations ---

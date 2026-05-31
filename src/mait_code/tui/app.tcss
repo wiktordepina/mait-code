@@ -46,3 +46,45 @@ ModalScreen {
 #help-dialog {
     max-height: 80%;
 }
+
+/* --- Toasts (notifications) ----------------------------------------------- */
+
+/* House notification toast: a rounded panel over $surface whose border and
+ * title hue are keyed to severity, so toasts read as part of the same family
+ * as the chips. Every colour is a theme role, so a Ctrl+P theme switch reskins
+ * toasts too. The leading glyph in each title is supplied by MaitApp.notify();
+ * its colour is the matching .toast--title rule below. */
+Toast {
+    padding: 0 1;
+    background: $surface;
+    border: round $primary;
+    link-color: $text;
+    link-background-hover: $primary;
+    link-color-hover: $text;
+}
+
+.toast--title {
+    text-style: bold;
+    color: $primary;
+}
+
+Toast.-information {
+    border: round $primary;
+}
+Toast.-information .toast--title {
+    color: $primary;
+}
+
+Toast.-warning {
+    border: round $warning;
+}
+Toast.-warning .toast--title {
+    color: $warning;
+}
+
+Toast.-error {
+    border: round $error;
+}
+Toast.-error .toast--title {
+    color: $error;
+}
