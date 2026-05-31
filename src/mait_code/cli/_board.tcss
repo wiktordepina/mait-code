@@ -56,9 +56,11 @@
 
 /* The two modes are stacked siblings; only one is displayed at a time, so the
  * shown one takes the 1fr between the title/footer. The view scroll centres its
- * capped content within the wide frame so it doesn't hug the left edge. */
+ * capped content within the wide frame so it doesn't hug the left edge. The
+ * margin-bottom lifts the content off the hint bar so they don't fuse. */
 #card-view, #card-edit {
     height: 1fr;
+    margin-bottom: 1;
 }
 
 #card-view {
@@ -69,10 +71,14 @@
     align-horizontal: center;
 }
 
+/* Symmetric horizontal padding gives the content equal breathing room on both
+ * sides — running text clears the scrollbar on the right while the block stays
+ * visually centred whether or not a scrollbar is present. */
 #card-view-content {
     width: 100%;
     max-width: 100;
     height: auto;
+    padding: 0 2;
 }
 
 /* Edit mode: the scrolling field area fills the frame (buttons sit outside it),

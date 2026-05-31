@@ -32,6 +32,7 @@ from mait_code.tools.board.columns import (
     DONE,
     IN_PROGRESS,
     REFINED,
+    label,
 )
 from mait_code.tools.board.db import get_connection
 
@@ -797,6 +798,247 @@ class TestHelp:
         assert is_help
         assert "New" in descs and "Help" in descs
         assert closed
+
+
+class TestCardScreenActions:
+    """#14 — acting on a card from inside the card screen, refreshed in place."""
+
+    def _rendered(self, screen) -> str:
+        return " ".join(str(s.render()) for s in screen.query(Static))
+
+    def test_comment_from_card_screen_refreshes_in_place(
+        self, board_path: Path
+    ) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                assert isinstance(app.screen, CardScreen)
+                # 'c' pushes the comment modal on top of the card screen.
+                await pilot.press("c")
+                await pilot.pause()
+                assert isinstance(app.screen, CommentScreen)
+                app.screen.query_one("#comment-input", Input).value = "in place"
+                await pilot.click("#comment-add")
+                await pilot.pause()
+                await pilot.pause()
+                # Back on the still-open card screen (view mode), comment shown.
+                still_card = isinstance(app.screen, CardScreen)
+                mode = app.screen._mode if still_card else None
+                rendered = self._rendered(app.screen) if still_card else ""
+                return (
+                    service.get_comments(app._conn, ids["card"]),
+                    still_card,
+                    mode,
+                    rendered,
+                )
+
+        comments, still_card, mode, rendered = _run(scenario)
+        assert [c["body"] for c in comments] == ["in place"]
+        assert still_card is True
+        assert mode == "view"
+        assert "in place" in rendered
+
+    def test_move_from_card_screen_updates_in_place(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("greater_than_sign")  # advance along the flow
+                await pilot.pause()
+                await pilot.pause()
+                still_card = isinstance(app.screen, CardScreen)
+                rendered = self._rendered(app.screen) if still_card else ""
+                return (
+                    service.get_card(app._conn, ids["card"])["status"],
+                    still_card,
+                    rendered,
+                )
+
+        status, still_card, rendered = _run(scenario)
+        assert status == IN_PROGRESS
+        assert still_card is True
+        # The meta line reflects the card's new status without leaving the screen.
+        assert label(IN_PROGRESS) in rendered
+
+    def test_block_from_card_screen_in_place(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("b")
+                await pilot.pause()
+                await pilot.pause()
+                still_card = isinstance(app.screen, CardScreen)
+                # The open screen's card refreshed in place (its tag list updated).
+                tags = app.screen._card.get("tags", []) if still_card else []
+                return service.get_card(app._conn, ids["card"]), still_card, tags
+
+        card, still_card, tags = _run(scenario)
+        assert card["status"] == REFINED  # block tags in place, never moves
+        assert BLOCKED_TAG in card["tags"]
+        assert still_card is True
+        assert BLOCKED_TAG in tags
+
+    def test_complete_from_card_screen_stays_open_shows_done(
+        self, board_path: Path
+    ) -> None:
+        ids = _seed(board_path, [{"title": "wip", "status": IN_PROGRESS}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(IN_PROGRESS)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("C")
+                await pilot.pause()
+                assert isinstance(app.screen, CompleteScreen)
+                app.screen.query_one("#complete-input", Input).value = "shipped here"
+                await pilot.click("#complete-ok")
+                await pilot.pause()
+                await pilot.pause()
+                still_card = isinstance(app.screen, CardScreen)
+                rendered = self._rendered(app.screen) if still_card else ""
+                return service.get_card(app._conn, ids["wip"]), still_card, rendered
+
+        card, still_card, rendered = _run(scenario)
+        assert card["status"] == DONE
+        assert card["completion_summary"] == "shipped here"
+        # Per the refinement: stay open and re-render to Done + summary in place.
+        assert still_card is True
+        assert "shipped here" in rendered
+        assert label(DONE) in rendered
+
+    def test_actions_inert_in_edit_mode(self, board_path: Path) -> None:
+        """Edit-mode keystrokes go to the form, not the view actions."""
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("e")  # straight into edit
+                await pilot.pause()
+                assert app.screen._mode == "edit"
+                # 'c' types into the title input — it must not open CommentScreen.
+                await pilot.press("c")
+                await pilot.pause()
+                return isinstance(app.screen, CardScreen), app.screen._mode
+
+        still_card, mode = _run(scenario)
+        assert still_card is True  # never bounced to a CommentScreen
+        assert mode == "edit"
+
+
+class TestCardScreenFooter:
+    """#15 — the contextual keybinding footer (check_action gating)."""
+
+    def test_view_mode_advertises_actions(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                screen = app.screen
+                view = {
+                    a: screen.check_action(a, ())
+                    for a in (
+                        "edit",
+                        "comment",
+                        "tag",
+                        "complete",
+                        "move_left",
+                        "move_right",
+                    )
+                }
+                save = screen.check_action("save", ())
+                # active_bindings is what the Footer renders.
+                actions = {ab.binding.action for ab in screen.active_bindings.values()}
+                return view, save, actions
+
+        view, save, actions = _run(scenario)
+        assert all(v is True for v in view.values())
+        assert save is False  # Save is edit-only
+        assert "comment" in actions and "save" not in actions
+
+    def test_edit_mode_hides_view_actions_shows_save(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("e")
+                await pilot.pause()
+                screen = app.screen
+                hidden = {
+                    a: screen.check_action(a, ())
+                    for a in ("comment", "tag", "complete", "edit")
+                }
+                save = screen.check_action("save", ())
+                close = screen.check_action("close", ())
+                actions = {ab.binding.action for ab in screen.active_bindings.values()}
+                return hidden, save, close, actions
+
+        hidden, save, close, actions = _run(scenario)
+        assert all(v is False for v in hidden.values())
+        assert save is True
+        assert close is True
+        assert "save" in actions
+        assert "comment" not in actions and "tag" not in actions
+
+    def test_block_unblock_mutual_exclusion(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                screen = app.screen
+                unblocked = (
+                    screen.check_action("block", ()),
+                    screen.check_action("unblock", ()),
+                )
+                # Block in place — the footer flips (refresh_bindings via show_card).
+                await pilot.press("b")
+                await pilot.pause()
+                await pilot.pause()
+                screen = app.screen
+                blocked = (
+                    screen.check_action("block", ()),
+                    screen.check_action("unblock", ()),
+                )
+                return unblocked, blocked
+
+        unblocked, blocked = _run(scenario)
+        assert unblocked == (True, False)  # unblocked card offers Block
+        assert blocked == (False, True)  # blocked card offers Unblock
 
 
 class TestPaletteAndJumps:

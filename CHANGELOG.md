@@ -10,6 +10,27 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.32.0] — 2026-05-31
+
+### Added
+
+- **You can now act on a board card without leaving its screen.** Comment (`c`),
+  tag (`t`), move (`<` / `>`), block / unblock (`b` / `u`) and complete (`C`) all
+  work from inside the card screen, refreshing the open card in place rather than
+  bouncing back to the board and losing your reading position. Completing a card
+  keeps the screen open and re-renders it as Done with its summary.
+
+### Changed
+
+- **The card screen's hint bar is now contextual.** The footer advertises only
+  the actions that apply right now — the view actions while reading, Save
+  (`Ctrl+S`) while editing, and whichever of block / unblock matches the card —
+  so it stays an accurate map of what each key does.
+- **The card screen content has room to breathe.** Running text no longer fuses
+  against the scrollbar or the hint bar: the content keeps symmetric side padding
+  and lifts off the footer, and stays visually centred whether or not a scrollbar
+  is present.
+
 ## [0.31.0] — 2026-05-31
 
 ### Added
@@ -1024,7 +1045,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.32.0
 [0.31.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.31.0
 [0.30.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.30.0
 [0.29.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.29.1
