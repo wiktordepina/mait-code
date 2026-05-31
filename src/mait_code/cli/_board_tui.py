@@ -543,18 +543,32 @@ class CardScreen(ModalScreen[None]):
             self.query_one(".detail-meta", Static).update(self._meta(self._card))
 
     def _meta(self, card: dict) -> Text:
-        """One line: project · status, then priority and tags as chips."""
+        """One line of fields, each set off by the same dim middot:
+        ``project · status · priority · #tag #tag``.
+
+        The uniform separator gives priority and the tags the same rhythm as
+        project/status, instead of trailing off space-separated. Tags read as
+        one group (the last field), so the middot sits before the group, not
+        between every badge.
+        """
+        sep = "  ·  "
         meta = Text()
         meta.append(card["project"], style="dim")
-        meta.append("  ·  ")
+        meta.append(sep, style="dim")
         meta.append(col_label(card["status"]))
-        meta.append("  ")
+        meta.append(sep, style="dim")
         meta.append_text(priority_chip(card["priority"], self._chip_colours))
-        for tag in card.get("tags", []):
-            meta.append(" ")
-            meta.append_text(
-                tag_badge(tag, blocked=(tag == BLOCKED_TAG), colours=self._chip_colours)
-            )
+        tags = card.get("tags", [])
+        if tags:
+            meta.append(sep, style="dim")
+            for i, tag in enumerate(tags):
+                if i:
+                    meta.append(" ")
+                meta.append_text(
+                    tag_badge(
+                        tag, blocked=(tag == BLOCKED_TAG), colours=self._chip_colours
+                    )
+                )
         return meta
 
     @staticmethod
