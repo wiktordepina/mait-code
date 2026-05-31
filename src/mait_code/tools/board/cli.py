@@ -130,6 +130,10 @@ def cmd_show(args):
         print(f"\nAcceptance criteria:\n{card['acceptance_criteria']}")
     if card["completion_summary"]:
         print(f"\nCompletion summary:\n{card['completion_summary']}")
+    if card["references"]:
+        print(f"\nReferences ({len(card['references'])}):")
+        for position, ref in enumerate(card["references"], 1):
+            print(f"  {position}. {ref['label']}: {ref['value']}")
     if comments:
         print(f"\nComments ({len(comments)}):")
         for comment in comments:
@@ -297,6 +301,61 @@ def cmd_untag(args):
     print(f"Card #{args.id}: '{tag}' tag removed.")
 
 
+def cmd_ref_add(args):
+    ref_label = args.label.strip()
+    value = " ".join(args.value).strip()
+    if not ref_label:
+        print("Error: reference label cannot be empty.", file=sys.stderr)
+        sys.exit(1)
+    if not value:
+        print("Error: reference value cannot be empty.", file=sys.stderr)
+        sys.exit(1)
+
+    with connection() as conn:
+        try:
+            service.add_reference(conn, args.id, ref_label, value)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    print(f"Card #{args.id}: added reference '{ref_label}'.")
+
+
+def cmd_ref_remove(args):
+    with connection() as conn:
+        try:
+            removed = service.remove_reference(conn, args.id, args.position)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    if not removed:
+        print(
+            f"Error: card #{args.id} has no reference at position {args.position}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    print(f"Card #{args.id}: removed reference {args.position}.")
+
+
+def cmd_ref_list(args):
+    with connection() as conn:
+        card = service.get_card(conn, args.id)
+        if card is None:
+            _not_found(args.id)
+        refs = card["references"]
+
+    if args.json:
+        print(json.dumps(refs, indent=2))
+        return
+
+    if not refs:
+        print(f"Card #{args.id} has no references.")
+        return
+
+    print(f"References for card #{args.id}:")
+    for position, ref in enumerate(refs, 1):
+        print(f"  {position}. {ref['label']}: {ref['value']}")
+
+
 def cmd_archive(args):
     with connection() as conn:
         try:
@@ -396,6 +455,29 @@ def main():
     p_untag.add_argument("id", type=int, help="Card ID")
     p_untag.add_argument("tag", help="Tag to remove")
     p_untag.set_defaults(func=cmd_untag)
+
+    p_ref = sub.add_parser("ref", help="Manage a card's references (label→value links)")
+    ref_sub = p_ref.add_subparsers(dest="ref_command", required=True)
+
+    p_ref_add = ref_sub.add_parser("add", help="Add a reference to a card")
+    p_ref_add.add_argument("id", type=int, help="Card ID")
+    p_ref_add.add_argument("label", help="Reference label (e.g. JIRA, PR)")
+    p_ref_add.add_argument(
+        "value", nargs="+", help="Reference value (URL, file:// path, or bare ID)"
+    )
+    p_ref_add.set_defaults(func=cmd_ref_add)
+
+    p_ref_remove = ref_sub.add_parser("remove", help="Remove a reference by position")
+    p_ref_remove.add_argument("id", type=int, help="Card ID")
+    p_ref_remove.add_argument(
+        "position", type=int, help="1-based position (see 'ref list')"
+    )
+    p_ref_remove.set_defaults(func=cmd_ref_remove)
+
+    p_ref_list = ref_sub.add_parser("list", help="List a card's references")
+    p_ref_list.add_argument("id", type=int, help="Card ID")
+    p_ref_list.add_argument("--json", action="store_true", help="Emit JSON")
+    p_ref_list.set_defaults(func=cmd_ref_list)
 
     p_archive = sub.add_parser("archive", help="Archive a card (hide it)")
     p_archive.add_argument("id", type=int, help="Card ID")

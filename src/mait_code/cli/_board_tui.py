@@ -16,6 +16,7 @@ one, falling back to a read-only render otherwise.
 
 from __future__ import annotations
 
+import re
 from functools import partial
 from pathlib import Path
 
@@ -200,6 +201,7 @@ _VIEW_ACTIONS: frozenset[str] = frozenset(
         "edit",
         "comment",
         "tag",
+        "reference",
         "complete",
         "block",
         "unblock",
@@ -207,6 +209,16 @@ _VIEW_ACTIONS: frozenset[str] = frozenset(
         "move_right",
     }
 )
+
+#: A reference value is rendered as a clickable link when it carries a URI
+#: scheme (``https://``, ``file://``, …). Bare IDs like ``WIKTOR-2342`` have no
+#: scheme and render as plain text.
+_URI_SCHEME = re.compile(r"^[a-z][a-z0-9+.\-]*://", re.IGNORECASE)
+
+
+def _is_linkable(value: str) -> bool:
+    """Whether a reference value should render as a clickable link."""
+    return bool(_URI_SCHEME.match(value))
 
 
 class CardScreen(ModalScreen[None]):
@@ -273,6 +285,7 @@ class CardScreen(ModalScreen[None]):
         Binding("ctrl+s", "save", "Save"),
         Binding("c", "comment", "Comment"),
         Binding("t", "tag", "Tag"),
+        Binding("r", "reference", "Refs"),
         Binding("C", "complete", "Complete"),
         Binding("b", "block", "Block"),
         Binding("u", "unblock", "Unblock"),
@@ -352,6 +365,14 @@ class CardScreen(ModalScreen[None]):
                 widgets.append(Static(heading, classes="section-head"))
                 widgets.append(Rule())
                 widgets.append(Static(escape(body)))
+        references = card.get("references", [])
+        if references:
+            widgets.append(
+                Static(f"References ({len(references)})", classes="section-head")
+            )
+            widgets.append(Rule())
+            for position, ref in enumerate(references, 1):
+                widgets.append(Static(self._reference_line(position, ref)))
         widgets.append(
             Static(f"Comments ({len(self._comments)})", classes="section-head")
         )
@@ -430,6 +451,16 @@ class CardScreen(ModalScreen[None]):
         )
         if tag:
             self.post_message(self.Mutate(self._card["id"], "tag", tag))
+
+    @work
+    async def action_reference(self) -> None:
+        if self._mode != "view":
+            return
+        result = await self.app.push_screen_wait(
+            RefScreen(self._card["id"], self._card.get("references", []))
+        )
+        if result:
+            self.post_message(self.Mutate(self._card["id"], "ref", result))
 
     @work
     async def action_complete(self) -> None:
@@ -579,6 +610,17 @@ class CardScreen(ModalScreen[None]):
         return meta
 
     @staticmethod
+    def _reference_line(position: int, ref: dict) -> Text:
+        """A ``N. label: value`` line; the value is a clickable link if it
+        carries a URI scheme, otherwise plain text."""
+        line = Text()
+        line.append(f"{position}. ", style="dim")
+        line.append(f"{ref['label']}: ", style="bold")
+        value = ref["value"]
+        line.append(value, style=f"link {value}" if _is_linkable(value) else "")
+        return line
+
+    @staticmethod
     def _comment_head(comment: dict) -> Text:
         head = Text(comment["author"], style="dim")
         created = comment.get("created_at")
@@ -675,6 +717,70 @@ class TagScreen(ModalScreen[str | None]):
     def _submit(self) -> None:
         tag = self.query_one("#tag-input", Input).value.strip()
         self.dismiss(tag or None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class RefScreen(ModalScreen[tuple | None]):
+    """Add a reference (label + value), or pick a current one to remove.
+
+    Resolves to ``("add", label, value)`` or ``("remove", position)`` — with
+    *position* 1-based in display order — or ``None`` on cancel. Unlike
+    :class:`TagScreen` there's no toggle: a reference is two free-form fields, so
+    add and remove are distinct gestures (type both fields and apply to add;
+    click a current-reference chip to remove it).
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, card_id: int, references: list[dict] | None = None) -> None:
+        super().__init__()
+        self._card_id = card_id
+        self._references = references or []
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Reference on card #{self._card_id}", classes="modal-title")
+            yield Input(placeholder="label (e.g. PR)…", id="ref-label")
+            yield Input(placeholder="value (URL, file:// path, or ID)…", id="ref-value")
+            if self._references:
+                yield Label(
+                    "Current references (select to remove):", classes="field-label"
+                )
+                with Vertical(id="ref-current"):
+                    for idx, ref in enumerate(self._references):
+                        yield Button(
+                            f"✕ {ref['label']}: {ref['value']}",
+                            id=f"ref-rm-{idx}",
+                            classes="tag-remove",
+                        )
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Add", id="ref-apply", variant="primary")
+                yield Button("Cancel", id="ref-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#ref-label", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        button_id = event.button.id or ""
+        if button_id == "ref-apply":
+            self._submit()
+        elif button_id.startswith("ref-rm-"):
+            # A current-reference chip: remove by its 1-based display position.
+            self.dismiss(("remove", int(button_id.removeprefix("ref-rm-")) + 1))
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        label_ = self.query_one("#ref-label", Input).value.strip()
+        value = self.query_one("#ref-value", Input).value.strip()
+        if not label_ or not value:
+            return  # both fields required; stay in the form
+        self.dismiss(("add", label_, value))
 
     def action_cancel(self) -> None:
         self.dismiss(None)
@@ -1153,6 +1259,21 @@ class BoardApp(MaitApp):
             else:
                 service.add_tag(self._conn, cid, tag)
                 self.notify(f"Tagged card #{cid} #{tag}")
+        elif op == "ref":
+            action = message.value
+            assert isinstance(action, tuple)
+            if action[0] == "add":
+                _, ref_label, value = action
+                service.add_reference(self._conn, cid, ref_label, value)
+                self.notify(f"Added reference to card #{cid}")
+            else:  # ("remove", position)
+                position = int(action[1])
+                if service.remove_reference(self._conn, cid, position):
+                    self.notify(f"Removed reference {position} from card #{cid}")
+                else:
+                    self.notify(
+                        f"Card #{cid} has no reference {position}", severity="warning"
+                    )
         elif op == "move":
             new_status = self._move_target(card["status"], int(message.value))  # type: ignore[arg-type]
             if new_status is None:

@@ -10,6 +10,19 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **References on cards — a structured list of label→value links.** Point a card
+  at the things it relates to (a PR URL, a `file://` plan, a bare JIRA key)
+  instead of burying them in the description. Manage them from the CLI with
+  `mait-code board ref add/remove/list`, or in the board TUI's card screen with
+  `r`; the card screen shows a References section where URL and `file://` values
+  are clickable. References are kept in order and identified by position.
+- **Toasts now carry the house look.** Notifications get a rounded, severity-keyed
+  border and a leading glyph (`ℹ`/`⚠`/`✘`) keyed to their colour — information in
+  the primary hue, warnings amber, errors red — so they read as part of the same
+  family as the chips and recolour with the active theme.
+
 ## [0.33.0] — 2026-05-31
 
 ### Added

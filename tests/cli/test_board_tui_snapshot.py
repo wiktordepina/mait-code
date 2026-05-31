@@ -212,6 +212,41 @@ def test_toast_snapshot_ember(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def _seed_detail_with_refs(db_path: Path) -> None:
+    """A refined card carrying a mix of reference kinds for the detail shot:
+    a linkable URL, a file:// path, and a bare ID (rendered plain)."""
+    conn = get_connection(db_path)
+    try:
+        cid = service.add_card(
+            conn, project="mait-code", title="Card with references", priority="medium"
+        )
+        service.move_card(conn, cid, "refined")
+        service.edit_card(conn, cid, description="Has a References section.")
+        service.add_reference(conn, cid, "PR", "https://github.com/example/pr/1")
+        service.add_reference(conn, cid, "Plan", "file:///home/me/plan.html")
+        service.add_reference(conn, cid, "JIRA", "WIKTOR-2342")
+    finally:
+        conn.close()
+
+
+def test_detail_references_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the References section in the card detail view — links vs the plain
+    bare ID, positions shown."""
+    db_path = tmp_path / "board.db"
+    _seed_detail_with_refs(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app._focus_status("refined")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
+
+
 def test_card_edit_snapshot(snap_compare, tmp_path: Path) -> None:
     """Lock the edit mode of the card screen (form fields on the same frame),
     reached in-place from view via ``e``."""

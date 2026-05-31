@@ -149,6 +149,14 @@
     margin-top: 1;
 }
 
+/* Reference modal: current references stack vertically — a label→value pair is
+ * wider than a tag, so a row would overflow. Each is a "✕ label: value" remove
+ * button reusing the .tag-remove chip styling. */
+#ref-current {
+    height: auto;
+    margin-top: 1;
+}
+
 .tag-remove {
     width: auto;
     height: 1;

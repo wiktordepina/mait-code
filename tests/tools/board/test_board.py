@@ -31,6 +31,7 @@ def test_ensure_schema_creates_tables(board_db: sqlite3.Connection):
     assert "cards" in names
     assert "card_comments" in names
     assert "card_tags" in names
+    assert "card_references" in names
     assert "schema_version" in names
 
 
@@ -38,8 +39,8 @@ def test_ensure_schema_idempotent(board_db: sqlite3.Connection):
     ensure_schema(board_db)
     ensure_schema(board_db)
     versions = board_db.execute("SELECT version FROM schema_version").fetchall()
-    assert len(versions) == 2
-    assert versions[-1][0] == 2
+    assert len(versions) == 3
+    assert versions[-1][0] == 3
 
 
 def test_migration_blocked_becomes_refined_with_tag(tmp_path):
@@ -574,6 +575,186 @@ def test_cmd_list_renders_tags(mock_conn, capsys):
     service.add_tag(mock_conn, cid, "urgent")
     cmd_list(_ns(all=False, status=None, archived=False, json=False))
     assert "#urgent" in capsys.readouterr().out
+
+
+# --- references ---
+
+
+def test_add_and_list_references_preserve_order(board_db):
+    from mait_code.tools.board import service
+
+    cid = _insert_card(board_db, "r")
+    service.add_reference(board_db, cid, "JIRA", "WIKTOR-1")
+    service.add_reference(board_db, cid, "PR", "https://example.com/pr/1")
+    refs = service.list_references(board_db, cid)
+    assert refs == [
+        {"label": "JIRA", "value": "WIKTOR-1"},
+        {"label": "PR", "value": "https://example.com/pr/1"},
+    ]
+
+
+def test_remove_reference_by_display_position(board_db):
+    from mait_code.tools.board import service
+
+    cid = _insert_card(board_db, "r")
+    for label_, value in [("a", "1"), ("b", "2"), ("c", "3")]:
+        service.add_reference(board_db, cid, label_, value)
+    # Remove the middle one; the third should slide up to position 2.
+    assert service.remove_reference(board_db, cid, 2) is True
+    refs = service.list_references(board_db, cid)
+    assert [r["label"] for r in refs] == ["a", "c"]
+    # The new position 2 ('c') removes cleanly — no stale-position gap.
+    assert service.remove_reference(board_db, cid, 2) is True
+    assert [r["label"] for r in service.list_references(board_db, cid)] == ["a"]
+
+
+def test_remove_reference_out_of_range_returns_false(board_db):
+    from mait_code.tools.board import service
+
+    cid = _insert_card(board_db, "r")
+    service.add_reference(board_db, cid, "a", "1")
+    assert service.remove_reference(board_db, cid, 5) is False
+    assert service.remove_reference(board_db, cid, 0) is False
+    assert len(service.list_references(board_db, cid)) == 1
+
+
+def test_add_reference_card_not_found(board_db):
+    from mait_code.tools.board import service
+
+    with pytest.raises(service.CardNotFound):
+        service.add_reference(board_db, 999, "a", "1")
+
+
+def test_references_cascade_on_card_delete(board_db):
+    from mait_code.tools.board import service
+
+    cid = _insert_card(board_db, "r")
+    service.add_reference(board_db, cid, "a", "1")
+    board_db.execute("DELETE FROM cards WHERE id = ?", (cid,))
+    board_db.commit()
+    remaining = board_db.execute(
+        "SELECT COUNT(*) FROM card_references WHERE card_id = ?", (cid,)
+    ).fetchone()[0]
+    assert remaining == 0
+
+
+def test_get_card_attaches_references(board_db):
+    from mait_code.tools.board import service
+
+    cid = _insert_card(board_db, "r")
+    service.add_reference(board_db, cid, "PR", "https://example.com")
+    card = service.get_card(board_db, cid)
+    assert card["references"] == [{"label": "PR", "value": "https://example.com"}]
+
+
+def test_list_cards_attaches_empty_references(board_db):
+    from mait_code.tools.board import service
+
+    _insert_card(board_db, "r")
+    cards = service.list_cards(board_db)
+    assert cards[0]["references"] == []
+
+
+def test_cmd_ref_add(mock_conn):
+    from mait_code.tools.board.cli import cmd_ref_add
+
+    cid = _insert_card(mock_conn, "r")
+    cmd_ref_add(_ns(id=cid, label="PR", value=["https://example.com/x"]))
+    row = mock_conn.execute(
+        "SELECT label, value FROM card_references WHERE card_id = ?", (cid,)
+    ).fetchone()
+    assert row == ("PR", "https://example.com/x")
+
+
+def test_cmd_ref_add_joins_multiword_value(mock_conn):
+    from mait_code.tools.board.cli import cmd_ref_add
+
+    cid = _insert_card(mock_conn, "r")
+    cmd_ref_add(_ns(id=cid, label="Note", value=["see", "the", "plan"]))
+    row = mock_conn.execute(
+        "SELECT value FROM card_references WHERE card_id = ?", (cid,)
+    ).fetchone()
+    assert row[0] == "see the plan"
+
+
+def test_cmd_ref_add_empty_label_or_value(mock_conn):
+    from mait_code.tools.board.cli import cmd_ref_add
+
+    cid = _insert_card(mock_conn, "r")
+    with pytest.raises(SystemExit):
+        cmd_ref_add(_ns(id=cid, label="   ", value=["v"]))
+    with pytest.raises(SystemExit):
+        cmd_ref_add(_ns(id=cid, label="L", value=["   "]))
+
+
+def test_cmd_ref_add_not_found(mock_conn):
+    from mait_code.tools.board.cli import cmd_ref_add
+
+    with pytest.raises(SystemExit):
+        cmd_ref_add(_ns(id=999, label="PR", value=["v"]))
+
+
+def test_cmd_ref_remove(mock_conn):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_ref_remove
+
+    cid = _insert_card(mock_conn, "r")
+    service.add_reference(mock_conn, cid, "a", "1")
+    cmd_ref_remove(_ns(id=cid, position=1))
+    assert service.list_references(mock_conn, cid) == []
+
+
+def test_cmd_ref_remove_out_of_range_exits(mock_conn):
+    from mait_code.tools.board.cli import cmd_ref_remove
+
+    cid = _insert_card(mock_conn, "r")
+    with pytest.raises(SystemExit):
+        cmd_ref_remove(_ns(id=cid, position=3))
+
+
+def test_cmd_ref_list(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_ref_list
+
+    cid = _insert_card(mock_conn, "r")
+    service.add_reference(mock_conn, cid, "JIRA", "WIKTOR-9")
+    cmd_ref_list(_ns(id=cid, json=False))
+    out = capsys.readouterr().out
+    assert "1. JIRA: WIKTOR-9" in out
+
+
+def test_cmd_ref_list_json(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_ref_list
+
+    cid = _insert_card(mock_conn, "r")
+    service.add_reference(mock_conn, cid, "PR", "https://example.com")
+    cmd_ref_list(_ns(id=cid, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data == [{"label": "PR", "value": "https://example.com"}]
+
+
+def test_cmd_show_renders_references(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_show
+
+    cid = _insert_card(mock_conn, "r")
+    service.add_reference(mock_conn, cid, "JIRA", "WIKTOR-9")
+    cmd_show(_ns(id=cid, json=False))
+    out = capsys.readouterr().out
+    assert "References (1):" in out
+    assert "1. JIRA: WIKTOR-9" in out
+
+
+def test_cmd_show_json_includes_references(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_show
+
+    cid = _insert_card(mock_conn, "r")
+    service.add_reference(mock_conn, cid, "PR", "https://example.com")
+    cmd_show(_ns(id=cid, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["references"] == [{"label": "PR", "value": "https://example.com"}]
 
 
 def test_cmd_archive_then_excluded_from_next(mock_conn, capsys):
