@@ -92,6 +92,13 @@ def run_board_tui(db_path: Path | None = None) -> None:
 _BLOCKED_MARK = "⊘ "
 
 
+def _mix(c1: str, c2: str, t: float) -> str:
+    """Blend two ``#rrggbb`` colours, ``t`` of the way from *c1* to *c2*."""
+    a = tuple(int(c1.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+    b = tuple(int(c2.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+    return "#" + "".join(f"{round(a[i] * (1 - t) + b[i] * t):02x}" for i in range(3))
+
+
 def _card_box(
     card: dict,
     *,
@@ -831,10 +838,13 @@ class BoardApp(MaitApp):
         t = theme or self.current_theme
         # Only `primary` is guaranteed on a Theme; the rest are optional, so
         # coalesce each role to primary when a stray theme leaves it unset.
+        # `low` recedes to a muted grey (foreground blended toward the
+        # background) so it reads as the quiet end of the heat scale *and* stays
+        # distinct from the tags, which take the secondary hue.
         return ChipColours(
             high=t.error or t.primary,
             medium=t.warning or t.primary,
-            low=t.secondary or t.primary,
+            low=_mix(t.foreground or p.FOREGROUND, t.background or p.BACKGROUND, 0.45),
             tag=t.secondary or t.primary,
             blocked=t.error or t.primary,
         )
