@@ -93,9 +93,11 @@
     height: 8;
 }
 
+/* The title is the loudest element: a strong neutral, not the primary tint —
+ * so it reads as the heading rather than blurring into the cyan frame/#id. */
 .detail-title {
     text-style: bold;
-    color: $text-primary;
+    color: $foreground;
     width: 100%;
 }
 
@@ -104,25 +106,27 @@
     margin-bottom: 1;
 }
 
-/* Section headers (Description / Acceptance / Comments): accent, set off by a
- * Rule below. */
+/* Section headers (Description / Acceptance / Comments): the accent hue, set
+ * off by a Rule below in the same hue — a distinct voice from the primary frame
+ * so the screen reads in layers rather than one colour. */
 .section-head {
     text-style: bold;
-    color: $primary;
+    color: $accent;
     margin-top: 1;
 }
 
 #card-view Rule {
     margin: 0 0 1 0;
-    color: $primary 40%;
+    color: $accent 40%;
 }
 
-/* Each comment is its own block: a left accent bar plus spacing. */
+/* Each comment is its own block: a left bar in the secondary hue plus spacing —
+ * the comment thread is its own voice, distinct from the frame and the heads. */
 .comment {
     height: auto;
     margin-top: 1;
     padding: 0 1;
-    border-left: solid $primary;
+    border-left: solid $secondary;
 }
 
 .comment-head {

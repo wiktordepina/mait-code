@@ -35,6 +35,7 @@ from mait_code.tools.board.columns import (
     label,
 )
 from mait_code.tools.board.db import get_connection
+from mait_code.tui.render import PALETTE_CHIPS
 
 
 def _run(coro_factory):
@@ -1063,3 +1064,75 @@ class TestPaletteAndJumps:
                 return app._focused_col
 
         assert _run(scenario) == 2
+
+
+class TestTheming:
+    """Chips are Rich text (no CSS $-vars), so they must be re-derived from the
+    active theme and repainted on a switch."""
+
+    def test_chip_colours_track_active_theme(self, board_path: Path) -> None:
+        from mait_code.tui import palette as p
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                default = app._chip_colours()
+                # Switch to a built-in theme with a different palette.
+                app.theme = "nord"
+                await pilot.pause()
+                switched = app._chip_colours()
+                return default, switched, app.current_theme
+
+        default, switched, theme = _run(scenario)
+        # Under mait-dark the tag hue is the house secondary…
+        assert default.tag == p.SECONDARY
+        # …and after the switch it tracks the new theme's secondary, not the old.
+        assert switched.tag == (theme.secondary or theme.primary)
+        assert switched.tag != default.tag
+
+    def test_open_card_recolours_on_theme_switch(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CardScreen)
+                before = screen._chip_colours
+                app.theme = "nord"
+                await pilot.pause()
+                return before, screen._chip_colours, app._chip_colours()
+
+        before, after, expected = _run(scenario)
+        # The open card screen picked up the new theme's chip palette.
+        assert after == expected
+        assert after != before
+
+    def test_ansi_theme_renders_card_without_crashing(self, board_path: Path) -> None:
+        """ANSI themes set colours to named tokens ('ansi_blue', 'ansi_default')
+        — valid in CSS but not as Rich-text styles, which Textual re-parses when
+        the card screen paints (MissingStyle). Chips must fall back to the hex
+        palette, so opening a card under an ANSI theme renders instead of crashing.
+        """
+        _seed(board_path, [{"title": "card", "priority": "low", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app.theme = "ansi-dark"
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")  # open the card screen — the crash site
+                await pilot.pause()
+                return type(app.screen).__name__, app._chip_colours(), app._exception
+
+        screen, colours, exc = _run(scenario)
+        assert exc is None  # the card screen painted without MissingStyle
+        assert screen == "CardScreen"
+        assert colours == PALETTE_CHIPS  # chips fell back to the hex palette

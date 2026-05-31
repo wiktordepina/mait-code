@@ -31,6 +31,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
 from textual.screen import ModalScreen, Screen
+from textual.theme import Theme
 from textual.widget import Widget
 from textual.widgets import (
     Button,
@@ -61,7 +62,12 @@ from mait_code.tools.board.columns import (
 from mait_code.tools.board.db import get_connection, get_project
 from mait_code.tui import palette as p
 from mait_code.tui.app import SHARED_TCSS, MaitApp
-from mait_code.tui.render import priority_chip, tag_badge
+from mait_code.tui.render import (
+    PALETTE_CHIPS,
+    ChipColours,
+    priority_chip,
+    tag_badge,
+)
 
 __all__ = ["BoardApp", "run_board_tui"]
 
@@ -86,16 +92,31 @@ def run_board_tui(db_path: Path | None = None) -> None:
 _BLOCKED_MARK = "⊘ "
 
 
-def _card_box(card: dict, *, show_project: bool) -> RenderableType:
+def _mix(c1: str, c2: str, t: float) -> str:
+    """Blend two ``#rrggbb`` colours, ``t`` of the way from *c1* to *c2*."""
+    a = tuple(int(c1.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+    b = tuple(int(c2.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+    return "#" + "".join(f"{round(a[i] * (1 - t) + b[i] * t):02x}" for i in range(3))
+
+
+def _card_box(
+    card: dict,
+    *,
+    show_project: bool,
+    colours: ChipColours = PALETTE_CHIPS,
+    ident: str = p.PRIMARY,
+) -> RenderableType:
     """Render one card as a bordered box for an :class:`OptionList` option.
 
     The box is a rounded :class:`~rich.panel.Panel` whose body stacks three
     parts: a header grid (``#id`` left, project right), the priority chip plus
     the full title (wraps to the column width, so the box grows in height), and a
-    right-justified tag line. A blocked card gets a red border, keeps the leading
-    :data:`_BLOCKED_MARK`, and its ``#blocked`` badge stands out in the error
-    colour. Colours flow from :mod:`mait_code.tui.palette` via
-    :mod:`mait_code.tui.render`, so the box tracks the active theme.
+    right-justified tag line. A blocked card gets a border in the ``blocked`` hue,
+    keeps the leading :data:`_BLOCKED_MARK`, and its ``#blocked`` badge stands out.
+
+    ``colours`` is the chip bundle and ``ident`` the ``#id`` mark's hue; both
+    default to the canonical palette. The board passes a bundle derived from the
+    active theme so the box recolours on a ``Ctrl+P`` switch.
     """
     tags = card.get("tags", [])
     blocked = BLOCKED_TAG in tags
@@ -105,15 +126,15 @@ def _card_box(card: dict, *, show_project: bool) -> RenderableType:
     header.add_column(justify="left")
     header.add_column(justify="right")
     header.add_row(
-        Text(f"#{card['id']}", style=f"bold {p.PRIMARY}"),
+        Text(f"#{card['id']}", style=f"bold {ident}"),
         Text(card["project"], style="dim") if show_project else Text(""),
     )
 
     # Title line: leading marker (blocked) + priority chip + the wrapping title.
     title = Text()
     if blocked:
-        title.append(_BLOCKED_MARK, style=f"bold {p.ERROR}")
-    title.append_text(priority_chip(card["priority"]))
+        title.append(_BLOCKED_MARK, style=f"bold {colours.blocked}")
+    title.append_text(priority_chip(card["priority"], colours))
     title.append(f" {card['title']}")
 
     parts: list[RenderableType] = [header, title]
@@ -124,13 +145,15 @@ def _card_box(card: dict, *, show_project: bool) -> RenderableType:
         for i, tag in enumerate(tags):
             if i:
                 tagline.append(" ")
-            tagline.append_text(tag_badge(tag, blocked=(tag == BLOCKED_TAG)))
+            tagline.append_text(
+                tag_badge(tag, blocked=(tag == BLOCKED_TAG), colours=colours)
+            )
         parts.append(tagline)
 
     return Panel(
         Group(*parts),
         box=rich.box.ROUNDED,
-        border_style=p.ERROR if blocked else "",
+        border_style=colours.blocked if blocked else "",
         padding=(0, 1),
     )
 
@@ -258,11 +281,19 @@ class CardScreen(ModalScreen[None]):
         Binding("escape", "close", "Close"),
     ]
 
-    def __init__(self, card: dict, comments: list[dict], *, mode: str = "view") -> None:
+    def __init__(
+        self,
+        card: dict,
+        comments: list[dict],
+        *,
+        mode: str = "view",
+        chip_colours: ChipColours = PALETTE_CHIPS,
+    ) -> None:
         super().__init__()
         self._card = card
         self._comments = comments
         self._mode = mode
+        self._chip_colours = chip_colours
 
     def compose(self) -> ComposeResult:
         card = self._card
@@ -507,18 +538,44 @@ class CardScreen(ModalScreen[None]):
             )
         )
 
-    @staticmethod
-    def _meta(card: dict) -> Text:
-        """One line: project · status, then priority and tags as chips."""
+    def set_chip_colours(self, colours: ChipColours) -> None:
+        """Re-colour the chips to a new theme's palette, live.
+
+        The only chip-bearing surface on this screen is the meta line, so a
+        theme switch just needs that one ``Static`` re-rendered &mdash; cheap and
+        synchronous (no re-mount). Called by the app from its theme-change hook.
+        """
+        self._chip_colours = colours
+        if self.is_mounted:
+            self.query_one(".detail-meta", Static).update(self._meta(self._card))
+
+    def _meta(self, card: dict) -> Text:
+        """One line of fields, each set off by the same dim middot:
+        ``project · status · priority · #tag #tag``.
+
+        The uniform separator gives priority and the tags the same rhythm as
+        project/status, instead of trailing off space-separated. Tags read as
+        one group (the last field), so the middot sits before the group, not
+        between every badge.
+        """
+        sep = "  ·  "
         meta = Text()
         meta.append(card["project"], style="dim")
-        meta.append("  ·  ")
+        meta.append(sep, style="dim")
         meta.append(col_label(card["status"]))
-        meta.append("  ")
-        meta.append_text(priority_chip(card["priority"]))
-        for tag in card.get("tags", []):
-            meta.append(" ")
-            meta.append_text(tag_badge(tag, blocked=(tag == BLOCKED_TAG)))
+        meta.append(sep, style="dim")
+        meta.append_text(priority_chip(card["priority"], self._chip_colours))
+        tags = card.get("tags", [])
+        if tags:
+            meta.append(sep, style="dim")
+            for i, tag in enumerate(tags):
+                if i:
+                    meta.append(" ")
+                meta.append_text(
+                    tag_badge(
+                        tag, blocked=(tag == BLOCKED_TAG), colours=self._chip_colours
+                    )
+                )
         return meta
 
     @staticmethod
@@ -758,12 +815,52 @@ class BoardApp(MaitApp):
         # Done and archived stay hidden until their toggles (`d` / `a`) reveal them.
         self.query_one("#col-done", Vertical).display = False
         self.query_one("#col-archived", Vertical).display = False
+        # Re-render the chip-bearing surfaces whenever the theme changes, so a
+        # Ctrl+P switch recolours the Rich-text chips (which can't read $-vars).
+        self.theme_changed_signal.subscribe(self, self._on_theme_change)
         self._update_subtitle()
         self._reload()
         self._focus_current()
 
     def on_unmount(self) -> None:
         self._conn.close()
+
+    # -- theming -----------------------------------------------------------
+
+    def _chip_colours(self, theme: Theme | None = None) -> ChipColours:
+        """The chip palette for the active (or given) theme.
+
+        Tags take the theme's *secondary* hue so they read distinct from the
+        primary frame/#id; the heat scale and blocked marker take the semantic
+        roles. ``secondary`` can be unset on a stray built-in theme, so it falls
+        back to ``primary``.
+        """
+        t = theme or self.current_theme
+        # The ANSI passthrough themes set their colours to named tokens
+        # ("ansi_blue", "ansi_default") rather than hex. Those are valid in CSS
+        # (Textual maps them to the terminal palette), but *not* as Rich-text
+        # styles: Textual re-parses them when the card screen's Static paints and
+        # raises MissingStyle. So for any non-hex theme, fall back to the
+        # canonical hex palette for the chips — the CSS chrome still follows the
+        # active theme. `primary` is the canary (themes don't mix hex and named).
+        if not (t.primary or "").startswith("#"):
+            return PALETTE_CHIPS
+        # Each role but `primary` is optional, so coalesce to primary when unset.
+        # `low` recedes to a muted grey (foreground blended toward the background)
+        # as the quiet end of the heat scale, distinct from the secondary tags.
+        return ChipColours(
+            high=t.error or t.primary,
+            medium=t.warning or t.primary,
+            low=_mix(t.foreground or p.FOREGROUND, t.background or p.BACKGROUND, 0.45),
+            tag=t.secondary or t.primary,
+            blocked=t.error or t.primary,
+        )
+
+    def _on_theme_change(self, theme: Theme) -> None:
+        """Repaint chips on a theme switch (board columns + any open card)."""
+        self._reload()
+        if isinstance(self.screen, CardScreen):
+            self.screen.set_chip_colours(self._chip_colours(theme))
 
     # -- layout helpers ----------------------------------------------------
 
@@ -790,12 +887,25 @@ class BoardApp(MaitApp):
         for card in cards:
             by_status.setdefault(card["status"], []).append(card)
         show_project = self._project_filter is None
+        colours = self._chip_colours()
+        # #id uses the theme primary, but falls back to hex under a non-hex
+        # (ANSI) theme to match the chip bundle and stay a valid Rich style.
+        primary = self.current_theme.primary
+        ident = primary if (primary or "").startswith("#") else p.PRIMARY
         for status in _PANES:
             column = self.query_one(f"#tbl-{status}", BoardColumn)
             column.clear_options()
             group = by_status.get(status, [])
             column.add_options(
-                Option(_card_box(card, show_project=show_project), id=str(card["id"]))
+                Option(
+                    _card_box(
+                        card,
+                        show_project=show_project,
+                        colours=colours,
+                        ident=ident,
+                    ),
+                    id=str(card["id"]),
+                )
                 for card in group
             )
             head = self.query_one(f"#head-{status}", Label)
@@ -1002,7 +1112,9 @@ class BoardApp(MaitApp):
         if card is None:
             return
         comments = service.get_comments(self._conn, card_id)
-        await self.push_screen_wait(CardScreen(card, comments, mode=mode))
+        await self.push_screen_wait(
+            CardScreen(card, comments, mode=mode, chip_colours=self._chip_colours())
+        )
         self._reload()
         self._select_card(card_id)
 
