@@ -10,6 +10,28 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.33.0] — 2026-05-31
+
+### Added
+
+- **Two new board themes, and the board now recolours fully when you switch.**
+  Press `Ctrl+P` to pick a theme: **mait-bubblegum** (a vivid neon palette — hot
+  pink, purple and mint on a deep aubergine base) or **mait-aurora** (a calmer
+  spread of teal, periwinkle and violet). `mait-dark` stays the default. A switch
+  now repaints the whole screen — including the priority and tag chips, which
+  previously stayed on the old palette.
+
+### Changed
+
+- **The card screen reads in distinct colours instead of one hue.** The title is
+  a strong neutral, section headers take the accent colour, tags and the comment
+  bar take the secondary — so the frame, headings, tags and body no longer blur
+  together. Every theme inherits the separation.
+- **The card-detail meta line has a consistent rhythm.** Project, status,
+  priority and tags are now set off by the same separator
+  (`project · status · priority · #tag`), rather than the priority and tags
+  trailing off space-separated.
+
 ## [0.32.0] — 2026-05-31
 
 ### Added
@@ -1045,7 +1067,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.32.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.33.0...HEAD
+[0.33.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.33.0
 [0.32.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.32.0
 [0.31.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.31.0
 [0.30.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.30.0
