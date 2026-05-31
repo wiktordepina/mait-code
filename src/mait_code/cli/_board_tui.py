@@ -836,24 +836,22 @@ class BoardApp(MaitApp):
         back to ``primary``.
         """
         t = theme or self.current_theme
-        # Only `primary` is guaranteed on a Theme; the rest are optional, so
-        # coalesce each role to primary when a stray theme leaves it unset.
+        # The ANSI passthrough themes set their colours to named tokens
+        # ("ansi_blue", "ansi_default") rather than hex. Those are valid in CSS
+        # (Textual maps them to the terminal palette), but *not* as Rich-text
+        # styles: Textual re-parses them when the card screen's Static paints and
+        # raises MissingStyle. So for any non-hex theme, fall back to the
+        # canonical hex palette for the chips — the CSS chrome still follows the
+        # active theme. `primary` is the canary (themes don't mix hex and named).
+        if not (t.primary or "").startswith("#"):
+            return PALETTE_CHIPS
+        # Each role but `primary` is optional, so coalesce to primary when unset.
         # `low` recedes to a muted grey (foreground blended toward the background)
-        # so it reads as the quiet end of the heat scale *and* stays distinct from
-        # the tags, which take the secondary hue. The ANSI passthrough themes use
-        # named tokens ("ansi_default") rather than hex, which can't be blended —
-        # fall back to the terminal's own grey there.
-        fg = t.foreground or p.FOREGROUND
-        bg = t.background or p.BACKGROUND
-        low = (
-            _mix(fg, bg, 0.45)
-            if fg.startswith("#") and bg.startswith("#")
-            else "bright_black"
-        )
+        # as the quiet end of the heat scale, distinct from the secondary tags.
         return ChipColours(
             high=t.error or t.primary,
             medium=t.warning or t.primary,
-            low=low,
+            low=_mix(t.foreground or p.FOREGROUND, t.background or p.BACKGROUND, 0.45),
             tag=t.secondary or t.primary,
             blocked=t.error or t.primary,
         )
@@ -890,7 +888,10 @@ class BoardApp(MaitApp):
             by_status.setdefault(card["status"], []).append(card)
         show_project = self._project_filter is None
         colours = self._chip_colours()
-        ident = self.current_theme.primary
+        # #id uses the theme primary, but falls back to hex under a non-hex
+        # (ANSI) theme to match the chip bundle and stay a valid Rich style.
+        primary = self.current_theme.primary
+        ident = primary if (primary or "").startswith("#") else p.PRIMARY
         for status in _PANES:
             column = self.query_one(f"#tbl-{status}", BoardColumn)
             column.clear_options()

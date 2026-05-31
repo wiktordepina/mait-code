@@ -35,6 +35,7 @@ from mait_code.tools.board.columns import (
     label,
 )
 from mait_code.tools.board.db import get_connection
+from mait_code.tui.render import PALETTE_CHIPS
 
 
 def _run(coro_factory):
@@ -1112,18 +1113,26 @@ class TestTheming:
         assert after == expected
         assert after != before
 
-    def test_ansi_theme_does_not_crash(self, board_path: Path) -> None:
-        """ANSI themes use named tokens ('ansi_default') not hex, so muting the
-        low chip can't blend them — it must fall back, not raise."""
-        # A low-priority card forces the muted-low path through a full repaint.
+    def test_ansi_theme_renders_card_without_crashing(self, board_path: Path) -> None:
+        """ANSI themes set colours to named tokens ('ansi_blue', 'ansi_default')
+        — valid in CSS but not as Rich-text styles, which Textual re-parses when
+        the card screen paints (MissingStyle). Chips must fall back to the hex
+        palette, so opening a card under an ANSI theme renders instead of crashing.
+        """
         _seed(board_path, [{"title": "card", "priority": "low", "status": REFINED}])
 
         async def scenario():
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                app.theme = "ansi-dark"  # would crash _mix before the guard
+                app.theme = "ansi-dark"
                 await pilot.pause()
-                return app._chip_colours().low
+                app._focus_status(REFINED)
+                await pilot.press("enter")  # open the card screen — the crash site
+                await pilot.pause()
+                return type(app.screen).__name__, app._chip_colours(), app._exception
 
-        assert _run(scenario) == "bright_black"
+        screen, colours, exc = _run(scenario)
+        assert exc is None  # the card screen painted without MissingStyle
+        assert screen == "CardScreen"
+        assert colours == PALETTE_CHIPS  # chips fell back to the hex palette
