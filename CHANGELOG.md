@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.42.0] — 2026-06-01
+
+### Added
+
+- **The board now refreshes itself when something changes underneath it.** If
+  you keep the board open while editing cards from the CLI or a skill in another
+  window, those changes now appear on their own — no manual reload (`r`) needed.
+  The board polls about once a second and only reloads when an outside change
+  has actually landed, so its own edits don't cause needless churn. Your
+  selected card and column are kept across a refresh, and an open card-detail
+  view updates in place rather than going stale (so, for example, completing a
+  card elsewhere is reflected without closing and reopening it). A refresh never
+  interrupts an in-progress edit or steals focus from an open dialog.
+
 ## [0.41.0] — 2026-06-01
 
 ### Added
@@ -1254,7 +1268,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.41.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.42.0...HEAD
+[0.42.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.42.0
 [0.41.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.41.0
 [0.40.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.1
 [0.40.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.0
