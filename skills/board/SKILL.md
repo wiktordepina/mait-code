@@ -38,6 +38,8 @@ Present the board above clearly, then act on what the user asks.
 
 ### Adding & editing
 
+The **description**, **acceptance criteria** and **completion summary** fields render markdown in the card detail view (plain text works too — it's a subset). Write these in markdown when it helps: headings, lists, emphasis, inline and fenced code all display formatted, and single newlines are kept as line breaks. No need to flatten a markdown source into plain prose.
+
 - Add: `mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project <name>]`. New cards land in `backlog`. Use `--project` for work with no git repo yet (e.g. an app idea).
 - Edit: `mc-tool-board edit N [--title ...] [--description ...] [--priority ...] [--acceptance ...]`.
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
