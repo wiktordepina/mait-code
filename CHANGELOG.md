@@ -10,6 +10,22 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.41.0] — 2026-06-01
+
+### Added
+
+- **Card descriptions and acceptance criteria now render markdown.** In the
+  board's card detail view, the Description, Acceptance criteria and Completion
+  summary fields display formatted markdown — headings, bullet and ordered lists
+  (including nested), emphasis, blockquotes, tables, inline code and
+  syntax-highlighted fenced code blocks — instead of showing raw `#`, `**` and
+  `-`. Plain text and markdown share the same field with no format to choose:
+  plain text is valid markdown, and a single newline is kept as a line break, so
+  existing plain descriptions lay out exactly as before. Links in the body
+  render as styled text but aren't clickable — the References field stays the
+  place for links you can follow. Editing is unchanged; you type raw text either
+  way, and storage is untouched (no migration).
+
 ## [0.40.1] — 2026-05-31
 
 ### Changed
@@ -1238,7 +1254,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.40.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.41.0...HEAD
+[0.41.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.41.0
 [0.40.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.1
 [0.40.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.0
 [0.39.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.39.0
