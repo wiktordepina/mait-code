@@ -516,6 +516,76 @@ def test_detail_full_snapshot(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def _seed_detail_markdown(db_path: Path) -> None:
+    """A card whose body exercises the markdown rendering path across the feature
+    surface: two heading levels, bold / italic, inline + fenced (highlighted)
+    code, a table and a blockquote in the description, and a nested ordered list
+    in the acceptance criteria. Doubles as the docs screenshot for markdown in
+    the body fields."""
+    conn = get_connection(db_path)
+    try:
+        cid = service.add_card(
+            conn,
+            project="mait-code",
+            title="Markdown rendering in the card detail view",
+            priority="high",
+        )
+        service.move_card(conn, cid, "refined")
+        service.edit_card(
+            conn,
+            cid,
+            description=(
+                "## Why this card exists\n\n"
+                "Claude drafts cards from markdown notes; the raw syntax used to "
+                "leak in as **literal text**. Now the body renders *properly*, "
+                "and `inline code` reads as code.\n\n"
+                "### What renders\n\n"
+                "| Element     | Renders as          |\n"
+                "| ----------- | ------------------- |\n"
+                "| Headings    | section headers     |\n"
+                "| Code fences | syntax-highlighted  |\n"
+                "| Tables      | this very table     |\n\n"
+                "```python\n"
+                'md = MarkdownIt("gfm-like")  # fenced code is highlighted\n'
+                "```\n\n"
+                "> Plain text is a subset of markdown — both work with no format "
+                "flag, and single newlines stay as line breaks."
+            ),
+            acceptance_criteria=(
+                "1. Render the body fields as markdown\n"
+                "2. Keep plain text seamless:\n"
+                "   1. single newlines stay as line breaks\n"
+                "   2. no format flag to choose\n"
+                "3. Show it off in the docs"
+            ),
+        )
+        service.add_tag(conn, cid, "tui")
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_detail_markdown_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the markdown rendering in the card detail view across the feature
+    surface: two heading levels, emphasis, inline + fenced (highlighted) code, a
+    table and a blockquote, plus a nested ordered list in the acceptance
+    criteria. A taller terminal keeps the whole rich body above the fold for the
+    docs shot."""
+    db_path = tmp_path / "board.db"
+    _seed_detail_markdown(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app._focus_status("refined")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 58),
+    )
+
+
 def test_card_edit_snapshot(snap_compare, tmp_path: Path) -> None:
     """Lock the edit mode of the card screen (form fields on the same frame),
     reached in-place from view via ``e``."""

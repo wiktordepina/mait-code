@@ -142,6 +142,24 @@
     color: $accent 40%;
 }
 
+/* Description / Acceptance / Completion summary render as markdown. Strip the
+ * widget's own horizontal padding (the #card-view-content column already pads)
+ * and its background so a markdown body sits flush with the plain Static
+ * sections rather than in an inset, off-palette block. */
+#card-view Markdown {
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+
+/* The next section-head carries the inter-section gap via its own margin-top,
+ * so the markdown body's trailing block margin would double it — trim it. */
+#card-view Markdown > MarkdownParagraph:last-of-type,
+#card-view Markdown > MarkdownBulletList:last-of-type,
+#card-view Markdown > MarkdownOrderedList:last-of-type {
+    margin-bottom: 0;
+}
+
 /* Each comment is its own block: a left bar in the secondary hue plus spacing —
  * the comment thread is its own voice, distinct from the frame and the heads. */
 .comment {

@@ -21,6 +21,7 @@ from functools import partial
 from pathlib import Path
 
 import rich.box
+from markdown_it import MarkdownIt
 from rich.console import Group, RenderableType
 from rich.markup import escape
 from rich.panel import Panel
@@ -40,6 +41,7 @@ from textual.widgets import (
     Header,
     Input,
     Label,
+    Markdown,
     OptionList,
     RadioButton,
     RadioSet,
@@ -85,6 +87,37 @@ _MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
 #: filter picker. A distinct object (not ``None``) so the picker can tell "all
 #: projects" apart from the ``None`` that escape/cancel dismisses with.
 _ALL_PROJECTS = object()
+
+
+def _hard_breaks(state) -> None:
+    """Core rule: rewrite every ``softbreak`` token to a ``hardbreak``.
+
+    The ``breaks`` *option* only changes markdown-it's HTML renderer (softbreak
+    → ``<br>``); the token type stays ``softbreak``, and Textual's Markdown
+    widget keys off the token *type*, rendering a softbreak as a space. So the
+    option alone is invisible in the TUI. Rewriting the token type is what
+    actually lands the hard break in the rendered widget.
+    """
+    for token in state.tokens:
+        if token.type == "inline" and token.children:
+            for child in token.children:
+                if child.type == "softbreak":
+                    child.type = "hardbreak"
+
+
+def _md_parser() -> MarkdownIt:
+    """Parser factory for the card body :class:`~textual.widgets.Markdown` widgets.
+
+    Mirrors Textual's own default (``MarkdownIt("gfm-like")``) but treats every
+    single newline as a hard line break (GitHub-comment style). That is what
+    lets plain text and markdown share one field with no format flag: a plain
+    description written with line-per-item newlines keeps those breaks instead
+    of collapsing into one reflowed paragraph, while real markdown still parses
+    as markdown.
+    """
+    md = MarkdownIt("gfm-like")
+    md.core.ruler.push("hard_breaks", _hard_breaks)
+    return md
 
 
 def run_board_tui(db_path: Path | None = None) -> None:
@@ -420,7 +453,15 @@ class CardScreen(ModalScreen[None]):
             if body:
                 widgets.append(Static(heading, classes="section-head"))
                 widgets.append(Rule())
-                widgets.append(Static(escape(body)))
+                # Markdown, not Static(escape(...)): plain text is valid markdown,
+                # so both render seamlessly with no format flag. The parser also
+                # makes "[...]" inert (only "[label](url)" is a link), so the
+                # markup-injection escape() the other sections need isn't required
+                # here. Links render-only (open_links=False) — References stays the
+                # canonical link surface.
+                widgets.append(
+                    Markdown(body, parser_factory=_md_parser, open_links=False)
+                )
         references = card.get("references", [])
         if references:
             widgets.append(

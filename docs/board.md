@@ -154,18 +154,39 @@ Every card carries:
 | **Title** | Required. The one-line summary. |
 | **Project** | Required at creation. Which repo (or idea) the card belongs to. |
 | **Priority** | `low`, `medium` (default), or `high`. Drives pick-up order. |
-| **Description** | Free text. The "what and why". |
-| **Acceptance criteria** | Free text. The contract for *done*. Usually set when refining. |
+| **Description** | The "what and why". Renders [markdown](#markdown-in-the-body), and plain text works just as well. |
+| **Acceptance criteria** | The contract for *done*, usually set when refining. Renders [markdown](#markdown-in-the-body) too. |
 | **References** | An ordered list of `label → value` links — a PR, a ticket, a file, a spec. Kept out of the description so they stay tidy and clickable. |
 | **Tags** | Free-form labels that ride alongside status (`blocked`, `urgent`, …). |
 | **Comments** | A threaded log — your notes and Claude's, each timestamped. |
-| **Completion summary** | The handoff note recorded when the card reaches **Done**. |
+| **Completion summary** | The handoff note recorded when the card reaches **Done**. Renders [markdown](#markdown-in-the-body). |
 
 **References** deserve a mention: they're a recent addition for keeping a card's
 links structured rather than buried in prose. A value that looks like a URL
 (`https://…`, `file://…`) renders as a clickable link in the TUI; a bare
 identifier like `JIRA-2342` stays as plain text. Manage them in a card's edit
 form (press <kbd>e</kbd> on the detail screen), or with the `ref` CLI commands.
+
+### Markdown in the body
+
+The three free-text body fields — **Description**, **Acceptance criteria** and
+**Completion summary** — render markdown in the detail view. Headings, emphasis,
+bullet and ordered lists (including nested ones), blockquotes, tables, inline
+code and fenced code blocks (with syntax highlighting) all display formatted
+rather than as raw `#`, `**` and `-`:
+
+![A card whose description and acceptance criteria use markdown: two heading levels, emphasis, a table, an inline and a fenced code block, a blockquote, and a nested ordered list.](assets/board/card-detail-markdown.svg)
+
+The key thing is that there's **no format to choose**. Plain text and markdown
+share the same field, and both render correctly — because plain text *is* valid
+markdown. Single newlines are kept as line breaks, so a plain list of notes
+lays out the way you typed it instead of reflowing into one paragraph. You can
+paste a markdown doc Claude drafted, or jot a few plain lines, and either reads
+right. The edit form (<kbd>e</kbd>) takes the raw text either way — what you
+type is what's stored; the formatting only appears in the view.
+
+Links in the body (`[label](url)`) render as styled text but aren't clickable —
+**References** stays the one place for links you can follow.
 
 ## TUI reference
 

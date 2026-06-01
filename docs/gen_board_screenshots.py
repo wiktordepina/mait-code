@@ -42,6 +42,7 @@ _SCREENSHOTS = {
     "test_board_rich_snapshot": "board.svg",
     "test_board_rich_expanded_snapshot": "board-expanded.svg",
     "test_detail_full_snapshot": "card-detail.svg",
+    "test_detail_markdown_snapshot": "card-detail-markdown.svg",
 }
 
 

@@ -13,7 +13,7 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from textual.widgets import Button, Input, Label, Select, Static, TextArea
+from textual.widgets import Button, Input, Label, Markdown, Select, Static, TextArea
 
 from mait_code.cli._board_tui import (
     BoardApp,
@@ -24,6 +24,7 @@ from mait_code.cli._board_tui import (
     TagScreen,
     _ALL_PROJECTS,
     _card_box,
+    _md_parser,
 )
 from mait_code.tools.board import service
 from mait_code.tools.board.columns import (
@@ -662,6 +663,39 @@ class TestDetail:
 
         assert "urgent" in _run(scenario)
 
+    def test_description_renders_as_markdown(self, board_path: Path) -> None:
+        """The Description / Acceptance body renders through a Markdown widget
+        (not an escaped Static), so markdown formatting is parsed rather than
+        shown raw."""
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+        conn = get_connection(board_path)
+        service.edit_card(
+            conn,
+            ids["card"],
+            description="**bold** and `code`",
+            acceptance_criteria="- one\n- two",
+        )
+        conn.close()
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                blocks = app.screen.query(Markdown)
+                sources = [b.source for b in blocks]
+                statics = " ".join(str(s.render()) for s in app.screen.query(Static))
+                return sources, statics
+
+        sources, statics = _run(scenario)
+        # Both body sections are Markdown widgets carrying their raw source…
+        assert "**bold** and `code`" in sources
+        assert "- one\n- two" in sources
+        # …and the raw markdown is not sitting in a plain Static instead.
+        assert "**bold**" not in statics
+
     def test_enter_then_e_switches_to_edit_in_place(self, board_path: Path) -> None:
         """Detail→edit without leaving the card screen (the headline gesture)."""
         _seed(board_path, [{"title": "card", "status": REFINED}])
@@ -710,6 +744,28 @@ class TestDetail:
         mode_after_first, still_open = _run(scenario)
         assert mode_after_first == "view"
         assert still_open is False
+
+
+class TestMarkdownParser:
+    """The shared parser factory behind the card-body Markdown widgets."""
+
+    def test_single_newlines_become_hardbreak_tokens(self) -> None:
+        """Single newlines must surface as ``hardbreak`` tokens, not
+        ``softbreak``. Textual's Markdown widget keys off the token *type* and
+        renders a softbreak as a space, so this token rewrite — not markdown-it's
+        render-only ``breaks`` option — is what keeps a plain-text body's
+        line-per-item newlines as line breaks. A regression here is invisible in
+        a unit that only checks HTML output, but collapses plain notes into a
+        wall of text in the TUI."""
+        inline = [t for t in _md_parser().parse("a\nb\nc") if t.type == "inline"]
+        child_types = [c.type for c in inline[0].children]
+        assert child_types == ["text", "hardbreak", "text", "hardbreak", "text"]
+        assert "softbreak" not in child_types
+
+    def test_structural_markdown_still_parses(self) -> None:
+        """The hard-break rewrite must not disturb real markdown structure."""
+        tokens = {t.type for t in _md_parser().parse("## H\n\n- a\n- b\n\n**x**")}
+        assert {"heading_open", "bullet_list_open", "list_item_open"} <= tokens
 
 
 class TestCardBox:
