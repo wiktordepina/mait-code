@@ -425,6 +425,23 @@ class CardScreen(ModalScreen[None]):
     def on_mount(self) -> None:
         self._apply_mode()
 
+    @property
+    def card_id(self) -> int:
+        """The id of the card currently on screen."""
+        return self._card["id"]
+
+    @property
+    def is_editing(self) -> bool:
+        """True while the edit form is showing — a live refresh must not clobber
+        an in-progress edit, so the app skips refreshing in this state."""
+        return self._mode == "edit"
+
+    def matches(self, card: dict, comments: list[dict]) -> bool:
+        """Whether the on-screen card and comments already equal *card* /
+        *comments* — lets a live refresh skip a no-op re-render (which would
+        otherwise reset the body's scroll position)."""
+        return self._card == card and self._comments == comments
+
     # -- view content ------------------------------------------------------
 
     def _header_widgets(self) -> list[Widget]:
@@ -1101,6 +1118,10 @@ class BoardApp(MaitApp):
     TITLE = "mait-code board"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_board.tcss"]
 
+    #: How often (seconds) to poll for external edits. `PRAGMA data_version`
+    #: is a header read, not a query, so a tight interval stays cheap.
+    _REFRESH_INTERVAL = 1.0
+
     def __init__(self, db_path: Path | None = None) -> None:
         super().__init__()
         self._conn = get_connection(db_path)  # one connection for the app's life
@@ -1111,6 +1132,7 @@ class BoardApp(MaitApp):
         self._show_archived = False
         self._focused_col = 0
         self._card_status: dict[int, str] = {}
+        self._data_version = 0  # last-seen PRAGMA data_version (set on mount)
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -1134,6 +1156,10 @@ class BoardApp(MaitApp):
         self._update_subtitle()
         self._reload()
         self._focus_current()
+        # Live refresh: poll for commits from other connections (the `mait-code`
+        # CLI, skills) and reload underneath the user so they don't need `r`.
+        self._data_version = self._read_data_version()
+        self.set_interval(self._REFRESH_INTERVAL, self._poll_external_changes)
 
     def on_unmount(self) -> None:
         super().on_unmount()  # persists the active theme (MaitApp)
@@ -1252,19 +1278,25 @@ class BoardApp(MaitApp):
         option = column.get_option_at_index(column.highlighted)
         return int(option.id) if option.id is not None else None
 
-    def _select_card(self, card_id: int) -> None:
-        """Follow a card to its (possibly new) pane and highlight it."""
+    def _select_card(self, card_id: int) -> bool:
+        """Follow a card to its (possibly new) pane and highlight it.
+
+        Returns ``True`` if the card was found in a visible pane and selected,
+        ``False`` if it's gone, archived out of view, or filtered out — letting
+        callers fall back to a sensible default focus.
+        """
         status = self._card_status.get(card_id)
         statuses = self._visible_statuses()
         if status is None or status not in statuses:
-            return
+            return False
         self._focused_col = statuses.index(status)
         column = self.query_one(f"#tbl-{status}", BoardColumn)
         try:
             column.highlighted = column.get_option_index(str(card_id))
         except OptionDoesNotExist:
-            return
+            return False
         column.focus()
+        return True
 
     # -- navigation --------------------------------------------------------
 
@@ -1430,6 +1462,60 @@ class BoardApp(MaitApp):
         self._projects = service.list_projects(self._conn)
         self._reload()
         self._focus_current()
+        # Re-baseline so the next poll doesn't double-reload on edits we just read.
+        self._data_version = self._read_data_version()
+
+    def _read_data_version(self) -> int:
+        """The SQLite ``data_version`` for this connection.
+
+        In WAL mode it changes only when *another* connection commits, so the
+        board's own mutations (made on ``self._conn``) never bump it — we only
+        react to external edits from the CLI or skills.
+        """
+        row = self._conn.execute("PRAGMA data_version").fetchone()
+        return int(row[0]) if row else 0
+
+    async def _poll_external_changes(self) -> None:
+        """Reload if another connection has committed since the last poll.
+
+        Selection and focus are preserved so a refresh underneath the user is
+        unobtrusive. When a card-detail view is open it's refreshed in place so
+        it doesn't go stale (e.g. an external complete); other modals are left
+        alone, with the board reloaded behind them. Focus is never stolen out
+        from under a modal's cursor.
+        """
+        version = self._read_data_version()
+        if version == self._data_version:
+            return
+        self._data_version = version
+        self._projects = service.list_projects(self._conn)
+        screen = self.screen
+        on_board = len(self.screen_stack) == 1
+        # Capture the selection *before* the reload clears the columns' highlight.
+        selected = self._selected_card_id() if on_board else None
+        self._reload()
+        if isinstance(screen, CardScreen):
+            await self._refresh_open_card(screen)
+        elif on_board and not (selected is not None and self._select_card(selected)):
+            self._focus_current()
+
+    async def _refresh_open_card(self, screen: CardScreen) -> None:
+        """Re-render an open card-detail view from the latest stored state.
+
+        Skips edit mode (refreshing would discard an in-progress edit) and
+        skips a no-op render when nothing about the card changed (preserving
+        the reader's scroll position). If the card was deleted elsewhere, the
+        stale view is left until the user closes it.
+        """
+        if screen.is_editing:
+            return
+        card = service.get_card(self._conn, screen.card_id)
+        if card is None:
+            return
+        comments = service.get_comments(self._conn, screen.card_id)
+        if screen.matches(card, comments):
+            return
+        await screen.show_card(card, comments)
 
     # -- detail / comment --------------------------------------------------
 

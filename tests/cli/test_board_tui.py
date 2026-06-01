@@ -583,6 +583,184 @@ class TestDoneToggle:
         assert done_shown is False
 
 
+class TestLiveRefresh:
+    """The board polls for commits from other connections and reloads."""
+
+    def test_poll_picks_up_externally_added_card(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "first", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                before = app.query_one("#tbl-refined").option_count
+                # A separate connection (stands in for the CLI / a skill).
+                other = get_connection(board_path)
+                try:
+                    service.add_card(
+                        other, project="demo", title="second", priority="medium"
+                    )
+                    service.move_card(
+                        other, service.list_cards(other)[-1]["id"], REFINED
+                    )
+                finally:
+                    other.close()
+                await app._poll_external_changes()
+                await pilot.pause()
+                return before, app.query_one("#tbl-refined").option_count
+
+        before, after = _run(scenario)
+        assert before == 1
+        assert after == 2
+
+    def test_poll_is_noop_without_external_change(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                baseline = app._data_version
+                await app._poll_external_changes()  # nothing committed elsewhere
+                return baseline, app._data_version
+
+        baseline, after = _run(scenario)
+        assert baseline == after
+
+    def test_own_edits_do_not_trip_the_poll(self, board_path: Path) -> None:
+        # A mutation on the app's own connection must not bump data_version,
+        # so the next poll stays a no-op (no redundant reload after every key).
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("greater_than_sign")  # move via self._conn
+                await pilot.pause()
+                version_after_own_edit = app._read_data_version()
+                return app._data_version, version_after_own_edit, ids
+
+        seen, actual, _ = _run(scenario)
+        assert seen == actual
+
+    def test_refresh_preserves_selection(self, board_path: Path) -> None:
+        ids = _seed(
+            board_path,
+            [
+                {"title": "alpha", "status": REFINED},
+                {"title": "beta", "status": REFINED},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._select_card(ids["beta"])
+                # External edit to an unrelated card forces a reload.
+                other = get_connection(board_path)
+                try:
+                    service.add_card(
+                        other, project="demo", title="gamma", priority="low"
+                    )
+                finally:
+                    other.close()
+                await app._poll_external_changes()
+                await pilot.pause()
+                return app._selected_card_id()
+
+        assert _run(scenario) == ids["beta"]
+
+    def test_refresh_does_not_steal_focus_from_modal(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")  # open the card screen (a modal)
+                await pilot.pause()
+                modal = app.screen
+                other = get_connection(board_path)
+                try:
+                    service.add_card(
+                        other, project="demo", title="late", priority="low"
+                    )
+                finally:
+                    other.close()
+                await app._poll_external_changes()
+                await pilot.pause()
+                # The modal is still on top; the board reloaded behind it.
+                return app.screen is modal, app.query_one("#tbl-backlog").option_count
+
+        same_modal, backlog_count = _run(scenario)
+        assert same_modal is True
+        assert backlog_count == 1
+
+    def test_open_card_view_refreshes_in_place(self, board_path: Path) -> None:
+        # The reported gap: a card open in detail view went stale on an
+        # external edit (it had to be closed and reopened to see the change).
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")  # open detail (view mode)
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CardScreen)
+                other = get_connection(board_path)
+                try:
+                    service.complete_card(other, ids["card"], summary="shipped it")
+                finally:
+                    other.close()
+                await app._poll_external_changes()
+                await pilot.pause()
+                return (
+                    screen.card_id,
+                    screen._card["status"],
+                    screen._card["completion_summary"],
+                )
+
+        cid, status, summary = _run(scenario)
+        assert cid == ids["card"]
+        assert status == DONE
+        assert summary == "shipped it"
+
+    def test_edit_mode_is_not_clobbered_by_refresh(self, board_path: Path) -> None:
+        # A refresh must never discard an in-progress edit.
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")  # open detail
+                await pilot.press("e")  # enter edit mode
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CardScreen)
+                other = get_connection(board_path)
+                try:
+                    service.edit_card(other, ids["card"], title="changed elsewhere")
+                finally:
+                    other.close()
+                await app._poll_external_changes()
+                await pilot.pause()
+                # Still editing, and the stale snapshot wasn't swapped out.
+                return screen.is_editing, screen._card["title"]
+
+        editing, title = _run(scenario)
+        assert editing is True
+        assert title == "card"
+
+
 class TestComment:
     def test_comment_modal_writes_a_row(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "card", "status": REFINED}])
