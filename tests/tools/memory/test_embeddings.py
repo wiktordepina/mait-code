@@ -5,11 +5,7 @@ import struct
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from mait_code.tools.memory.embeddings import (
-    EMBEDDING_DIM,
-    EMBEDDING_MODEL,
-    serialize_f32,
-)
+from mait_code.tools.memory.embeddings import serialize_f32
 
 
 class TestSerializeF32:
@@ -32,24 +28,27 @@ class TestSerializeF32:
 class TestConstants:
     """Module-level constants are computed at import time from env vars.
 
-    EMBEDDING_MODEL and EMBEDDING_DIM reflect whichever provider is configured
-    when the module is first imported, so tests must accept both local and
-    bedrock defaults.
+    The root ``_isolate_mait_settings`` fixture clears every ``MAIT_CODE_*`` var,
+    so under test the constants resolve to the ``local`` defaults regardless of
+    the developer's shell. The module is collected before that fixture runs, so
+    reload it here to recompute the constants against the isolated environment.
     """
 
     def test_default_model_name(self):
-        provider = os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
-        if provider == "bedrock":
-            assert "titan" in EMBEDDING_MODEL or "cohere" in EMBEDDING_MODEL
-        else:
-            assert "nomic" in EMBEDDING_MODEL
+        import importlib
+
+        import mait_code.tools.memory.embeddings as emb
+
+        emb = importlib.reload(emb)
+        assert "nomic" in emb.EMBEDDING_MODEL
 
     def test_default_dimension(self):
-        provider = os.environ.get("MAIT_CODE_EMBEDDING_PROVIDER", "local").lower()
-        if provider == "bedrock":
-            assert EMBEDDING_DIM in (1024, 1536)
-        else:
-            assert EMBEDDING_DIM == 768
+        import importlib
+
+        import mait_code.tools.memory.embeddings as emb
+
+        emb = importlib.reload(emb)
+        assert emb.EMBEDDING_DIM == 768
 
     @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
     def test_local_default_dimension(self):
