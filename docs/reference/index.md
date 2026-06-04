@@ -28,7 +28,6 @@ Contributors: see the
 - [Tasks](tools/tasks.md) — `mait_code.tools.tasks`
 - [Board](tools/board.md) — `mait_code.tools.board`
 - [Inbox](tools/inbox.md) — `mait_code.tools.inbox`
-- [Decisions](tools/decisions.md) — `mait_code.tools.decisions`
 - [Web fetch](tools/web_fetch.md) — `mait_code.tools.web_fetch`
 
 ## Hooks

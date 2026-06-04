@@ -377,7 +377,6 @@ class TestDerivedRegistry:
             "embedding-dim",
             "memory-db-path",
             "tasks-db-path",
-            "decisions-db-path",
             "reminders-db-path",
             "model-cache-dir",
             "observations-dir",
@@ -391,7 +390,6 @@ class TestDerivedRegistry:
     def test_db_paths_match_runtime_helpers(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        from mait_code.tools.decisions.db import get_db_path as decisions_db
         from mait_code.tools.memory.db import get_db_path as memory_db
         from mait_code.tools.reminders.db import get_db_path as reminders_db
         from mait_code.tools.tasks.db import get_db_path as tasks_db
@@ -403,7 +401,6 @@ class TestDerivedRegistry:
         pairs = {
             "memory-db-path": memory_db,
             "tasks-db-path": tasks_db,
-            "decisions-db-path": decisions_db,
             "reminders-db-path": reminders_db,
         }
         for key, helper in pairs.items():

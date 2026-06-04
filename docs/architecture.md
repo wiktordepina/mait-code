@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders, /task, /tasks<br/>/board, /triage<br/>/commit, /standup, /work-history<br/>/today, /status, /prs<br/>/decision, /decisions<br/>/web-fetch"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders, /task, /tasks<br/>/board, /triage<br/>/commit<br/>/web-fetch"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -365,45 +365,6 @@ A thin capture-and-drain CLI over `inbox.db`. `add "<text>"` captures an item (f
 
 The intended lifecycle is **capture → triage → empty**: the `/triage` skill walks the captured items, proposes a destination for each (board card, task, decision, or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.
 
-## Decisions Database
-
-The decisions database (`decisions.db`) stores project-scoped technical decision records (ADR-lite).
-
-**Decisions table: `decisions`**
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INTEGER PK | Auto-incrementing identifier |
-| `project` | TEXT | Project identifier (basename of git root or cwd) |
-| `title` | TEXT | Decision title |
-| `context` | TEXT | Problem or situation that prompted this |
-| `alternatives` | TEXT | Other options considered |
-| `consequences` | TEXT | Known trade-offs |
-| `status` | TEXT | `accepted`, `proposed`, `deprecated`, or `superseded` (default: `accepted`) |
-| `superseded_by` | INTEGER FK | References decisions(id) |
-| `tags` | TEXT | Comma-separated tags |
-| `created_at` | DATETIME | Timestamp of creation |
-| `updated_at` | DATETIME | Timestamp of last update |
-
-**FTS5 virtual table: `decisions_fts`** — full-text search across title, context, alternatives, and consequences. Kept in sync via insert/update/delete triggers.
-
-## Decisions CLI Tool (`mc-tool-decisions`)
-
-Project-scoped decision records with full-text search and automatic markdown rendering.
-
-| Subcommand | Args | Description |
-|------------|------|-------------|
-| `record` | title, --context?, --alternatives?, --consequences?, --status?, --tags? | Record a new decision |
-| `list` | --all?, --tag?, --status? | List decisions (default: accepted + proposed only) |
-| `show` | id | Show full decision details |
-| `amend` | id, --context?, --alternatives?, --consequences?, --status?, --tags? | Update specific fields |
-| `supersede` | old_id, new_id | Mark old decision as superseded by new |
-| `search` | query | FTS5 full-text search across all fields |
-| `remove` | id | Delete a decision (clears superseded_by references) |
-| `sync` | — | Manually regenerate `docs/decisions.md` |
-
-Every mutation auto-regenerates `docs/decisions.md` at the project's git root with a summary table and full decision sections.
-
 ## Reminders CLI Tool (`mc-tool-reminders`)
 
 | Subcommand | Args | Description |
@@ -580,6 +541,5 @@ Adding a new migration:
 | Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |
 | File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `RotatingFileHandler` keeps log size bounded |
 | Watermark table for reflection idempotency | Separate table over `reflected_at` column — atomic batch tracking, no feedback loops, clean separation of concerns |
-| Decisions in SQLite + FTS5 | Consistent with existing tool patterns; full-text search across decision fields; auto-rendered to `docs/decisions.md` for git-friendly visibility |
 | urllib.request over httpx/requests for web fetch | Zero new HTTP dependency tree; `truststore.inject_into_ssl()` patches the stdlib SSL context that `urllib.request` uses; system proxy env vars (`HTTP_PROXY`/`HTTPS_PROXY`) respected automatically |
 | markdownify for HTML-to-markdown | Lightweight (~600 lines), single purpose, only brings `beautifulsoup4`; full readability extraction (trafilatura) is overkill — Claude can ignore boilerplate itself |

@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Removed
+
+- **Seven unused skills and the decisions subsystem are gone.** The workflow
+  skills `/prs`, `/standup`, `/today`, `/work-history`, and `/status`, along with
+  the `/decision` and `/decisions` skills and their backing `mc-tool-decisions`
+  tool (and its `decisions.db` store), have been removed. They saw effectively no
+  use, and the kanban board plus quick-capture inbox cover the same ground. Inbox
+  triage no longer offers a "decision" destination — items route to the board,
+  tasks, or memory. The `mait-code status` CLI command is unaffected; only the
+  `/status` skill was removed.
+
 ## [0.42.0] — 2026-06-01
 
 ### Added
