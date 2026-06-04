@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.43.0] — 2026-06-04
+
 ### Removed
 
 - **Seven unused skills and the decisions subsystem are gone.** The workflow
@@ -1287,7 +1289,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.42.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.43.0...HEAD
+[0.43.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.43.0
 [0.42.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.42.0
 [0.41.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.41.0
 [0.40.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.40.1
