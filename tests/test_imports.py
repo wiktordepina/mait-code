@@ -24,7 +24,6 @@ REFERENCE_MODULES = [
     # Tools
     "mait_code.tools.memory",
     "mait_code.tools.reminders",
-    "mait_code.tools.tasks",
     "mait_code.tools.board",
     "mait_code.tools.inbox",
     "mait_code.tools.web_fetch",

@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders, /task, /tasks<br/>/board, /triage<br/>/commit<br/>/web-fetch"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders<br/>/board, /triage<br/>/commit<br/>/web-fetch"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -40,7 +40,7 @@ graph TD
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md<br/>user_context.md"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>memory.db <i>(SQLite)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
-        other_dbs["reminders.db<br/>tasks.db<br/>board.db<br/>inbox.db<br/>decisions.db"]
+        other_dbs["reminders.db<br/>board.db<br/>inbox.db"]
     end
 
     HOOKS --> mait_code
@@ -237,37 +237,6 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 | `reflect` | --days?, --min-new?, --batch-size?, --drain?, --project?, --branch?, --scope? | Synthesise observations into insights, propose MEMORY.md updates |
 
 Scope flags apply to every command that touches `memory_entries`: `--project` and `--branch` override the auto-detected context; `--scope` filters or sets the entry scope (`global`, `project`, `branch`, or `all` — the last disables filtering at query time).
-
-## Tasks Database
-
-The tasks database (`tasks.db`) stores per-project tasks.
-
-**Tasks table: `tasks`**
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INTEGER PK | Auto-incrementing identifier |
-| `project` | TEXT | Project identifier (basename of git root or cwd) |
-| `title` | TEXT | Task description |
-| `priority` | TEXT | `low`, `medium`, or `high` (default: `medium`) |
-| `status` | TEXT | `open` or `done` (default: `open`) |
-| `created_at` | DATETIME | Timestamp of creation |
-| `completed_at` | DATETIME | Timestamp of completion (null if open) |
-
-Project detection uses `mait_code.context.get_project()` — the basename of the git root or current working directory.
-
-## Tasks CLI Tool (`mc-tool-tasks`)
-
-Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared `tasks.db`.
-
-| Subcommand | Args | Description |
-|------------|------|-------------|
-| `add` | title, --priority? | Add a task (low/medium/high, default: medium) |
-| `list` | --all? | List open tasks (or all including completed) |
-| `done` | id | Mark a task as completed |
-| `remove` | id | Remove a task |
-| `check` | --project? | List open tasks for current project (used by session_start hook) |
-| `list-all` | — | List open tasks across all projects |
 
 ## Board Database
 
@@ -514,10 +483,8 @@ Adding a new migration:
 │   ├── mait-code.log.1       # Rotated backups
 │   └── ...
 ├── reminders.db              # Reminder database
-├── tasks.db                  # Per-project tasks database
 ├── board.db                  # Cross-project kanban board database
-├── inbox.db                  # Quick-capture inbox database
-└── decisions.db              # Decision records database
+└── inbox.db                  # Quick-capture inbox database
 ```
 
 ## Key Technical Decisions

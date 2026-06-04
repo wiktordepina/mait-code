@@ -25,7 +25,6 @@ Contributors: see the
 
 - [Memory](tools/memory.md) — `mait_code.tools.memory`
 - [Reminders](tools/reminders.md) — `mait_code.tools.reminders`
-- [Tasks](tools/tasks.md) — `mait_code.tools.tasks`
 - [Board](tools/board.md) — `mait_code.tools.board`
 - [Inbox](tools/inbox.md) — `mait_code.tools.inbox`
 - [Web fetch](tools/web_fetch.md) — `mait_code.tools.web_fetch`

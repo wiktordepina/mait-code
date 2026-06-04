@@ -376,7 +376,6 @@ class TestDerivedRegistry:
         assert {s.key for s in derived} == {
             "embedding-dim",
             "memory-db-path",
-            "tasks-db-path",
             "reminders-db-path",
             "model-cache-dir",
             "observations-dir",
@@ -392,7 +391,6 @@ class TestDerivedRegistry:
     ) -> None:
         from mait_code.tools.memory.db import get_db_path as memory_db
         from mait_code.tools.reminders.db import get_db_path as reminders_db
-        from mait_code.tools.tasks.db import get_db_path as tasks_db
 
         monkeypatch.setenv("HOME", str(tmp_path))
         monkeypatch.delenv("MAIT_CODE_DATA_DIR", raising=False)
@@ -400,7 +398,6 @@ class TestDerivedRegistry:
 
         pairs = {
             "memory-db-path": memory_db,
-            "tasks-db-path": tasks_db,
             "reminders-db-path": reminders_db,
         }
         for key, helper in pairs.items():

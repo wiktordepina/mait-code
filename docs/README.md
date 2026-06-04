@@ -9,8 +9,8 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 - **Companion identity** — customisable soul document and user context that shape how the companion communicates and makes decisions.
 - **Reactive hooks** — `SessionStart` injects companion context; `PreCompact` and `SessionEnd` extract observations asynchronously.
 - **Observation pipeline** — automatic extraction of facts, preferences, decisions, entities, and relationships via Claude Haiku.
-- **CLI tools** — memory, reminders, tasks, a cross-project kanban board, a quick-capture inbox, and web fetch (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-tasks`, `mc-tool-board`, `mc-tool-inbox`, `mc-tool-web-fetch`).
-- **Skills** — slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), tasks (`/task`, `/tasks`), the board (`/board`), capture triage (`/triage`), web fetch (`/web-fetch`), and workflow (`/commit`).
+- **CLI tools** — memory, reminders, a cross-project kanban board, a quick-capture inbox, and web fetch (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-board`, `mc-tool-inbox`, `mc-tool-web-fetch`).
+- **Skills** — slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), web fetch (`/web-fetch`), and workflow (`/commit`).
 
 ## Quick start
 

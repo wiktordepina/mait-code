@@ -119,7 +119,6 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             "embedding-dim",
             "memory-db-path",
-            "tasks-db-path",
             "reminders-db-path",
             "model-cache-dir",
             "observations-dir",

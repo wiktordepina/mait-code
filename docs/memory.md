@@ -128,7 +128,7 @@ Run `mait-code settings list` to see the active configuration and where each val
 | Derived value | Computed from |
 |---------------|---------------|
 | `embedding-dim` | provider + model (768 for local nomic, 1024 for Bedrock Titan v2) |
-| `memory-db-path`, `tasks-db-path`, `decisions-db-path`, `reminders-db-path` | `data-dir` |
+| `memory-db-path`, `reminders-db-path` | `data-dir` |
 | `model-cache-dir` | `data-dir` + `/models` (local model cache, can be ~550MB) |
 | `observations-dir` | `data-dir` + `/memory/observations` |
 | `project-aliases-path` | `data-dir` + `/project-aliases.json` |
@@ -346,17 +346,6 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `--scope global\|project\|branch` | Filter (or set, on `store`) to a specific scope |
 | `--scope all` | Query-time: disable scope filtering entirely |
 
-### Tasks tool (`mc-tool-tasks`)
-
-| Command | Description |
-|---------|-------------|
-| `add <title> [--priority high]` | Add a task for the current project |
-| `list [--all]` | List open (or all) tasks for the current project |
-| `done <id>` | Mark a task as completed |
-| `remove <id>` | Remove a task |
-| `check [--project <name>]` | Check open tasks (used by session_start hook) |
-| `list-all` | List open tasks across all projects |
-
 ### Skills
 
 | Skill | Usage |
@@ -366,8 +355,6 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `/reflect` | Synthesise observations into insights, propose MEMORY.md updates |
 | `/remind <when> <what>` | Set a reminder |
 | `/reminders` | Show active and overdue reminders |
-| `/task <title>` | Add a task for the current project |
-| `/tasks` | Show open tasks for the current project |
 | `/web-fetch <url>` | Fetch a web page as markdown (bypasses claude.ai proxy) |
 | `/commit` | Detect changes, generate conventional commit, confirm and commit |
 
