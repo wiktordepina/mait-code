@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -15,7 +16,16 @@ def _isolate_mait_settings(
 ) -> Iterator[None]:
     """Isolate every test from the developer's real mait-code config, data, and logs.
 
-    Three things are pointed at throwaway dirs under ``tmp_path``:
+    First, **every** inherited ``MAIT_CODE_*`` env var is cleared. ``config.resolve``
+    checks env before settings file before default, so any knob a developer exports
+    in their shell (``MAIT_CODE_THEME``, ``MAIT_CODE_EMBEDDING_PROVIDER``,
+    ``MAIT_CODE_LOG_LEVEL``, …) would otherwise bleed straight into the suite —
+    a local "red" that's actually green on a clean CI runner. Clearing them up front
+    pins every setting to its default regardless of the dev's shell. Tests that need
+    a specific value set it via their own ``monkeypatch``, which runs after this
+    autouse setup, so clear-all-first is safe.
+
+    Three things are then pointed at throwaway dirs under ``tmp_path``:
 
     * ``XDG_CONFIG_HOME`` — ``config.resolve`` / ``collect_settings`` read
       ``$XDG_CONFIG_HOME/mait-code/settings.toml`` (cached at module level).
@@ -38,6 +48,10 @@ def _isolate_mait_settings(
     """
     import mait_code.config as _config
     import mait_code.logging as _logging
+
+    for key in list(os.environ):
+        if key.startswith("MAIT_CODE_"):
+            monkeypatch.delenv(key, raising=False)
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
