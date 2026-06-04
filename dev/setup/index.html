@@ -18,7 +18,7 @@
         <link rel="prev" href="..">
       
       
-        <link rel="next" href="../sync/">
+        <link rel="next" href="../board/">
       
       
         
@@ -355,28 +355,6 @@
     
     
       <li class="md-tabs__item">
-        <a href="../decisions/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Decisions
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
         <a href="../development/" class="md-tabs__link">
           
   
@@ -479,6 +457,8 @@
   
     
     
+      
+        
       
         
       
@@ -746,6 +726,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../board/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1384,6 +1392,8 @@
       
         
       
+        
+      
     
     
     
@@ -1520,14 +1530,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tools/decisions/" class="md-nav__link">
+      <a href="../reference/tools/board/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Decisions
+    Board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/inbox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inbox
   
 
     
@@ -1755,6 +1793,8 @@
       
         
       
+        
+      
     
     
     
@@ -1778,7 +1818,7 @@
   <span class="md-ellipsis">
     
   
-    Decisions
+    Contributing
   
 
     
@@ -1791,99 +1831,6 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Decisions
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../decisions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Decision records
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2239,11 +2186,13 @@
 <p>Once installed, the <code>mait-code</code> binary owns the full install lifecycle. Its subcommands cover the common cases:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mait-code<span class="w"> </span>status<span class="w">            </span><span class="c1"># read-only summary, with a health badge (use --json)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>mait-code<span class="w"> </span>doctor<span class="w">            </span><span class="c1"># surface silent breakage; --fix applies safe fixes</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>mait-code<span class="w"> </span>settings<span class="w">          </span><span class="c1"># read-only view of the active config (use --json)</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>mait-code<span class="w"> </span>update<span class="w">            </span><span class="c1"># git pull + reinstall + refresh symlinks/settings</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>mait-code<span class="w"> </span>uninstall<span class="w">         </span><span class="c1"># remove symlinks, strip settings; preserves data by default</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>mait-code<span class="w"> </span>uninstall<span class="w"> </span>--purge-data<span class="w">   </span><span class="c1"># also delete the data directory</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>mait-code<span class="w"> </span>version<span class="w">           </span><span class="c1"># print the installed version</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>mait-code<span class="w"> </span>settings<span class="w">          </span><span class="c1"># edit config interactively (lists when piped)</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>mait-code<span class="w"> </span>settings<span class="w"> </span>list<span class="w">     </span><span class="c1"># read-only view of the active config (use --json)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>log-level<span class="w"> </span>DEBUG<span class="w">   </span><span class="c1"># validate, persist, enforce one knob</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>mait-code<span class="w"> </span>update<span class="w">            </span><span class="c1"># git pull, reinstall if changed, refresh symlinks/settings</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>mait-code<span class="w"> </span>uninstall<span class="w">         </span><span class="c1"># remove symlinks, strip settings; preserves data by default</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>mait-code<span class="w"> </span>uninstall<span class="w"> </span>--purge-data<span class="w">   </span><span class="c1"># also delete the data directory</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>mait-code<span class="w"> </span>version<span class="w">           </span><span class="c1"># print the installed version</span>
 </span></code></pre></div>
 <p>Most commands accept <code>--claude-dir</code> and (where relevant) <code>--data-dir</code> overrides for non-default layouts (<code>settings</code> and <code>version</code> take neither). Coloured output can be disabled with the global <code>--no-color</code> flag. See the <strong><a href="../reference/mait-code/">CLI reference</a></strong> for full per-command flag tables, behaviour notes, and exit codes.</p>
 <h2 id="personalisation">Personalisation<a class="headerlink" href="#personalisation" title="Permanent link">&para;</a></h2>

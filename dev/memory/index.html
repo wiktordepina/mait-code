@@ -355,28 +355,6 @@
     
     
       <li class="md-tabs__item">
-        <a href="../decisions/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Decisions
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
         <a href="../development/" class="md-tabs__link">
           
   
@@ -482,6 +460,8 @@
       
         
       
+        
+      
     
     
     
@@ -542,6 +522,34 @@
     
   
     Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../board/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The board
   
 
     
@@ -888,6 +896,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#advanced-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -980,6 +999,17 @@
     <span class="md-ellipsis">
       
         Relevance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tuning-advanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning (advanced)
       
     </span>
   </a>
@@ -1606,6 +1636,8 @@
       
         
       
+        
+      
     
     
     
@@ -1742,14 +1774,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tools/decisions/" class="md-nav__link">
+      <a href="../reference/tools/board/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Decisions
+    Board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/inbox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inbox
   
 
     
@@ -1977,6 +2037,8 @@
       
         
       
+        
+      
     
     
     
@@ -2000,7 +2062,7 @@
   <span class="md-ellipsis">
     
   
-    Decisions
+    Contributing
   
 
     
@@ -2013,99 +2075,6 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Decisions
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../decisions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Decision records
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2345,6 +2314,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#advanced-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2437,6 +2417,17 @@
     <span class="md-ellipsis">
       
         Relevance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tuning-advanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tuning (advanced)
       
     </span>
   </a>
@@ -2801,8 +2792,95 @@
 </tr>
 </tbody>
 </table>
-<p>Run <code>mait-code settings</code> to see the active configuration and where each value comes from.</p>
-<p><strong>Important:</strong> The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires a <code>mc-tool-memory reindex</code> which detects the dimension mismatch and recreates the vec table. Run <code>mait-code settings</code> to see the active provider and whether it still matches the one recorded at install time — it flags drift and points you at <code>reindex</code>.</p>
+<p>Run <code>mait-code settings list</code> to see the active configuration and where each value comes from, or bare <code>mait-code settings</code> to edit it interactively. To change one value non-interactively, use <code>mait-code settings set &lt;key&gt; &lt;value&gt;</code> — it validates the value, persists it to <code>settings.toml</code>, keeps any mirrored entry in <code>~/.claude/settings.json</code> in step, and warns if a shell export still shadows the change.</p>
+<p><strong>Derived values (read-only):</strong> <code>mait-code settings</code> also reports values that are <em>computed</em> rather than configured — listed with source <code>derived</code>. They can't be set, but they answer "where does my data live?" and "why does a provider switch force a reindex?":</p>
+<table>
+<thead>
+<tr>
+<th>Derived value</th>
+<th>Computed from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>embedding-dim</code></td>
+<td>provider + model (768 for local nomic, 1024 for Bedrock Titan v2)</td>
+</tr>
+<tr>
+<td><code>memory-db-path</code>, <code>tasks-db-path</code>, <code>decisions-db-path</code>, <code>reminders-db-path</code></td>
+<td><code>data-dir</code></td>
+</tr>
+<tr>
+<td><code>model-cache-dir</code></td>
+<td><code>data-dir</code> + <code>/models</code> (local model cache, can be ~550MB)</td>
+</tr>
+<tr>
+<td><code>observations-dir</code></td>
+<td><code>data-dir</code> + <code>/memory/observations</code></td>
+</tr>
+<tr>
+<td><code>project-aliases-path</code></td>
+<td><code>data-dir</code> + <code>/project-aliases.json</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Important:</strong> The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires re-embedding, which detects the dimension mismatch and recreates the vec table. The simplest path is <code>mait-code settings set embedding-provider bedrock --reindex</code> (a migration key requires an explicit <code>--reindex</code>/<code>--no-reindex</code>), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run <code>mc-tool-memory reindex</code> yourself. <code>mait-code settings list</code> shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at <code>reindex</code>.</p>
+<h4 id="advanced-settings">Advanced settings<a class="headerlink" href="#advanced-settings" title="Permanent link">&para;</a></h4>
+<p>The settings file also carries an <strong>Advanced</strong> section of operational knobs, written <strong>commented-out</strong> so the built-in default stays in effect until you opt in — either with <code>mait-code settings set &lt;key&gt; &lt;value&gt;</code> (which writes the line active) or by uncommenting it by hand. They never need touching for normal use; bad values fall back to the default and are flagged by <code>mait-code doctor</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Setting key</th>
+<th>Env var override</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>log-backup-count</code></td>
+<td><code>MAIT_CODE_LOG_BACKUP_COUNT</code></td>
+<td><code>14</code></td>
+<td>Days of rotated log files to keep</td>
+</tr>
+<tr>
+<td><code>extraction-model</code></td>
+<td><code>MAIT_CODE_EXTRACTION_MODEL</code></td>
+<td><code>haiku</code></td>
+<td>Model used for memory extraction</td>
+</tr>
+<tr>
+<td><code>reflection-model</code></td>
+<td><code>MAIT_CODE_REFLECTION_MODEL</code></td>
+<td><code>haiku</code></td>
+<td>Model used for reflection synthesis</td>
+</tr>
+<tr>
+<td><code>llm-timeout</code></td>
+<td><code>MAIT_CODE_LLM_TIMEOUT</code></td>
+<td><code>90</code></td>
+<td>Timeout (seconds) for subprocess LLM calls</td>
+</tr>
+<tr>
+<td><code>reflection-batch-size</code></td>
+<td><code>MAIT_CODE_REFLECTION_BATCH_SIZE</code></td>
+<td><code>50</code></td>
+<td>Default <code>--batch-size</code> for reflection</td>
+</tr>
+<tr>
+<td><code>reflection-novelty-gate</code></td>
+<td><code>MAIT_CODE_REFLECTION_NOVELTY_GATE</code></td>
+<td><code>3</code></td>
+<td>Default <code>--min-new</code> for reflection</td>
+</tr>
+<tr>
+<td><code>git-timeout</code></td>
+<td><code>MAIT_CODE_GIT_TIMEOUT</code></td>
+<td><code>5</code></td>
+<td>Timeout (seconds) for git context probes</td>
+</tr>
+</tbody>
+</table>
 <h4 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h4>
 <ul>
 <li><strong>On store:</strong> the content is embedded and the vector is stored in a <code>vec0</code> virtual table alongside the entry. For the local provider, content is prefixed with <code>"search_document: "</code> (nomic-embed requires this); Bedrock providers receive raw text.</li>
@@ -2878,6 +2956,74 @@
 <li><strong>FTS:</strong> hardcoded 0.7 (BM25 already filtered for relevance)</li>
 <li><strong>Vector:</strong> cosine similarity converted from distance</li>
 </ul>
+<h3 id="tuning-advanced">Tuning (advanced)<a class="headerlink" href="#tuning-advanced" title="Permanent link">&para;</a></h3>
+<p>The scoring and deduplication knobs are exposed as <strong>advanced</strong> settings (commented-out in <code>settings.toml</code>). They directly affect retrieval quality — leave them alone unless you know why you're changing them, and re-check with <code>mait-code doctor</code>, which validates ranges and the weight sum. The dedup, half-life and scope-boost knobs can be changed with <code>mait-code settings set</code>. The three scoring <strong>weights</strong> can't (setting one alone would leave a transient invalid sum) — retune all three together in the interactive editor (<code>mait-code settings</code>), which enforces the sum before saving, or edit <code>settings.toml</code> by hand and let <code>doctor</code> validate the result.</p>
+<table>
+<thead>
+<tr>
+<th>Setting key</th>
+<th>Default</th>
+<th>Sensible range</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>score-weight-recency</code></td>
+<td><code>0.3</code></td>
+<td>0.0–1.0</td>
+<td>The three weights <strong>must sum to 1.0</strong>; a bad sum falls back to defaults and is flagged by <code>doctor</code>.</td>
+</tr>
+<tr>
+<td><code>score-weight-importance</code></td>
+<td><code>0.3</code></td>
+<td>0.0–1.0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>score-weight-relevance</code></td>
+<td><code>0.4</code></td>
+<td>0.0–1.0</td>
+<td></td>
+</tr>
+<tr>
+<td><code>half-life-episodic</code></td>
+<td><code>3.0</code></td>
+<td>days</td>
+<td>Too short and events vanish; too long and they crowd out facts.</td>
+</tr>
+<tr>
+<td><code>half-life-semantic</code></td>
+<td><code>90.0</code></td>
+<td>days</td>
+<td>Too short and facts fade; too long and stale facts persist.</td>
+</tr>
+<tr>
+<td><code>dedup-string-threshold</code></td>
+<td><code>0.85</code></td>
+<td>0.0–1.0</td>
+<td>Too low misses near-duplicates; too high admits false positives.</td>
+</tr>
+<tr>
+<td><code>dedup-vector-threshold</code></td>
+<td><code>0.92</code></td>
+<td>0.0–1.0</td>
+<td>Same trade-off, on cosine similarity.</td>
+</tr>
+<tr>
+<td><code>scope-boost-global</code></td>
+<td><code>0.7</code></td>
+<td>0.0–1.0</td>
+<td>Relevance multiplier for global memories.</td>
+</tr>
+<tr>
+<td><code>scope-boost-cross-project</code></td>
+<td><code>0.3</code></td>
+<td>0.0–1.0</td>
+<td>Relevance multiplier across project boundaries.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="reminders">Reminders<a class="headerlink" href="#reminders" title="Permanent link">&para;</a></h2>
 <p>Reminders are a separate system stored in <code>reminders.db</code>. They are time-based triggers, not memories.</p>
 <table>
@@ -3161,40 +3307,12 @@
 <td>Show open tasks for the current project</td>
 </tr>
 <tr>
-<td><code>/decision &lt;title&gt;</code></td>
-<td>Record a technical decision</td>
-</tr>
-<tr>
-<td><code>/decisions</code></td>
-<td>Browse and search decision records</td>
-</tr>
-<tr>
 <td><code>/web-fetch &lt;url&gt;</code></td>
 <td>Fetch a web page as markdown (bypasses claude.ai proxy)</td>
 </tr>
 <tr>
 <td><code>/commit</code></td>
 <td>Detect changes, generate conventional commit, confirm and commit</td>
-</tr>
-<tr>
-<td><code>/standup</code></td>
-<td>Standup summary from git, tasks, memory, and PRs</td>
-</tr>
-<tr>
-<td><code>/work-history [period]</code></td>
-<td>Project work history (today/yesterday/week)</td>
-</tr>
-<tr>
-<td><code>/today</code></td>
-<td>Daily overview — tasks, reminders, activity, PRs</td>
-</tr>
-<tr>
-<td><code>/status</code></td>
-<td>Generate STATUS.md for current project</td>
-</tr>
-<tr>
-<td><code>/prs</code></td>
-<td>List open PRs across all projects</td>
 </tr>
 </tbody>
 </table>

@@ -355,28 +355,6 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../decisions/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Decisions
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
         <a href="../../../development/" class="md-tabs__link">
           
   
@@ -482,6 +460,8 @@
       
         
       
+        
+      
     
     
     
@@ -542,6 +522,34 @@
     
   
     Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../board/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The board
   
 
     
@@ -1189,6 +1197,8 @@
   
     
     
+      
+        
       
         
       
@@ -2055,14 +2065,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../decisions/" class="md-nav__link">
+      <a href="../board/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Decisions
+    Board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inbox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inbox
   
 
     
@@ -2290,6 +2328,8 @@
       
         
       
+        
+      
     
     
     
@@ -2313,7 +2353,7 @@
   <span class="md-ellipsis">
     
   
-    Decisions
+    Contributing
   
 
     
@@ -2326,99 +2366,6 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Decisions
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../decisions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Decision records
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -4936,9 +4883,9 @@ support arbitrary <code>WHERE</code> clauses in k-NN queries.</p>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">entry_branch</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">query_project</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">query_branch</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">w_recency</span><span class="p">:</span> <span class="n"><span title="float">float</span></span> <span class="o">=</span> <span class="n"><span title="mait_code.tools.memory.scoring.W_RECENCY">W_RECENCY</span></span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">w_importance</span><span class="p">:</span> <span class="n"><span title="float">float</span></span> <span class="o">=</span> <span class="n"><span title="mait_code.tools.memory.scoring.W_IMPORTANCE">W_IMPORTANCE</span></span><span class="p">,</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">w_relevance</span><span class="p">:</span> <span class="n"><span title="float">float</span></span> <span class="o">=</span> <span class="n"><span title="mait_code.tools.memory.scoring.W_RELEVANCE">W_RELEVANCE</span></span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">w_recency</span><span class="p">:</span> <span class="n"><span title="float">float</span></span> <span class="o">=</span> <span class="n"><span title="W_RECENCY">W_RECENCY</span></span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">w_importance</span><span class="p">:</span> <span class="n"><span title="float">float</span></span> <span class="o">=</span> <span class="n"><span title="W_IMPORTANCE">W_IMPORTANCE</span></span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">w_relevance</span><span class="p">:</span> <span class="n"><span title="float">float</span></span> <span class="o">=</span> <span class="n"><span title="W_RELEVANCE">W_RELEVANCE</span></span><span class="p">,</span>
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">now</span><span class="p">:</span> <span class="n"><span title="datetime.datetime">datetime</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="float">float</span></span>
 </span></code></pre></div>
@@ -5144,7 +5091,7 @@ support arbitrary <code>WHERE</code> clauses in k-NN queries.</p>
                   </span>
                   <span class="doc-param-default">
                     <b>DEFAULT:</b>
-                      <code><span title="mait_code.tools.memory.scoring.W_RECENCY">W_RECENCY</span></code>
+                      <code><span title="W_RECENCY">W_RECENCY</span></code>
                   </span>
               </p>
             </td>
@@ -5164,7 +5111,7 @@ support arbitrary <code>WHERE</code> clauses in k-NN queries.</p>
                   </span>
                   <span class="doc-param-default">
                     <b>DEFAULT:</b>
-                      <code><span title="mait_code.tools.memory.scoring.W_IMPORTANCE">W_IMPORTANCE</span></code>
+                      <code><span title="W_IMPORTANCE">W_IMPORTANCE</span></code>
                   </span>
               </p>
             </td>
@@ -5184,7 +5131,7 @@ support arbitrary <code>WHERE</code> clauses in k-NN queries.</p>
                   </span>
                   <span class="doc-param-default">
                     <b>DEFAULT:</b>
-                      <code><span title="mait_code.tools.memory.scoring.W_RELEVANCE">W_RELEVANCE</span></code>
+                      <code><span title="W_RELEVANCE">W_RELEVANCE</span></code>
                   </span>
               </p>
             </td>
@@ -5536,7 +5483,7 @@ support arbitrary <code>WHERE</code> clauses in k-NN queries.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p><code>1.0</code> for a branch match, <code>0.85</code> for a project match, <code>0.7</code></p>
+                <p><code>1.0</code> for a branch match, <code>0.85</code> for a project match,</p>
               </div>
             </td>
           </tr>
@@ -5548,7 +5495,7 @@ support arbitrary <code>WHERE</code> clauses in k-NN queries.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>for global entries, and <code>1.0</code> when no query context is provided</p>
+                <p><code>SCOPE_BOOST_GLOBAL</code> (default <code>0.7</code>) for global entries,</p>
               </div>
             </td>
           </tr>
@@ -5560,7 +5507,19 @@ support arbitrary <code>WHERE</code> clauses in k-NN queries.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>(backward compat).</p>
+                <p><code>SCOPE_BOOST_CROSS_PROJECT</code> (default <code>0.3</code>) across projects, and</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="float">float</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p><code>1.0</code> when no query context is provided (backward compat).</p>
               </div>
             </td>
           </tr>

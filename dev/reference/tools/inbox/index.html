@@ -12,10 +12,10 @@
         <meta name="author" content="Wiktor de Pina">
       
       
-        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/reference/tools/decisions/">
+        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/reference/tools/inbox/">
       
       
-        <link rel="prev" href="../tasks/">
+        <link rel="prev" href="../board/">
       
       
         <link rel="next" href="../web_fetch/">
@@ -29,7 +29,7 @@
     
     
       
-        <title>Decisions - mait-code</title>
+        <title>Inbox - mait-code</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#decisions-api-reference" class="md-skip">
+        <a href="#inbox-api-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Decisions
+              Inbox
             
           </span>
         </div>
@@ -355,28 +355,6 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../decisions/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Decisions
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
         <a href="../../../development/" class="md-tabs__link">
           
   
@@ -482,6 +460,8 @@
       
         
       
+        
+      
     
     
     
@@ -542,6 +522,34 @@
     
   
     Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../board/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The board
   
 
     
@@ -1200,6 +1208,8 @@
       
         
       
+        
+      
     
     
     
@@ -1333,6 +1343,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../board/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1352,7 +1390,7 @@
   <span class="md-ellipsis">
     
   
-    Decisions
+    Inbox
   
 
     
@@ -1370,7 +1408,7 @@
   <span class="md-ellipsis">
     
   
-    Decisions
+    Inbox
   
 
     
@@ -1396,10 +1434,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#cli" class="md-nav__link">
+  <a href="#database" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CLI
+        Database
       
     </span>
   </a>
@@ -1407,29 +1445,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.main" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;main
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#storage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Storage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.connection" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.connection" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;connection
@@ -1440,7 +1456,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.ensure_schema" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.ensure_schema" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;ensure_schema
@@ -1451,7 +1467,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_connection" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_connection" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_connection
@@ -1462,7 +1478,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_data_dir" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_data_dir" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_data_dir
@@ -1473,7 +1489,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_db_path" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_db_path" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_db_path
@@ -1484,7 +1500,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_project" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_project" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_project
@@ -1495,10 +1511,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rendering" class="md-nav__link">
+  <a href="#service" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rendering
+        Service
       
     </span>
   </a>
@@ -1506,10 +1522,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.render_decisions_md" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.ItemNotFound" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;render_decisions_md
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ItemNotFound
       
     </span>
   </a>
@@ -1517,10 +1533,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.write_decisions_md" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.add_item" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;write_decisions_md
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;add_item
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.count_items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;count_items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.get_item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_item
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.list_items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;list_items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.remove_item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;remove_item
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;main
       
     </span>
   </a>
@@ -1750,6 +1832,8 @@
       
         
       
+        
+      
     
     
     
@@ -1773,7 +1857,7 @@
   <span class="md-ellipsis">
     
   
-    Decisions
+    Contributing
   
 
     
@@ -1786,99 +1870,6 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Decisions
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../decisions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Decision records
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1978,10 +1969,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#cli" class="md-nav__link">
+  <a href="#database" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CLI
+        Database
       
     </span>
   </a>
@@ -1989,29 +1980,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.main" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;main
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#storage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Storage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.connection" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.connection" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;connection
@@ -2022,7 +1991,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.ensure_schema" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.ensure_schema" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;ensure_schema
@@ -2033,7 +2002,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_connection" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_connection" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_connection
@@ -2044,7 +2013,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_data_dir" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_data_dir" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_data_dir
@@ -2055,7 +2024,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_db_path" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_db_path" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_db_path
@@ -2066,7 +2035,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.get_project" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.get_project" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_project
@@ -2077,10 +2046,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rendering" class="md-nav__link">
+  <a href="#service" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rendering
+        Service
       
     </span>
   </a>
@@ -2088,10 +2057,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.render_decisions_md" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.ItemNotFound" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;render_decisions_md
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ItemNotFound
       
     </span>
   </a>
@@ -2099,10 +2068,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mait_code.tools.decisions.write_decisions_md" class="md-nav__link">
+  <a href="#mait_code.tools.inbox.add_item" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;write_decisions_md
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;add_item
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.count_items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;count_items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.get_item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_item
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.list_items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;list_items
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.remove_item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;remove_item
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entry point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.inbox.main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;main
       
     </span>
   </a>
@@ -2126,7 +2161,7 @@
 
 
   
-    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/reference/tools/decisions.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/reference/tools/inbox.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2137,43 +2172,24 @@
 <!-- Generated by docs/gen_ref_pages.py from each module's __all__.
      Do not edit by hand — re-run the generator instead. -->
 
-<h1 id="decisions-api-reference">Decisions — API reference<a class="headerlink" href="#decisions-api-reference" title="Permanent link">&para;</a></h1>
-<h2 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h2>
+<h1 id="inbox-api-reference">Inbox — API reference<a class="headerlink" href="#inbox-api-reference" title="Permanent link">&para;</a></h1>
+<h2 id="database">Database<a class="headerlink" href="#database" title="Permanent link">&para;</a></h2>
 
 
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.main" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">main</span>
-
-
-<a href="#mait_code.tools.decisions.main" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">main</span><span class="p">()</span>
-</span></code></pre></div>
-
-    <div class="doc doc-contents first">
-
-
-    </div>
-
-</div><h2 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h2>
-
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="mait_code.tools.decisions.connection" class="doc doc-heading">
+<h2 id="mait_code.tools.inbox.connection" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">connection</span>
 
 
-<a href="#mait_code.tools.decisions.connection" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#mait_code.tools.inbox.connection" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">:</span> <span class="n"><span title="pathlib.Path">Path</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Context manager that opens and closes a decisions database connection.</p>
+        <p>Context manager that opens and closes an inbox database connection.</p>
 
 
     </div>
@@ -2183,19 +2199,19 @@
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.ensure_schema" class="doc doc-heading">
+<h2 id="mait_code.tools.inbox.ensure_schema" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">ensure_schema</span>
 
 
-<a href="#mait_code.tools.decisions.ensure_schema" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#mait_code.tools.inbox.ensure_schema" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ensure_schema</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
         <p>Apply any pending migrations to the database.</p>
-<p>Safe to call on every connection open — checks a single integer and
-returns immediately if the schema is current.</p>
+<p>Safe to call on every connection open — checks a single integer and returns
+immediately if the schema is current.</p>
 
 
 <table>
@@ -2212,7 +2228,7 @@ returns immediately if the schema is current.</p>
             </td>
             <td class="doc-param-details">
               <div class="doc-md-description">
-                <p>Open decisions database connection.</p>
+                <p>Open inbox database connection.</p>
               </div>
               <p>
                   <span class="doc-param-annotation">
@@ -2233,17 +2249,17 @@ returns immediately if the schema is current.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.get_connection" class="doc doc-heading">
+<h2 id="mait_code.tools.inbox.get_connection" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_connection</span>
 
 
-<a href="#mait_code.tools.decisions.get_connection" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#mait_code.tools.inbox.get_connection" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">:</span> <span class="n"><span title="pathlib.Path">Path</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Open a decisions database connection.</p>
+        <p>Open an inbox database connection.</p>
 <p>The connection has WAL journal mode enabled (for concurrent reads),
 foreign-key enforcement enabled, and the current schema applied via
 migrations.</p>
@@ -2264,7 +2280,7 @@ migrations.</p>
             <td class="doc-param-details">
               <div class="doc-md-description">
                 <p>Override the database path (defaults to
-<code>{data_dir}/decisions.db</code>).</p>
+<code>{data_dir}/inbox.db</code>).</p>
               </div>
               <p>
                   <span class="doc-param-annotation">
@@ -2313,11 +2329,11 @@ migrations.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.get_data_dir" class="doc doc-heading">
+<h2 id="mait_code.tools.inbox.get_data_dir" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_data_dir</span>
 
 
-<a href="#mait_code.tools.decisions.get_data_dir" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#mait_code.tools.inbox.get_data_dir" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_data_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><span title="pathlib.Path">Path</span></span>
 </span></code></pre></div>
 
@@ -2333,17 +2349,17 @@ migrations.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.get_db_path" class="doc doc-heading">
+<h2 id="mait_code.tools.inbox.get_db_path" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_db_path</span>
 
 
-<a href="#mait_code.tools.decisions.get_db_path" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#mait_code.tools.inbox.get_db_path" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_db_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><span title="pathlib.Path">Path</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Return the decisions database path.</p>
+        <p>Return the inbox database path.</p>
 
 
     </div>
@@ -2353,38 +2369,95 @@ migrations.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.get_project" class="doc doc-heading">
+<h2 id="mait_code.tools.inbox.get_project" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_project</span>
 
 
-<a href="#mait_code.tools.decisions.get_project" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#mait_code.tools.inbox.get_project" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_project</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
         <p>Return the current project identifier (basename of git root or cwd).</p>
+<p>Delegates to <code>mait_code.context.get_project()</code>, falling back to the
+current directory name. On the inbox this is only a capture-context hint —
+the store itself is global.</p>
 
 
     </div>
 
-</div><h2 id="rendering">Rendering<a class="headerlink" href="#rendering" title="Permanent link">&para;</a></h2>
+</div><h2 id="service">Service<a class="headerlink" href="#service" title="Permanent link">&para;</a></h2>
 
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mait_code.tools.inbox.ItemNotFound" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">ItemNotFound</span>
+
+
+<a href="#mait_code.tools.inbox.ItemNotFound" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ItemNotFound</span><span class="p">(</span><span class="n">item_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="Exception">Exception</span></code></p>
+
+
+
+        <p>Raised by mutations when no inbox item has the given id.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.render_decisions_md" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">render_decisions_md</span>
+<h2 id="mait_code.tools.inbox.add_item" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">add_item</span>
 
 
-<a href="#mait_code.tools.decisions.render_decisions_md" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">render_decisions_md</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
+<a href="#mait_code.tools.inbox.add_item" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">add_item</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">body</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">project</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Generate a markdown string from all decisions in the database.</p>
+        <p>Insert a captured item and return its new id.</p>
 
 
     </div>
@@ -2394,18 +2467,150 @@ migrations.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="mait_code.tools.decisions.write_decisions_md" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">write_decisions_md</span>
+<h2 id="mait_code.tools.inbox.count_items" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">count_items</span>
 
 
-<a href="#mait_code.tools.decisions.write_decisions_md" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">write_decisions_md</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<a href="#mait_code.tools.inbox.count_items" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">count_items</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">project</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Write <code>docs/decisions.md</code> at the git root.</p>
-<p>Skips silently if the current directory isn't inside a git repo.</p>
+        <p>Return the number of items in the inbox (global unless <em>project</em> given).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.inbox.get_item" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_item</span>
+
+
+<a href="#mait_code.tools.inbox.get_item" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_item</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">item_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="dict">dict</span></span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Return one item as a dict, or <code>None</code> if no item has that id.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.inbox.list_items" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">list_items</span>
+
+
+<a href="#mait_code.tools.inbox.list_items" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">list_items</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">project</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Return captured items oldest-first (capture order, for triage).</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>conn</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Open inbox connection.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="sqlite3.Connection">Connection</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>project</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Restrict to one capture-context project, or <code>None</code> for the
+whole inbox (the default — capture is global).</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.inbox.remove_item" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">remove_item</span>
+
+
+<a href="#mait_code.tools.inbox.remove_item" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">remove_item</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">item_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Delete an item permanently (triage routes it out, then removes it).</p>
+<p>Raises :class:<code>ItemNotFound</code> if the id is unknown.</p>
+
+
+    </div>
+
+</div><h2 id="entry-point">Entry point<a class="headerlink" href="#entry-point" title="Permanent link">&para;</a></h2>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.inbox.main" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">main</span>
+
+
+<a href="#mait_code.tools.inbox.main" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">main</span><span class="p">()</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
 
 
     </div>

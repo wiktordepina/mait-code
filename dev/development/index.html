@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/development/">
       
       
-        <link rel="prev" href="../decisions/">
+        <link rel="prev" href="../reference/hooks/auto_format/">
       
       
         <link rel="next" href="../contributing-docs/">
@@ -349,28 +349,6 @@
   
   
   
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../decisions/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Decisions
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
     
   
   
@@ -482,6 +460,8 @@
       
         
       
+        
+      
     
     
     
@@ -542,6 +522,34 @@
     
   
     Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../board/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The board
   
 
     
@@ -1188,6 +1196,8 @@
       
         
       
+        
+      
     
     
     
@@ -1324,14 +1334,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tools/decisions/" class="md-nav__link">
+      <a href="../reference/tools/board/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Decisions
+    Board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tools/inbox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inbox
   
 
     
@@ -1552,97 +1590,6 @@
       
   
   
-  
-  
-    
-    
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Decisions
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Decisions
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../decisions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Decision records
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
     
   
   
@@ -1670,10 +1617,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -1691,8 +1638,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1788,6 +1735,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#snapshot-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshot tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1817,6 +1781,17 @@
     <span class="md-ellipsis">
       
         Memory Module Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tui-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TUI Layer
       
     </span>
   </a>
@@ -1931,6 +1906,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-tui-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New TUI Surface
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2068,6 +2054,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#snapshot-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snapshot tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2097,6 +2100,17 @@
     <span class="md-ellipsis">
       
         Memory Module Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tui-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TUI Layer
       
     </span>
   </a>
@@ -2215,6 +2229,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#adding-a-new-tui-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New TUI Surface
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#adding-a-new-skill" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2294,17 +2319,28 @@
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-v<span class="w">       </span><span class="c1"># verbose</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/tools/memory/<span class="w">   </span><span class="c1"># narrow to a package</span>
 </span></code></pre></div>
-<p>The suite covers every package under <code>src/mait_code/</code> (~460 tests at the time of
-writing). Fixtures live in tool-specific <code>tests/&lt;area&gt;/conftest.py</code> files; the
+<p>The suite covers every package under <code>src/mait_code/</code> (close to a thousand tests
+and growing). Fixtures live in tool-specific <code>tests/&lt;area&gt;/conftest.py</code> files; the
 root <code>tests/conftest.py</code> keeps cross-cutting setup. See the "Writing Tests for
 Memory Components" section below for the established patterns.</p>
 <p><code>tests/test_imports.py</code> is the smoke test that asserts every reference-surface
 module declares a non-empty <code>__all__</code>. CI's <code>ci.yml</code> runs the full suite on
 every PR and push to <code>main</code>.</p>
+<h3 id="snapshot-tests">Snapshot tests<a class="headerlink" href="#snapshot-tests" title="Permanent link">&para;</a></h3>
+<p>The TUIs are guarded by <code>pytest-textual-snapshot</code>: a test renders an app at a
+fixed terminal size and compares it against an accepted baseline under
+<code>tests/cli/__snapshots__/</code>. Regenerate baselines intentionally — and eyeball the
+change — after a deliberate visual edit:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/cli/test_board_tui_snapshot.py<span class="w"> </span>--snapshot-update
+</span></code></pre></div>
+<p>Keep snapshots deterministic: pin <code>terminal_size</code>, seed fixed data, and
+neutralise anything environment-dependent (e.g. the settings snapshot clears
+<code>MAIT_CODE_*</code> so every row resolves to its default source). <code>MaitApp</code> applies
+<code>mait-dark</code> as the default, so there's no need to pin it.</p>
 <h2 id="linting-formatting-typechecking">Linting, formatting, typechecking<a class="headerlink" href="#linting-formatting-typechecking" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w">         </span><span class="c1"># Lint</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src/<span class="w">        </span><span class="c1"># Format</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pyright<span class="w">                 </span><span class="c1"># Typecheck (standard mode, src/ only)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>src/<span class="w">         </span><span class="c1"># Lint</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>src/<span class="w">        </span><span class="c1"># Format</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pyright<span class="w">                 </span><span class="c1"># Typecheck (standard mode, src/ only)</span>
 </span></code></pre></div>
 <p>Pyright reads the optional <code>boto3</code> import in <code>tools/memory/embeddings.py</code>,
 so the bedrock extra must be installed for typechecking: run
@@ -2320,56 +2356,88 @@ The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 <li><strong>Package convention</strong> — Both hooks and tools use <code>&lt;name&gt;/cli.py</code> as the entry point containing <code>main()</code></li>
 </ul>
 <h2 id="memory-module-structure">Memory Module Structure<a class="headerlink" href="#memory-module-structure" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>src/mait_code/tools/memory/
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── __init__.py    # Public API re-exports
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── cli.py         # CLI entry point (mc-tool-memory)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── db.py          # Connection factory (get_connection, get_data_dir)
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── migrate.py     # Schema migrations (ensure_schema)
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>├── scoring.py     # Composite scoring (pure functions, no DB)
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├── search.py      # FTS5 keyword, vector, and hybrid search + list + delete
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>├── writer.py      # Store with deduplication + auto-embedding
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>├── entities.py    # Entity and relationship CRUD
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>└── embeddings.py  # Embedding providers (local fastembed / AWS Bedrock, lazy-loading, graceful degradation)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>src/mait_code/tools/memory/
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── __init__.py    # Public API re-exports
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>├── cli.py         # CLI entry point (mc-tool-memory)
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>├── db.py          # Connection factory (get_connection, get_data_dir)
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>├── migrate.py     # Schema migrations (ensure_schema)
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>├── scoring.py     # Composite scoring (pure functions, no DB)
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>├── search.py      # FTS5 keyword, vector, and hybrid search + list + delete
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>├── writer.py      # Store with deduplication + auto-embedding
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>├── entities.py    # Entity and relationship CRUD
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>└── embeddings.py  # Embedding providers (local fastembed / AWS Bedrock, lazy-loading, graceful degradation)
 </span></code></pre></div>
 <p><strong>Dependency order:</strong> <code>migrate.py</code> ← <code>db.py</code> ← everything else. <code>scoring.py</code> has no internal dependencies. <code>embeddings.py</code> depends only on <code>db.py</code> (for data dir).</p>
 <p><strong>Pattern:</strong> All search/writer/entity functions receive a <code>sqlite3.Connection</code> as their first argument. The CLI tool opens and closes connections per subcommand invocation.</p>
+<h2 id="tui-layer">TUI Layer<a class="headerlink" href="#tui-layer" title="Permanent link">&para;</a></h2>
+<p>The Textual TUIs share one identity through <code>src/mait_code/tui/</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>src/mait_code/tui/
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├── __init__.py    # Re-exports palette only (kept Textual-free)
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├── palette.py     # Canonical role→hex colours — the single source of truth
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>├── theme.py       # The mait-* house Textual Themes, built from palette
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>├── render.py      # Palette-coloured Rich chip helpers (for DataTable/OptionList cells)
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>├── help.py        # Shared `?` HelpScreen (live key-binding cheat-sheet)
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├── app.py         # MaitApp base class + SHARED_TCSS path
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>└── app.tcss       # Shared stylesheet (modal geometry, conventions)
+</span></code></pre></div>
+<p><strong>Dependency order:</strong> <code>palette.py</code> ← <code>theme.py</code> ← <code>app.py</code>; <code>render.py</code> and
+<code>help.py</code> sit on top of <code>palette.py</code>/<code>app.py</code> respectively. The one hard rule:
+<strong><code>palette.py</code> imports nothing from Textual or the rest of <code>mait_code</code>.</strong> It
+sits on the CLI hot path — <code>console.py</code> imports it to colour plain output — so
+pulling Textual in there would slow every CLI invocation. <code>theme.py</code> and
+<code>app.py</code> <em>do</em> import Textual; import those submodules directly
+(<code>from mait_code.tui.app import MaitApp</code>), never via the package, so that
+<code>import mait_code.tui</code> stays cheap.</p>
+<p><strong>One palette, two consumers.</strong> <code>palette.py</code> is the single source of truth for
+both the Rich CLI theme (<code>console.py</code>) and the Textual TUI theme (<code>theme.py</code>),
+so plain CLI output and the TUIs share a colour identity. Tune a colour once and
+both follow. Every value clears WCAG AA (≥4.5:1) against the dark backgrounds.</p>
+<p><strong>Theming model.</strong> <code>MaitApp</code> registers the five house themes in <code>HOUSE_THEMES</code>
+(<code>mait-dark</code>, <code>mait-bubblegum</code>, <code>mait-aurora</code>, <code>mait-ember</code>, <code>mait-syntax</code>),
+defaults to <code>mait-dark</code>, and leaves Textual's built-in themes registered — so the
+Ctrl+P command palette's "Change theme" offers all of them. A user's pick is
+persisted across sessions via the <code>theme</code> setting (<code>MAIT_CODE_THEME</code>), so the TUIs
+reopen in the last-chosen theme. Because every style is driven off <code>$</code>-variables,
+adding a house theme is just another <code>Theme</code> in <code>theme.py</code>; a user can also drop in
+their own theme file and it works mechanically, though only the house themes are
+maintained.</p>
 <h2 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h2>
 <p>All entry points use the shared logging module at <code>src/mait_code/logging.py</code>.</p>
 <h3 id="adding-logging-to-a-new-component">Adding logging to a new component<a class="headerlink" href="#adding-logging-to-a-new-component" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-tool-mycommand&quot;</span><span class="p">)</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="c1"># ... your code here</span>
-</span></code></pre></div>
-<p>For internal modules, use standard <code>logging.getLogger(__name__)</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_function</span><span class="p">():</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Processing...&quot;</span><span class="p">)</span>
-</span></code></pre></div>
-<p>The <code>mait_code</code> logger hierarchy is configured by <code>setup_logging()</code> in the entry point — internal modules don't need to call it.</p>
-<h3 id="ssl-setup-for-network-calling-entry-points">SSL setup for network-calling entry points<a class="headerlink" href="#ssl-setup-for-network-calling-entry-points" title="Permanent link">&para;</a></h3>
-<p>Entry points that make outbound HTTPS requests (e.g. embedding model downloads, API calls) should also call <code>setup_ssl()</code> after <code>setup_logging()</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-tool-mycommand&quot;</span><span class="p">)</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.ssl</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_ssl</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">setup_ssl</span><span class="p">()</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="c1"># ... your code here</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="c1"># ... your code here</span>
+</span></code></pre></div>
+<p>For internal modules, use standard <code>logging.getLogger(__name__)</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_function</span><span class="p">():</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Processing...&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The <code>mait_code</code> logger hierarchy is configured by <code>setup_logging()</code> in the entry point — internal modules don't need to call it.</p>
+<h3 id="ssl-setup-for-network-calling-entry-points">SSL setup for network-calling entry points<a class="headerlink" href="#ssl-setup-for-network-calling-entry-points" title="Permanent link">&para;</a></h3>
+<p>Entry points that make outbound HTTPS requests (e.g. embedding model downloads, API calls) should also call <code>setup_ssl()</code> after <code>setup_logging()</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-tool-mycommand&quot;</span><span class="p">)</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.ssl</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_ssl</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="n">setup_ssl</span><span class="p">()</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="c1"># ... your code here</span>
 </span></code></pre></div>
 <p>This injects the OS trust store into Python's <code>ssl</code> module via the <code>truststore</code> package, so corporate proxy CA certificates (e.g. Netskope) are trusted automatically. It is idempotent and fails silently if <code>truststore</code> is unavailable.</p>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>MAIT_CODE_LOG_LEVEL</code> env var (default: <code>INFO</code>) — set via <code>settings.json</code> <code>env</code> block</li>
 <li><code>MAIT_CODE_LOG_FILE</code> env var — override log file path</li>
-<li>Logs write to <code>~/.claude/mait-code-data/logs/mait-code.log</code> (rotating, 5 MB, 3 backups)</li>
+<li>Logs write to <code>~/.local/state/mait-code/mait-code.log</code> (rotates at midnight, keeps <code>log-backup-count</code> days — default 14)</li>
 <li>Logs never go to stdout/stderr</li>
 </ul>
 <h2 id="adding-new-memory-types">Adding New Memory Types<a class="headerlink" href="#adding-new-memory-types" title="Permanent link">&para;</a></h2>
@@ -2383,52 +2451,52 @@ The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 </ol>
 <h2 id="writing-tests-for-memory-components">Writing Tests for Memory Components<a class="headerlink" href="#writing-tests-for-memory-components" title="Permanent link">&para;</a></h2>
 <p>Use the shared fixtures from <code>tests/tools/memory/conftest.py</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_something</span><span class="p">(</span><span class="n">memory_db</span><span class="p">):</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;memory_db provides a fresh temp database with full schema.&quot;&quot;&quot;</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">store_memory</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">store_memory</span><span class="p">(</span><span class="n">memory_db</span><span class="p">,</span> <span class="s2">&quot;test content&quot;</span><span class="p">,</span> <span class="s2">&quot;fact&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="k">assert</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;created&quot;</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_with_data</span><span class="p">(</span><span class="n">populated_db</span><span class="p">):</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;populated_db has 7 sample entries pre-loaded.&quot;&quot;&quot;</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.search</span><span class="w"> </span><span class="kn">import</span> <span class="n">search_entries</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="n">results</span> <span class="o">=</span> <span class="n">search_entries</span><span class="p">(</span><span class="n">populated_db</span><span class="p">,</span> <span class="s2">&quot;dark mode&quot;</span><span class="p">)</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_something</span><span class="p">(</span><span class="n">memory_db</span><span class="p">):</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;memory_db provides a fresh temp database with full schema.&quot;&quot;&quot;</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">store_memory</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">store_memory</span><span class="p">(</span><span class="n">memory_db</span><span class="p">,</span> <span class="s2">&quot;test content&quot;</span><span class="p">,</span> <span class="s2">&quot;fact&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">assert</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;created&quot;</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_with_data</span><span class="p">(</span><span class="n">populated_db</span><span class="p">):</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;populated_db has 7 sample entries pre-loaded.&quot;&quot;&quot;</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.search</span><span class="w"> </span><span class="kn">import</span> <span class="n">search_entries</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">results</span> <span class="o">=</span> <span class="n">search_entries</span><span class="p">(</span><span class="n">populated_db</span><span class="p">,</span> <span class="s2">&quot;dark mode&quot;</span><span class="p">)</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span>
 </span></code></pre></div>
 <p>For memory tool tests, patch <code>get_connection</code> to use a temp DB:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_connection</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">mem_db</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">):</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">db_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">get_connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">patched</span><span class="p">(</span><span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="k">return</span> <span class="n">get_connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="k">with</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mait_code.tools.memory.db.get_connection&quot;</span><span class="p">,</span> <span class="n">side_effect</span><span class="o">=</span><span class="n">patched</span><span class="p">):</span>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>        <span class="k">yield</span> <span class="n">conn</span>
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_connection</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">mem_db</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">):</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">db_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">get_connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">patched</span><span class="p">(</span><span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        <span class="k">return</span> <span class="n">get_connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="k">with</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mait_code.tools.memory.db.get_connection&quot;</span><span class="p">,</span> <span class="n">side_effect</span><span class="o">=</span><span class="n">patched</span><span class="p">):</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>        <span class="k">yield</span> <span class="n">conn</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
 <h2 id="database-migrations">Database Migrations<a class="headerlink" href="#database-migrations" title="Permanent link">&para;</a></h2>
 <h3 id="adding-a-new-migration">Adding a new migration<a class="headerlink" href="#adding-a-new-migration" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Open <code>src/mait_code/tools/memory/migrate.py</code></li>
 <li>Append a new tuple to the <code>MIGRATIONS</code> list:
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">MIGRATIONS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="mi">7</span><span class="p">,</span>  <span class="c1"># Next version number</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="s2">&quot;Description of what this migration does&quot;</span><span class="p">,</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="p">[</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>        <span class="s2">&quot;SQL statement 1&quot;</span><span class="p">,</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="s2">&quot;SQL statement 2&quot;</span><span class="p">,</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="p">],</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">))</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">MIGRATIONS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="mi">7</span><span class="p">,</span>  <span class="c1"># Next version number</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="s2">&quot;Description of what this migration does&quot;</span><span class="p">,</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="p">[</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>        <span class="s2">&quot;SQL statement 1&quot;</span><span class="p">,</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>        <span class="s2">&quot;SQL statement 2&quot;</span><span class="p">,</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    <span class="p">],</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="p">))</span>
 </span></code></pre></div></li>
 <li>For complex migrations, use a callable instead of SQL list:
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_migrate_something</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="c1"># Complex migration logic here</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="k">pass</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">MIGRATIONS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;Complex migration&quot;</span><span class="p">,</span> <span class="n">_migrate_something</span><span class="p">))</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_migrate_something</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="c1"># Complex migration logic here</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="k">pass</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">MIGRATIONS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;Complex migration&quot;</span><span class="p">,</span> <span class="n">_migrate_something</span><span class="p">))</span>
 </span></code></pre></div></li>
 <li>Migrations run automatically on next <code>get_connection()</code> call</li>
 <li>Add tests in <code>tests/tools/memory/test_migrate.py</code> to verify the new schema</li>
@@ -2440,6 +2508,39 @@ The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 <li><code>ensure_schema()</code> is idempotent — safe to call on every connection</li>
 <li>Vec0 migrations gracefully skip if <code>sqlite-vec</code> is not loaded</li>
 </ul>
+<h2 id="adding-a-new-tui-surface">Adding a New TUI Surface<a class="headerlink" href="#adding-a-new-tui-surface" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Subclass <code>MaitApp</code> (from <code>mait_code.tui.app</code>) — it wires the house theme and
+   the shared stylesheet, and inherits the <code>q</code>-to-quit binding.</li>
+<li>Put the surface's layout in its own <code>.tcss</code> next to the module, and load it
+   alongside the shared sheet. <code>CSS_PATH</code> is read only from the most-derived
+   class (it does <strong>not</strong> merge across the MRO), so list both explicitly:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tui.app</span><span class="w"> </span><span class="kn">import</span> <span class="n">MaitApp</span><span class="p">,</span> <span class="n">SHARED_TCSS</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">MaitApp</span><span class="p">):</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">CSS_PATH</span> <span class="o">=</span> <span class="p">[</span><span class="n">SHARED_TCSS</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;_my.tcss&quot;</span><span class="p">]</span>
+</span></code></pre></div></li>
+<li>Reuse the shared modal styling: wrap a modal's body in a container with
+   <code>classes="modal-dialog"</code>, its heading with <code>classes="modal-title"</code>, and its
+   button row with <code>classes="modal-buttons"</code>. Only a <em>scrolling</em> modal should
+   cap its height (<code>max-height</code>); a plain one must grow to its content, or its
+   buttons clip off-screen on a short terminal.</li>
+<li>Drive every colour off theme <code>$</code>-variables (e.g. <code>$text-primary</code>; <code>$border</code>
+   vs <code>$border-blurred</code> for a focus signal) — never hard-code a hex in a <code>.tcss</code>.
+   For Rich <code>Text</code> in a <code>DataTable</code> cell or an <code>OptionList</code> option (which can't
+   read <code>$</code>-variables), use the palette-coloured chip helpers in
+   <code>mait_code.tui.render</code>.</li>
+<li>A <code>?</code> help screen comes free from <code>MaitApp</code> — it lists the app's live
+   key-bindings, so new bindings appear automatically. Expose the app's actions
+   in the Ctrl+P palette by overriding <code>get_system_commands</code> and yielding
+   <code>SystemCommand</code>s after <code>yield from super().get_system_commands(screen)</code>.</li>
+<li>Add a snapshot test (see "Snapshot tests" above).</li>
+</ol>
+<p>The two shipped surfaces are worked examples: <code>cli/_board_tui.py</code> (the board) and
+<code>cli/_settings_tui.py</code> (the settings editor, a master–detail tree). Theme
+persistence is free — <code>MaitApp.on_unmount</code> writes the active theme back to the
+<code>theme</code> setting for every surface, so a user's pick survives across sessions.</p>
 <h2 id="adding-a-new-skill">Adding a New Skill<a class="headerlink" href="#adding-a-new-skill" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Create <code>skills/&lt;skill-name&gt;/SKILL.md</code> with frontmatter and instructions</li>
@@ -2450,15 +2551,15 @@ The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 <ol>
 <li>Create package in <code>src/mait_code/hooks/&lt;hook_name&gt;/</code> with <code>cli.py</code> containing a <code>main()</code> function</li>
 <li>Wire in logging:
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-hook-&lt;hook-name&gt;&quot;</span><span class="p">)</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="c1"># ...</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-hook-&lt;hook-name&gt;&quot;</span><span class="p">)</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="c1"># ...</span>
 </span></code></pre></div></li>
 <li>Add entry point in <code>pyproject.toml</code>:
-   <div class="language-toml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">mc-hook-</span><span class="err">&lt;</span><span class="n">hook-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.hooks.&lt;hook_name&gt;.cli:main&quot;</span>
+   <div class="language-toml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">mc-hook-</span><span class="err">&lt;</span><span class="n">hook-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.hooks.&lt;hook_name&gt;.cli:main&quot;</span>
 </span></code></pre></div></li>
 <li>Register in <code>config/settings.json</code> under the appropriate hook event</li>
 <li>Use <code>"async": true</code> for observation/logging hooks that don't feed results back into the conversation. <strong>Note:</strong> Async hooks on macOS may receive empty stdin due to a Claude Code bug (<a href="https://github.com/anthropics/claude-code/issues/38162">#38162</a>) — handle this by falling back to filesystem discovery or other means.</li>
@@ -2468,15 +2569,15 @@ The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 <ol>
 <li>Create package in <code>src/mait_code/tools/&lt;tool_name&gt;/</code> with <code>cli.py</code> containing a <code>main()</code> function</li>
 <li>Wire in logging:
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-tool-&lt;tool-name&gt;&quot;</span><span class="p">)</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="c1"># ...</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-tool-&lt;tool-name&gt;&quot;</span><span class="p">)</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="c1"># ...</span>
 </span></code></pre></div></li>
 <li>Add entry point in <code>pyproject.toml</code>:
-   <div class="language-toml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">mc-tool-</span><span class="err">&lt;</span><span class="n">tool-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.tools.&lt;tool_name&gt;.cli:main&quot;</span>
+   <div class="language-toml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">mc-tool-</span><span class="err">&lt;</span><span class="n">tool-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.tools.&lt;tool_name&gt;.cli:main&quot;</span>
 </span></code></pre></div></li>
 <li>Run <code>uv sync</code></li>
 <li>Skills can invoke the tool via preprocessing (<code>!</code>mc-tool-<name> ...<code>`) or</code>Bash(mc-tool-<name> *)`</li>
@@ -2489,7 +2590,7 @@ The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 <ol>
 <li>Create package in <code>src/mait_code/mcp/&lt;server_name&gt;/</code> with <code>cli.py</code> containing a <code>main()</code> function</li>
 <li>Add entry point in <code>pyproject.toml</code>:
-   <div class="language-toml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">mc-mcp-</span><span class="err">&lt;</span><span class="n">server-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.mcp.&lt;server_name&gt;.cli:main&quot;</span>
+   <div class="language-toml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">mc-mcp-</span><span class="err">&lt;</span><span class="n">server-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.mcp.&lt;server_name&gt;.cli:main&quot;</span>
 </span></code></pre></div></li>
 <li>Register in <code>config/settings.json</code> under <code>mcpServers</code></li>
 <li>Run <code>uv sync</code> and re-run <code>./scripts/install.sh</code></li>
