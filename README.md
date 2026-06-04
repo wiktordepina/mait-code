@@ -79,7 +79,7 @@ uv sync
 mait-code/
 ├── src/mait_code/        # Python package
 │   ├── hooks/            #   Hooks: session_start, observe, auto_format
-│   └── tools/            #   CLI tools: memory, reminders, tasks, decisions, web_fetch
+│   └── tools/            #   CLI tools: memory, reminders, board, inbox, web_fetch
 ├── config/               # CLAUDE.md and settings.json templates
 ├── templates/            # Identity templates
 ├── scripts/              # Install/uninstall scripts
