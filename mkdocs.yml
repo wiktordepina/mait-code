@@ -135,7 +135,6 @@ nav:
           - Tools:
               - Memory: reference/tools/memory.md
               - Reminders: reference/tools/reminders.md
-              - Tasks: reference/tools/tasks.md
               - Board: reference/tools/board.md
               - Inbox: reference/tools/inbox.md
               - Web fetch: reference/tools/web_fetch.md

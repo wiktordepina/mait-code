@@ -116,7 +116,6 @@ def test_invalid_payloads_are_rejected(stdout, match):
 
 def test_session_start_output_is_valid(monkeypatch, capsys):
     monkeypatch.setattr(session_start_cli, "_check_reminders", lambda: "")
-    monkeypatch.setattr(session_start_cli, "_check_tasks", lambda: "")
     monkeypatch.setattr(
         session_start_cli, "_check_board", lambda: "2 refined · 1 blocked"
     )
@@ -130,7 +129,6 @@ def test_session_start_output_is_valid(monkeypatch, capsys):
 def test_session_start_emits_nothing_when_empty(monkeypatch, capsys):
     """With no sections the hook prints nothing — still contract-valid."""
     monkeypatch.setattr(session_start_cli, "_check_reminders", lambda: "")
-    monkeypatch.setattr(session_start_cli, "_check_tasks", lambda: "")
     monkeypatch.setattr(session_start_cli, "_check_board", lambda: "")
     monkeypatch.setattr("sys.stdin", io.StringIO("{}"))
 

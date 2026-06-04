@@ -12,10 +12,8 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Commit | `/commit` | Detect changes, generate conventional commit message, confirm and commit | **Implemented** |
 | Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
-| Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
-| Tasks | `/tasks` | Show open tasks for the current project | **Implemented** |
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
-| Triage | `/triage` | Route quick-capture inbox items to board, tasks, or memory | **Implemented** |
+| Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
 | Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
 
 ## Implemented Skills
@@ -111,38 +109,6 @@ Show active and overdue reminders.
 2. Presents active and overdue reminders
 3. Supports dismissing reminders via `mc-tool-reminders dismiss <id>`
 
-### /task
-
-Add a task for the current project. Model-invocable — Claude can proactively suggest tasks during a session, but always asks for confirmation before adding.
-
-**Usage:**
-```
-/task Fix login page CSS
-/task --priority high Fix auth race condition
-/task --priority low Update README with new API docs
-```
-
-**How it works:**
-
-1. Parses the title and optional `--priority` flag
-2. Stores via `mc-tool-tasks add [--priority <priority>] <title>`
-3. Tasks are scoped to the current project (git root basename or cwd basename)
-
-### /tasks
-
-Show open tasks for the current project.
-
-**Usage:**
-```
-/tasks                        # Show open tasks
-```
-
-**How it works:**
-
-1. Preprocesses results via `mc-tool-tasks list` (injected before Claude sees the skill)
-2. Presents open tasks sorted by priority (high → medium → low)
-3. Supports completing tasks via `mc-tool-tasks done <id>` or removing via `mc-tool-tasks remove <id>`
-
 ### /board
 
 View and drive the manually-driven kanban board for the current project. Claude acts as the worker — there is no autonomous dispatcher.
@@ -175,7 +141,7 @@ Drain the quick-capture inbox by routing each captured item to where it belongs.
 
 1. Preprocesses the current inbox via `mc-tool-inbox list` (injected before Claude sees the skill)
 2. For each item, proposes the best destination and, on confirmation, creates it there:
-   - Board card → `mc-tool-board add ...` · Task → `mc-tool-tasks add ...`
+   - Board card → `mc-tool-board add ...`
    - Memory → `/remember`
 3. After an item lands in its destination, drains it with `mc-tool-inbox remove <id>` so the inbox stays near-empty
 4. Never routes or removes an item without the user's confirmation
@@ -236,14 +202,10 @@ skills/
 │   └── SKILL.md     # Set a reminder
 ├── reminders/
 │   └── SKILL.md     # Show reminders
-├── task/
-│   └── SKILL.md     # Add a project task
-├── tasks/
-│   └── SKILL.md     # Show project tasks
 ├── board/
 │   └── SKILL.md     # View and drive the kanban board
 ├── triage/
-│   └── SKILL.md     # Route the quick-capture inbox to board/task/memory
+│   └── SKILL.md     # Route the quick-capture inbox to the board or memory
 ├── commit/
 │   └── SKILL.md     # Smart commit with conventional message
 └── web-fetch/

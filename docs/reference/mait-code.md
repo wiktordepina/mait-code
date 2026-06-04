@@ -398,7 +398,7 @@ Settings fall into three groups:
 
 - **Primary** — written uncommented in `settings.toml`: `data-dir`, `log-level`, `log-file`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`.
 - **Advanced** — written commented-out (the built-in default applies until you opt in via `set` or by uncommenting): `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`, `reflection-batch-size`, `reflection-novelty-gate`, `git-timeout`, and the scoring/dedup tuning knobs `score-weight-recency`, `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`, `half-life-semantic`, `dedup-string-threshold`, `dedup-vector-threshold`, `scope-boost-global`, `scope-boost-cross-project`.
-- **Derived** (source `derived`, not settable): `embedding-dim`, `memory-db-path`, `tasks-db-path`, `decisions-db-path`, `reminders-db-path`, `model-cache-dir`, `observations-dir`, `project-aliases-path`.
+- **Derived** (source `derived`, not settable): `embedding-dim`, `memory-db-path`, `reminders-db-path`, `model-cache-dir`, `observations-dir`, `project-aliases-path`.
 
 See the [Memory guide](../memory.md) for per-setting defaults and the scoring/dedup tuning ranges.
 

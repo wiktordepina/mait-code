@@ -90,7 +90,6 @@ def test_check_board_bad_json(monkeypatch):
 
 def test_main_includes_board_section(monkeypatch, capsys):
     monkeypatch.setattr(cli_mod, "_check_reminders", lambda: "")
-    monkeypatch.setattr(cli_mod, "_check_tasks", lambda: "")
     monkeypatch.setattr(cli_mod, "_check_board", lambda: "2 refined · 1 blocked")
     monkeypatch.setattr("sys.stdin", io.StringIO("{}"))
 
@@ -105,7 +104,6 @@ def test_main_includes_board_section(monkeypatch, capsys):
 
 def test_main_silent_when_nothing(monkeypatch, capsys):
     monkeypatch.setattr(cli_mod, "_check_reminders", lambda: "")
-    monkeypatch.setattr(cli_mod, "_check_tasks", lambda: "")
     monkeypatch.setattr(cli_mod, "_check_board", lambda: "")
     monkeypatch.setattr("sys.stdin", io.StringIO("{}"))
 

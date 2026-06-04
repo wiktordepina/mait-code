@@ -425,14 +425,6 @@ SETTINGS: tuple[Setting, ...] = (
         help="SQLite store for memories (derived from data-dir).",
     ),
     Setting(
-        "tasks-db-path",
-        "",
-        "",
-        settable=False,
-        derive=lambda: _display_path("tasks.db"),
-        help="SQLite store for tasks (derived from data-dir).",
-    ),
-    Setting(
         "reminders-db-path",
         "",
         "",

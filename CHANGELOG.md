@@ -17,9 +17,17 @@ don't change the public surface. Everything is still in flux.
   the `/decision` and `/decisions` skills and their backing `mc-tool-decisions`
   tool (and its `decisions.db` store), have been removed. They saw effectively no
   use, and the kanban board plus quick-capture inbox cover the same ground. Inbox
-  triage no longer offers a "decision" destination — items route to the board,
-  tasks, or memory. The `mait-code status` CLI command is unaffected; only the
-  `/status` skill was removed.
+  triage no longer offers a "decision" destination — items route to the board or
+  memory. The `mait-code status` CLI command is unaffected; only the `/status`
+  skill was removed.
+
+- **The tasks subsystem is gone.** The `/task` and `/tasks` skills, the
+  `mc-tool-tasks` CLI tool, and its `tasks.db` store have been removed. The board
+  is a strict superset of what tasks tracked, and the quick-capture inbox owns
+  frictionless capture — a one-line `mc-tool-board add "<title>"` lands straight
+  in the backlog, so tasks was left with no exclusive job. Inbox triage now routes
+  to the board or memory only, and the session-start brief surfaces open work
+  through its existing board summary rather than a separate "Project Tasks" block.
 
 ## [0.42.0] — 2026-06-01
 

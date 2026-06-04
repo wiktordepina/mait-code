@@ -21,20 +21,6 @@ def _check_reminders() -> str:
         return ""
 
 
-def _check_tasks() -> str:
-    """Check for open project tasks via the CLI tool."""
-    try:
-        result = subprocess.run(
-            ["mc-tool-tasks", "check"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return ""
-
-
 def _check_board() -> str:
     """Summarise the current project's board via the CLI tool.
 
@@ -101,10 +87,6 @@ def main():
     reminders = _check_reminders()
     if reminders:
         sections.append(f"## Reminders\n\n{reminders}")
-
-    tasks = _check_tasks()
-    if tasks:
-        sections.append(f"## Project Tasks\n\n{tasks}")
 
     board = _check_board()
     if board:
