@@ -10,19 +10,12 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Reflect | `/reflect` | Synthesise recent observations into insights, update MEMORY.md | **Implemented** |
 | Observe | `/observe` | Manually trigger observation extraction from current session | Planned |
 | Commit | `/commit` | Detect changes, generate conventional commit message, confirm and commit | **Implemented** |
-| Standup | `/standup` | Generate standup summary from git history, tasks, memory, and PRs | **Implemented** |
-| Work History | `/work-history [period]` | Show project work history (git log + memory) for a time period | **Implemented** |
-| Today | `/today` | Daily overview — open tasks, reminders, recent activity, PRs | **Implemented** |
-| Status | `/status` | Generate STATUS.md with project overview, tasks, recent work | **Implemented** |
-| PRs | `/prs` | List open PRs across all projects | **Implemented** |
 | Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Task | `/task [--priority high\|medium\|low] <title>` | Add a task for the current project | **Implemented** |
 | Tasks | `/tasks` | Show open tasks for the current project | **Implemented** |
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
-| Triage | `/triage` | Route quick-capture inbox items to board, tasks, decisions, or memory | **Implemented** |
-| Decision | `/decision [--status ...] [--tags ...] <title>` | Record a technical decision | **Implemented** |
-| Decisions | `/decisions` | Browse and search decision records | **Implemented** |
+| Triage | `/triage` | Route quick-capture inbox items to board, tasks, or memory | **Implemented** |
 | Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
 
 ## Implemented Skills
@@ -183,7 +176,7 @@ Drain the quick-capture inbox by routing each captured item to where it belongs.
 1. Preprocesses the current inbox via `mc-tool-inbox list` (injected before Claude sees the skill)
 2. For each item, proposes the best destination and, on confirmation, creates it there:
    - Board card → `mc-tool-board add ...` · Task → `mc-tool-tasks add ...`
-   - Decision → `mc-tool-decisions record ...` · Memory → `/remember`
+   - Memory → `/remember`
 3. After an item lands in its destination, drains it with `mc-tool-inbox remove <id>` so the inbox stays near-empty
 4. Never routes or removes an item without the user's confirmation
 
@@ -202,118 +195,6 @@ Detect changes, generate a conventional commit message, confirm with user, and c
 2. Analyses the changes and generates a conventional commit message (`type(scope): description`)
 3. Presents the proposed message for user confirmation or editing
 4. On approval, stages files if needed and runs `git commit`
-
-### /standup
-
-Generate a standup summary from git history, tasks, memory, and open PRs.
-
-**Usage:**
-```
-/standup                         # Generate standup report
-```
-
-**How it works:**
-
-1. Preprocesses: git log (last 24h), all open tasks, recent memories, reminders
-2. Checks for open PRs via `gh search prs --author=@me --state=open`
-3. Formats as standup: Yesterday, Today, Blockers, Open PRs
-
-### /work-history
-
-Show recent work history for the current project.
-
-**Usage:**
-```
-/work-history                    # Today's work (default)
-/work-history today              # Same as above
-/work-history yesterday          # Last 24-48 hours
-/work-history week               # Last 7 days
-```
-
-**How it works:**
-
-1. Parses the time period argument (defaults to "today")
-2. Runs `git log` and `mc-tool-memory list --since` with the appropriate time range
-3. Shows completed tasks from the period
-4. Presents a formatted work history
-
-### /today
-
-Daily overview dashboard — open tasks, reminders, recent activity, and open PRs.
-
-**Usage:**
-```
-/today                           # Show daily overview
-```
-
-**How it works:**
-
-1. Preprocesses: all open tasks, reminders, recent commits, recent memories
-2. Checks for open PRs via `gh search prs --author=@me --state=open`
-3. Presents sections: Tasks, Reminders, Recent Activity, Open PRs
-
-### /status
-
-Generate a STATUS.md for the current project.
-
-**Usage:**
-```
-/status                          # Generate STATUS.md
-```
-
-**How it works:**
-
-1. Preprocesses: project tasks, reminders, git log (7 days), recent memories
-2. Gets project info from git (name, remote URL)
-3. Reads existing STATUS.md (if present) for continuity
-4. Generates STATUS.md with sections: Project, Open Tasks, Recent Work, Completed Tasks, Reminders
-5. Writes to the project root
-
-### /prs
-
-List open PRs across all projects.
-
-**Usage:**
-```
-/prs                             # Show all open PRs
-```
-
-**How it works:**
-
-1. Preprocesses via `gh search prs --author=@me --state=open`
-2. Shows PR number, title, and review status grouped by repository
-
-### /decision
-
-Record a technical decision for the current project. Model-invocable — Claude can proactively suggest recording decisions during sessions, but always asks for confirmation.
-
-**Usage:**
-```
-/decision Use PostgreSQL for primary store
-/decision --context "Need structured data" --tags db Use PostgreSQL
-/decision --status proposed Migrate to gRPC
-```
-
-**How it works:**
-
-1. Parses the title and optional flags (`--context`, `--alternatives`, `--consequences`, `--status`, `--tags`)
-2. If only a title is given, asks briefly about context and alternatives before recording
-3. Records via `mc-tool-decisions record [flags] <title>`
-4. Auto-regenerates `docs/decisions.md` at the git root
-
-### /decisions
-
-Browse and search decision records for the current project.
-
-**Usage:**
-```
-/decisions                        # Show accepted and proposed decisions
-```
-
-**How it works:**
-
-1. Preprocesses results via `mc-tool-decisions list` (injected before Claude sees the skill)
-2. Supports show (`mc-tool-decisions show <id>`), search (`mc-tool-decisions search <query>`), amend, supersede, and remove via follow-up commands
 
 ### /web-fetch
 
@@ -362,23 +243,9 @@ skills/
 ├── board/
 │   └── SKILL.md     # View and drive the kanban board
 ├── triage/
-│   └── SKILL.md     # Route the quick-capture inbox to board/task/decision/memory
+│   └── SKILL.md     # Route the quick-capture inbox to board/task/memory
 ├── commit/
 │   └── SKILL.md     # Smart commit with conventional message
-├── standup/
-│   └── SKILL.md     # Standup summary
-├── work-history/
-│   └── SKILL.md     # Project work history
-├── today/
-│   └── SKILL.md     # Daily overview dashboard
-├── status/
-│   └── SKILL.md     # Generate STATUS.md
-├── prs/
-│   └── SKILL.md     # Cross-project PR listing
-├── decision/
-│   └── SKILL.md     # Record a technical decision
-├── decisions/
-│   └── SKILL.md     # Browse/search decision records
 └── web-fetch/
     └── SKILL.md     # Fetch web page content (bypasses claude.ai proxy)
 ```

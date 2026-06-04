@@ -368,15 +368,8 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `/reminders` | Show active and overdue reminders |
 | `/task <title>` | Add a task for the current project |
 | `/tasks` | Show open tasks for the current project |
-| `/decision <title>` | Record a technical decision |
-| `/decisions` | Browse and search decision records |
 | `/web-fetch <url>` | Fetch a web page as markdown (bypasses claude.ai proxy) |
 | `/commit` | Detect changes, generate conventional commit, confirm and commit |
-| `/standup` | Standup summary from git, tasks, memory, and PRs |
-| `/work-history [period]` | Project work history (today/yesterday/week) |
-| `/today` | Daily overview — tasks, reminders, activity, PRs |
-| `/status` | Generate STATUS.md for current project |
-| `/prs` | List open PRs across all projects |
 
 ## Multi-Machine Sync
 

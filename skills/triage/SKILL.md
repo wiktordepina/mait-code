@@ -1,7 +1,7 @@
 ---
 name: triage
-description: Triage the quick-capture inbox — route each captured item to the board, a task, a decision, or memory. Use when the user mentions triage, the inbox, processing/sorting captured items, or asks to clear the inbox.
-allowed-tools: Bash(mc-tool-inbox *), Bash(mc-tool-board *), Bash(mc-tool-tasks *), Bash(mc-tool-decisions *), Bash(mc-tool-memory *)
+description: Triage the quick-capture inbox — route each captured item to the board, a task, or memory. Use when the user mentions triage, the inbox, processing/sorting captured items, or asks to clear the inbox.
+allowed-tools: Bash(mc-tool-inbox *), Bash(mc-tool-board *), Bash(mc-tool-tasks *), Bash(mc-tool-memory *)
 ---
 
 # /triage
@@ -26,8 +26,6 @@ destination, and on the user's say-so create it in the target store, then
   `mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project <name>]`
 - **Task** — a smaller to-do for the current project:
   `mc-tool-tasks add "<title>" [--priority ...]`
-- **Decision** — a technical choice worth recording (note the verb is `record`):
-  `mc-tool-decisions record "<title>" ...` (or the `/decision` skill)
 - **Memory** — a durable fact about the user, a project, or a preference:
   use the `/remember` skill (or `mc-tool-memory` directly)
 
