@@ -11,16 +11,36 @@ git init
 
 ### .gitignore
 
+Not every database should be synced. `memory.db` is **regenerable** — the JSONL
+observation logs under `memory/observations/` are its source of truth, so it is
+gitignored and rebuilt with `mc-tool-memory restore` after a pull. The other
+databases (`board.db`, `reminders.db`, `inbox.db`) have **no such source**, so
+they are committed directly — gitignoring them would silently lose your board,
+reminders, and inbox on every other machine.
+
 Create `~/.claude/mait-code-data/.gitignore`:
 
 ```gitignore
-# Binary databases — rebuilt from markdown sources
-*.db
+# Regenerable from the observation logs (mc-tool-memory restore) — don't sync.
+memory.db
+
+# SQLite sidecar files (WAL mode) — never sync these.
+*.db-wal
+*.db-shm
 *.db-journal
+
+# Cached embedding models (large; re-downloaded on demand)
+models/
 
 # Temporary files
 *.tmp
 ```
+
+> `board.db`, `reminders.db`, and `inbox.db` are deliberately **not** ignored.
+> They are small and have no source to rebuild from, so they travel with the
+> repo. As SQLite binaries they don't merge cleanly — for a single user across
+> machines the practical rule is to push from the machine you just worked on and
+> pull before starting on another.
 
 ### Initial commit
 
@@ -47,7 +67,7 @@ git push
 ```bash
 cd ~/.claude/mait-code-data
 git pull
-# Rebuild vector database from synced markdown
+# Rebuild memory.db from the synced observation logs
 mc-tool-memory restore
 ```
 

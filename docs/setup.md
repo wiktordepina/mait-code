@@ -22,7 +22,7 @@ Pass flags via `bash -s --`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh \
-    | bash -s -- --embedding-provider bedrock --ref v0.15.0
+    | bash -s -- --embedding-provider bedrock --ref v0.43.0
 ```
 
 | Flag | Default | Purpose |
@@ -31,6 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts
 | `--ref <tag\|branch\|sha>` | latest `v*` tag | Checkout this ref after cloning. `main` for bleeding edge. |
 | `--dir <path>` | `~/.local/share/mait-code` | Install root. Source goes in `<dir>/source`. |
 | `--no-uv` | off | Don't try to install `uv` (fail if not on PATH). |
+| `--repo-url <url>` | upstream repo | Override the clone source (mainly for testing). |
 | `--help` | — | Print usage. |
 
 ### Inspect before running
@@ -65,7 +66,7 @@ mait-code install --from "$PWD" --embedding-provider local
 `mait-code install` performs:
 
 1. Validates the source path is a mait-code clone.
-2. Creates `~/.claude/mait-code-data/` with memory subdirectories (`observations/`, `reflections/`).
+2. Creates `~/.claude/mait-code-data/` with memory subdirectories (`memory/observations/`, `memory/reflections/`).
 3. Copies identity templates (`soul_document.md`, `user_context.md`) — never overwrites existing files.
 4. Bootstraps `memory/MEMORY.md` with a placeholder if missing.
 5. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file to `CLAUDE.md.backup`).

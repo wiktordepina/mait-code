@@ -11,7 +11,7 @@ graph LR
     C[Conversations] --> T1
 
     T1["**Tier 1: Observations**<br>*(raw)*<br>JSONL logs<br>memory.db<br>embeddings"]
-    T2["**Tier 2: Reflections**<br>*(synthesised)*<br>Monthly summaries"]
+    T2["**Tier 2: Reflections**<br>*(synthesised)*<br>batch synthesis<br>via /reflect"]
     T3["**Tier 3: MEMORY.md**<br>*(curated)*<br>~150 lines<br>loaded every session"]
 
     T1 --> T2 --> T3
@@ -40,7 +40,7 @@ Claude Haiku analyses the conversation and returns structured JSON:
 |----------|-----------|---------|
 | **Facts** | `fact` (semantic) | "The auth service uses JWT with RS256", "Database runs on PostgreSQL 16" |
 | **Preferences** | `preference` (semantic) | "User prefers dark mode", "Always use tabs for Go code" |
-| **Decisions** | `insight` (semantic) | "Chose REST over GraphQL for the public API" |
+| **Decisions** | `decision` (semantic) | "Chose REST over GraphQL for the public API" |
 | **Bugs fixed** | `event` (episodic) | "Fixed race condition in the connection pool" |
 | **Entities** | knowledge graph | People, projects, tools, services, concepts, organisations |
 | **Relationships** | knowledge graph | "User → contributes_to → mait-code", "mait-code → depends_on → sqlite-vec" |
@@ -56,8 +56,8 @@ Every extraction is also appended to a daily JSONL file at `~/.claude/mait-code-
 Before storing a new memory, the writer checks for near-duplicates:
 
 1. Extracts key words from the new content
-2. Queries FTS5 for candidate matches (up to 20) of the same entry type
-3. Compares using `SequenceMatcher` — if similarity >= 90%, it's a duplicate
+2. Gathers candidates from both FTS5 keyword search and vector similarity search (scoped to the entry's project)
+3. Compares candidates two ways — `SequenceMatcher` string similarity ≥ 0.85, or vector cosine similarity ≥ 0.92; a hit on either marks it a duplicate
 4. Duplicates update the existing entry's timestamp and keep the highest importance
 
 This means the same fact can be re-observed across sessions without creating clutter.
@@ -73,7 +73,7 @@ The core table stores every observation with metadata:
 | Field | Description |
 |-------|-------------|
 | `content` | The memory text |
-| `entry_type` | `fact`, `preference`, `event`, `insight`, `task`, `relationship` |
+| `entry_type` | `fact`, `preference`, `event`, `decision`, `insight`, `task`, `relationship` |
 | `importance` | 1-10 scale |
 | `memory_class` | `episodic` (fast decay) or `semantic` (slow decay) |
 | `scope` | `global`, `project`, or `branch` (controls visibility) |
@@ -205,7 +205,7 @@ Exponential decay based on memory class:
 | Class | Types | Half-life | Effect |
 |-------|-------|-----------|--------|
 | Episodic | `event`, `task` | 3 days | Fades fast — yesterday's deploy matters less next week |
-| Semantic | `fact`, `preference`, `insight`, `relationship` | 90 days | Persists — architectural decisions stay relevant for months |
+| Semantic | `fact`, `preference`, `decision`, `insight`, `relationship` | 90 days | Persists — architectural decisions stay relevant for months |
 
 Formula: `recency = exp(-ln(2) × age_days / half_life)`
 
@@ -360,4 +360,4 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 
 ## Multi-Machine Sync
 
-The data directory can be synced via git. Binary databases (`*.db`) are gitignored — after pulling on a new machine, run `mc-tool-memory restore` to replay the synced observation logs into the database and reindex embeddings. If the database already has entries and you only need to recompute embeddings, use `mc-tool-memory reindex`. See [Multi-Machine Sync](sync.md) for the full workflow.
+The data directory can be synced via git. `memory.db` is regenerable, so it is gitignored — the JSONL observation logs are the source of truth. After pulling on a new machine, run `mc-tool-memory restore` to replay the synced observation logs into the database and reindex embeddings. If the database already has entries and you only need to recompute embeddings, use `mc-tool-memory reindex`. The other databases (`board.db`, `reminders.db`, `inbox.db`) have no such source and are committed instead. See [Multi-Machine Sync](sync.md) for the full workflow.
