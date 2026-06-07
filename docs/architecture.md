@@ -28,10 +28,8 @@ graph TD
         subgraph tools_pkg ["tools/"]
             memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect"]
             reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
-            tasks_tool["tasks/ <i>(CLI)</i><br/>cli, db, migrate"]
             board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns, service"]
             inbox_tool["inbox/ <i>(CLI)</i><br/>cli, db, migrate, service"]
-            decisions_tool["decisions/ <i>(CLI)</i><br/>cli, db, migrate, render"]
             web_fetch_tool["web_fetch/ <i>(CLI)</i><br/>cli, fetch, convert"]
         end
         shared["llm.py + logging.py + ssl.py <i>(shared)</i>"]
@@ -64,7 +62,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 |--------|------|-------------|
 | `id` | INTEGER PK | Auto-incrementing identifier |
 | `content` | TEXT | The memory content |
-| `entry_type` | TEXT | fact, preference, event, insight, task, relationship |
+| `entry_type` | TEXT | fact, preference, event, decision, insight, task, relationship |
 | `importance` | INTEGER | 1-10 scale (default 5) |
 | `memory_class` | TEXT | episodic or semantic (controls decay rate) |
 | `scope` | TEXT | `global`, `project`, or `branch` (default `global`) |
@@ -83,7 +81,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 **Entry type to memory class mapping:**
 
 - **Episodic** (fast decay, 3-day half-life): `event`, `task`
-- **Semantic** (slow decay, 90-day half-life): `fact`, `preference`, `insight`, `relationship`
+- **Semantic** (slow decay, 90-day half-life): `fact`, `preference`, `decision`, `insight`, `relationship`
 
 **FTS5 virtual table: `memory_entries_fts`**
 - Full-text search with BM25 ranking
@@ -166,12 +164,13 @@ score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 
 ### Deduplication
 
-Before storing a new memory, the writer checks for near-duplicates:
+Before storing a new memory, the writer checks for near-duplicates (scoped to the
+new entry's project) using two complementary measures:
 
 1. Extract first 8 significant words (length > 2) from new content
-2. Query FTS5 for candidate matches (up to 20)
-3. Compare each candidate using `SequenceMatcher`
-4. If similarity >= 0.90: update existing entry's timestamp and keep max importance
+2. Gather candidates from **both** FTS5 keyword search and vector similarity search
+3. Compare each candidate two ways: `SequenceMatcher` string similarity and vector cosine similarity
+4. If string similarity ≥ `dedup-string-threshold` (default 0.85) **or** cosine similarity ≥ `dedup-vector-threshold` (default 0.92): treat as a duplicate — update the existing entry's timestamp and keep max importance
 5. If no match: insert as new entry
 
 ### Data Flow
@@ -179,8 +178,8 @@ Before storing a new memory, the writer checks for near-duplicates:
 ```mermaid
 flowchart TD
     A["store_memory()"] --> B["find_duplicate()"]
-    B --> C["FTS5 candidates"]
-    C --> D["SequenceMatcher<br/>similarity >= 0.90?"]
+    B --> C["FTS5 + vector candidates"]
+    C --> D["string sim >= 0.85<br/>OR cosine >= 0.92?"]
     D -->|Yes| E["UPDATE timestamp"]
     D -->|No| F["INSERT new entry"]
     F --> G["embed_text()<br/><i>configured provider</i>"]
@@ -315,7 +314,7 @@ The board TUI is **on-demand and foreground** — it is launched explicitly, run
 
 ## Inbox Database
 
-The inbox database (`inbox.db`) backs a single frictionless quick-capture holding pen — a "capture now, sort later" store so a thought can be dumped without deciding upfront whether it is a task, a card, a decision, or a memory.
+The inbox database (`inbox.db`) backs a single frictionless quick-capture holding pen — a "capture now, sort later" store so a thought can be dumped without deciding upfront whether it is a board card or a memory.
 
 **Inbox table: `inbox_items`**
 
@@ -326,13 +325,13 @@ The inbox database (`inbox.db`) backs a single frictionless quick-capture holdin
 | `project` | TEXT | Capture-context project (a routing hint; nullable — the store is global) |
 | `created_at` | TEXT | Timestamp of capture |
 
-Unlike the board and tasks, the inbox is **global, not project-scoped** — `project` is only a hint to help triage route the item later.
+Unlike the board, the inbox is **global, not project-scoped** — `project` is only a hint to help triage route the item later.
 
 ## Inbox CLI Tool (`mc-tool-inbox`)
 
 A thin capture-and-drain CLI over `inbox.db`. `add "<text>"` captures an item (frictionless — no flags required), `list [--json]` shows the inbox oldest-first, `remove <id>` drains an item out, and `count` prints the item total (consumed by the session-start hook). Queries and mutations live in `src/mait_code/tools/inbox/service.py`, the presentation-agnostic layer mirroring the board's `cli`/`service`/`db` split.
 
-The intended lifecycle is **capture → triage → empty**: the `/triage` skill walks the captured items, proposes a destination for each (board card, task, decision, or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.
+The intended lifecycle is **capture → triage → empty**: the `/triage` skill walks the captured items, proposes a destination for each (board card or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.
 
 ## Reminders CLI Tool (`mc-tool-reminders`)
 
@@ -362,7 +361,7 @@ Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed
 
 | Hook | Trigger | Mode | Purpose |
 |------|---------|------|---------|
-| `session_start` | SessionStart | sync | Inject companion context (reminders, project tasks, board summary, inbox count) |
+| `session_start` | SessionStart | sync | Inject companion context (reminders, board summary, inbox count) |
 | `observe` | PreCompact | async | Extract observations before context compaction |
 | `observe` | SessionEnd | async | Final observation extraction |
 | `auto_format` | *not registered* | — | Placeholder package — entry point exists (`mc-hook-format`) but no settings.json registration and no implementation |
@@ -456,6 +455,7 @@ Current migrations:
 7. Recreate vec0 with 768 dimensions (default for local provider), add vec delete trigger
 8. Add `scope`, `project`, `branch` columns to `memory_entries`; rebuild FTS with new columns; add scope/project indexes
 9. Create `reflection_watermark` table for idempotent reflection
+10. Relabel extraction-sourced `insight` entries as `decision` (one-time; guarded to run only before reflection has ever run, so genuine reflection insights are never touched)
 
 Adding a new migration:
 
@@ -475,17 +475,16 @@ Adding a new migration:
 │   ├── observations/         # Raw JSONL session extractions
 │   │   ├── YYYY-MM-DD.jsonl
 │   │   └── cursors.json      # Byte offset tracking per transcript
-│   └── reflections/          # Synthesised insights
-│       └── YYYY-MM.md
+│   └── reflections/          # Reserved for synthesised insights (created on install)
 ├── models/                   # Cached embedding models (local provider only)
-├── logs/                     # Rotating log files
-│   ├── mait-code.log         # Current log
-│   ├── mait-code.log.1       # Rotated backups
-│   └── ...
 ├── reminders.db              # Reminder database
 ├── board.db                  # Cross-project kanban board database
 └── inbox.db                  # Quick-capture inbox database
 ```
+
+> Rotating log files do **not** live in the data directory — they go to the XDG
+> state dir (`~/.local/state/mait-code/mait-code.log` by default), configurable
+> via `MAIT_CODE_LOG_FILE`.
 
 ## Key Technical Decisions
 

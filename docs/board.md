@@ -244,7 +244,7 @@ can call directly. The same store backs both.
 
 ```bash
 # View
-mc-tool-board list [--all] [--status STATUS] [--archived] [--json]
+mc-tool-board list [--all] [--status STATUS] [--archived] [--search TEXT] [--json]
 mc-tool-board show ID [--json]
 mc-tool-board summary [--all] [--project PROJECT] [--json]
 

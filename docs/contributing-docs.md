@@ -26,12 +26,12 @@ uv run python docs/gen_ref_pages.py --check
 
 ## Prose docs (`docs/*.md`)
 
-The hand-authored pages under `docs/` populate seven tabs:
+The hand-authored pages under `docs/` populate six tabs:
 
 | Tab | What lives here |
 |-----|-----------------|
 | **Home** | `docs/README.md` — project intro, key features, quick start. |
-| **Guide** | Procedural how-to docs (`setup.md`, `sync.md`). |
+| **Guide** | Procedural how-to docs (`setup.md`, `board.md`, `sync.md`). |
 | **Concepts** | Conceptual prose (`philosophy.md`, `memory.md`). |
 | **Architecture** | System design (`architecture.md`). |
 | **Reference** | `docs/reference/skills.md` (hand-authored) plus the Python API pages under `docs/reference/{tools,hooks}/` (auto-generated — see below). |
@@ -66,9 +66,9 @@ To add a new prose page:
 
 ## API reference (`docs/reference/`)
 
-The Python API pages — `docs/reference/{context,llm,logging,ssl}.md` plus the nested `docs/reference/tools/*.md` and `docs/reference/hooks/*.md` — are **regenerated from each module's `__all__`** by `docs/gen_ref_pages.py`. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's `--check` invocation will flag the drift.
+The Python API pages — `docs/reference/{context,cli,config,llm,logging,ssl}.md` plus the nested `docs/reference/tools/*.md` and `docs/reference/hooks/*.md` — are **regenerated from each module's `__all__`** by `docs/gen_ref_pages.py`. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's `--check` invocation will flag the drift.
 
-`docs/reference/skills.md` is the only **hand-authored** file under `docs/reference/`. Edit it directly when adding or renaming a slash command.
+`docs/reference/skills.md` and `docs/reference/mait-code.md` (the `mait-code` CLI command reference) are the only **hand-authored** files under `docs/reference/`. Edit them directly — `skills.md` when adding or renaming a slash command, `mait-code.md` when changing a CLI command. (Note the deliberate split: `reference/cli.md` is the *generated* `mait_code.cli` Python API, while `reference/mait-code.md` is the hand-authored command reference.)
 
 The nested layout mirrors the dotted module hierarchy: `mait_code.tools.memory` lives at `docs/reference/tools/memory.md` and renders at `/reference/tools/memory/`.
 

@@ -67,6 +67,7 @@ uv run mkdocs build --strict                        # CI-equivalent build
 
 ```
 src/mait_code/
+├── config.py        # Settings registry (all MAIT_CODE_* knobs, resolution order)
 ├── context.py       # Project/branch detection (get_context, get_project)
 ├── llm.py           # Shared LLM invocation (call_claude)
 ├── logging.py       # Shared logging (setup_logging, @log_invocation)
@@ -74,7 +75,7 @@ src/mait_code/
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
 ├── cli/             # The `mait-code` CLI + Textual TUIs (board, settings)
 ├── tui/             # Shared TUI layer: house theme, palette, base MaitApp
-└── tools/           # CLI tools (memory, reminders, tasks, decisions, web_fetch)
+└── tools/           # CLI tools (memory, reminders, board, inbox, web_fetch)
 config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh
