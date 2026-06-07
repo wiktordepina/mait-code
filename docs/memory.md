@@ -346,6 +346,25 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `--scope global\|project\|branch` | Filter (or set, on `store`) to a specific scope |
 | `--scope all` | Query-time: disable scope filtering entirely |
 
+### Memory browser (`mait-code memory`)
+
+Open the interactive, read-only memory browser with:
+
+```bash
+mait-code memory
+```
+
+This is a full-screen [Textual](https://textual.textualize.io/) app over the
+same store: a tree of memories grouped by entry type on the left (newest
+first, counts per group), and the selected memory's body — rendered as
+markdown — with its metadata (created, importance, scope, class) on the
+right. `/` filters the list live by substring, `r` re-reads the store, and
+`?` shows the key cheat-sheet. It browses *everything*, across projects and
+scopes — the reading companion to `mc-tool-memory`'s query verbs.
+
+When you're not on a terminal that supports it (e.g. piping output, or in
+CI), `mait-code memory` falls back to a read-only grouped summary.
+
 ### Skills
 
 | Skill | Usage |

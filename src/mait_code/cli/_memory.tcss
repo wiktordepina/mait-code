@@ -1,0 +1,51 @@
+/* Memory browser layout. The house theme and the shared styling come from
+ * tui/app.tcss; only memory-browser-specific layout lives here. */
+
+#body {
+    height: 1fr;
+}
+
+#nav {
+    width: 1fr;
+    border-right: solid $panel;
+    padding: 0 1;
+}
+
+#filter {
+    margin-bottom: 1;
+}
+
+#list {
+    height: 1fr;
+}
+
+/* Group rows read as section headers; leaves inherit the theme. */
+#list > .tree--guides,
+#list > .tree--guides-hover,
+#list > .tree--guides-selected {
+    color: $panel;
+}
+
+/* The detail pane gets the wider share: it renders whole memory bodies. */
+#detail {
+    width: 2fr;
+    padding: 1 2;
+}
+
+#detail .title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+#detail .help {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+/* The Markdown widget ships its own background/margins tuned for full-screen
+ * documents; flatten them so the body sits on the pane like the metadata. */
+#detail Markdown {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}

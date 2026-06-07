@@ -282,8 +282,9 @@ def mem_db(tmp_path):
    `SystemCommand`s after `yield from super().get_system_commands(screen)`.
 6. Add a snapshot test (see "Snapshot tests" above).
 
-The two shipped surfaces are worked examples: `cli/_board_tui.py` (the board) and
-`cli/_settings_tui.py` (the settings editor, a master–detail tree). Theme
+The three shipped surfaces are worked examples: `cli/_board_tui.py` (the board),
+`cli/_settings_tui.py` (the settings editor, a master–detail tree), and
+`cli/_memory_tui.py` (the memory browser, a read-only master–detail). Theme
 persistence is free — `MaitApp.on_unmount` writes the active theme back to the
 `theme` setting for every surface, so a user's pick survives across sessions.
 
