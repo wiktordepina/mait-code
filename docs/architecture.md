@@ -234,8 +234,13 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 | `reindex` | — | Recompute vector embeddings for all entries |
 | `restore` | --dry-run? | Restore memory database from observation JSONL log files, then reindex |
 | `reflect` | --days?, --min-new?, --batch-size?, --drain?, --project?, --branch?, --scope? | Synthesise observations into insights, propose MEMORY.md updates |
+| `canonicalize-projects` | --dry-run? | Rewrite stored project slugs per the project-alias map |
 
 Scope flags apply to every command that touches `memory_entries`: `--project` and `--branch` override the auto-detected context; `--scope` filters or sets the entry scope (`global`, `project`, `branch`, or `all` — the last disables filtering at query time).
+
+## Memory Browser TUI (`mait-code memory`)
+
+`mait-code memory` opens a full-screen, read-only master–detail browser over the memory store: a tree of memories grouped by entry type on the left (counts per group, newest first), the selected memory's body — rendered as markdown, plain text being a subset — plus its metadata (created, importance, scope, class) on the right. `/` focuses a live substring filter (groups expand to the matches, the subtitle reports the narrowed count), `r` re-reads the store, a `Ctrl+P` command palette exposes the actions, and `?` opens the context help screen. It deliberately browses *everything* — across projects and scopes — and performs no mutations: reading is its whole job, and writes stay with `mc-tool-memory`. It is built on Textual over the same query layer as the CLI tool (`search.list_entries`), following the house TUI conventions: a TTY-gated launch (piped or redirected, it prints a grouped read-only summary instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.
 
 ## Board Database
 

@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.44.0] — 2026-06-07
+
+### Added
+
+- **`mait-code memory` — a read-only memory browser TUI.** A third Textual
+  surface alongside the board and the settings editor: a master–detail browser
+  over the memory store, with memories grouped by entry type (counts per
+  group, newest first), the selected memory's body rendered as markdown with
+  its metadata, and a live substring filter (`/`). It browses everything —
+  across projects and scopes — and performs no mutations. Off a TTY the
+  command falls back to a read-only grouped summary. The shared body-markdown
+  parser (single newlines kept as line breaks) moved from the board into
+  `mait_code.tui.markdown`, where both surfaces now use it.
+
 ## [0.43.0] — 2026-06-04
 
 ### Removed
@@ -1289,7 +1303,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.43.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.44.0...HEAD
+[0.44.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.44.0
 [0.43.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.43.0
 [0.42.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.42.0
 [0.41.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.41.0

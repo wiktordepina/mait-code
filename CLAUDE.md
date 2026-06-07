@@ -73,7 +73,7 @@ src/mait_code/
 ├── logging.py       # Shared logging (setup_logging, @log_invocation)
 ├── ssl.py           # OS trust store injection (setup_ssl, for corporate proxies)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
-├── cli/             # The `mait-code` CLI + Textual TUIs (board, settings)
+├── cli/             # The `mait-code` CLI + Textual TUIs (board, settings, memory)
 ├── tui/             # Shared TUI layer: house theme, palette, base MaitApp
 └── tools/           # CLI tools (memory, reminders, board, inbox, web_fetch)
 config/              # CLAUDE.md and settings.json templates

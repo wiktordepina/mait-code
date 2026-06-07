@@ -660,6 +660,44 @@ def _board_render() -> None:
         typer.echo("")
 
 
+@app.command("memory")
+def memory() -> None:
+    """Browse stored memories read-only (grouped summary when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._memory_tui import run_memory_tui
+
+        run_memory_tui()
+    else:
+        _memory_render()
+
+
+def _memory_render() -> None:
+    """Print the store as a grouped summary (the non-TTY fallback)."""
+    from mait_code.tools.memory.db import connection
+    from mait_code.tools.memory.search import list_entries
+
+    with connection() as conn:
+        entries = list_entries(conn, limit=100_000)
+
+    if not entries:
+        typer.echo("No memories stored yet.")
+        return
+
+    by_type: dict[str, list[dict]] = {}
+    for entry in entries:
+        by_type.setdefault(entry["entry_type"], []).append(entry)
+
+    for entry_type in sorted(by_type, key=lambda t: -len(by_type[t])):
+        group = by_type[entry_type]
+        typer.echo(f"{entry_type} ({len(group)}):")
+        for entry in group[:5]:
+            first_line = entry["content"].strip().splitlines()[0]
+            typer.echo(f"  [#{entry['id']}] {entry['created_at'][:10]} {first_line}")
+        if len(group) > 5:
+            typer.echo(f"  … and {len(group) - 5} more")
+        typer.echo("")
+
+
 def main() -> None:
     """Console-script entry point declared in ``pyproject.toml``."""
     app()
