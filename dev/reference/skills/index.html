@@ -1020,28 +1020,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#task" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        /task
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        /tasks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#board" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1428,8 +1406,6 @@
       
         
       
-        
-      
     
     
     
@@ -1518,34 +1494,6 @@
     
   
     Reminders
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tools/tasks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tasks
   
 
     
@@ -2044,28 +1992,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#task" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        /task
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        /tasks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#board" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2228,18 +2154,6 @@
 <td><strong>Implemented</strong></td>
 </tr>
 <tr>
-<td>Task</td>
-<td><code>/task [--priority high\|medium\|low] &lt;title&gt;</code></td>
-<td>Add a task for the current project</td>
-<td><strong>Implemented</strong></td>
-</tr>
-<tr>
-<td>Tasks</td>
-<td><code>/tasks</code></td>
-<td>Show open tasks for the current project</td>
-<td><strong>Implemented</strong></td>
-</tr>
-<tr>
 <td>Board</td>
 <td><code>/board</code></td>
 <td>View and drive the project kanban board</td>
@@ -2248,7 +2162,7 @@
 <tr>
 <td>Triage</td>
 <td><code>/triage</code></td>
-<td>Route quick-capture inbox items to board, tasks, or memory</td>
+<td>Route quick-capture inbox items to the board or memory</td>
 <td><strong>Implemented</strong></td>
 </tr>
 <tr>
@@ -2329,34 +2243,10 @@
 <li>Presents active and overdue reminders</li>
 <li>Supports dismissing reminders via <code>mc-tool-reminders dismiss &lt;id&gt;</code></li>
 </ol>
-<h3 id="task">/task<a class="headerlink" href="#task" title="Permanent link">&para;</a></h3>
-<p>Add a task for the current project. Model-invocable — Claude can proactively suggest tasks during a session, but always asks for confirmation before adding.</p>
-<p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/task Fix login page CSS
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>/task --priority high Fix auth race condition
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>/task --priority low Update README with new API docs
-</span></code></pre></div></p>
-<p><strong>How it works:</strong></p>
-<ol>
-<li>Parses the title and optional <code>--priority</code> flag</li>
-<li>Stores via <code>mc-tool-tasks add [--priority &lt;priority&gt;] &lt;title&gt;</code></li>
-<li>Tasks are scoped to the current project (git root basename or cwd basename)</li>
-</ol>
-<h3 id="tasks">/tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h3>
-<p>Show open tasks for the current project.</p>
-<p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/tasks                        # Show open tasks
-</span></code></pre></div></p>
-<p><strong>How it works:</strong></p>
-<ol>
-<li>Preprocesses results via <code>mc-tool-tasks list</code> (injected before Claude sees the skill)</li>
-<li>Presents open tasks sorted by priority (high → medium → low)</li>
-<li>Supports completing tasks via <code>mc-tool-tasks done &lt;id&gt;</code> or removing via <code>mc-tool-tasks remove &lt;id&gt;</code></li>
-</ol>
 <h3 id="board">/board<a class="headerlink" href="#board" title="Permanent link">&para;</a></h3>
 <p>View and drive the manually-driven kanban board for the current project. Claude acts as the worker — there is no autonomous dispatcher.</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/board                                  # Show the board, then act on requests
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/board                                  # Show the board, then act on requests
 </span></code></pre></div></p>
 <p><strong>How it works:</strong></p>
 <ol>
@@ -2371,13 +2261,13 @@
 <h3 id="triage">/triage<a class="headerlink" href="#triage" title="Permanent link">&para;</a></h3>
 <p>Drain the quick-capture inbox by routing each captured item to where it belongs. Suggestion-based — Claude proposes a destination per item; the user decides.</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>/triage                                 # Walk the inbox, route each item out
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/triage                                 # Walk the inbox, route each item out
 </span></code></pre></div></p>
 <p><strong>How it works:</strong></p>
 <ol>
 <li>Preprocesses the current inbox via <code>mc-tool-inbox list</code> (injected before Claude sees the skill)</li>
 <li>For each item, proposes the best destination and, on confirmation, creates it there:</li>
-<li>Board card → <code>mc-tool-board add ...</code> · Task → <code>mc-tool-tasks add ...</code></li>
+<li>Board card → <code>mc-tool-board add ...</code></li>
 <li>Memory → <code>/remember</code></li>
 <li>After an item lands in its destination, drains it with <code>mc-tool-inbox remove &lt;id&gt;</code> so the inbox stays near-empty</li>
 <li>Never routes or removes an item without the user's confirmation</li>
@@ -2385,7 +2275,7 @@
 <h3 id="commit">/commit<a class="headerlink" href="#commit" title="Permanent link">&para;</a></h3>
 <p>Detect changes, generate a conventional commit message, confirm with user, and commit.</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>/commit                          # Analyse changes and propose a commit
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/commit                          # Analyse changes and propose a commit
 </span></code></pre></div></p>
 <p><strong>How it works:</strong></p>
 <ol>
@@ -2397,8 +2287,8 @@
 <h3 id="web-fetch">/web-fetch<a class="headerlink" href="#web-fetch" title="Permanent link">&para;</a></h3>
 <p>Fetch web page content directly from the local machine, bypassing the claude.ai proxy. Works behind corporate firewalls and proxies.</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>/web-fetch https://example.com              # Fetch and convert to markdown
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>/web-fetch https://api.example.com/data     # Fetch JSON, pretty-printed
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>/web-fetch https://example.com              # Fetch and convert to markdown
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>/web-fetch https://api.example.com/data     # Fetch JSON, pretty-printed
 </span></code></pre></div></p>
 <p><strong>How it works:</strong></p>
 <ol>
@@ -2414,46 +2304,42 @@
 </ul>
 <h2 id="skill-architecture">Skill Architecture<a class="headerlink" href="#skill-architecture" title="Permanent link">&para;</a></h2>
 <p>Each skill is a directory in <code>skills/</code> containing:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>skills/
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>├── recall/
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>│   └── SKILL.md     # Search memory
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>├── remember/
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>│   └── SKILL.md     # Store memory (manual)
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>├── memory-store/
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>│   └── SKILL.md     # Store memory (auto-invoked by Claude)
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>├── reflect/
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>│   └── SKILL.md     # Synthesise observations into insights
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>├── remind/
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>│   └── SKILL.md     # Set a reminder
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>├── reminders/
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>│   └── SKILL.md     # Show reminders
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>├── task/
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>│   └── SKILL.md     # Add a project task
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>├── tasks/
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>│   └── SKILL.md     # Show project tasks
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>├── board/
-</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>│   └── SKILL.md     # View and drive the kanban board
-</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>├── triage/
-</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>│   └── SKILL.md     # Route the quick-capture inbox to board/task/memory
-</span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>├── commit/
-</span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>│   └── SKILL.md     # Smart commit with conventional message
-</span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>└── web-fetch/
-</span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>    └── SKILL.md     # Fetch web page content (bypasses claude.ai proxy)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>skills/
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── recall/
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>│   └── SKILL.md     # Search memory
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>├── remember/
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>│   └── SKILL.md     # Store memory (manual)
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>├── memory-store/
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>│   └── SKILL.md     # Store memory (auto-invoked by Claude)
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>├── reflect/
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>│   └── SKILL.md     # Synthesise observations into insights
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>├── remind/
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>│   └── SKILL.md     # Set a reminder
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>├── reminders/
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>│   └── SKILL.md     # Show reminders
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>├── board/
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>│   └── SKILL.md     # View and drive the kanban board
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>├── triage/
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>│   └── SKILL.md     # Route the quick-capture inbox to the board or memory
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>├── commit/
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>│   └── SKILL.md     # Smart commit with conventional message
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>└── web-fetch/
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    └── SKILL.md     # Fetch web page content (bypasses claude.ai proxy)
 </span></code></pre></div>
 <p>Skills are symlinked into <code>~/.claude/skills/</code> by <code>install.sh</code> and loaded by Claude Code automatically.</p>
 <h3 id="skill-definition-format">Skill Definition Format<a class="headerlink" href="#skill-definition-format" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nn">---</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skill-name</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What the skill does</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nt">argument-hint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;args&gt;&quot;</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nt">user-invocable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="nt">allowed-tools</span><span class="p">:</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mcp__server-name__tool_name</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="nn">---</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1"># /skill-name</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="l l-Scalar l-Scalar-Plain">Instructions for Claude when this skill is invoked.</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nn">---</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skill-name</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What the skill does</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nt">argument-hint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;args&gt;&quot;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="nt">user-invocable</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="nt">allowed-tools</span><span class="p">:</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mcp__server-name__tool_name</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="nn">---</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="c1"># /skill-name</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="l l-Scalar l-Scalar-Plain">Instructions for Claude when this skill is invoked.</span>
 </span></code></pre></div>
 <p>Key fields:</p>
 <ul>

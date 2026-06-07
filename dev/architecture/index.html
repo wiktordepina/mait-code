@@ -985,28 +985,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tasks-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks Database
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tasks-cli-tool-mc-tool-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks CLI Tool (mc-tool-tasks)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#board-database" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1562,8 +1540,6 @@
       
         
       
-        
-      
     
     
     
@@ -1652,34 +1628,6 @@
     
   
     Reminders
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/tasks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tasks
   
 
     
@@ -2238,28 +2186,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tasks-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks Database
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tasks-cli-tool-mc-tool-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks CLI Tool (mc-tool-tasks)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#board-database" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2453,7 +2379,7 @@
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md&lt;br/&gt;&lt;i&gt;identity + rules&lt;/i&gt;&lt;br/&gt;@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks&lt;br/&gt;SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills&lt;br/&gt;/recall, /remember, /reflect, memory-store&lt;br/&gt;/remind, /reminders, /task, /tasks&lt;br/&gt;/board, /triage&lt;br/&gt;/commit&lt;br/&gt;/web-fetch"]
+        SKILLS["Skills&lt;br/&gt;/recall, /remember, /reflect, memory-store&lt;br/&gt;/remind, /reminders&lt;br/&gt;/board, /triage&lt;br/&gt;/commit&lt;br/&gt;/web-fetch"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -2465,10 +2391,8 @@
         subgraph tools_pkg ["tools/"]
             memory_tool["memory/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, writer&lt;br/&gt;search, scoring, entities&lt;br/&gt;embeddings, reflect"]
             reminders_tool["reminders/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate"]
-            tasks_tool["tasks/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate"]
             board_tool["board/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, columns, service"]
             inbox_tool["inbox/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, service"]
-            decisions_tool["decisions/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, render"]
             web_fetch_tool["web_fetch/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, fetch, convert"]
         end
         shared["llm.py + logging.py + ssl.py &lt;i&gt;(shared)&lt;/i&gt;"]
@@ -2477,7 +2401,7 @@
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md&lt;br/&gt;user_context.md"]
         memory_store["memory/&lt;br/&gt;MEMORY.md &lt;i&gt;(curated)&lt;/i&gt;&lt;br/&gt;memory.db &lt;i&gt;(SQLite)&lt;/i&gt;&lt;br/&gt;observations/ &lt;i&gt;(raw JSONL)&lt;/i&gt;&lt;br/&gt;reflections/ &lt;i&gt;(synthesised)&lt;/i&gt;"]
-        other_dbs["reminders.db&lt;br/&gt;tasks.db&lt;br/&gt;board.db&lt;br/&gt;inbox.db&lt;br/&gt;decisions.db"]
+        other_dbs["reminders.db&lt;br/&gt;board.db&lt;br/&gt;inbox.db"]
     end
 
     HOOKS --&gt; mait_code
@@ -2511,7 +2435,7 @@
 <tr>
 <td><code>entry_type</code></td>
 <td>TEXT</td>
-<td>fact, preference, event, insight, task, relationship</td>
+<td>fact, preference, event, decision, insight, task, relationship</td>
 </tr>
 <tr>
 <td><code>importance</code></td>
@@ -2556,7 +2480,7 @@
 <p><strong>Entry type to memory class mapping:</strong></p>
 <ul>
 <li><strong>Episodic</strong> (fast decay, 3-day half-life): <code>event</code>, <code>task</code></li>
-<li><strong>Semantic</strong> (slow decay, 90-day half-life): <code>fact</code>, <code>preference</code>, <code>insight</code>, <code>relationship</code></li>
+<li><strong>Semantic</strong> (slow decay, 90-day half-life): <code>fact</code>, <code>preference</code>, <code>decision</code>, <code>insight</code>, <code>relationship</code></li>
 </ul>
 <p><strong>FTS5 virtual table: <code>memory_entries_fts</code></strong>
 - Full-text search with BM25 ranking
@@ -2695,19 +2619,20 @@
 <li><strong>Vector mode</strong>: semantic similarity only via the configured embedding provider</li>
 </ul>
 <h3 id="deduplication">Deduplication<a class="headerlink" href="#deduplication" title="Permanent link">&para;</a></h3>
-<p>Before storing a new memory, the writer checks for near-duplicates:</p>
+<p>Before storing a new memory, the writer checks for near-duplicates (scoped to the
+new entry's project) using two complementary measures:</p>
 <ol>
 <li>Extract first 8 significant words (length &gt; 2) from new content</li>
-<li>Query FTS5 for candidate matches (up to 20)</li>
-<li>Compare each candidate using <code>SequenceMatcher</code></li>
-<li>If similarity &gt;= 0.90: update existing entry's timestamp and keep max importance</li>
+<li>Gather candidates from <strong>both</strong> FTS5 keyword search and vector similarity search</li>
+<li>Compare each candidate two ways: <code>SequenceMatcher</code> string similarity and vector cosine similarity</li>
+<li>If string similarity ≥ <code>dedup-string-threshold</code> (default 0.85) <strong>or</strong> cosine similarity ≥ <code>dedup-vector-threshold</code> (default 0.92): treat as a duplicate — update the existing entry's timestamp and keep max importance</li>
 <li>If no match: insert as new entry</li>
 </ol>
 <h3 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>flowchart TD
     A["store_memory()"] --&gt; B["find_duplicate()"]
-    B --&gt; C["FTS5 candidates"]
-    C --&gt; D["SequenceMatcher&lt;br/&gt;similarity &gt;= 0.90?"]
+    B --&gt; C["FTS5 + vector candidates"]
+    C --&gt; D["string sim &gt;= 0.85&lt;br/&gt;OR cosine &gt;= 0.92?"]
     D --&gt;|Yes| E["UPDATE timestamp"]
     D --&gt;|No| F["INSERT new entry"]
     F --&gt; G["embed_text()&lt;br/&gt;&lt;i&gt;configured provider&lt;/i&gt;"]
@@ -2808,99 +2733,6 @@
 </tbody>
 </table>
 <p>Scope flags apply to every command that touches <code>memory_entries</code>: <code>--project</code> and <code>--branch</code> override the auto-detected context; <code>--scope</code> filters or sets the entry scope (<code>global</code>, <code>project</code>, <code>branch</code>, or <code>all</code> — the last disables filtering at query time).</p>
-<h2 id="tasks-database">Tasks Database<a class="headerlink" href="#tasks-database" title="Permanent link">&para;</a></h2>
-<p>The tasks database (<code>tasks.db</code>) stores per-project tasks.</p>
-<p><strong>Tasks table: <code>tasks</code></strong></p>
-<table>
-<thead>
-<tr>
-<th>Column</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>id</code></td>
-<td>INTEGER PK</td>
-<td>Auto-incrementing identifier</td>
-</tr>
-<tr>
-<td><code>project</code></td>
-<td>TEXT</td>
-<td>Project identifier (basename of git root or cwd)</td>
-</tr>
-<tr>
-<td><code>title</code></td>
-<td>TEXT</td>
-<td>Task description</td>
-</tr>
-<tr>
-<td><code>priority</code></td>
-<td>TEXT</td>
-<td><code>low</code>, <code>medium</code>, or <code>high</code> (default: <code>medium</code>)</td>
-</tr>
-<tr>
-<td><code>status</code></td>
-<td>TEXT</td>
-<td><code>open</code> or <code>done</code> (default: <code>open</code>)</td>
-</tr>
-<tr>
-<td><code>created_at</code></td>
-<td>DATETIME</td>
-<td>Timestamp of creation</td>
-</tr>
-<tr>
-<td><code>completed_at</code></td>
-<td>DATETIME</td>
-<td>Timestamp of completion (null if open)</td>
-</tr>
-</tbody>
-</table>
-<p>Project detection uses <code>mait_code.context.get_project()</code> — the basename of the git root or current working directory.</p>
-<h2 id="tasks-cli-tool-mc-tool-tasks">Tasks CLI Tool (<code>mc-tool-tasks</code>)<a class="headerlink" href="#tasks-cli-tool-mc-tool-tasks" title="Permanent link">&para;</a></h2>
-<p>Per-project task tracking. Tasks are scoped by the basename of the git root (or cwd for non-git directories), stored in a shared <code>tasks.db</code>.</p>
-<table>
-<thead>
-<tr>
-<th>Subcommand</th>
-<th>Args</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>add</code></td>
-<td>title, --priority?</td>
-<td>Add a task (low/medium/high, default: medium)</td>
-</tr>
-<tr>
-<td><code>list</code></td>
-<td>--all?</td>
-<td>List open tasks (or all including completed)</td>
-</tr>
-<tr>
-<td><code>done</code></td>
-<td>id</td>
-<td>Mark a task as completed</td>
-</tr>
-<tr>
-<td><code>remove</code></td>
-<td>id</td>
-<td>Remove a task</td>
-</tr>
-<tr>
-<td><code>check</code></td>
-<td>--project?</td>
-<td>List open tasks for current project (used by session_start hook)</td>
-</tr>
-<tr>
-<td><code>list-all</code></td>
-<td>—</td>
-<td>List open tasks across all projects</td>
-</tr>
-</tbody>
-</table>
 <h2 id="board-database">Board Database<a class="headerlink" href="#board-database" title="Permanent link">&para;</a></h2>
 <p>The board database (<code>board.db</code>) stores a single cross-project kanban board. Cards carry a <code>project</code> field — so one board serves every project and UIs filter by it — and move through a fixed, hardcoded column workflow.</p>
 <p><strong>Cards table: <code>cards</code></strong></p>
@@ -3144,7 +2976,7 @@
 <p><code>mait-code board</code> opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a <code>p</code> project-filter dropdown, arrow-key navigation, <code>&lt;</code>/<code>&gt;</code> to move a card along the flow (<code>backlog → refined → in_progress → done</code>), <code>t</code> to toggle a tag and <code>b</code>/<code>u</code> to tag/untag <code>blocked</code> in place, plus a near-fullscreen card screen (<code>Enter</code>) that shows the card with its comment thread and flips to an edit form in place with <code>e</code>. That form is the single place a card is changed: title, priority, <strong>status</strong>, <strong>tags</strong>, <strong>references</strong>, description and acceptance criteria all on one form. Tags, references and status are a working copy — Save applies them together and returns to the view; cancel discards every pending change. Block/unblock stay outside the form (they carry a reason comment a plain tag can't), so the form's tag editor leaves <code>blocked</code> alone. <code>n</code> creates a card, <code>C</code> completes one with a handoff summary, and <code>c</code> comments. The card screen carries a References section — a list of label→value links, clickable where the value is a URL or <code>file://</code> path. Priority and tags render as domain-coloured chips on the card rows (<code>blocked</code> distinct in the error colour). A <code>Ctrl+P</code> command palette exposes every action, <code>?</code> opens a context help screen built from the live key-bindings, number keys jump between columns, and actions raise toasts. It is built on Textual and reuses the board <code>service.py</code>, mirroring the <code>mait-code settings</code> editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
 <p>The board TUI is <strong>on-demand and foreground</strong> — it is launched explicitly, runs until you quit with <code>q</code>, and leaves nothing behind. The <em>No background services</em> principle is intact: there is no daemon polling the board, only a short-lived app you open when you want to see it.</p>
 <h2 id="inbox-database">Inbox Database<a class="headerlink" href="#inbox-database" title="Permanent link">&para;</a></h2>
-<p>The inbox database (<code>inbox.db</code>) backs a single frictionless quick-capture holding pen — a "capture now, sort later" store so a thought can be dumped without deciding upfront whether it is a task, a card, a decision, or a memory.</p>
+<p>The inbox database (<code>inbox.db</code>) backs a single frictionless quick-capture holding pen — a "capture now, sort later" store so a thought can be dumped without deciding upfront whether it is a board card or a memory.</p>
 <p><strong>Inbox table: <code>inbox_items</code></strong></p>
 <table>
 <thead>
@@ -3177,10 +3009,10 @@
 </tr>
 </tbody>
 </table>
-<p>Unlike the board and tasks, the inbox is <strong>global, not project-scoped</strong> — <code>project</code> is only a hint to help triage route the item later.</p>
+<p>Unlike the board, the inbox is <strong>global, not project-scoped</strong> — <code>project</code> is only a hint to help triage route the item later.</p>
 <h2 id="inbox-cli-tool-mc-tool-inbox">Inbox CLI Tool (<code>mc-tool-inbox</code>)<a class="headerlink" href="#inbox-cli-tool-mc-tool-inbox" title="Permanent link">&para;</a></h2>
 <p>A thin capture-and-drain CLI over <code>inbox.db</code>. <code>add "&lt;text&gt;"</code> captures an item (frictionless — no flags required), <code>list [--json]</code> shows the inbox oldest-first, <code>remove &lt;id&gt;</code> drains an item out, and <code>count</code> prints the item total (consumed by the session-start hook). Queries and mutations live in <code>src/mait_code/tools/inbox/service.py</code>, the presentation-agnostic layer mirroring the board's <code>cli</code>/<code>service</code>/<code>db</code> split.</p>
-<p>The intended lifecycle is <strong>capture → triage → empty</strong>: the <code>/triage</code> skill walks the captured items, proposes a destination for each (board card, task, decision, or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.</p>
+<p>The intended lifecycle is <strong>capture → triage → empty</strong>: the <code>/triage</code> skill walks the captured items, proposes a destination for each (board card or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.</p>
 <h2 id="reminders-cli-tool-mc-tool-reminders">Reminders CLI Tool (<code>mc-tool-reminders</code>)<a class="headerlink" href="#reminders-cli-tool-mc-tool-reminders" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3272,7 +3104,7 @@
 <td><code>session_start</code></td>
 <td>SessionStart</td>
 <td>sync</td>
-<td>Inject companion context (reminders, project tasks, board summary, inbox count)</td>
+<td>Inject companion context (reminders, board summary, inbox count)</td>
 </tr>
 <tr>
 <td><code>observe</code></td>
@@ -3440,6 +3272,7 @@
 <li>Recreate vec0 with 768 dimensions (default for local provider), add vec delete trigger</li>
 <li>Add <code>scope</code>, <code>project</code>, <code>branch</code> columns to <code>memory_entries</code>; rebuild FTS with new columns; add scope/project indexes</li>
 <li>Create <code>reflection_watermark</code> table for idempotent reflection</li>
+<li>Relabel extraction-sourced <code>insight</code> entries as <code>decision</code> (one-time; guarded to run only before reflection has ever run, so genuine reflection insights are never touched)</li>
 </ol>
 <p>Adding a new migration:</p>
 <ol>
@@ -3457,19 +3290,17 @@
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── observations/         # Raw JSONL session extractions
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   │   ├── YYYY-MM-DD.jsonl
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   └── reflections/          # Synthesised insights
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│       └── YYYY-MM.md
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── models/                   # Cached embedding models (local provider only)
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── logs/                     # Rotating log files
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>│   ├── mait-code.log         # Current log
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>│   ├── mait-code.log.1       # Rotated backups
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>│   └── ...
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>├── reminders.db              # Reminder database
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>├── tasks.db                  # Per-project tasks database
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>├── board.db                  # Cross-project kanban board database
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>├── inbox.db                  # Quick-capture inbox database
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>└── decisions.db              # Decision records database
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   └── reflections/          # Reserved for synthesised insights (created on install)
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>├── models/                   # Cached embedding models (local provider only)
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── reminders.db              # Reminder database
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── board.db                  # Cross-project kanban board database
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>└── inbox.db                  # Quick-capture inbox database
 </span></code></pre></div>
+<blockquote>
+<p>Rotating log files do <strong>not</strong> live in the data directory — they go to the XDG
+state dir (<code>~/.local/state/mait-code/mait-code.log</code> by default), configurable
+via <code>MAIT_CODE_LOG_FILE</code>.</p>
+</blockquote>
 <h2 id="key-technical-decisions">Key Technical Decisions<a class="headerlink" href="#key-technical-decisions" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

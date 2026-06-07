@@ -1398,8 +1398,6 @@
       
         
       
-        
-      
     
     
     
@@ -1488,34 +1486,6 @@
     
   
     Reminders
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/tasks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tasks
   
 
     
@@ -2117,14 +2087,34 @@
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>init
 </span></code></pre></div>
 <h3 id="gitignore">.gitignore<a class="headerlink" href="#gitignore" title="Permanent link">&para;</a></h3>
+<p>Not every database should be synced. <code>memory.db</code> is <strong>regenerable</strong> — the JSONL
+observation logs under <code>memory/observations/</code> are its source of truth, so it is
+gitignored and rebuilt with <code>mc-tool-memory restore</code> after a pull. The other
+databases (<code>board.db</code>, <code>reminders.db</code>, <code>inbox.db</code>) have <strong>no such source</strong>, so
+they are committed directly — gitignoring them would silently lose your board,
+reminders, and inbox on every other machine.</p>
 <p>Create <code>~/.claude/mait-code-data/.gitignore</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># Binary databases — rebuilt from markdown sources
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>*.db
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>*.db-journal
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a># Temporary files
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>*.tmp
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># Regenerable from the observation logs (mc-tool-memory restore) — don&#39;t sync.
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>memory.db
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a># SQLite sidecar files (WAL mode) — never sync these.
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>*.db-wal
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>*.db-shm
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>*.db-journal
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a># Cached embedding models (large; re-downloaded on demand)
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>models/
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a># Temporary files
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>*.tmp
 </span></code></pre></div>
+<blockquote>
+<p><code>board.db</code>, <code>reminders.db</code>, and <code>inbox.db</code> are deliberately <strong>not</strong> ignored.
+They are small and have no source to rebuild from, so they travel with the
+repo. As SQLite binaries they don't merge cleanly — for a single user across
+machines the practical rule is to push from the machine you just worked on and
+pull before starting on another.</p>
+</blockquote>
 <h3 id="initial-commit">Initial commit<a class="headerlink" href="#initial-commit" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>add<span class="w"> </span>-A
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Initial companion data&quot;</span>
@@ -2141,7 +2131,7 @@
 <h3 id="pull-on-another-machine">Pull on another machine<a class="headerlink" href="#pull-on-another-machine" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>~/.claude/mait-code-data
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Rebuild vector database from synced markdown</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Rebuild memory.db from the synced observation logs</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>mc-tool-memory<span class="w"> </span>restore
 </span></code></pre></div>
 <h3 id="post-merge-hook-for-auto-db-restore">Post-merge hook for auto DB restore<a class="headerlink" href="#post-merge-hook-for-auto-db-restore" title="Permanent link">&para;</a></h3>

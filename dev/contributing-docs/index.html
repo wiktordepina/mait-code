@@ -1194,8 +1194,6 @@
       
         
       
-        
-      
     
     
     
@@ -1284,34 +1282,6 @@
     
   
     Reminders
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/tasks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tasks
   
 
     
@@ -2018,7 +1988,7 @@ the reference surface.</p>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>docs/gen_ref_pages.py<span class="w"> </span>--check
 </span></code></pre></div>
 <h2 id="prose-docs-docsmd">Prose docs (<code>docs/*.md</code>)<a class="headerlink" href="#prose-docs-docsmd" title="Permanent link">&para;</a></h2>
-<p>The hand-authored pages under <code>docs/</code> populate seven tabs:</p>
+<p>The hand-authored pages under <code>docs/</code> populate six tabs:</p>
 <table>
 <thead>
 <tr>
@@ -2033,7 +2003,7 @@ the reference surface.</p>
 </tr>
 <tr>
 <td><strong>Guide</strong></td>
-<td>Procedural how-to docs (<code>setup.md</code>, <code>sync.md</code>).</td>
+<td>Procedural how-to docs (<code>setup.md</code>, <code>board.md</code>, <code>sync.md</code>).</td>
 </tr>
 <tr>
 <td><strong>Concepts</strong></td>
@@ -2080,8 +2050,8 @@ the reference surface.</p>
 <li>Run <code>uv run mkdocs build --strict</code> to verify.</li>
 </ol>
 <h2 id="api-reference-docsreference">API reference (<code>docs/reference/</code>)<a class="headerlink" href="#api-reference-docsreference" title="Permanent link">&para;</a></h2>
-<p>The Python API pages — <code>docs/reference/{context,llm,logging,ssl}.md</code> plus the nested <code>docs/reference/tools/*.md</code> and <code>docs/reference/hooks/*.md</code> — are <strong>regenerated from each module's <code>__all__</code></strong> by <code>docs/gen_ref_pages.py</code>. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's <code>--check</code> invocation will flag the drift.</p>
-<p><code>docs/reference/skills.md</code> is the only <strong>hand-authored</strong> file under <code>docs/reference/</code>. Edit it directly when adding or renaming a slash command.</p>
+<p>The Python API pages — <code>docs/reference/{context,cli,config,llm,logging,ssl}.md</code> plus the nested <code>docs/reference/tools/*.md</code> and <code>docs/reference/hooks/*.md</code> — are <strong>regenerated from each module's <code>__all__</code></strong> by <code>docs/gen_ref_pages.py</code>. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's <code>--check</code> invocation will flag the drift.</p>
+<p><code>docs/reference/skills.md</code> and <code>docs/reference/mait-code.md</code> (the <code>mait-code</code> CLI command reference) are the only <strong>hand-authored</strong> files under <code>docs/reference/</code>. Edit them directly — <code>skills.md</code> when adding or renaming a slash command, <code>mait-code.md</code> when changing a CLI command. (Note the deliberate split: <code>reference/cli.md</code> is the <em>generated</em> <code>mait_code.cli</code> Python API, while <code>reference/mait-code.md</code> is the hand-authored command reference.)</p>
 <p>The nested layout mirrors the dotted module hierarchy: <code>mait_code.tools.memory</code> lives at <code>docs/reference/tools/memory.md</code> and renders at <code>/reference/tools/memory/</code>.</p>
 <h3 id="the-__all__-contract">The <code>__all__</code> contract<a class="headerlink" href="#the-__all__-contract" title="Permanent link">&para;</a></h3>
 <p>For a module to surface in the reference, it must:</p>

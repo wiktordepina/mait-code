@@ -1106,17 +1106,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tasks-tool-mc-tool-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks tool (mc-tool-tasks)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#skills" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1636,8 +1625,6 @@
       
         
       
-        
-      
     
     
     
@@ -1726,34 +1713,6 @@
     
   
     Reminders
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/tasks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tasks
   
 
     
@@ -2524,17 +2483,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tasks-tool-mc-tool-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks tool (mc-tool-tasks)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#skills" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2594,7 +2542,7 @@
     C[Conversations] --&gt; T1
 
     T1["**Tier 1: Observations**&lt;br&gt;*(raw)*&lt;br&gt;JSONL logs&lt;br&gt;memory.db&lt;br&gt;embeddings"]
-    T2["**Tier 2: Reflections**&lt;br&gt;*(synthesised)*&lt;br&gt;Monthly summaries"]
+    T2["**Tier 2: Reflections**&lt;br&gt;*(synthesised)*&lt;br&gt;batch synthesis&lt;br&gt;via /reflect"]
     T3["**Tier 3: MEMORY.md**&lt;br&gt;*(curated)*&lt;br&gt;~150 lines&lt;br&gt;loaded every session"]
 
     T1 --&gt; T2 --&gt; T3</code></pre>
@@ -2634,7 +2582,7 @@
 </tr>
 <tr>
 <td><strong>Decisions</strong></td>
-<td><code>insight</code> (semantic)</td>
+<td><code>decision</code> (semantic)</td>
 <td>"Chose REST over GraphQL for the public API"</td>
 </tr>
 <tr>
@@ -2661,8 +2609,8 @@
 <p>Before storing a new memory, the writer checks for near-duplicates:</p>
 <ol>
 <li>Extracts key words from the new content</li>
-<li>Queries FTS5 for candidate matches (up to 20) of the same entry type</li>
-<li>Compares using <code>SequenceMatcher</code> — if similarity &gt;= 90%, it's a duplicate</li>
+<li>Gathers candidates from both FTS5 keyword search and vector similarity search (scoped to the entry's project)</li>
+<li>Compares candidates two ways — <code>SequenceMatcher</code> string similarity ≥ 0.85, or vector cosine similarity ≥ 0.92; a hit on either marks it a duplicate</li>
 <li>Duplicates update the existing entry's timestamp and keep the highest importance</li>
 </ol>
 <p>This means the same fact can be re-observed across sessions without creating clutter.</p>
@@ -2684,7 +2632,7 @@
 </tr>
 <tr>
 <td><code>entry_type</code></td>
-<td><code>fact</code>, <code>preference</code>, <code>event</code>, <code>insight</code>, <code>task</code>, <code>relationship</code></td>
+<td><code>fact</code>, <code>preference</code>, <code>event</code>, <code>decision</code>, <code>insight</code>, <code>task</code>, <code>relationship</code></td>
 </tr>
 <tr>
 <td><code>importance</code></td>
@@ -2807,7 +2755,7 @@
 <td>provider + model (768 for local nomic, 1024 for Bedrock Titan v2)</td>
 </tr>
 <tr>
-<td><code>memory-db-path</code>, <code>tasks-db-path</code>, <code>decisions-db-path</code>, <code>reminders-db-path</code></td>
+<td><code>memory-db-path</code>, <code>reminders-db-path</code></td>
 <td><code>data-dir</code></td>
 </tr>
 <tr>
@@ -2940,7 +2888,7 @@
 </tr>
 <tr>
 <td>Semantic</td>
-<td><code>fact</code>, <code>preference</code>, <code>insight</code>, <code>relationship</code></td>
+<td><code>fact</code>, <code>preference</code>, <code>decision</code>, <code>insight</code>, <code>relationship</code></td>
 <td>90 days</td>
 <td>Persists — architectural decisions stay relevant for months</td>
 </tr>
@@ -3234,41 +3182,6 @@
 </tr>
 </tbody>
 </table>
-<h3 id="tasks-tool-mc-tool-tasks">Tasks tool (<code>mc-tool-tasks</code>)<a class="headerlink" href="#tasks-tool-mc-tool-tasks" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Command</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>add &lt;title&gt; [--priority high]</code></td>
-<td>Add a task for the current project</td>
-</tr>
-<tr>
-<td><code>list [--all]</code></td>
-<td>List open (or all) tasks for the current project</td>
-</tr>
-<tr>
-<td><code>done &lt;id&gt;</code></td>
-<td>Mark a task as completed</td>
-</tr>
-<tr>
-<td><code>remove &lt;id&gt;</code></td>
-<td>Remove a task</td>
-</tr>
-<tr>
-<td><code>check [--project &lt;name&gt;]</code></td>
-<td>Check open tasks (used by session_start hook)</td>
-</tr>
-<tr>
-<td><code>list-all</code></td>
-<td>List open tasks across all projects</td>
-</tr>
-</tbody>
-</table>
 <h3 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3299,14 +3212,6 @@
 <td>Show active and overdue reminders</td>
 </tr>
 <tr>
-<td><code>/task &lt;title&gt;</code></td>
-<td>Add a task for the current project</td>
-</tr>
-<tr>
-<td><code>/tasks</code></td>
-<td>Show open tasks for the current project</td>
-</tr>
-<tr>
 <td><code>/web-fetch &lt;url&gt;</code></td>
 <td>Fetch a web page as markdown (bypasses claude.ai proxy)</td>
 </tr>
@@ -3317,7 +3222,7 @@
 </tbody>
 </table>
 <h2 id="multi-machine-sync">Multi-Machine Sync<a class="headerlink" href="#multi-machine-sync" title="Permanent link">&para;</a></h2>
-<p>The data directory can be synced via git. Binary databases (<code>*.db</code>) are gitignored — after pulling on a new machine, run <code>mc-tool-memory restore</code> to replay the synced observation logs into the database and reindex embeddings. If the database already has entries and you only need to recompute embeddings, use <code>mc-tool-memory reindex</code>. See <a href="../sync/">Multi-Machine Sync</a> for the full workflow.</p>
+<p>The data directory can be synced via git. <code>memory.db</code> is regenerable, so it is gitignored — the JSONL observation logs are the source of truth. After pulling on a new machine, run <code>mc-tool-memory restore</code> to replay the synced observation logs into the database and reindex embeddings. If the database already has entries and you only need to recompute embeddings, use <code>mc-tool-memory reindex</code>. The other databases (<code>board.db</code>, <code>reminders.db</code>, <code>inbox.db</code>) have no such source and are committed instead. See <a href="../sync/">Multi-Machine Sync</a> for the full workflow.</p>
 
 
 

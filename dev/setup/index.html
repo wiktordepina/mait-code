@@ -1392,8 +1392,6 @@
       
         
       
-        
-      
     
     
     
@@ -1482,34 +1480,6 @@
     
   
     Reminders
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/tasks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tasks
   
 
     
@@ -2113,7 +2083,7 @@
 <h3 id="flags">Flags<a class="headerlink" href="#flags" title="Permanent link">&para;</a></h3>
 <p>Pass flags via <code>bash -s --</code>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--embedding-provider<span class="w"> </span>bedrock<span class="w"> </span>--ref<span class="w"> </span>v0.15.0
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--embedding-provider<span class="w"> </span>bedrock<span class="w"> </span>--ref<span class="w"> </span>v0.43.0
 </span></code></pre></div>
 <table>
 <thead>
@@ -2145,6 +2115,11 @@
 <td>Don't try to install <code>uv</code> (fail if not on PATH).</td>
 </tr>
 <tr>
+<td><code>--repo-url &lt;url&gt;</code></td>
+<td>upstream repo</td>
+<td>Override the clone source (mainly for testing).</td>
+</tr>
+<tr>
 <td><code>--help</code></td>
 <td>—</td>
 <td>Print usage.</td>
@@ -2172,7 +2147,7 @@
 <p><code>mait-code install</code> performs:</p>
 <ol>
 <li>Validates the source path is a mait-code clone.</li>
-<li>Creates <code>~/.claude/mait-code-data/</code> with memory subdirectories (<code>observations/</code>, <code>reflections/</code>).</li>
+<li>Creates <code>~/.claude/mait-code-data/</code> with memory subdirectories (<code>memory/observations/</code>, <code>memory/reflections/</code>).</li>
 <li>Copies identity templates (<code>soul_document.md</code>, <code>user_context.md</code>) — never overwrites existing files.</li>
 <li>Bootstraps <code>memory/MEMORY.md</code> with a placeholder if missing.</li>
 <li>Symlinks <code>CLAUDE.md</code> into <code>~/.claude/</code> (backs up any existing file to <code>CLAUDE.md.backup</code>).</li>
