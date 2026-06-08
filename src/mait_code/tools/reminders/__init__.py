@@ -13,12 +13,23 @@ from mait_code.tools.reminders.db import (
     get_db_path,
 )
 from mait_code.tools.reminders.migrate import ensure_schema
+from mait_code.tools.reminders.service import (
+    active_reminders,
+    dismissed_reminders,
+    overdue_reminders,
+)
 
 __all__ = [
+    # CLI
+    "main",
+    # Storage
     "connection",
     "ensure_schema",
     "get_connection",
     "get_data_dir",
     "get_db_path",
-    "main",
+    # Queries
+    "active_reminders",
+    "dismissed_reminders",
+    "overdue_reminders",
 ]

@@ -1,0 +1,390 @@
+"""Behaviour tests for the home hub TUI.
+
+The root conftest points ``MAIT_CODE_DATA_DIR`` at a per-test tmp dir, so every
+store the hub reads is seeded through the same connections the app uses. The
+doctor and version are pinned — the health line and brand header must not
+depend on the developer's real ``~/.claude`` or the package version.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from datetime import datetime, timezone
+
+import pytest
+
+import mait_code.cli._doctor as doctor_mod
+import mait_code.cli._home_tui as home_mod
+from mait_code.cli._doctor import Check, DoctorReport
+from mait_code.cli._home_tui import HomeApp, HomeTarget
+
+OVERDUE_AT = datetime(2026, 1, 1, 9, 0, tzinfo=timezone.utc)
+UPCOMING_AT = datetime(2099, 1, 1, 9, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def _pin_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the doctor report and version so tests see fixed chrome."""
+    report = DoctorReport(
+        checks=[Check("a", "ok", "fine"), Check("b", "warn", "meh")],
+        fixes_applied=[],
+    )
+    monkeypatch.setattr(doctor_mod, "run_doctor", lambda **_kw: report)
+    monkeypatch.setattr(home_mod, "_installed_version", lambda: "1.2.3")
+
+
+def _seed_board() -> None:
+    from mait_code.tools.board import service
+    from mait_code.tools.board.db import get_connection
+
+    conn = get_connection()
+    try:
+        service.add_card(conn, project="demo", title="Wire up the widget")
+        wid = service.add_card(conn, project="demo", title="Work the thing")
+        service.move_card(conn, wid, "in_progress")
+        rid = service.add_card(conn, project="other", title="Refine the spec")
+        service.move_card(conn, rid, "refined")
+    finally:
+        conn.close()
+
+
+def _seed_reminder(what: str, due: datetime) -> None:
+    from mait_code.tools.reminders.db import get_connection
+
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO reminders (what, due, created_at) VALUES (?, ?, ?)",
+            (what, due.isoformat(), OVERDUE_AT.isoformat()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _seed_inbox(body: str) -> None:
+    from mait_code.tools.inbox import service
+    from mait_code.tools.inbox.db import get_connection
+
+    conn = get_connection()
+    try:
+        service.add_item(conn, body=body)
+    finally:
+        conn.close()
+
+
+def _seed_memory(*entries: tuple[str, str]) -> None:
+    from mait_code.tools.memory.db import get_connection
+
+    conn = get_connection()
+    try:
+        for content, entry_type in entries:
+            conn.execute(
+                """INSERT INTO memory_entries
+                   (content, entry_type, importance, memory_class, created_at)
+                   VALUES (?, ?, 5, 'semantic', '2026-06-01 09:00:00')""",
+                (content, entry_type),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _run(coro_factory):
+    return asyncio.run(coro_factory())
+
+
+def _detail_text(app: HomeApp) -> str:
+    """The rendered text of the detail pane (labels and markdown bodies)."""
+    parts: list[str] = []
+    for widget in app.query("#detail *"):
+        render = getattr(widget, "render", None)
+        if render is not None:
+            parts.append(str(render()))
+    return "\n".join(parts)
+
+
+def _tree_labels(app: HomeApp) -> list[str]:
+    from textual.widgets import Tree
+
+    tree = app.query_one("#tree", Tree)
+    return [str(child.label) for child in tree.root.children]
+
+
+async def _show(app, pilot, key: str) -> str:
+    await app._show_detail(key)
+    await pilot.pause()
+    return _detail_text(app)
+
+
+# --- empty stores ---
+
+
+def test_empty_details_speak_with_the_companion_voice() -> None:
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return {
+                key: await _show(app, pilot, key)
+                for key in ("board", "memory", "reminders", "inbox")
+            }
+
+    details = _run(scenario)
+    assert "board is clear" in details["board"]
+    assert "Nothing remembered yet" in details["memory"]
+    assert "Nothing pending" in details["reminders"]
+    assert "Inbox zero" in details["inbox"]
+    for text in details.values():
+        assert "✦ " in text  # glyph-led voice, not a bare "no data"
+
+
+# --- populated detail panes ---
+
+
+def test_board_detail_lists_live_cards_and_launch_hint() -> None:
+    _seed_board()
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "board")
+
+    text = _run(scenario)
+    assert "In progress" in text and "Work the thing" in text
+    assert "Next up" in text and "Refine the spec" in text
+    assert "Enter to open the board" in text
+
+
+def test_board_by_project_breakdown() -> None:
+    _seed_board()
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "board:by_project")
+
+    text = _run(scenario)
+    assert "demo" in text and "other" in text
+    assert "1 backlog" in text and "1 in progress" in text
+
+
+def test_reminders_detail_splits_overdue_and_upcoming() -> None:
+    _seed_reminder("water the plants", OVERDUE_AT)
+    _seed_reminder("renew the domain", UPCOMING_AT)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "reminders")
+
+    text = _run(scenario)
+    assert "Overdue (1)" in text and "water the plants" in text
+    assert "Upcoming" in text and "renew the domain" in text
+
+
+def test_inbox_detail_counts_and_guides() -> None:
+    _seed_inbox("first thought")
+    _seed_inbox("second thought")
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "inbox")
+
+    text = _run(scenario)
+    assert "2 captured items" in text
+    assert "first thought" in text and "second thought" in text
+    assert "/triage" in text  # non-launchable: it points at the skill
+
+
+def test_memory_by_type_detail() -> None:
+    _seed_memory(("a", "fact"), ("b", "fact"), ("c", "decision"))
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "memory:by_type")
+
+    text = _run(scenario)
+    assert "fact (2)" in text and "decision (1)" in text
+
+
+def test_memory_reflection_detail() -> None:
+    _seed_memory(("a", "fact"))
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "memory:reflection")
+
+    text = _run(scenario)
+    assert "awaiting" in text and "observation(s)" in text and "never" in text
+
+
+def test_doctor_detail_lists_every_check() -> None:
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "system:doctor")
+
+    text = _run(scenario)
+    assert "a" in text and "fine" in text
+    assert "b" in text and "meh" in text
+
+
+# --- tree badges ---
+
+
+def test_tree_badges_reflect_live_counts() -> None:
+    _seed_board()
+    _seed_reminder("water the plants", OVERDUE_AT)
+    _seed_inbox("a thought")
+    _seed_memory(("a", "fact"))
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return _tree_labels(app)
+
+    labels = "\n".join(_run(scenario))
+    assert "Board" in labels and "active" in labels
+    assert "1 overdue!" in labels
+    assert "Inbox" in labels
+
+
+# --- chrome ---
+
+
+def test_health_line_renders_pinned_doctor_verdict() -> None:
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return str(app.query_one("#health").render())
+
+    text = _run(scenario)
+    assert "1 warning" in text and "1 passed" in text and "doctor" in text
+
+
+def test_wordmark_falls_back_when_narrow() -> None:
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(24, 36)) as pilot:
+            await pilot.pause()
+            return str(app.query_one("#wordmark").render())
+
+    assert _run(scenario) == "mait-code"
+
+
+def test_broken_store_shows_snag_not_crash(monkeypatch: pytest.MonkeyPatch) -> None:
+    import mait_code.tools.inbox.db as inbox_db
+
+    def boom(*_a, **_kw):
+        raise RuntimeError("store on fire")
+
+    monkeypatch.setattr(inbox_db, "get_connection", boom)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "inbox")
+
+    text = _run(scenario)
+    assert "hit a snag" in text
+    assert "store on fire" in text
+
+
+# --- system prompt node ---
+
+
+def test_system_prompt_node_renders_identity_and_context() -> None:
+    from mait_code.config import data_dir
+
+    ddir = data_dir()
+    ddir.mkdir(parents=True, exist_ok=True)
+    (ddir / "soul_document.md").write_text("# Soul\n\nBe kind.\n")
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            text = await _show(app, pilot, "identity:sysprompt")
+            docs = len(app.query("#detail Markdown"))
+            return text, docs
+
+    text, docs = _run(scenario)
+    assert "Soul document" in text
+    assert "User context" in text
+    assert "isn't written yet" in text  # missing files speak, not error
+    assert "Session context" in text
+    assert "A quiet start" in text  # empty stores → silent context, voiced
+    assert docs == 1  # only the soul document exists in this data dir
+
+
+# --- launch + reload ---
+
+
+def test_selecting_a_launch_node_sets_the_target() -> None:
+    from textual.widgets import Tree
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            board = tree.root.children[0]  # Board is the first section
+            app.on_tree_node_selected(Tree.NodeSelected(board))
+            await pilot.pause()
+            return app.target
+
+    assert _run(scenario) is HomeTarget.BOARD
+
+
+def test_escape_quits(monkeypatch: pytest.MonkeyPatch) -> None:
+    called: list[bool] = []
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            monkeypatch.setattr(app, "action_quit", lambda: called.append(True))
+            await pilot.press("escape")
+            await pilot.pause()
+
+    _run(scenario)
+    assert called == [True]
+
+
+def test_reload_refreshes_detail_and_badges() -> None:
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            before_detail = _detail_text(app)  # home overview, cursor on root
+            before_labels = "\n".join(_tree_labels(app))
+            _seed_inbox("captured mid-session")
+            app.action_reload()  # re-reads stores: refreshes detail + badges
+            await pilot.pause()
+            await pilot.pause()
+            return (
+                before_detail,
+                before_labels,
+                _detail_text(app),
+                "\n".join(_tree_labels(app)),
+            )
+
+    before_detail, before_labels, after_detail, after_labels = _run(scenario)
+    assert "inbox zero" in before_detail  # the overview's Inbox line
+    assert "1 waiting" in after_detail  # detail re-rendered with fresh count
+    assert "Inbox\n" in before_labels or before_labels.rstrip().endswith("Inbox")
+    assert "Inbox  1" in after_labels  # badge picked up the new item

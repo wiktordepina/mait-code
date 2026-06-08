@@ -3,6 +3,12 @@
 
 # Reminders — API reference
 
+## CLI
+
+::: mait_code.tools.reminders.main
+
+## Storage
+
 ::: mait_code.tools.reminders.connection
 
 ::: mait_code.tools.reminders.ensure_schema
@@ -13,4 +19,10 @@
 
 ::: mait_code.tools.reminders.get_db_path
 
-::: mait_code.tools.reminders.main
+## Queries
+
+::: mait_code.tools.reminders.active_reminders
+
+::: mait_code.tools.reminders.dismissed_reminders
+
+::: mait_code.tools.reminders.overdue_reminders

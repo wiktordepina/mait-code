@@ -161,18 +161,17 @@ __all__ = [
 app = typer.Typer(
     name="mait-code",
     help="mait-code install-lifecycle CLI.",
-    no_args_is_help=True,
     pretty_exceptions_enable=False,
     add_completion=False,
 )
 
 
-# Empty callback forces Typer into multi-command mode even when only one
-# subcommand is registered (subsequent commits will add several more).
-# Without this, `mait-code version` would be parsed as `mait-code` with
-# `version` as an unexpected positional argument.
-@app.callback()
+# The callback forces Typer into multi-command mode even when only one
+# subcommand is registered. Without this, `mait-code version` would be
+# parsed as `mait-code` with `version` as an unexpected positional argument.
+@app.callback(invoke_without_command=True)
 def _root(
+    ctx: typer.Context,
     no_color: Annotated[
         bool,
         typer.Option("--no-color", help="Disable coloured output."),
@@ -183,6 +182,15 @@ def _root(
     # explicit manual override. Assigning the bool each invocation keeps
     # the process-wide console's state predictable.
     console.no_color = no_color
+    if ctx.invoked_subcommand is not None:
+        return
+    # Bare `mait-code` on a terminal opens the companion's home hub — the front
+    # door. Piped or redirected it keeps printing help, so scripts and muscle
+    # memory like `mait-code | grep` see what they always did.
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        _run_home_loop()
+    else:
+        typer.echo(ctx.get_help())
 
 
 @app.command()
@@ -658,6 +666,95 @@ def _board_render() -> None:
                 f"[{card['project']}]"
             )
         typer.echo("")
+
+
+@app.command("home")
+def home() -> None:
+    """Open the companion's home hub (text summary when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        _run_home_loop()
+    else:
+        _home_render()
+
+
+def _run_home_loop() -> None:
+    """Run the home hub, relaunching it after each sibling TUI it hands off to.
+
+    Home exits with a :class:`~mait_code.cli._home_tui.HomeTarget` when the user
+    opens the board, memory browser or settings editor; we launch that app
+    (which blocks until it quits) and then re-enter a fresh home — so its tree
+    badges reflect anything just changed. ``None`` means the user quit home.
+
+    Each TUI runs in turn in this one process: home exits its event loop before
+    the next app starts its own, so the loops never nest.
+    """
+    from mait_code.cli._home_tui import HomeTarget, run_home_tui
+
+    def launch(target: HomeTarget) -> None:
+        # Imported lazily, per target — keep the heavy Textual imports off the
+        # path of every other `mait-code` subcommand.
+        if target is HomeTarget.BOARD:
+            from mait_code.cli._board_tui import run_board_tui
+
+            run_board_tui()
+        elif target is HomeTarget.MEMORY:
+            from mait_code.cli._memory_tui import run_memory_tui
+
+            run_memory_tui()
+        elif target is HomeTarget.SETTINGS:
+            from mait_code.cli._settings_tui import run_interactive_editor
+
+            run_interactive_editor()
+
+    target = run_home_tui()
+    while target is not None:
+        launch(target)
+        target = run_home_tui()
+
+
+def _home_render() -> None:
+    """Print the home summary as compact text (the non-TTY fallback)."""
+    from mait_code.tools.board import service as board_service
+    from mait_code.tools.board.db import connection as board_connection
+    from mait_code.tools.inbox import service as inbox_service
+    from mait_code.tools.inbox.db import connection as inbox_connection
+    from mait_code.tools.memory.db import connection as memory_connection
+    from mait_code.tools.memory.stats import collect_stats
+    from mait_code.tools.reminders.db import connection as reminders_connection
+    from mait_code.tools.reminders.service import active_reminders
+
+    with board_connection() as conn:
+        cards = board_service.list_cards(conn)
+    by_project: dict[str, dict[str, int]] = {}
+    for card in cards:
+        counts = by_project.setdefault(card["project"], {})
+        counts[card["status"]] = counts.get(card["status"], 0) + 1
+    typer.echo("Board:")
+    if not by_project:
+        typer.echo("  no cards")
+    for project in sorted(by_project):
+        counts = by_project[project]
+        live = " · ".join(
+            f"{n} {status.replace('_', ' ')}"
+            for status, n in counts.items()
+            if status != "done" and n
+        )
+        typer.echo(f"  {project}: {live or 'all done'}")
+
+    with reminders_connection() as conn:
+        overdue, upcoming = active_reminders(conn)
+    typer.echo(f"Reminders: {len(overdue)} overdue · {len(upcoming)} upcoming")
+
+    with inbox_connection() as conn:
+        inbox_count = inbox_service.count_items(conn)
+    typer.echo(f"Inbox: {inbox_count}")
+
+    with memory_connection() as conn:
+        stats = collect_stats(conn)
+    typer.echo(
+        f"Memory: {stats.total} entries · {stats.unembedded} unembedded · "
+        f"{stats.unreflected} unreflected"
+    )
 
 
 @app.command("memory")

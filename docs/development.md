@@ -92,6 +92,7 @@ src/mait_code/tui/
 ├── palette.py     # Canonical role→hex colours — the single source of truth
 ├── theme.py       # The mait-* house Textual Themes, built from palette
 ├── render.py      # Palette-coloured Rich chip helpers (for DataTable/OptionList cells)
+├── brand.py       # Wordmark, signature glyph, companion-voice helpers (Textual-free)
 ├── help.py        # Shared `?` HelpScreen (live key-binding cheat-sheet)
 ├── app.py         # MaitApp base class + SHARED_TCSS path
 └── app.tcss       # Shared stylesheet (modal geometry, conventions)
@@ -280,11 +281,16 @@ def mem_db(tmp_path):
    key-bindings, so new bindings appear automatically. Expose the app's actions
    in the Ctrl+P palette by overriding `get_system_commands` and yielding
    `SystemCommand`s after `yield from super().get_system_commands(screen)`.
-6. Add a snapshot test (see "Snapshot tests" above).
+6. Give every empty state the companion voice: route the copy through
+   `mait_code.tui.brand.empty_state` (which leads with the signature glyph)
+   instead of a bare "no data" string. Toast glyphs come free from
+   `MaitApp.notify`.
+7. Add a snapshot test (see "Snapshot tests" above).
 
-The three shipped surfaces are worked examples: `cli/_board_tui.py` (the board),
-`cli/_settings_tui.py` (the settings editor, a master–detail tree), and
-`cli/_memory_tui.py` (the memory browser, a read-only master–detail). Theme
+The four shipped surfaces are worked examples: `cli/_home_tui.py` (the home
+hub, a tree-navigable master–detail that launches the others), `cli/_board_tui.py`
+(the board), `cli/_settings_tui.py` (the settings editor, a master–detail tree),
+and `cli/_memory_tui.py` (the memory browser, a read-only master–detail). Theme
 persistence is free — `MaitApp.on_unmount` writes the active theme back to the
 `theme` setting for every surface, so a user's pick survives across sessions.
 

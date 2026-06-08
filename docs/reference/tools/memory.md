@@ -83,6 +83,16 @@
 
 ::: mait_code.tools.memory.store_memory
 
+## Stats
+
+::: mait_code.tools.memory.MemoryStats
+
+::: mait_code.tools.memory.collect_stats
+
 ## Reflection
+
+::: mait_code.tools.memory.count_unreflected
+
+::: mait_code.tools.memory.get_last_reflected_at
 
 ::: mait_code.tools.memory.reflect

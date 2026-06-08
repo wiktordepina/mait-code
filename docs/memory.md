@@ -323,7 +323,7 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `list --since 24h` | Filter by time period (`24h`, `7d`, `1w`, etc.) |
 | `list --type event` | Filter by type |
 | `delete <id>` | Delete an entry (embedding cleaned up by trigger) |
-| `stats` | Entry counts, class/scope/project distribution, embedding coverage, provider info |
+| `stats` | Entry counts, class/scope/project distribution, embedding coverage, provider info, unreflected backlog + last reflection run |
 | `entities [query]` | Search or list knowledge graph entities |
 | `relationships <entity>` | Show relationships for an entity |
 | `reindex` | Recompute all vector embeddings from scratch |

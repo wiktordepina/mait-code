@@ -99,18 +99,20 @@ def update_watermark(
 # ---------------------------------------------------------------------------
 
 
-def check_novelty_gate_v2(
+def count_unreflected(
     conn: sqlite3.Connection,
-    min_new: int = 3,
     *,
     project: str | None = None,
-) -> bool:
-    """Return ``True`` if there are enough unreflected entries to justify reflection.
+) -> int:
+    """Return the number of entries above the reflection watermark.
+
+    Counts the non-insight entries that a future :func:`reflect` run would
+    consider — the observation backlog. With no watermark (no reflection has
+    ever run for the scope), every non-insight entry counts.
 
     Args:
         conn: Open memory database connection.
-        min_new: Minimum number of new non-insight entries required.
-        project: Project identifier to scope the check; ``None`` for global.
+        project: Project identifier to scope the count; ``None`` for global.
     """
     watermark = get_watermark(conn, project=project)
 
@@ -126,8 +128,51 @@ def check_novelty_gate_v2(
         params.append(project)
 
     query = f"SELECT COUNT(*) FROM memory_entries WHERE {' AND '.join(conditions)}"
-    count = conn.execute(query, params).fetchone()[0]
-    return count >= min_new
+    return conn.execute(query, params).fetchone()[0]
+
+
+def get_last_reflected_at(
+    conn: sqlite3.Connection,
+    *,
+    project: str | None = None,
+) -> datetime | None:
+    """Return when reflection last ran for a project (or global scope).
+
+    Reads ``last_reflected_at`` from the watermark table — the authoritative
+    record of the most recent :func:`reflect` run, regardless of whether it
+    produced insights.
+
+    Args:
+        conn: Open memory database connection.
+        project: Project identifier, or ``None`` for the global watermark.
+
+    Returns:
+        The parsed timestamp, or ``None`` if reflection has never run.
+    """
+    project_key = project or ""
+    row = conn.execute(
+        "SELECT last_reflected_at FROM reflection_watermark WHERE project = ?",
+        (project_key,),
+    ).fetchone()
+    if row is None or row[0] is None:
+        return None
+    return datetime.fromisoformat(row[0])
+
+
+def check_novelty_gate_v2(
+    conn: sqlite3.Connection,
+    min_new: int = 3,
+    *,
+    project: str | None = None,
+) -> bool:
+    """Return ``True`` if there are enough unreflected entries to justify reflection.
+
+    Args:
+        conn: Open memory database connection.
+        min_new: Minimum number of new non-insight entries required.
+        project: Project identifier to scope the check; ``None`` for global.
+    """
+    return count_unreflected(conn, project=project) >= min_new
 
 
 # ---------------------------------------------------------------------------

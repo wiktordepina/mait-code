@@ -3,4 +3,16 @@
 
 # Session start — API reference
 
+## CLI
+
 ::: mait_code.hooks.session_start.main
+
+## Context builder
+
+::: mait_code.hooks.session_start.board_section
+
+::: mait_code.hooks.session_start.build_session_context
+
+::: mait_code.hooks.session_start.inbox_section
+
+::: mait_code.hooks.session_start.reminders_section

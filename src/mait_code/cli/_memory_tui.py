@@ -28,6 +28,7 @@ from textual.widgets.tree import TreeNode
 from mait_code.tools.memory.db import get_connection
 from mait_code.tools.memory.search import list_entries
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.brand import empty_state
 from mait_code.tui.markdown import md_parser
 
 __all__ = ["MemoryApp", "run_memory_tui"]
@@ -106,7 +107,7 @@ class MemoryApp(MaitApp):
 
     BINDINGS = [
         ("slash", "focus_filter", "Filter"),
-        ("escape", "focus_list", "Back to list"),
+        ("escape", "escape", "Back"),
         ("r", "reload", "Reload"),
         Binding("1", "focus_list", "List", show=False),
         Binding("2", "focus_detail", "Detail", show=False),
@@ -246,10 +247,10 @@ class MemoryApp(MaitApp):
     async def _show_empty(self) -> None:
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
-        message = (
-            f"No memories match {self._query!r}."
+        message = empty_state(
+            f"I don't remember anything matching {self._query!r}."
             if self._query
-            else "No memories stored yet."
+            else "Nothing remembered yet — we're just getting started."
         )
         await detail.mount(Static(message, classes="help"))
 
@@ -270,6 +271,18 @@ class MemoryApp(MaitApp):
 
     def action_focus_list(self) -> None:
         self.query_one("#list", Tree).focus()
+
+    def action_escape(self) -> None:
+        """Escape steps back to the list; pressed on the list itself, it quits.
+
+        The hierarchical escape: from the filter or the detail pane it returns
+        focus to the tree, and from the tree (nothing left to back out of) it
+        exits — so escape always eventually leaves, like ``q``.
+        """
+        if self.query_one("#list", Tree).has_focus:
+            self.exit()
+        else:
+            self.action_focus_list()
 
     def action_focus_detail(self) -> None:
         self.query_one("#detail", VerticalScroll).focus()

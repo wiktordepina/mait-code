@@ -65,6 +65,7 @@ from mait_code.tools.board.columns import (
 from mait_code.tools.board.db import get_connection, get_project
 from mait_code.tui import palette as p
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.brand import empty_state
 from mait_code.tui.markdown import md_parser
 from mait_code.tui.render import (
     PALETTE_CHIPS,
@@ -87,6 +88,16 @@ _MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
 #: filter picker. A distinct object (not ``None``) so the picker can tell "all
 #: projects" apart from the ``None`` that escape/cancel dismisses with.
 _ALL_PROJECTS = object()
+
+#: Companion-voice hint shown (dim, non-selectable) in an empty column, so a
+#: bare pane still sounds like the companion rather than rendering as a void.
+_EMPTY_HINTS: dict[str, str] = {
+    BACKLOG: "Nothing waiting.",
+    REFINED: "Nothing ready to pick up.",
+    IN_PROGRESS: "Nothing in flight.",
+    DONE: "Nothing finished yet.",
+    ARCHIVED: "Nothing tucked away.",
+}
 
 
 def run_board_tui(db_path: Path | None = None) -> None:
@@ -1221,6 +1232,13 @@ class BoardApp(MaitApp):
                 )
                 for card in group
             )
+            if not group:
+                column.add_option(
+                    Option(
+                        Text(empty_state(_EMPTY_HINTS[status]), style="dim"),
+                        disabled=True,
+                    )
+                )
             head = self.query_one(f"#head-{status}", Label)
             head.update(f"{col_label(status)} ({len(group)})")
 
@@ -1229,7 +1247,13 @@ class BoardApp(MaitApp):
         column = self.query_one(f"#tbl-{status}", BoardColumn)
         # OptionList doesn't auto-highlight on focus (unlike a DataTable cursor),
         # so default to the first card — otherwise actions have nothing selected.
-        if column.highlighted is None and column.option_count:
+        # An empty column holds only its disabled companion hint, which must
+        # never be highlighted (it carries no card id).
+        if (
+            column.highlighted is None
+            and column.option_count
+            and not column.get_option_at_index(0).disabled
+        ):
             column.highlighted = 0
         column.focus()
 
