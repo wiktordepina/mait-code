@@ -462,6 +462,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -542,6 +550,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../home/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The home hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../board/" class="md-nav__link">
         
   
@@ -550,6 +586,90 @@
     
   
     The board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The settings editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory-browser/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The memory browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The observations browser
   
 
     
@@ -816,6 +936,17 @@
     <span class="md-ellipsis">
       
         Deduplication
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evolving-memory-supersede-dont-duplicate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evolving memory: supersede, don't duplicate
       
     </span>
   </a>
@@ -1099,6 +1230,28 @@
     <span class="md-ellipsis">
       
         Memory tool (mc-tool-memory)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#memory-browser-mait-code-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory browser (mait-code memory)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observations-browser-mait-code-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observations browser (mait-code observations)
       
     </span>
   </a>
@@ -2199,6 +2352,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#evolving-memory-supersede-dont-duplicate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evolving memory: supersede, don't duplicate
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2483,6 +2647,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#memory-browser-mait-code-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory browser (mait-code memory)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observations-browser-mait-code-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observations browser (mait-code observations)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#skills" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2605,6 +2791,9 @@
 <p>Each item includes an importance rating (1-10) that influences search ranking.</p>
 <h3 id="raw-observation-logs">Raw observation logs<a class="headerlink" href="#raw-observation-logs" title="Permanent link">&para;</a></h3>
 <p>Every extraction is also appended to a daily JSONL file at <code>~/.claude/mait-code-data/memory/observations/YYYY-MM-DD.jsonl</code>. These serve as the source of truth — the database can be restored from them using <code>mc-tool-memory restore</code>.</p>
+<p>To <em>see</em> this tier — what's been captured, and what's still waiting for
+reflection — open the <a href="../observations/">observations browser</a> with
+<code>mait-code observations</code>.</p>
 <h3 id="deduplication">Deduplication<a class="headerlink" href="#deduplication" title="Permanent link">&para;</a></h3>
 <p>Before storing a new memory, the writer checks for near-duplicates:</p>
 <ol>
@@ -2613,7 +2802,20 @@
 <li>Compares candidates two ways — <code>SequenceMatcher</code> string similarity ≥ 0.85, or vector cosine similarity ≥ 0.92; a hit on either marks it a duplicate</li>
 <li>Duplicates update the existing entry's timestamp and keep the highest importance</li>
 </ol>
-<p>This means the same fact can be re-observed across sessions without creating clutter.</p>
+<p>This means the same fact can be re-observed across sessions without creating clutter. Superseded entries (see below) are never offered as duplicate candidates.</p>
+<h3 id="evolving-memory-supersede-dont-duplicate">Evolving memory: supersede, don't duplicate<a class="headerlink" href="#evolving-memory-supersede-dont-duplicate" title="Permanent link">&para;</a></h3>
+<p>A duplicate is the <em>same</em> fact restated. A <strong>contradiction</strong> is a related-but-different fact — "uses X" when an earlier entry says "uses Y". Those sit below the dedup thresholds, so they aren't merged. Instead the writer flags them:</p>
+<ul>
+<li>Cosine similarity in the band <code>[dedup-conflict-threshold, dedup-vector-threshold)</code> (default <code>[0.60, 0.92)</code>) marks a <strong>possible conflict</strong>.</li>
+<li>The new entry is still stored — the write is never blocked. <code>store_memory</code> returns the conflicting entries under <code>potential_conflicts</code>, and <code>mc-tool-memory store</code> prints a <code>⚠ This may contradict …</code> notice.</li>
+</ul>
+<p>When a fact has genuinely changed, replace the stale entry rather than letting two coexist:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mc-tool-memory<span class="w"> </span>supersede<span class="w"> </span>&lt;old_id&gt;<span class="w"> </span><span class="s2">&quot;&lt;new, current content&gt;&quot;</span>
+</span></code></pre></div>
+<p>This inserts the new content as a fresh entry (inheriting the old one's type and scope), then marks the old entry <strong>superseded</strong> — recording <code>superseded_by</code> (the new id) and <code>superseded_at</code> (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mc-tool-memory<span class="w"> </span>list<span class="w"> </span>--include-superseded
+</span></code></pre></div>
+<p>This is manually-driven: the companion <em>suggests</em> superseding a conflicting entry, and you decide — nothing is replaced automatically.</p>
 <h2 id="storage-the-memory-database">Storage: The Memory Database<a class="headerlink" href="#storage-the-memory-database" title="Permanent link">&para;</a></h2>
 <p>All structured data lives in a single SQLite file (<code>memory.db</code>) with three search layers:</p>
 <h3 id="memory-entries">Memory entries<a class="headerlink" href="#memory-entries" title="Permanent link">&para;</a></h3>
@@ -2657,6 +2859,14 @@
 <tr>
 <td><code>created_at</code></td>
 <td>Timestamp, refreshed on deduplication</td>
+</tr>
+<tr>
+<td><code>superseded_by</code></td>
+<td>Id of the entry that replaced this one (null = current)</td>
+</tr>
+<tr>
+<td><code>superseded_at</code></td>
+<td>When it was superseded (null = current)</td>
 </tr>
 </tbody>
 </table>
@@ -2866,7 +3076,7 @@
 <p>Relationships between entities are typed (<code>uses</code>, <code>owns</code>, <code>contributes_to</code>, <code>depends_on</code>, <code>manages</code>, <code>related_to</code>) with a free-text context field explaining the connection.</p>
 <h2 id="scoring-how-results-are-ranked">Scoring: How Results Are Ranked<a class="headerlink" href="#scoring-how-results-are-ranked" title="Permanent link">&para;</a></h2>
 <p>Search results are ranked by a composite score:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 </span></code></pre></div>
 <h3 id="recency">Recency<a class="headerlink" href="#recency" title="Permanent link">&para;</a></h3>
 <p>Exponential decay based on memory class:</p>
@@ -2956,7 +3166,13 @@
 <td><code>dedup-vector-threshold</code></td>
 <td><code>0.92</code></td>
 <td>0.0–1.0</td>
-<td>Same trade-off, on cosine similarity.</td>
+<td>Same trade-off, on cosine similarity. Also the upper edge of the conflict band.</td>
+</tr>
+<tr>
+<td><code>dedup-conflict-threshold</code></td>
+<td><code>0.60</code></td>
+<td>0.0–1.0</td>
+<td>Lower edge of the contradiction band. Too low floods every write with spurious conflicts; too high lets real contradictions slip through as separate facts.</td>
 </tr>
 <tr>
 <td><code>scope-boost-global</code></td>
@@ -3019,11 +3235,11 @@
 <li><strong>Batching:</strong> Processes entries in configurable batches (default 50), oldest first</li>
 </ul>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/reflect                                    # Standard reflection
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>/reflect                                    # Standard reflection
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 </span></code></pre></div>
 <h3 id="how-it-works_1">How it works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
 <ol>
@@ -3083,7 +3299,11 @@
 </tr>
 <tr>
 <td><code>store &lt;content&gt; --type preference --importance 8</code></td>
-<td>Store a memory manually</td>
+<td>Store a memory manually (prints any contradiction warnings)</td>
+</tr>
+<tr>
+<td><code>supersede &lt;old_id&gt; &lt;content&gt;</code></td>
+<td>Replace an entry with an evolved version; the old one is kept for audit but hidden from recall</td>
 </tr>
 <tr>
 <td><code>list</code></td>
@@ -3098,12 +3318,16 @@
 <td>Filter by type</td>
 </tr>
 <tr>
+<td><code>list --include-superseded</code></td>
+<td>Include superseded entries (hidden by default)</td>
+</tr>
+<tr>
 <td><code>delete &lt;id&gt;</code></td>
 <td>Delete an entry (embedding cleaned up by trigger)</td>
 </tr>
 <tr>
 <td><code>stats</code></td>
-<td>Entry counts, class/scope/project distribution, embedding coverage, provider info</td>
+<td>Entry counts, class/scope/project distribution, superseded count, embedding coverage, provider info, unreflected backlog + last reflection run</td>
 </tr>
 <tr>
 <td><code>entities [query]</code></td>
@@ -3182,6 +3406,27 @@
 </tr>
 </tbody>
 </table>
+<h3 id="memory-browser-mait-code-memory">Memory browser (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-mait-code-memory" title="Permanent link">&para;</a></h3>
+<p>Open the interactive, read-only memory browser with:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mait-code<span class="w"> </span>memory
+</span></code></pre></div>
+<p>This is a full-screen <a href="https://textual.textualize.io/">Textual</a> app over the
+same store: a tree of memories grouped by entry type on the left (newest
+first, counts per group), and the selected memory's body — rendered as
+markdown — with its metadata (created, importance, scope, class) on the
+right. <code>/</code> filters the list live by substring, <code>r</code> re-reads the store, and
+<code>?</code> shows the key cheat-sheet. It browses <em>everything</em>, across projects and
+scopes — the reading companion to <code>mc-tool-memory</code>'s query verbs.</p>
+<p>When you're not on a terminal that supports it (e.g. piping output, or in
+CI), <code>mait-code memory</code> falls back to a read-only grouped summary.</p>
+<h3 id="observations-browser-mait-code-observations">Observations browser (<code>mait-code observations</code>)<a class="headerlink" href="#observations-browser-mait-code-observations" title="Permanent link">&para;</a></h3>
+<p>The memory browser's sibling over <strong>Tier 1</strong>: the same full-screen,
+read-only layout, but scoped to the raw observations and their reflection
+standing — grouped by capture day, each entry flagged pending or reflected
+against the reflection watermark, with each day's capture sessions read from
+the JSONL logs. It answers "what has the observe hook collected, and what
+will the next <code>/reflect</code> chew on?" — see <a href="../observations/">the observations browser
+guide</a> for the full tour.</p>
 <h3 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h3>
 <table>
 <thead>

@@ -15,10 +15,10 @@
         <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/board/">
       
       
-        <link rel="prev" href="../setup/">
+        <link rel="prev" href="../home/">
       
       
-        <link rel="next" href="../sync/">
+        <link rel="next" href="../settings/">
       
       
         
@@ -464,6 +464,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -527,6 +535,34 @@
     
   
     Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../home/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The home hub
   
 
     
@@ -799,6 +835,90 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The settings editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory-browser/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The memory browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The observations browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2165,7 +2285,7 @@ you and Claude turn them into shipped changes. It is the spine of a reactive way
 of working: instead of writing a long plan up front, you jot a card, refine it
 when you get to it, and let Claude pick it up and do the work in the same
 session.</p>
-<p><img alt="The board, mid-flight: Backlog, Refined, and In Progress columns side by side." src="../assets/board/board.svg" /></p>
+<p><img alt="The board, mid-flight: Backlog, Refined, and In Progress columns side by side." src="../assets/board/board.png" /></p>
 <h2 id="why-use-it">Why use it<a class="headerlink" href="#why-use-it" title="Permanent link">&para;</a></h2>
 <p>A plan written before you understand the problem is a guess. The board lets you
 defer that guess: park a rough idea in <strong>Backlog</strong>, sharpen it into a crisp
@@ -2236,7 +2356,7 @@ as a comment), so you never lose track of <em>where</em> a card was when it stal
 three columns you actually act on wide and uncluttered, with finished and parked
 work tucked out of sight so it can't pull your attention.</p>
 <p>Press <code>d</code> and <code>a</code> to reveal <strong>Done</strong> and <strong>Archived</strong> — the full five-column view:</p>
-<p><img alt="The board uncollapsed: all five columns, including Done and Archived, in view." src="../assets/board/board-expanded.svg" /></p>
+<p><img alt="The board uncollapsed: all five columns, including Done and Archived, in view." src="../assets/board/board-expanded.png" /></p>
 <p>This expanded layout is for <em>admin and reflection</em>, not for getting work done:
 reviewing what's shipped, re-reading completion summaries, sweeping stale cards
 into the archive, and taking stock of how much has moved. Step back into it when
@@ -2290,7 +2410,7 @@ build, complete, repeat.</p>
 <p>The acceptance criteria written at step 2 are the contract for steps 3 and 5 —
 which is exactly why refining <em>before</em> picking up is worth the small ceremony.</p>
 <h2 id="anatomy-of-a-card">Anatomy of a card<a class="headerlink" href="#anatomy-of-a-card" title="Permanent link">&para;</a></h2>
-<p><img alt="A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread." src="../assets/board/card-detail.svg" /></p>
+<p><img alt="A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread." src="../assets/board/card-detail.png" /></p>
 <p>The title and the meta line beneath it (project · status · priority · tags) are
 <strong>pinned</strong> above the scroll: as you page through a long description, acceptance
 criteria and comment thread, they stay put — a constant reference to which card
@@ -2353,7 +2473,7 @@ form (press <kbd>e</kbd> on the detail screen), or with the <code>ref</code> CLI
 bullet and ordered lists (including nested ones), blockquotes, tables, inline
 code and fenced code blocks (with syntax highlighting) all display formatted
 rather than as raw <code>#</code>, <code>**</code> and <code>-</code>:</p>
-<p><img alt="A card whose description and acceptance criteria use markdown: two heading levels, emphasis, a table, an inline and a fenced code block, a blockquote, and a nested ordered list." src="../assets/board/card-detail-markdown.svg" /></p>
+<p><img alt="A card whose description and acceptance criteria use markdown: two heading levels, emphasis, a table, an inline and a fenced code block, a blockquote, and a nested ordered list." src="../assets/board/card-detail-markdown.png" /></p>
 <p>The key thing is that there's <strong>no format to choose</strong>. Plain text and markdown
 share the same field, and both render correctly — because plain text <em>is</em> valid
 markdown. Single newlines are kept as line breaks, so a plain list of notes
@@ -2476,6 +2596,10 @@ type is what's stored; the formatting only appears in the view.</p>
 <td><kbd>b</kbd> / <kbd>u</kbd></td>
 <td>Block / unblock</td>
 </tr>
+<tr>
+<td><kbd>x</kbd></td>
+<td>Export the card to markdown (prompts for the path, pre-filled with <code>card-N.md</code> in the current directory)</td>
+</tr>
 </tbody>
 </table>
 <p>The edit form (<kbd>e</kbd>) is the single place a card is changed: title,
@@ -2521,9 +2645,20 @@ can call directly. The same store backs both.</p>
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>add<span class="w"> </span>ID<span class="w"> </span>&lt;label&gt;<span class="w"> </span>&lt;value&gt;
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>remove<span class="w"> </span>ID<span class="w"> </span>&lt;position&gt;
 </span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>list<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="c1"># Export</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>mc-tool-board<span class="w"> </span><span class="nb">export</span><span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>markdown<span class="p">|</span>json<span class="o">]</span><span class="w"> </span><span class="o">[</span>--out<span class="w"> </span>FILE<span class="o">]</span><span class="w">    </span><span class="c1"># one card, full fidelity</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>mc-tool-board<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--out<span class="w"> </span>FILE<span class="o">]</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">    </span><span class="o">[</span>--all<span class="w"> </span><span class="p">|</span><span class="w"> </span>--project<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--archived<span class="o">]</span><span class="w"> </span><span class="o">[</span>--search<span class="w"> </span>TEXT<span class="o">]</span><span class="w">   </span><span class="c1"># whole board</span>
 </span></code></pre></div>
 <p><code>--json</code> on the read commands gives machine-readable output — handy for scripting
 or for Claude to consume.</p>
+<p><code>export</code> renders a card — or a whole board listing, grouped by column — as a
+portable document. Markdown embeds the stored description, acceptance criteria
+and completion summary verbatim, so what you wrote round-trips unchanged; JSON
+is full fidelity (tags, references and comments included, matching the
+<code>show --json</code> shape). Output goes to stdout unless <code>--out FILE</code> is given. The
+board-wide form takes the same filters as <code>list</code>.</p>
 <h2 id="tips-for-getting-the-most-from-it">Tips for getting the most from it<a class="headerlink" href="#tips-for-getting-the-most-from-it" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Capture freely, refine sparingly.</strong> Backlog is cheap; a card you'll never act

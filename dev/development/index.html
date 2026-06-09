@@ -462,6 +462,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -542,6 +550,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../home/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The home hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../board/" class="md-nav__link">
         
   
@@ -550,6 +586,90 @@
     
   
     The board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The settings editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory-browser/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The memory browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The observations browser
   
 
     
@@ -2346,9 +2466,10 @@ The CI typecheck job (<code>ci.yml</code>) does this automatically.</p>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├── palette.py     # Canonical role→hex colours — the single source of truth
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>├── theme.py       # The mait-* house Textual Themes, built from palette
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>├── render.py      # Palette-coloured Rich chip helpers (for DataTable/OptionList cells)
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>├── help.py        # Shared `?` HelpScreen (live key-binding cheat-sheet)
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├── app.py         # MaitApp base class + SHARED_TCSS path
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>└── app.tcss       # Shared stylesheet (modal geometry, conventions)
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>├── brand.py       # Wordmark, signature glyph, companion-voice helpers (Textual-free)
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├── help.py        # Shared `?` HelpScreen (live key-binding cheat-sheet)
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>├── app.py         # MaitApp base class + SHARED_TCSS path
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>└── app.tcss       # Shared stylesheet (modal geometry, conventions)
 </span></code></pre></div>
 <p><strong>Dependency order:</strong> <code>palette.py</code> ← <code>theme.py</code> ← <code>app.py</code>; <code>render.py</code> and
 <code>help.py</code> sit on top of <code>palette.py</code>/<code>app.py</code> respectively. The one hard rule:
@@ -2505,10 +2626,18 @@ maintained.</p>
    key-bindings, so new bindings appear automatically. Expose the app's actions
    in the Ctrl+P palette by overriding <code>get_system_commands</code> and yielding
    <code>SystemCommand</code>s after <code>yield from super().get_system_commands(screen)</code>.</li>
+<li>Give every empty state the companion voice: route the copy through
+   <code>mait_code.tui.brand.empty_state</code> (which leads with the signature glyph)
+   instead of a bare "no data" string. Toast glyphs come free from
+   <code>MaitApp.notify</code>.</li>
 <li>Add a snapshot test (see "Snapshot tests" above).</li>
 </ol>
-<p>The two shipped surfaces are worked examples: <code>cli/_board_tui.py</code> (the board) and
-<code>cli/_settings_tui.py</code> (the settings editor, a master–detail tree). Theme
+<p>The five shipped surfaces are worked examples: <code>cli/_home_tui.py</code> (the home
+hub, a tree-navigable master–detail that launches the others), <code>cli/_board_tui.py</code>
+(the board), <code>cli/_settings_tui.py</code> (the settings editor, a master–detail tree),
+<code>cli/_memory_tui.py</code> (the memory browser, a read-only master–detail), and
+<code>cli/_observations_tui.py</code> (the observations browser, the same shape over the
+raw extraction tier). Theme
 persistence is free — <code>MaitApp.on_unmount</code> writes the active theme back to the
 <code>theme</code> setting for every surface, so a user's pick survives across sessions.</p>
 <h2 id="adding-a-new-skill">Adding a New Skill<a class="headerlink" href="#adding-a-new-skill" title="Permanent link">&para;</a></h2>

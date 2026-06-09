@@ -12,13 +12,13 @@
         <meta name="author" content="Wiktor de Pina">
       
       
-        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/sync/">
+        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/settings/">
       
       
-        <link rel="prev" href="../observations/">
+        <link rel="prev" href="../board/">
       
       
-        <link rel="next" href="../philosophy/">
+        <link rel="next" href="../memory-browser/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Multi-machine sync - mait-code</title>
+        <title>The settings editor - mait-code</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#multi-machine-sync" class="md-skip">
+        <a href="#the-settings-editor" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Multi-machine sync
+              The settings editor
             
           </span>
         </div>
@@ -608,10 +608,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../settings/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The settings editor
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -627,6 +654,148 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-it-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why it exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#editing-a-setting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing a setting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Editing a setting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-scoring-weights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The scoring weights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrations-and-data-dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migrations and data-dir
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-settings-live" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where settings live
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#off-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Off the terminal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-cli-behind-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The CLI behind it
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -692,37 +861,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Multi-machine sync
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../sync/" class="md-nav__link">
         
   
   
@@ -738,176 +880,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Setup
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Setup">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#gitignore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        .gitignore
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#initial-commit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Initial commit
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Workflow
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Workflow">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#push-changes-after-a-session" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Push changes after a session
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pull-on-another-machine" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pull on another machine
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#post-merge-hook-for-auto-db-restore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Post-merge hook for auto DB restore
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#conflict-resolution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conflict Resolution
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Conflict Resolution">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#memorymd-conflicts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MEMORY.md conflicts
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#observation-conflicts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Observation conflicts
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#embedding-provider" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Embedding Provider
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-note" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security Note
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2026,22 +1998,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#setup" class="md-nav__link">
+  <a href="#why-it-exists" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Setup
+        Why it exists
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Setup">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#editing-a-setting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing a setting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Editing a setting">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#gitignore" class="md-nav__link">
+  <a href="#the-scoring-weights" class="md-nav__link">
     <span class="md-ellipsis">
       
-        .gitignore
+        The scoring weights
       
     </span>
   </a>
@@ -2049,10 +2043,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#initial-commit" class="md-nav__link">
+  <a href="#migrations-and-data-dir" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Initial commit
+        Migrations and data-dir
       
     </span>
   </a>
@@ -2065,22 +2059,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#workflow" class="md-nav__link">
+  <a href="#where-settings-live" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Workflow
+        Where settings live
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Workflow">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#off-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Off the terminal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reference">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#push-changes-after-a-session" class="md-nav__link">
+  <a href="#keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Push changes after a session
+        Keys
       
     </span>
   </a>
@@ -2088,21 +2104,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pull-on-another-machine" class="md-nav__link">
+  <a href="#the-cli-behind-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pull on another machine
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#post-merge-hook-for-auto-db-restore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Post-merge hook for auto DB restore
+        The CLI behind it
       
     </span>
   </a>
@@ -2111,67 +2116,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#conflict-resolution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conflict Resolution
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Conflict Resolution">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#memorymd-conflicts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MEMORY.md conflicts
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#observation-conflicts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Observation conflicts
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#embedding-provider" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Embedding Provider
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-note" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security Note
-      
-    </span>
-  </a>
   
 </li>
       
@@ -2192,7 +2136,7 @@
 
 
   
-    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/sync.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/settings.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2200,84 +2144,185 @@
   
 
 
-<h1 id="multi-machine-sync">Multi-Machine Sync<a class="headerlink" href="#multi-machine-sync" title="Permanent link">&para;</a></h1>
-<p>The companion's data directory (<code>~/.claude/mait-code-data/</code>) can be synchronised across machines using git.</p>
-<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">cd</span><span class="w"> </span>~/.claude/mait-code-data
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>init
-</span></code></pre></div>
-<h3 id="gitignore">.gitignore<a class="headerlink" href="#gitignore" title="Permanent link">&para;</a></h3>
-<p>Not every database should be synced. <code>memory.db</code> is <strong>regenerable</strong> — the JSONL
-observation logs under <code>memory/observations/</code> are its source of truth, so it is
-gitignored and rebuilt with <code>mc-tool-memory restore</code> after a pull. The other
-databases (<code>board.db</code>, <code>reminders.db</code>, <code>inbox.db</code>) have <strong>no such source</strong>, so
-they are committed directly — gitignoring them would silently lose your board,
-reminders, and inbox on every other machine.</p>
-<p>Create <code>~/.claude/mait-code-data/.gitignore</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># Regenerable from the observation logs (mc-tool-memory restore) — don&#39;t sync.
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>memory.db
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a># SQLite sidecar files (WAL mode) — never sync these.
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>*.db-wal
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>*.db-shm
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>*.db-journal
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a># Cached embedding models (large; re-downloaded on demand)
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>models/
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a># Temporary files
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>*.tmp
-</span></code></pre></div>
-<blockquote>
-<p><code>board.db</code>, <code>reminders.db</code>, and <code>inbox.db</code> are deliberately <strong>not</strong> ignored.
-They are small and have no source to rebuild from, so they travel with the
-repo. As SQLite binaries they don't merge cleanly — for a single user across
-machines the practical rule is to push from the machine you just worked on and
-pull before starting on another.</p>
-</blockquote>
-<h3 id="initial-commit">Initial commit<a class="headerlink" href="#initial-commit" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>add<span class="w"> </span>-A
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Initial companion data&quot;</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>origin<span class="w"> </span>&lt;your-private-repo-url&gt;
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>main
-</span></code></pre></div>
-<h2 id="workflow">Workflow<a class="headerlink" href="#workflow" title="Permanent link">&para;</a></h2>
-<h3 id="push-changes-after-a-session">Push changes after a session<a class="headerlink" href="#push-changes-after-a-session" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">cd</span><span class="w"> </span>~/.claude/mait-code-data
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>add<span class="w"> </span>-A
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Update memories&quot;</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>git<span class="w"> </span>push
-</span></code></pre></div>
-<h3 id="pull-on-another-machine">Pull on another machine<a class="headerlink" href="#pull-on-another-machine" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>~/.claude/mait-code-data
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Rebuild memory.db from the synced observation logs</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>mc-tool-memory<span class="w"> </span>restore
-</span></code></pre></div>
-<h3 id="post-merge-hook-for-auto-db-restore">Post-merge hook for auto DB restore<a class="headerlink" href="#post-merge-hook-for-auto-db-restore" title="Permanent link">&para;</a></h3>
-<p>Create <code>~/.claude/mait-code-data/.git/hooks/post-merge</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="ch">#!/usr/bin/env bash</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Restore memory DB from observation logs after pulling</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">if</span><span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span>mc-tool-memory<span class="w"> </span><span class="p">&amp;</span>&gt;<span class="w"> </span>/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>mc-tool-memory<span class="w"> </span>restore<span class="w"> </span><span class="p">&amp;</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">fi</span>
-</span></code></pre></div>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>chmod<span class="w"> </span>+x<span class="w"> </span>~/.claude/mait-code-data/.git/hooks/post-merge
-</span></code></pre></div>
-<h2 id="conflict-resolution">Conflict Resolution<a class="headerlink" href="#conflict-resolution" title="Permanent link">&para;</a></h2>
-<h3 id="memorymd-conflicts">MEMORY.md conflicts<a class="headerlink" href="#memorymd-conflicts" title="Permanent link">&para;</a></h3>
-<p>MEMORY.md is the most likely file to have merge conflicts (both machines may update curated facts). To resolve:</p>
+<h1 id="the-settings-editor">The settings editor<a class="headerlink" href="#the-settings-editor" title="Permanent link">&para;</a></h1>
+<p>Everything mait-code reads — where your data lives, which theme the TUIs wear,
+which embedding provider powers memory search, how retrieval is scored — is a
+<em>setting</em>. <code>mait-code settings</code> is the full-screen editor for all of it: a
+master–detail app that shows every knob, what it's currently set to and <em>where
+that value came from</em>, and lets you change it with the right control for its
+type, validated before it's written.</p>
+<p><img alt="The settings editor: the categorised list on the left, the inline editor for
+the highlighted setting on the right, with its help line, current source and an
+Apply button." src="../assets/settings/settings.png" /></p>
+<h2 id="why-it-exists">Why it exists<a class="headerlink" href="#why-it-exists" title="Permanent link">&para;</a></h2>
+<p>Configuration that lives only in environment variables and a hand-edited file is
+easy to get wrong and hard to reason about: you can never quite tell whether a
+value is the default, something you set last month, or a shell export shadowing
+both. The editor makes the whole picture legible. Every row carries its resolved
+value and its <strong>source</strong> — <code>default</code>, <code>settings</code> (the file), <code>env</code>, or <code>derived</code>
+— so "why is it <em>this</em>?" is answered on screen. And because each setting knows
+its own type, choices and validator, the editor can offer a radio set where the
+value is an enum, reject a bad number before it's saved, and refuse to leave the
+scoring weights in a state that doesn't add up.</p>
+<p>It is the same configuration the <code>mait-code settings</code> CLI subcommands read and
+write — the editor is just the interactive face of it. Nothing here is hidden
+from <code>settings list</code>/<code>get</code>/<code>set</code>, and vice versa.</p>
+<h2 id="the-layout">The layout<a class="headerlink" href="#the-layout" title="Permanent link">&para;</a></h2>
+<p>Three regions, top to bottom:</p>
+<ul>
+<li><strong>The masthead</strong> — the shared brand banner, labelled <em>Settings</em> (see <a href="../home/">the home
+  hub guide</a> for how the banner works).</li>
+<li><strong>The body</strong> — the <strong>settings list</strong> on the left, grouped into categories; the
+  <strong>editor</strong> on the right, which adapts to whatever setting is highlighted.</li>
+<li><strong>The footer</strong> — the live key hints.</li>
+</ul>
+<p>Each row in the list reads <code>&lt;key&gt;  &lt;value&gt;</code>. Values at their built-in default are
+dimmed, so what you've actually changed stands out. A <code>⚠</code> marks a
+<strong>migration-sensitive</strong> setting — one whose change triggers a re-embed (more on
+that below).</p>
+<p>The categories:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>What's in it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>General</strong></td>
+<td><code>data-dir</code> (where everything lives) and <code>theme</code>.</td>
+</tr>
+<tr>
+<td><strong>Logging</strong></td>
+<td>Log level, log file, and how many rotated backups to keep.</td>
+</tr>
+<tr>
+<td><strong>Embeddings</strong></td>
+<td>The provider (<code>local</code> or <code>bedrock</code>), the model, and the Bedrock model id / region.</td>
+</tr>
+<tr>
+<td><strong>Models</strong></td>
+<td>The extraction and reflection models, LLM and git timeouts, and reflection batch/novelty tuning.</td>
+</tr>
+<tr>
+<td><strong>Scoring &amp; dedup</strong></td>
+<td>The retrieval scoring weights and decay half-lives, plus the dedup similarity thresholds and scope boosts.</td>
+</tr>
+<tr>
+<td><strong>Paths (derived)</strong></td>
+<td>Read-only paths computed from <code>data-dir</code> — the database files, the model cache, the observations directory.</td>
+</tr>
+</tbody>
+</table>
+<p>General, Logging and Embeddings open on boot; the more advanced groups start
+collapsed to keep the initial list short.</p>
+<h2 id="editing-a-setting">Editing a setting<a class="headerlink" href="#editing-a-setting" title="Permanent link">&para;</a></h2>
+<p>Move the highlight with the arrow keys; the editor on the right re-renders for
+whatever you land on. The control matches the setting's type:</p>
+<p><img alt="The adaptive editor on an enum setting: highlighting theme renders a radio
+set of every installed theme, the current one marked." src="../assets/settings/settings-editor.png" /></p>
+<ul>
+<li><strong>Enums</strong> (<code>theme</code>, <code>embedding-provider</code>, <code>log-level</code>, …) become a <strong>radio
+  set</strong> of the allowed choices, the current one selected — no way to type an
+  invalid value.</li>
+<li><strong>Free text and numbers</strong> (<code>data-dir</code>, <code>log-file</code>, timeouts, thresholds …)
+  become an <strong>input with live validation</strong>: a bad value shows its error as you
+  type, and <em>Apply</em> won't write it.</li>
+<li><strong>Derived values</strong> (everything under <em>Paths</em>) are <strong>read-only</strong> — they're
+  computed from <code>data-dir</code>, so the editor shows the value and says so rather than
+  pretending you can change it.</li>
+</ul>
+<p>Press <code>Ctrl+S</code> (or <code>Enter</code> in an input) to apply. A line under the editor
+confirms <code>✓ applied</code>, along with any warning the change carries.</p>
+<h3 id="the-scoring-weights">The scoring weights<a class="headerlink" href="#the-scoring-weights" title="Permanent link">&para;</a></h3>
+<p>Retrieval ranks memories by a blend of recency, importance and relevance, and
+those three weights <strong>must sum to 1.0</strong>. Editing them one at a time would
+inevitably pass through invalid states, so they collapse into a single
+<strong>grouped</strong> row. Its editor is a small modal with all three fields and a running
+sum; <em>Apply</em> only lights up when they total <code>1.0</code>. (The <code>settings set</code> CLI
+rejects the individual weight keys for the same reason — change them here, or
+edit <code>settings.toml</code> directly and let <code>doctor</code> validate the result.)</p>
+<h3 id="migrations-and-data-dir">Migrations and <code>data-dir</code><a class="headerlink" href="#migrations-and-data-dir" title="Permanent link">&para;</a></h3>
+<p>A few changes have consequences beyond the file, and the editor confirms them in
+a modal before doing anything:</p>
+<ul>
+<li>Changing the <strong>embedding provider or model</strong> (the <code>⚠</code> rows) means stored
+  vectors no longer match — so it offers to <strong>re-embed</strong> every memory now. If you
+  say yes, the editor drops out to the terminal so <code>reindex</code> can print its normal
+  progress, then returns.</li>
+<li>Changing <strong><code>data-dir</code></strong> offers to <strong>move</strong> your existing data to the new
+  location rather than leaving it stranded.</li>
+</ul>
+<p>Decline either and the setting still changes — the follow-up just waits until you
+run it yourself.</p>
+<h2 id="where-settings-live">Where settings live<a class="headerlink" href="#where-settings-live" title="Permanent link">&para;</a></h2>
+<p>Resolution order, highest priority first:</p>
 <ol>
-<li>Accept both versions — the file should stay under ~150 lines</li>
-<li>Remove duplicates</li>
-<li>Re-run <code>/reflect</code> to consolidate if needed</li>
+<li>an <strong>environment variable</strong> (<code>MAIT_CODE_*</code>) — source <code>env</code>,</li>
+<li>the <strong>settings file</strong> — source <code>settings</code>,</li>
+<li>the <strong>built-in default</strong> — source <code>default</code>.</li>
 </ol>
-<h3 id="observation-conflicts">Observation conflicts<a class="headerlink" href="#observation-conflicts" title="Permanent link">&para;</a></h3>
-<p>Observations are timestamped files, so conflicts are rare. If they occur, keep both versions — the reflection system will deduplicate.</p>
-<h2 id="embedding-provider">Embedding Provider<a class="headerlink" href="#embedding-provider" title="Permanent link">&para;</a></h2>
-<p>Ensure the same embedding provider (<code>MAIT_CODE_EMBEDDING_PROVIDER</code>) is configured on all machines. If you switch providers (e.g. from <code>local</code> to <code>bedrock</code>), run <code>mc-tool-memory reindex</code> on each machine after pulling — it will detect the dimension mismatch and recreate the vec table automatically.</p>
-<h2 id="security-note">Security Note<a class="headerlink" href="#security-note" title="Permanent link">&para;</a></h2>
-<p>Your companion data may contain sensitive information (project details, preferences, work patterns). Use a <strong>private</strong> repository and consider encrypting sensitive fields in the future.</p>
+<p>The file is <code>settings.toml</code> under <code>$XDG_CONFIG_HOME/mait-code/</code> (i.e.
+<code>~/.config/mait-code/settings.toml</code> unless <code>XDG_CONFIG_HOME</code> is set). The editor
+writes it for you, fully commented: primary knobs uncommented, advanced ones
+commented-out until you opt in, and the derived paths shown as informational
+comments you can't assign. Derived values are computed, never read from the file.</p>
+<div class="admonition tip">
+<p class="admonition-title">An export can shadow the file</p>
+<p>Because <code>env</code> wins, a <code>MAIT_CODE_*</code> exported in your shell overrides whatever
+the editor writes. If a change doesn't seem to take, check your environment —
+the <code>settings list</code> view names the source of every value, so a stray export
+shows up as <code>env</code>.</p>
+</div>
+<h2 id="off-the-terminal">Off the terminal<a class="headerlink" href="#off-the-terminal" title="Permanent link">&para;</a></h2>
+<p><code>mait-code settings</code> only opens the editor when it's attached to a TTY. Piped or
+redirected, it falls back to the read-only <code>settings list</code> — a provenance-aware
+table of every knob, its resolved value and its source — so scripts and CI see a
+stable, parseable view instead of a TUI.</p>
+<h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
+<h3 id="keys">Keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><kbd>↑</kbd> / <kbd>↓</kbd></td>
+<td>Move between settings</td>
+</tr>
+<tr>
+<td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Enter</kbd></td>
+<td>Apply the edit (or open the grouped weights editor)</td>
+</tr>
+<tr>
+<td><kbd>Esc</kbd></td>
+<td>Back to the list (from the editor); quit (from the list)</td>
+</tr>
+<tr>
+<td><kbd>q</kbd></td>
+<td>Quit</td>
+</tr>
+<tr>
+<td><kbd>?</kbd></td>
+<td>Key cheat-sheet</td>
+</tr>
+<tr>
+<td><kbd>Ctrl</kbd>+<kbd>P</kbd></td>
+<td>Command palette (incl. theme switching)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-cli-behind-it">The CLI behind it<a class="headerlink" href="#the-cli-behind-it" title="Permanent link">&para;</a></h3>
+<p>The editor is the interactive face of the <code>mait-code settings</code> command. The same
+store backs <code>settings list</code> (the read-only table), <code>settings get &lt;key&gt;</code> (one
+resolved value and its source, for scripting) and <code>settings set &lt;key&gt; &lt;value&gt;</code>
+(validate → write → run any follow-up). See the
+<a href="../reference/mait-code/">CLI reference</a> for the full surface and flags, and
+<a href="../memory/">How memory works</a> for what the scoring and dedup knobs actually tune.</p>
 
 
 

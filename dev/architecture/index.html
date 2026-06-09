@@ -462,6 +462,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
@@ -542,6 +550,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../home/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The home hub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../board/" class="md-nav__link">
         
   
@@ -550,6 +586,90 @@
     
   
     The board
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The settings editor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory-browser/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The memory browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The observations browser
   
 
     
@@ -985,6 +1105,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#memory-browser-tui-mait-code-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Browser TUI (mait-code memory)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#observations-browser-tui-mait-code-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observations Browser TUI (mait-code observations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#board-database" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1055,6 +1197,17 @@
     <span class="md-ellipsis">
       
         Web Fetch CLI Tool (mc-tool-web-fetch)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#home-hub-tui-mait-code-home" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Home Hub TUI (mait-code home)
       
     </span>
   </a>
@@ -2186,6 +2339,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#memory-browser-tui-mait-code-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Browser TUI (mait-code memory)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#observations-browser-tui-mait-code-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observations Browser TUI (mait-code observations)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#board-database" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2256,6 +2431,17 @@
     <span class="md-ellipsis">
       
         Web Fetch CLI Tool (mc-tool-web-fetch)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#home-hub-tui-mait-code-home" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Home Hub TUI (mait-code home)
       
     </span>
   </a>
@@ -2626,8 +2812,10 @@ new entry's project) using two complementary measures:</p>
 <li>Gather candidates from <strong>both</strong> FTS5 keyword search and vector similarity search</li>
 <li>Compare each candidate two ways: <code>SequenceMatcher</code> string similarity and vector cosine similarity</li>
 <li>If string similarity ≥ <code>dedup-string-threshold</code> (default 0.85) <strong>or</strong> cosine similarity ≥ <code>dedup-vector-threshold</code> (default 0.92): treat as a duplicate — update the existing entry's timestamp and keep max importance</li>
+<li>If cosine similarity falls in the contradiction band <code>[dedup-conflict-threshold, dedup-vector-threshold)</code> (default <code>[0.60, 0.92)</code>): insert as new entry <strong>and</strong> return the near-neighbours as <code>potential_conflicts</code> so a stale fact can be superseded</li>
 <li>If no match: insert as new entry</li>
 </ol>
+<p>Superseded entries (replaced via <code>supersede_memory</code>) are excluded as dedup candidates and hidden from default search/listing.</p>
 <h3 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>flowchart TD
     A["store_memory()"] --&gt; B["find_duplicate()"]
@@ -2730,9 +2918,18 @@ new entry's project) using two complementary measures:</p>
 <td>--days?, --min-new?, --batch-size?, --drain?, --project?, --branch?, --scope?</td>
 <td>Synthesise observations into insights, propose MEMORY.md updates</td>
 </tr>
+<tr>
+<td><code>canonicalize-projects</code></td>
+<td>--dry-run?</td>
+<td>Rewrite stored project slugs per the project-alias map</td>
+</tr>
 </tbody>
 </table>
 <p>Scope flags apply to every command that touches <code>memory_entries</code>: <code>--project</code> and <code>--branch</code> override the auto-detected context; <code>--scope</code> filters or sets the entry scope (<code>global</code>, <code>project</code>, <code>branch</code>, or <code>all</code> — the last disables filtering at query time).</p>
+<h2 id="memory-browser-tui-mait-code-memory">Memory Browser TUI (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-tui-mait-code-memory" title="Permanent link">&para;</a></h2>
+<p><code>mait-code memory</code> opens a full-screen, read-only master–detail browser over the memory store: a tree of memories grouped by entry type on the left (counts per group, newest first), the selected memory's body — rendered as markdown, plain text being a subset — plus its metadata (created, importance, scope, class) on the right. <code>/</code> focuses a live substring filter (groups expand to the matches, the subtitle reports the narrowed count), <code>r</code> re-reads the store, a <code>Ctrl+P</code> command palette exposes the actions, and <code>?</code> opens the context help screen. It deliberately browses <em>everything</em> — across projects and scopes — and performs no mutations: reading is its whole job, and writes stay with <code>mc-tool-memory</code>. It is built on Textual over the same query layer as the CLI tool (<code>search.list_entries</code>), following the house TUI conventions: a TTY-gated launch (piped or redirected, it prints a grouped read-only summary instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
+<h2 id="observations-browser-tui-mait-code-observations">Observations Browser TUI (<code>mait-code observations</code>)<a class="headerlink" href="#observations-browser-tui-mait-code-observations" title="Permanent link">&para;</a></h2>
+<p><code>mait-code observations</code> is the memory browser's sibling over the <strong>raw extraction tier</strong>: a read-only master–detail browser of every non-insight entry, grouped by capture day (newest first), each flagged <strong>pending</strong> or <strong>reflected</strong> against the reflection watermark — so what reads pending here is precisely what the next <code>/reflect</code> run will consider. Highlighting a day renders its capture sessions (trigger, project, per-category extraction counts) from the daily JSONL logs; highlighting an entry renders its body and metadata, including its reflection standing. <code>/</code> filters live by content; <code>p</code> narrows to one project via a <code>Select</code> dropdown (the board's filter pattern) and judges entries against <em>that project's</em> watermark, since reflection runs per-project. The query layer lives in <code>tools/memory/observations.py</code> — <code>memory.db</code> is the operative source (the watermark is defined over its entry IDs); the JSONL logs contribute only per-capture metadata, read best-effort. Same house conventions: TTY-gated (a day-grouped text summary when piped), lazily imported, one connection for the app's lifetime, and no mutations — synthesis stays with <code>/reflect</code>.</p>
 <h2 id="board-database">Board Database<a class="headerlink" href="#board-database" title="Permanent link">&para;</a></h2>
 <p>The board database (<code>board.db</code>) stores a single cross-project kanban board. Cards carry a <code>project</code> field — so one board serves every project and UIs filter by it — and move through a fixed, hardcoded column workflow.</p>
 <p><strong>Cards table: <code>cards</code></strong></p>
@@ -2967,7 +3164,7 @@ new entry's project) using two complementary measures:</p>
 <tr>
 <td><code>summary</code></td>
 <td>--all?, --project?, --json?</td>
-<td>Per-column counts (used by the session-start hook)</td>
+<td>Per-column counts (the session-start hook reads the same counts via <code>service.summary_counts</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -3011,7 +3208,7 @@ new entry's project) using two complementary measures:</p>
 </table>
 <p>Unlike the board, the inbox is <strong>global, not project-scoped</strong> — <code>project</code> is only a hint to help triage route the item later.</p>
 <h2 id="inbox-cli-tool-mc-tool-inbox">Inbox CLI Tool (<code>mc-tool-inbox</code>)<a class="headerlink" href="#inbox-cli-tool-mc-tool-inbox" title="Permanent link">&para;</a></h2>
-<p>A thin capture-and-drain CLI over <code>inbox.db</code>. <code>add "&lt;text&gt;"</code> captures an item (frictionless — no flags required), <code>list [--json]</code> shows the inbox oldest-first, <code>remove &lt;id&gt;</code> drains an item out, and <code>count</code> prints the item total (consumed by the session-start hook). Queries and mutations live in <code>src/mait_code/tools/inbox/service.py</code>, the presentation-agnostic layer mirroring the board's <code>cli</code>/<code>service</code>/<code>db</code> split.</p>
+<p>A thin capture-and-drain CLI over <code>inbox.db</code>. <code>add "&lt;text&gt;"</code> captures an item (frictionless — no flags required), <code>list [--json]</code> shows the inbox oldest-first, <code>remove &lt;id&gt;</code> drains an item out, and <code>count</code> prints the item total (the session-start hook reads the same count via <code>service.count_items</code>). Queries and mutations live in <code>src/mait_code/tools/inbox/service.py</code>, the presentation-agnostic layer mirroring the board's <code>cli</code>/<code>service</code>/<code>db</code> split.</p>
 <p>The intended lifecycle is <strong>capture → triage → empty</strong>: the <code>/triage</code> skill walks the captured items, proposes a destination for each (board card or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.</p>
 <h2 id="reminders-cli-tool-mc-tool-reminders">Reminders CLI Tool (<code>mc-tool-reminders</code>)<a class="headerlink" href="#reminders-cli-tool-mc-tool-reminders" title="Permanent link">&para;</a></h2>
 <table>
@@ -3041,7 +3238,7 @@ new entry's project) using two complementary measures:</p>
 <tr>
 <td><code>check</code></td>
 <td>—</td>
-<td>Check for overdue reminders (used by session_start hook)</td>
+<td>Check for overdue reminders (the session-start hook builds the same text via <code>tools/reminders/service.py</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -3089,6 +3286,10 @@ new entry's project) using two complementary measures:</p>
 </tbody>
 </table>
 <p>Content-type routing: HTML→markdown (via <code>markdownify</code>), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.</p>
+<h2 id="home-hub-tui-mait-code-home">Home Hub TUI (<code>mait-code home</code>)<a class="headerlink" href="#home-hub-tui-mait-code-home" title="Permanent link">&para;</a></h2>
+<p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
+<p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the observations browser, or the settings editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and the board/memory/observations/settings apps are launched unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with.</p>
+<p>This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from <code>mait_code.tui.brand</code>. The <code>BrandBanner</code> (<code>mait_code.tui.banner</code>) wraps them into one size-responsive masthead worn by every TUI — home, board, settings, the memory browser and the observations browser — in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the <code>mc-tool-*</code> CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, <code>mait-code home</code> prints a compact text summary and bare <code>mait-code</code> keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.</p>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3104,7 +3305,7 @@ new entry's project) using two complementary measures:</p>
 <td><code>session_start</code></td>
 <td>SessionStart</td>
 <td>sync</td>
-<td>Inject companion context (reminders, board summary, inbox count)</td>
+<td>Inject companion context (reminders, board summary, inbox count) — built by <code>hooks/session_start/context.py</code>, which reads each tool's store layer directly and is shared with the home TUI's system prompt view</td>
 </tr>
 <tr>
 <td><code>observe</code></td>
