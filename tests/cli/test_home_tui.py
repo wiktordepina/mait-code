@@ -316,6 +316,38 @@ def test_wordmark_falls_back_when_narrow() -> None:
     assert _run(scenario) == "mait-code"
 
 
+def _banner_state(width: int, height: int) -> tuple[str, bool]:
+    """Render the home banner at *size* and report (wordmark, is-compact)."""
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(width, height)) as pilot:
+            await pilot.pause()
+            banner = app.query_one(banner_mod.BrandBanner)
+            return str(app.query_one("#wordmark").render()), banner.has_class(
+                "-compact"
+            )
+
+    return _run(scenario)
+
+
+def test_banner_full_on_a_tall_terminal() -> None:
+    from mait_code.tui.brand import WORDMARK
+
+    wordmark, compact = _banner_state(120, 40)
+    assert wordmark == WORDMARK
+    assert compact is False
+
+
+def test_banner_goes_compact_on_a_short_terminal() -> None:
+    from mait_code.tui.brand import WORDMARK_COMPACT
+
+    # 28 rows is at/below COMPACT_MAX_HEIGHT, so the half-height art stands in.
+    wordmark, compact = _banner_state(120, 28)
+    assert wordmark == WORDMARK_COMPACT
+    assert compact is True
+
+
 def test_broken_store_shows_snag_not_crash(monkeypatch: pytest.MonkeyPatch) -> None:
     import mait_code.tools.inbox.db as inbox_db
 

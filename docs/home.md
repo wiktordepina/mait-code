@@ -51,10 +51,11 @@ Memory: 128 entries · 0 unembedded · 3 unreflected
 Three regions, top to bottom:
 
 - **The masthead** — the brand wordmark on the left; on the right, the view name
-  (here, *Home Hub*) over the tagline and the installed version. The same banner
-  leads the settings editor and the memory browser too — each labelled with its
-  own view name — so those surfaces wear one identity in place of a stock title
-  bar.
+  (here, *Home Hub*) over the tagline and the installed version. On a short
+  terminal the wordmark drops to a half-height variant so it never crowds the
+  screen. The same banner leads the board, the settings editor and the memory
+  browser too — each labelled with its own view name — so every surface wears one
+  identity in place of a stock title bar.
 - **The body** — a tree sidebar on the left, a detail pane on the right. The tree
   is deliberately the slimmer share: it's a menu, and the detail pane is where the
   content lives. Highlighting a node renders that section in full on the right.
@@ -75,10 +76,10 @@ and `Enter` does the obvious thing on each:
 
 ### Opening the other TUIs
 
-The board, the memory browser and the settings editor are full applications in
-their own right. Each has a dedicated **launch leaf** at the top of its section,
-marked with a `↗` and shown in the accent colour so it reads as a hand-off rather
-than just another row:
+[The board](board.md), [the memory browser](memory-browser.md) and
+[the settings editor](settings.md) are full applications in their own right. Each
+has a dedicated **launch leaf** at the top of its section, marked with a `↗` and
+shown in the accent colour so it reads as a hand-off rather than just another row:
 
 - `↗ Open board` — under **Board**
 - `↗ Open memory browser` — under **Memory**

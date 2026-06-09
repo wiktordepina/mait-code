@@ -14,9 +14,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+import mait_code.tui.banner as banner_mod
 from mait_code.cli._board_tui import BoardApp
 from mait_code.tools.board import service
 from mait_code.tools.board.db import get_connection
+
+
+@pytest.fixture(autouse=True)
+def _pin_banner_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the masthead version so the brand banner stays release-stable.
+
+    The board wears the banner now, which renders the installed version; without
+    pinning, every version bump would churn these baselines.
+    """
+    monkeypatch.setattr(banner_mod, "installed_version", lambda: "0.0.0")
 
 
 def _seed_demo(db_path: Path) -> None:
@@ -51,6 +64,13 @@ def test_board_snapshot(snap_compare, tmp_path: Path) -> None:
     db_path = tmp_path / "board.db"
     _seed_demo(db_path)
     assert snap_compare(BoardApp(db_path=db_path), terminal_size=(120, 40))
+
+
+def test_board_compact_banner_snapshot(snap_compare, tmp_path: Path) -> None:
+    """A short terminal (≤30 rows) drops the masthead to the half-height brand."""
+    db_path = tmp_path / "board.db"
+    _seed_demo(db_path)
+    assert snap_compare(BoardApp(db_path=db_path), terminal_size=(120, 28))
 
 
 def test_help_screen_snapshot(snap_compare, tmp_path: Path) -> None:

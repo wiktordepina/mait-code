@@ -37,7 +37,6 @@ from textual.widget import Widget
 from textual.widgets import (
     Button,
     Footer,
-    Header,
     Input,
     Label,
     Markdown,
@@ -65,6 +64,7 @@ from mait_code.tools.board.columns import (
 from mait_code.tools.board.db import get_connection, get_project
 from mait_code.tui import palette as p
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.banner import BrandBanner
 from mait_code.tui.brand import empty_state
 from mait_code.tui.markdown import md_parser
 from mait_code.tui.render import (
@@ -1115,7 +1115,7 @@ class BoardApp(MaitApp):
         self._data_version = 0  # last-seen PRAGMA data_version (set on mount)
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield BrandBanner(subtitle="Board")
         with Horizontal(id="body"):
             for status in _PANES:
                 with Vertical(classes="col", id=f"col-{status}"):
@@ -1193,10 +1193,12 @@ class BoardApp(MaitApp):
         return statuses
 
     def _update_subtitle(self) -> None:
-        parts = [f"project: {self._project_filter or 'all'}"]
+        # The live filter/search state rides the banner's view-name line; the
+        # `p`/`/` key hints it used to carry are already in the footer.
+        parts = [f"Board · project: {self._project_filter or 'all'}"]
         if self._search:
             parts.append(f"search: {self._search!r}")
-        self.sub_title = "  ".join(parts) + "  (p to filter, / to search)"
+        self.query_one(BrandBanner).set_subtitle("  ".join(parts))
 
     def _reload(self) -> None:
         """Re-query with the active filter and repaint every pane."""
