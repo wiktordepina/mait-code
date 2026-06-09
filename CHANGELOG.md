@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.46.1] — 2026-06-09
+
 ### Added
 
 - **Guides for the settings editor and the memory browser.** `mait-code
@@ -1409,7 +1411,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.46.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.46.1...HEAD
+[0.46.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.1
 [0.46.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.0
 [0.45.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.1
 [0.45.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.0
