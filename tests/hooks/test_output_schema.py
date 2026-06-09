@@ -17,6 +17,7 @@ import pytest
 
 import mait_code.hooks.auto_format.cli as auto_format_cli
 import mait_code.hooks.session_start.cli as session_start_cli
+import mait_code.hooks.session_start.context as session_start_context
 from tests.hooks.hook_schema import validate_hook_output
 
 
@@ -115,10 +116,11 @@ def test_invalid_payloads_are_rejected(stdout, match):
 
 
 def test_session_start_output_is_valid(monkeypatch, capsys):
-    monkeypatch.setattr(session_start_cli, "_check_reminders", lambda: "")
+    monkeypatch.setattr(session_start_context, "reminders_section", lambda: "")
     monkeypatch.setattr(
-        session_start_cli, "_check_board", lambda: "2 refined · 1 blocked"
+        session_start_context, "board_section", lambda: "2 refined · 1 blocked"
     )
+    monkeypatch.setattr(session_start_context, "inbox_section", lambda: "")
     monkeypatch.setattr("sys.stdin", io.StringIO("{}"))
 
     session_start_cli.main()
@@ -128,8 +130,9 @@ def test_session_start_output_is_valid(monkeypatch, capsys):
 
 def test_session_start_emits_nothing_when_empty(monkeypatch, capsys):
     """With no sections the hook prints nothing — still contract-valid."""
-    monkeypatch.setattr(session_start_cli, "_check_reminders", lambda: "")
-    monkeypatch.setattr(session_start_cli, "_check_board", lambda: "")
+    monkeypatch.setattr(session_start_context, "reminders_section", lambda: "")
+    monkeypatch.setattr(session_start_context, "board_section", lambda: "")
+    monkeypatch.setattr(session_start_context, "inbox_section", lambda: "")
     monkeypatch.setattr("sys.stdin", io.StringIO("{}"))
 
     session_start_cli.main()

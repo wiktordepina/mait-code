@@ -307,7 +307,7 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance? | Edit card fields |
 | `remove` | id | Delete a card permanently (cascades comments) |
-| `summary` | --all?, --project?, --json? | Per-column counts (used by the session-start hook) |
+| `summary` | --all?, --project?, --json? | Per-column counts (the session-start hook reads the same counts via `service.summary_counts`) |
 
 Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
 
@@ -334,7 +334,7 @@ Unlike the board, the inbox is **global, not project-scoped** — `project` is o
 
 ## Inbox CLI Tool (`mc-tool-inbox`)
 
-A thin capture-and-drain CLI over `inbox.db`. `add "<text>"` captures an item (frictionless — no flags required), `list [--json]` shows the inbox oldest-first, `remove <id>` drains an item out, and `count` prints the item total (consumed by the session-start hook). Queries and mutations live in `src/mait_code/tools/inbox/service.py`, the presentation-agnostic layer mirroring the board's `cli`/`service`/`db` split.
+A thin capture-and-drain CLI over `inbox.db`. `add "<text>"` captures an item (frictionless — no flags required), `list [--json]` shows the inbox oldest-first, `remove <id>` drains an item out, and `count` prints the item total (the session-start hook reads the same count via `service.count_items`). Queries and mutations live in `src/mait_code/tools/inbox/service.py`, the presentation-agnostic layer mirroring the board's `cli`/`service`/`db` split.
 
 The intended lifecycle is **capture → triage → empty**: the `/triage` skill walks the captured items, proposes a destination for each (board card or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.
 
@@ -345,7 +345,7 @@ The intended lifecycle is **capture → triage → empty**: the `/triage` skill 
 | `set` | when, what | Schedule a reminder with natural language time parsing |
 | `list` | --all? | List active (or all) reminders |
 | `dismiss` | id | Dismiss a reminder by ID |
-| `check` | — | Check for overdue reminders (used by session_start hook) |
+| `check` | — | Check for overdue reminders (the session-start hook builds the same text via `tools/reminders/service.py`) |
 
 ## Web Fetch CLI Tool (`mc-tool-web-fetch`)
 
@@ -362,11 +362,19 @@ Local web fetcher that bypasses the claude.ai proxy. Works behind corporate fire
 
 Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.
 
+## Home Hub TUI (`mait-code home`)
+
+`mait-code home` — or just `mait-code` with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim **tree sidebar** (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The **detail pane** beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete `doctor` check list. A one-line install-health verdict (reusing the `doctor` checks) sits under the tree, and the installed version shows in the brand header. `r` re-reads every store (refreshing badges and the open detail), `j`/`k` and the arrows move the cursor, and a `Ctrl+P` palette exposes the actions.
+
+Pressing **Enter** on the Board, Memory or Settings node leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the `home` command (`_run_home_loop`): home exits its event loop returning a `HomeTarget`, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and the board/memory/settings apps are launched unchanged. The **Identity → System prompt** node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same `build_session_context()` the hook calls, so the text on screen is exactly the text a new session opens with.
+
+This is also where the brand lives: the box-drawing wordmark (with a plain-text fallback on narrow terminals), the signature glyph, and the companion voice in every empty state — all from `mait_code.tui.brand`, shared by every TUI's empty states. The hub follows the house TUI conventions: presentation over the same store layers the `mc-tool-*` CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, `mait-code home` prints a compact text summary and bare `mait-code` keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.
+
 ## Hooks
 
 | Hook | Trigger | Mode | Purpose |
 |------|---------|------|---------|
-| `session_start` | SessionStart | sync | Inject companion context (reminders, board summary, inbox count) |
+| `session_start` | SessionStart | sync | Inject companion context (reminders, board summary, inbox count) — built by `hooks/session_start/context.py`, which reads each tool's store layer directly and is shared with the home TUI's system prompt view |
 | `observe` | PreCompact | async | Extract observations before context compaction |
 | `observe` | SessionEnd | async | Final observation extraction |
 | `auto_format` | *not registered* | — | Placeholder package — entry point exists (`mc-hook-format`) but no settings.json registration and no implementation |

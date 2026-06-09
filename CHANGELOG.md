@@ -10,6 +10,36 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.45.0] — 2026-06-08
+
+### Added
+
+- **`mait-code home` — the companion's home hub.** A fourth Textual surface
+  and the front door to everything mait-code: a slim tree sidebar of sections
+  — Board, Memory, Reminders, Inbox, Identity, System — each node carrying a
+  live status badge (active cards, memory total, overdue reminders in alarm
+  colour, inbox count), beside a detail pane that renders the highlighted
+  section in full. Pressing Enter on the Board, Memory or Settings node opens
+  that dedicated TUI and returns to a freshly-read home when it quits. The
+  Identity → System prompt view shows exactly what the companion is presented
+  with at session start, built live by the session-start context builder. Bare
+  `mait-code` on a terminal opens the hub; off a TTY the command prints a
+  compact text summary.
+- **A bold block-shadow brand wordmark.** The home header debuts a filled
+  block-shadow `mait-code` wordmark — with a plain-text fallback for narrow
+  terminals — set off by a separator rule, the signature glyph and the tagline.
+
+### Changed
+
+- **Escape now exits every TUI.** Home and the board quit on Escape; the
+  memory and settings master–detail browsers step back to the list first, then
+  quit from the list — so Escape always eventually leaves, like `q`.
+- **Companion-voice empty states across the board.** Empty board columns and
+  every home detail pane speak in the companion's voice rather than rendering
+  as a bare void.
+- **Home detail panes align key→value rows into columns** (overview, memory,
+  doctor, settings, version & paths) for a clean, tabular read.
+
 ## [0.44.0] — 2026-06-07
 
 ### Added
@@ -1303,7 +1333,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.44.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.45.0...HEAD
+[0.45.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.0
 [0.44.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.44.0
 [0.43.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.43.0
 [0.42.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.42.0

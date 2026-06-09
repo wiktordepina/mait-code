@@ -280,7 +280,7 @@ class SettingsApp(MaitApp):
 
     BINDINGS = [
         ("ctrl+s", "apply", "Apply"),
-        ("escape", "focus_list", "Back to list"),
+        ("escape", "escape", "Back"),
         Binding("1", "focus_list", "List", show=False),
         Binding("2", "focus_editor", "Editor", show=False),
     ]
@@ -473,6 +473,18 @@ class SettingsApp(MaitApp):
 
     def action_focus_list(self) -> None:
         self.query_one("#list", Tree).focus()
+
+    def action_escape(self) -> None:
+        """Escape steps back to the list; pressed on the list itself, it quits.
+
+        From the editor pane it returns focus to the settings tree; from the
+        tree (nothing left to back out of) it exits — so escape always
+        eventually leaves, like ``q``.
+        """
+        if self.query_one("#list", Tree).has_focus:
+            self.exit()
+        else:
+            self.action_focus_list()
 
     def action_focus_editor(self) -> None:
         self._focus_editor()

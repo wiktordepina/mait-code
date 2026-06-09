@@ -158,7 +158,9 @@ class TestBoot:
                 await pilot.pause()
                 return str(app.query_one("#detail Static", Static).render())
 
-        assert "No memories stored yet." in _run(scenario)
+        assert "✦ Nothing remembered yet — we're just getting started." in _run(
+            scenario
+        )
 
     def test_detail_metadata_line(self, store_path: Path) -> None:
         _seed(
@@ -257,7 +259,7 @@ class TestFiltering:
                 await pilot.pause()
                 return str(app.query_one("#detail Static", Static).render())
 
-        assert "No memories match 'kubernetes'." in _run(scenario)
+        assert "✦ I don't remember anything matching 'kubernetes'." in _run(scenario)
 
     def test_clearing_filter_restores_all_groups(self, store_path: Path) -> None:
         self._seed_mixed(store_path)
@@ -291,6 +293,37 @@ class TestFiltering:
                 return app.focused is app.query_one("#list", Tree)
 
         assert _run(scenario) is True
+
+    def test_escape_from_filter_returns_to_list(self, store_path: Path) -> None:
+        self._seed_mixed(store_path)
+
+        async def scenario():
+            app = MemoryApp(db_path=store_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.press("slash")  # focus the filter
+                await pilot.pause()
+                await pilot.press("escape")  # steps back to the list, not quit
+                await pilot.pause()
+                return app.focused is app.query_one("#list", Tree), app.is_running
+
+        on_list, running = _run(scenario)
+        assert on_list and running
+
+    def test_escape_on_list_quits(self, store_path: Path, monkeypatch) -> None:
+        self._seed_mixed(store_path)
+        calls: list[bool] = []
+
+        async def scenario():
+            app = MemoryApp(db_path=store_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()  # the tree holds focus on boot
+                monkeypatch.setattr(app, "exit", lambda *a, **k: calls.append(True))
+                await pilot.press("escape")  # nothing to back out of → quit
+                await pilot.pause()
+
+        _run(scenario)
+        assert calls == [True]
 
 
 class TestReload:

@@ -56,6 +56,11 @@ class MaitApp(App[None]):
     CSS_PATH = SHARED_TCSS
     BINDINGS = [
         Binding("q", "quit", "Quit"),
+        # Escape is a quit alias on the main screen (hidden — the footer already
+        # shows q). Apps that give escape a screen-local meaning (e.g. the
+        # master–detail "back to list") override it; modals bind their own
+        # escape=cancel, which takes precedence while one is open.
+        Binding("escape", "quit", "Quit", show=False),
         Binding("question_mark", "help", "Help"),
     ]
 

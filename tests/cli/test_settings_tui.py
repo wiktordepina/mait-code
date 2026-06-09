@@ -148,6 +148,23 @@ class TestNavigation:
 
         assert _run(scenario) == ("editor", "Tree")
 
+    def test_escape_on_list_quits(self, fake_home: Path, monkeypatch) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        calls: list[bool] = []
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app.query_one("#list", Tree).focus()
+                await pilot.pause()
+                monkeypatch.setattr(app, "exit", lambda *a, **k: calls.append(True))
+                await pilot.press("escape")  # nothing to back out of → quit
+                await pilot.pause()
+
+        _run(scenario)
+        assert calls == [True]
+
     def test_single_tab_reaches_editor(self, fake_home: Path) -> None:
         config.write_settings_file({"embedding-provider": "local"})
 

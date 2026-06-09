@@ -10,6 +10,11 @@ import dateparser
 from mait_code.logging import log_invocation, setup_logging
 
 from mait_code.tools.reminders.db import connection
+from mait_code.tools.reminders.service import (
+    active_reminders,
+    dismissed_reminders,
+    overdue_reminders,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,44 +67,29 @@ def cmd_set(args):
 
 def cmd_list(args):
     with connection() as conn:
-        rows = conn.execute(
-            "SELECT id, what, due, dismissed FROM reminders ORDER BY due"
-        ).fetchall()
+        overdue, upcoming = active_reminders(conn)
+        dismissed = dismissed_reminders(conn) if args.all else []
 
-    active = [(r[0], r[1], r[2]) for r in rows if not r[3]]
-    dismissed = [(r[0], r[1], r[2]) for r in rows if r[3]]
-
-    if not active and not (args.all and dismissed):
+    if not (overdue or upcoming) and not dismissed:
         print("No active reminders.")
         return
 
-    now = _now()
-    overdue = []
-    upcoming = []
-    for rid, what, due_str in active:
-        due = datetime.fromisoformat(due_str)
-        if due <= now:
-            overdue.append((rid, what, due))
-        else:
-            upcoming.append((rid, what, due))
-
     if overdue:
         print(f"OVERDUE ({len(overdue)}):\n")
-        for rid, what, due in overdue:
-            print(f"  [#{rid}] {due.strftime('%Y-%m-%d %H:%M')} — {what}")
+        for r in overdue:
+            print(f"  [#{r['id']}] {r['due'].strftime('%Y-%m-%d %H:%M')} — {r['what']}")
         print()
 
     if upcoming:
         print(f"Upcoming ({len(upcoming)}):\n")
-        for rid, what, due in upcoming:
-            print(f"  [#{rid}] {due.strftime('%Y-%m-%d %H:%M')} — {what}")
+        for r in upcoming:
+            print(f"  [#{r['id']}] {r['due'].strftime('%Y-%m-%d %H:%M')} — {r['what']}")
         print()
 
-    if args.all and dismissed:
+    if dismissed:
         print(f"Dismissed ({len(dismissed)}):\n")
-        for rid, what, due_str in dismissed:
-            due = datetime.fromisoformat(due_str)
-            print(f"  [#{rid}] {due.strftime('%Y-%m-%d %H:%M')} — {what}")
+        for r in dismissed:
+            print(f"  [#{r['id']}] {r['due'].strftime('%Y-%m-%d %H:%M')} — {r['what']}")
         print()
 
 
@@ -130,19 +120,14 @@ def cmd_dismiss(args):
 def cmd_check(_args):
     """Print any overdue reminders (used by the session-start hook)."""
     with connection() as conn:
-        rows = conn.execute(
-            "SELECT id, what, due FROM reminders "
-            "WHERE dismissed = 0 AND due <= ? ORDER BY due",
-            (_now().isoformat(),),
-        ).fetchall()
+        overdue = overdue_reminders(conn)
 
-    if not rows:
+    if not overdue:
         return
 
-    print(f"You have {len(rows)} overdue reminder(s):\n")
-    for rid, what, due_str in rows:
-        due = datetime.fromisoformat(due_str)
-        print(f"  [#{rid}] {due.strftime('%Y-%m-%d %H:%M')} — {what}")
+    print(f"You have {len(overdue)} overdue reminder(s):\n")
+    for r in overdue:
+        print(f"  [#{r['id']}] {r['due'].strftime('%Y-%m-%d %H:%M')} — {r['what']}")
     print("\nUse `mc-tool-reminders dismiss <id>` to dismiss.")
 
 

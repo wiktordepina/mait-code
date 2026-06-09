@@ -1,0 +1,107 @@
+/* Home hub layout. The house theme and the shared styling come from
+ * tui/app.tcss; only home-specific layout lives here. */
+
+/* --- Brand header --------------------------------------------------------- */
+
+/* A rule under the brand separates the wordmark from the tree + detail below,
+ * so the header doesn't crowd the content. $panel matches the tree divider. */
+#brand {
+    height: 7;
+    padding: 0 2;
+    border-bottom: solid $panel;
+}
+
+#wordmark {
+    width: auto;
+    color: $primary;
+}
+
+#brand-meta {
+    width: 1fr;
+    align-horizontal: right;
+}
+
+#tagline {
+    text-align: right;
+    color: $text-muted;
+}
+
+#version {
+    text-align: right;
+    color: $text-muted;
+    text-style: dim;
+}
+
+/* --- Tree sidebar + detail pane ------------------------------------------- */
+
+#body {
+    height: 1fr;
+    padding: 0 1;
+}
+
+/* The tree is deliberately the slimmer share — under a third of the width
+ * (1fr:3fr ≈ ¼), narrower than the memory browser (1fr:2fr) and the settings
+ * editor (1fr:1fr): it is a menu, the detail pane is where the content lives. */
+#tree {
+    width: 1fr;
+    border-right: solid $panel;
+    padding: 0 1;
+}
+
+#tree > .tree--guides,
+#tree > .tree--guides-hover,
+#tree > .tree--guides-selected {
+    color: $panel;
+}
+
+#detail {
+    width: 3fr;
+    padding: 0 2;
+}
+
+/* Full-width labels wrap long content (card titles, companion voice lines)
+ * instead of clipping at the pane edge. */
+#detail Label {
+    width: 100%;
+}
+
+#detail .title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+#detail .help {
+    color: $text-muted;
+}
+
+#detail .hint {
+    color: $text-muted;
+    text-style: italic;
+    margin-bottom: 1;
+}
+
+#detail .subhead {
+    margin-top: 1;
+    text-style: bold;
+    color: $text-primary;
+}
+
+#detail .overdue {
+    color: $warning;
+}
+
+/* The Markdown widget ships its own background/margins tuned for full-screen
+ * documents; flatten them so the body sits on the pane like the rest. */
+#detail Markdown {
+    background: transparent;
+    margin: 0 0 1 0;
+    padding: 0;
+}
+
+/* --- Health line ---------------------------------------------------------- */
+
+#health {
+    height: 1;
+    padding: 0 2;
+    color: $text-muted;
+}

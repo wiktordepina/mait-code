@@ -39,7 +39,11 @@ from mait_code.tools.memory.entities import (
     upsert_relationship,
 )
 from mait_code.tools.memory.migrate import ensure_schema
-from mait_code.tools.memory.reflect import reflect
+from mait_code.tools.memory.reflect import (
+    count_unreflected,
+    get_last_reflected_at,
+    reflect,
+)
 from mait_code.tools.memory.scoring import (
     composite_score,
     importance_score,
@@ -53,6 +57,7 @@ from mait_code.tools.memory.search import (
     search_entries,
     vector_search_entries,
 )
+from mait_code.tools.memory.stats import MemoryStats, collect_stats
 from mait_code.tools.memory.writer import find_duplicate, store_memory
 
 __all__ = [
@@ -96,6 +101,11 @@ __all__ = [
     # Writer
     "find_duplicate",
     "store_memory",
+    # Stats
+    "MemoryStats",
+    "collect_stats",
     # Reflection
+    "count_unreflected",
+    "get_last_reflected_at",
     "reflect",
 ]

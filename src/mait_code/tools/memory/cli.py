@@ -10,8 +10,6 @@ from mait_code.logging import log_invocation, setup_logging
 
 from mait_code.tools.memory.db import connection
 from mait_code.tools.memory.embeddings import (
-    EMBEDDING_DIM,
-    EMBEDDING_MODEL,
     check_dimension_match,
     embed_texts,
     is_available,
@@ -26,6 +24,7 @@ from mait_code.tools.memory.entities import (
     search_entities as _search_entities,
 )
 from mait_code.tools.memory.scoring import composite_score
+from mait_code.tools.memory.stats import collect_stats
 from mait_code.tools.memory.search import (
     delete_entry,
     hybrid_search,
@@ -239,53 +238,42 @@ def cmd_delete(args):
 
 def cmd_stats(_args):
     with connection() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
-        if total == 0:
-            print("No memories stored yet.")
-            return
+        stats = collect_stats(conn)
 
-        by_type = conn.execute(
-            "SELECT entry_type, COUNT(*) FROM memory_entries "
-            "GROUP BY entry_type ORDER BY COUNT(*) DESC"
-        ).fetchall()
-        by_class = conn.execute(
-            "SELECT memory_class, COUNT(*) FROM memory_entries GROUP BY memory_class"
-        ).fetchall()
-        by_scope = conn.execute(
-            "SELECT scope, COUNT(*) FROM memory_entries GROUP BY scope ORDER BY COUNT(*) DESC"
-        ).fetchall()
-        by_project = conn.execute(
-            "SELECT COALESCE(project, '(global)'), COUNT(*) FROM memory_entries "
-            "GROUP BY project ORDER BY COUNT(*) DESC"
-        ).fetchall()
+    if stats.total == 0:
+        print("No memories stored yet.")
+        return
 
-        # Embedding stats
-        try:
-            embedded = conn.execute("SELECT COUNT(*) FROM memory_vec").fetchone()[0]
-        except Exception:
-            embedded = 0
+    print(f"Memory Statistics ({stats.total} total entries)\n")
+    print("By type:")
+    for name, count in stats.by_type:
+        print(f"  {name}: {count}")
+    print("\nBy class:")
+    for name, count in stats.by_class:
+        print(f"  {name}: {count}")
+    print("\nBy scope:")
+    for name, count in stats.by_scope:
+        print(f"  {name}: {count}")
+    print("\nBy project:")
+    for name, count in stats.by_project:
+        print(f"  {name}: {count}")
 
-        print(f"Memory Statistics ({total} total entries)\n")
-        print("By type:")
-        for row in by_type:
-            print(f"  {row[0]}: {row[1]}")
-        print("\nBy class:")
-        for row in by_class:
-            print(f"  {row[0]}: {row[1]}")
-        print("\nBy scope:")
-        for row in by_scope:
-            print(f"  {row[0]}: {row[1]}")
-        print("\nBy project:")
-        for row in by_project:
-            print(f"  {row[0]}: {row[1]}")
+    available = "yes" if is_available() else "no"
+    print(
+        f"\nEmbeddings: {stats.embedded}/{stats.total} entries ({stats.embedded_pct}%)"
+    )
+    print(f"Embedding provider: {stats.provider}")
+    print(f"Embedding model: {stats.model}")
+    print(f"Embedding dimension: {stats.dim}")
+    print(f"Embedding model available: {available}")
 
-        pct = round(100 * embedded / total) if total else 0
-        available = "yes" if is_available() else "no"
-        print(f"\nEmbeddings: {embedded}/{total} entries ({pct}%)")
-        print(f"Embedding provider: {_embedding_provider_name()}")
-        print(f"Embedding model: {EMBEDDING_MODEL}")
-        print(f"Embedding dimension: {EMBEDDING_DIM}")
-        print(f"Embedding model available: {available}")
+    last = (
+        stats.last_reflected_at.strftime("%Y-%m-%d %H:%M")
+        if stats.last_reflected_at
+        else "never"
+    )
+    print(f"\nUnreflected entries: {stats.unreflected}")
+    print(f"Last reflection: {last}")
 
 
 def cmd_entities(args):
