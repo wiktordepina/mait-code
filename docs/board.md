@@ -222,7 +222,7 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable â€
 | <kbd>c</kbd> | Add a comment |
 | <kbd>C</kbd> | Complete the card |
 | <kbd>b</kbd> / <kbd>u</kbd> | Block / unblock |
-| <kbd>x</kbd> | Export the card to `card-N.md` in the current directory |
+| <kbd>x</kbd> | Export the card to markdown (prompts for the path, pre-filled with `card-N.md` in the current directory) |
 
 The edit form (<kbd>e</kbd>) is the single place a card is changed: title,
 priority, **status**, **tags**, **references**, description and acceptance

@@ -19,8 +19,9 @@ don't change the public surface. Everything is still in flux.
   one markdown document grouped by column, or a JSON array, and takes the same
   filters as `list` (`--all`, `--project`, `--status`, `--archived`, `-q`).
   Output goes to stdout, or to a file with `--out`. In the board TUI,
-  <kbd>x</kbd> on the card screen writes `card-N.md` to the current directory.
-  The rendering layer lives in `tools/board/export.py`, shared by CLI and TUI.
+  <kbd>x</kbd> on the card screen prompts for a destination — pre-filled with
+  `card-N.md` in the current directory — and writes the markdown there. The
+  rendering layer lives in `tools/board/export.py`, shared by CLI and TUI.
 
 ## [0.47.0] — 2026-06-09
 

@@ -547,14 +547,22 @@ class CardScreen(ModalScreen[None]):
         if summary:
             self.post_message(self.Mutate(self._card["id"], "complete", summary))
 
-    def action_export(self) -> None:
-        """``x`` in view mode writes the on-screen card to ``card-N.md`` in the
-        cwd, rendered through the same export layer as the CLI."""
+    @work
+    async def action_export(self) -> None:
+        """``x`` in view mode prompts for a destination — pre-filled with
+        ``card-N.md`` in the cwd — and writes the card's markdown there,
+        rendered through the same export layer as the CLI."""
         if self._mode != "view":
+            return
+        suggestion = Path.cwd() / f"card-{self._card['id']}.md"
+        raw = await self.app.push_screen_wait(
+            ExportScreen(self._card["id"], suggestion)
+        )
+        if not raw:
             return
         card = dict(self._card)
         card["comments"] = self._comments
-        path = Path.cwd() / f"card-{card['id']}.md"
+        path = Path(raw).expanduser()
         try:
             path.write_text(export.card_markdown(card) + "\n", encoding="utf-8")
         except OSError as exc:
@@ -845,6 +853,46 @@ class CommentScreen(ModalScreen[str | None]):
     def _submit(self) -> None:
         body = self.query_one("#comment-input", Input).value.strip()
         self.dismiss(body or None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+class ExportScreen(ModalScreen[str | None]):
+    """Prompt for an export destination; resolves to the path, or ``None`` on
+    cancel. Pre-populated with a suggested path so Enter accepts the default;
+    the value is free to edit (``~`` is expanded by the caller)."""
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, card_id: int, suggestion: Path) -> None:
+        super().__init__()
+        self._card_id = card_id
+        self._suggestion = suggestion
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Export card #{self._card_id} to…", classes="modal-title")
+            yield Input(value=str(self._suggestion), id="export-path")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Export", id="export-save", variant="primary")
+                yield Button("Cancel", id="export-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#export-path", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "export-save":
+            self._submit()
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        path = self.query_one("#export-path", Input).value.strip()
+        self.dismiss(path or None)
 
     def action_cancel(self) -> None:
         self.dismiss(None)
