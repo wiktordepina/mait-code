@@ -6,12 +6,14 @@ from unittest.mock import patch
 import numpy as np
 
 from mait_code.tools.memory.writer import (
+    CONFLICT_SIMILARITY_THRESHOLD,
     MEMORY_CLASS_MAP,
     STRING_SIMILARITY_THRESHOLD,
     VALID_ENTRY_TYPES,
     VECTOR_SIMILARITY_THRESHOLD,
     find_duplicate,
     store_memory,
+    supersede_memory,
 )
 
 
@@ -191,6 +193,160 @@ class TestStoreMemory:
         assert r1["action"] == "created"
         assert r2["action"] == "created"
         assert r1["id"] != r2["id"]
+
+    def test_store_reports_no_conflicts_for_unrelated(
+        self, memory_db: sqlite3.Connection
+    ):
+        """A brand-new entry with no near-neighbours reports no conflicts."""
+        first = store_memory(
+            memory_db, "User prefers tabs over spaces", "preference", 5
+        )
+        assert first["potential_conflicts"] == []
+
+
+class TestConflictBand:
+    """The 0.6-0.9 contradiction band: store the new fact, surface the conflict."""
+
+    def test_midband_similarity_surfaces_conflict(self, memory_db: sqlite3.Connection):
+        """A candidate in [conflict, vector) is stored AND flagged, not merged."""
+        original = store_memory(memory_db, "The deploy target is staging", "fact", 5)
+
+        sim = (CONFLICT_SIMILARITY_THRESHOLD + VECTOR_SIMILARITY_THRESHOLD) / 2
+        with patch(
+            "mait_code.tools.memory.writer._vector_candidates",
+            return_value=[(original["id"], "The deploy target is staging", sim)],
+        ):
+            result = store_memory(
+                memory_db, "The deploy target is production", "fact", 5
+            )
+
+        assert result["action"] == "created"
+        assert result["id"] != original["id"]
+        conflicts = result["potential_conflicts"]
+        assert len(conflicts) == 1
+        assert conflicts[0]["id"] == original["id"]
+        assert conflicts[0]["similarity"] == round(sim, 4)
+
+    def test_below_conflict_threshold_no_flag(self, memory_db: sqlite3.Connection):
+        """Similarity below the conflict floor is just an unrelated new entry."""
+        original = store_memory(memory_db, "Uses Redis for caching", "fact", 5)
+
+        low = CONFLICT_SIMILARITY_THRESHOLD - 0.1
+        with patch(
+            "mait_code.tools.memory.writer._vector_candidates",
+            return_value=[(original["id"], "Uses Redis for caching", low)],
+        ):
+            result = store_memory(memory_db, "Runs on Kubernetes", "fact", 5)
+
+        assert result["action"] == "created"
+        assert result["potential_conflicts"] == []
+
+    def test_above_vector_threshold_merges_not_conflicts(
+        self, memory_db: sqlite3.Connection
+    ):
+        """At/above the dedup threshold it's a duplicate — merge, no conflict list."""
+        original = store_memory(memory_db, "The cache TTL is 60 seconds", "fact", 5)
+
+        with patch(
+            "mait_code.tools.memory.writer._vector_candidates",
+            return_value=[(original["id"], "The cache TTL is 60 seconds", 0.97)],
+        ):
+            result = store_memory(memory_db, "Cache TTL: sixty seconds", "fact", 5)
+
+        assert result["action"] == "deduplicated"
+        assert result["potential_conflicts"] == []
+
+
+class TestSupersede:
+    def test_supersede_marks_old_and_creates_new(self, memory_db: sqlite3.Connection):
+        """Superseding links the old entry to the new one with a timestamp."""
+        old = store_memory(memory_db, "Backend is written in Go", "fact", 6)
+        result = supersede_memory(memory_db, old["id"], "Backend is written in Rust")
+
+        assert result["action"] == "superseded"
+        assert result["old_id"] == old["id"]
+        assert result["id"] != old["id"]
+
+        old_row = memory_db.execute(
+            "SELECT superseded_by, superseded_at FROM memory_entries WHERE id = ?",
+            (old["id"],),
+        ).fetchone()
+        assert old_row[0] == result["id"]
+        assert old_row[1] is not None
+
+        new_row = memory_db.execute(
+            "SELECT content, superseded_by FROM memory_entries WHERE id = ?",
+            (result["id"],),
+        ).fetchone()
+        assert new_row[0] == "Backend is written in Rust"
+        assert new_row[1] is None
+
+    def test_supersede_inherits_type_and_scope(self, memory_db: sqlite3.Connection):
+        """The new entry carries over the old one's type and scope."""
+        old = store_memory(
+            memory_db,
+            "Cluster lives in eu-west-1",
+            "fact",
+            7,
+            scope="project",
+            project="infra",
+        )
+        result = supersede_memory(memory_db, old["id"], "Cluster lives in eu-west-2")
+
+        row = memory_db.execute(
+            "SELECT entry_type, scope, project, importance FROM memory_entries "
+            "WHERE id = ?",
+            (result["id"],),
+        ).fetchone()
+        assert row[0] == "fact"
+        assert row[1] == "project"
+        assert row[2] == "infra"
+        assert row[3] == 7  # importance inherited
+
+    def test_supersede_importance_override(self, memory_db: sqlite3.Connection):
+        """An explicit importance overrides the inherited value (clamped)."""
+        old = store_memory(memory_db, "Old budget is 1000", "fact", 4)
+        result = supersede_memory(
+            memory_db, old["id"], "New budget is 2000", importance=99
+        )
+        row = memory_db.execute(
+            "SELECT importance FROM memory_entries WHERE id = ?", (result["id"],)
+        ).fetchone()
+        assert row[0] == 10
+
+    def test_supersede_missing_id(self, memory_db: sqlite3.Connection):
+        """Superseding a nonexistent entry returns not_found, writes nothing."""
+        result = supersede_memory(memory_db, 9999, "whatever")
+        assert result["action"] == "not_found"
+        count = memory_db.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
+        assert count == 0
+
+    def test_supersede_chain(self, memory_db: sqlite3.Connection):
+        """Superseding twice leaves only the latest entry current."""
+        a = store_memory(memory_db, "Version is 1.0", "fact", 5)
+        b = supersede_memory(memory_db, a["id"], "Version is 2.0")
+        c = supersede_memory(memory_db, b["id"], "Version is 3.0")
+
+        current = memory_db.execute(
+            "SELECT id, content FROM memory_entries WHERE superseded_by IS NULL"
+        ).fetchall()
+        assert len(current) == 1
+        assert current[0][0] == c["id"]
+        assert current[0][1] == "Version is 3.0"
+
+    def test_superseded_excluded_from_dedup_candidates(
+        self, memory_db: sqlite3.Connection
+    ):
+        """A superseded entry is not offered as a duplicate target."""
+        content = "The primary region is us-east-1"
+        old = store_memory(memory_db, content, "fact", 5)
+        # Replace with unrelated content so the only entry resembling `content`
+        # is the now-superseded row.
+        supersede_memory(memory_db, old["id"], "Cody is a brindle whippet")
+
+        # Re-stating the OLD (now superseded) content must not dedup into the
+        # hidden superseded row — it's excluded as a candidate.
+        assert find_duplicate(memory_db, content, "fact") is None
 
 
 class TestScopedDedup:

@@ -110,6 +110,7 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "half-life-semantic",
             "dedup-string-threshold",
             "dedup-vector-threshold",
+            "dedup-conflict-threshold",
             "scope-boost-global",
             "scope-boost-cross-project",
         ),

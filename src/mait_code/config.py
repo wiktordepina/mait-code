@@ -389,6 +389,19 @@ SETTINGS: tuple[Setting, ...] = (
         help="Cosine-similarity threshold above which a memory is a duplicate.",
     ),
     Setting(
+        "dedup-conflict-threshold",
+        "MAIT_CODE_DEDUP_CONFLICT_THRESHOLD",
+        "0.60",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help=(
+            "Lower edge of the contradiction band. Cosine similarity in "
+            "[this, dedup-vector-threshold) flags a possible conflict rather "
+            "than merging or storing silently."
+        ),
+    ),
+    Setting(
         "scope-boost-global",
         "MAIT_CODE_SCOPE_BOOST_GLOBAL",
         "0.7",

@@ -11,7 +11,13 @@ from mait_code.tools.memory.embeddings import embed_text, serialize_f32
 logger = logging.getLogger(__name__)
 
 # Columns returned from all search/list queries
-_BASE_COLS = "m.id, m.content, m.entry_type, m.importance, m.memory_class, m.created_at, m.scope, m.project, m.branch"
+_BASE_COLS = (
+    "m.id, m.content, m.entry_type, m.importance, m.memory_class, "
+    "m.created_at, m.scope, m.project, m.branch, m.superseded_by, m.superseded_at"
+)
+
+# SQL fragment (leading "AND ") that hides superseded entries unless opted in.
+_LIVE_ONLY = "AND m.superseded_by IS NULL"
 
 
 def _scope_filter(project: str | None, branch: str | None) -> tuple[str, list]:
@@ -54,6 +60,8 @@ def _row_to_dict(r: tuple) -> dict:
         "scope": r[6],
         "project": r[7],
         "branch": r[8],
+        "superseded_by": r[9],
+        "superseded_at": r[10],
     }
 
 
@@ -65,6 +73,7 @@ def search_entries(
     *,
     project: str | None = None,
     branch: str | None = None,
+    include_superseded: bool = False,
 ) -> list[dict]:
     """Search memory entries using FTS5 BM25 ranking.
 
@@ -78,6 +87,8 @@ def search_entries(
         entry_type: Optional entry-type filter.
         project: Project context for scope filtering.
         branch: Branch context for scope filtering.
+        include_superseded: Include entries that have been superseded
+            (hidden by default).
 
     Returns:
         A list of dicts with the standard memory entry fields.
@@ -85,6 +96,7 @@ def search_entries(
     scope_cond, scope_params = _scope_filter(project, branch)
     type_cond = "AND m.entry_type = ?" if entry_type else ""
     type_params = [entry_type] if entry_type else []
+    live_cond = "" if include_superseded else _LIVE_ONLY
 
     try:
         cursor = conn.execute(
@@ -92,7 +104,7 @@ def search_entries(
                 FROM memory_entries_fts f
                 JOIN memory_entries m ON m.id = f.rowid
                 WHERE memory_entries_fts MATCH ?
-                {type_cond} {scope_cond}
+                {type_cond} {scope_cond} {live_cond}
                 ORDER BY bm25(memory_entries_fts)
                 LIMIT ?""",
             [query, *type_params, *scope_params, limit],
@@ -103,7 +115,7 @@ def search_entries(
             f"""SELECT {_BASE_COLS}
                 FROM memory_entries m
                 WHERE m.content LIKE ?
-                {type_cond} {scope_cond}
+                {type_cond} {scope_cond} {live_cond}
                 ORDER BY m.importance DESC, m.created_at DESC
                 LIMIT ?""",
             [f"%{query}%", *type_params, *scope_params, limit],
@@ -147,6 +159,7 @@ def list_entries(
     project: str | None = None,
     branch: str | None = None,
     scope: str | None = None,
+    include_superseded: bool = False,
 ) -> list[dict]:
     """List recent memory entries, optionally filtered by type, time, and scope.
 
@@ -159,6 +172,8 @@ def list_entries(
         branch: Filter to this branch context.
         scope: Explicit scope filter (``"global"``, ``"project"``,
             ``"branch"``); overrides project-based filtering when set.
+        include_superseded: Include entries that have been superseded
+            (hidden by default).
 
     Returns:
         A list of dicts with the standard memory entry fields, ordered by
@@ -166,6 +181,9 @@ def list_entries(
     """
     conditions: list[str] = []
     params: list = []
+
+    if not include_superseded:
+        conditions.append("m.superseded_by IS NULL")
 
     if entry_type:
         conditions.append("m.entry_type = ?")
@@ -209,6 +227,7 @@ def vector_search_entries(
     *,
     project: str | None = None,
     branch: str | None = None,
+    include_superseded: bool = False,
 ) -> list[dict]:
     """Search memory entries using vector similarity via sqlite-vec.
 
@@ -222,6 +241,8 @@ def vector_search_entries(
         entry_type: Optional entry-type filter.
         project: Project context for scope filtering.
         branch: Branch context for scope filtering.
+        include_superseded: Include entries that have been superseded
+            (hidden by default).
 
     Returns:
         A list of dicts with the standard fields plus a ``"similarity"``
@@ -233,6 +254,7 @@ def vector_search_entries(
 
     # Over-fetch to account for post-filtering
     fetch_k = limit * 3 if project is not None else limit
+    live_cond = "" if include_superseded else _LIVE_ONLY
 
     try:
         if entry_type:
@@ -241,7 +263,7 @@ def vector_search_entries(
                    FROM memory_vec v
                    JOIN memory_entries m ON m.id = v.rowid
                    WHERE v.embedding MATCH ? AND k = ?
-                     AND m.entry_type = ?""",
+                     AND m.entry_type = ? {live_cond}""",
                 (serialize_f32(vec), fetch_k, entry_type),
             )
         else:
@@ -249,7 +271,7 @@ def vector_search_entries(
                 f"""SELECT {_BASE_COLS}, v.distance
                    FROM memory_vec v
                    JOIN memory_entries m ON m.id = v.rowid
-                   WHERE v.embedding MATCH ? AND k = ?""",
+                   WHERE v.embedding MATCH ? AND k = ? {live_cond}""",
                 (serialize_f32(vec), fetch_k),
             )
         rows = cursor.fetchall()
@@ -260,7 +282,7 @@ def vector_search_entries(
     results = []
     for r in rows:
         entry = _row_to_dict(r)
-        entry["similarity"] = max(0.0, 1.0 - r[9])
+        entry["similarity"] = max(0.0, 1.0 - r[11])
 
         # Post-filter by scope
         if project is not None:
@@ -287,6 +309,7 @@ def hybrid_search(
     *,
     project: str | None = None,
     branch: str | None = None,
+    include_superseded: bool = False,
 ) -> list[dict]:
     """Run a combined FTS5 + vector search and return merged results.
 
@@ -319,6 +342,7 @@ def hybrid_search(
         entry_type=entry_type,
         project=project,
         branch=branch,
+        include_superseded=include_superseded,
     )
     vec_results = vector_search_entries(
         conn,
@@ -327,6 +351,7 @@ def hybrid_search(
         entry_type=entry_type,
         project=project,
         branch=branch,
+        include_superseded=include_superseded,
     )
 
     # Index vector results by ID for fast lookup

@@ -34,6 +34,7 @@ from mait_code.tools.memory.search import (
 )
 from mait_code.tools.memory.writer import VALID_ENTRY_TYPES
 from mait_code.tools.memory.writer import store_memory as _store_memory
+from mait_code.tools.memory.writer import supersede_memory as _supersede_memory
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +195,44 @@ def cmd_store(args):
                 f"scope={scope_label}] {content[:80]}"
             )
 
+        conflicts = result.get("potential_conflicts") or []
+        if conflicts:
+            print(
+                f"\n⚠ This may contradict {len(conflicts)} existing "
+                f"{'entry' if len(conflicts) == 1 else 'entries'}:"
+            )
+            for c in conflicts:
+                print(
+                    f"  [#{c['id']}] (similarity {c['similarity']:.2f}) {c['content'][:80]}"
+                )
+            print(
+                "  To replace one with the new entry: "
+                f'mc-tool-memory supersede <old_id> "{content[:48]}…"'
+            )
+
+
+def cmd_supersede(args):
+    content = " ".join(args.content)
+    if not content.strip():
+        logger.warning("content cannot be empty")
+        print("Error: content cannot be empty.", file=sys.stderr)
+        sys.exit(1)
+
+    with connection() as conn:
+        result = _supersede_memory(
+            conn,
+            args.old_id,
+            content.strip(),
+            importance=args.importance,
+        )
+        if result["action"] == "not_found":
+            logger.warning("memory #%d not found", args.old_id)
+            print(f"Error: memory #{args.old_id} not found.", file=sys.stderr)
+            sys.exit(1)
+        print(
+            f"Memory #{result['old_id']} superseded by #{result['id']}: {content[:80]}"
+        )
+
 
 def cmd_list(args):
     ctx = _resolve_context(args)
@@ -207,6 +246,7 @@ def cmd_list(args):
             project=ctx["project"],
             branch=ctx["branch"],
             scope=ctx["scope_filter"],
+            include_superseded=getattr(args, "include_superseded", False),
         )
         if not results:
             print("No memories found." if args.since else "No memories stored yet.")
@@ -218,9 +258,14 @@ def cmd_list(args):
         print(f"{header}:\n")
         for r in results:
             scope_label = _format_scope_label(r)
+            superseded = (
+                f" — superseded by #{r['superseded_by']}"
+                if r.get("superseded_by")
+                else ""
+            )
             print(
                 f"[#{r['id']}] ({r['entry_type']}, importance={r['importance']}, "
-                f"scope={scope_label}) {r['created_at'][:10]}"
+                f"scope={scope_label}) {r['created_at'][:10]}{superseded}"
             )
             print(f"  {r['content'][:120]}")
             print()
@@ -257,6 +302,9 @@ def cmd_stats(_args):
     print("\nBy project:")
     for name, count in stats.by_project:
         print(f"  {name}: {count}")
+
+    if stats.superseded:
+        print(f"\nSuperseded (hidden from default surfacing): {stats.superseded}")
 
     available = "yes" if is_available() else "no"
     print(
@@ -771,8 +819,29 @@ def main():
         default=None,
         help="Time period filter (e.g. 24h, 7d, 1w)",
     )
+    p_list.add_argument(
+        "--include-superseded",
+        action="store_true",
+        help="Include superseded entries (hidden by default)",
+    )
     _add_scope_args(p_list)
     p_list.set_defaults(func=cmd_list)
+
+    # supersede
+    p_supersede = sub.add_parser(
+        "supersede",
+        help="Replace an entry with an evolved version (keeps the old one for audit)",
+    )
+    p_supersede.add_argument("old_id", type=int, help="ID of the entry to supersede")
+    p_supersede.add_argument("content", nargs="+", help="New, current content")
+    p_supersede.add_argument(
+        "--importance",
+        type=int,
+        default=None,
+        choices=range(1, 11),
+        help="Importance for the new entry (default: inherit from the old one)",
+    )
+    p_supersede.set_defaults(func=cmd_supersede)
 
     # delete
     p_delete = sub.add_parser("delete", help="Delete a memory by ID")

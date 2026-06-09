@@ -58,7 +58,11 @@ from mait_code.tools.memory.search import (
     vector_search_entries,
 )
 from mait_code.tools.memory.stats import MemoryStats, collect_stats
-from mait_code.tools.memory.writer import find_duplicate, store_memory
+from mait_code.tools.memory.writer import (
+    find_duplicate,
+    store_memory,
+    supersede_memory,
+)
 
 __all__ = [
     # CLI
@@ -101,6 +105,7 @@ __all__ = [
     # Writer
     "find_duplicate",
     "store_memory",
+    "supersede_memory",
     # Stats
     "MemoryStats",
     "collect_stats",

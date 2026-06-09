@@ -10,6 +10,30 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.46.0] — 2026-06-09
+
+### Added
+
+- **Evolving memory — supersede, don't duplicate.** When a fact genuinely
+  changes ("uses X" → "now uses Y"), memory no longer leaves two contradictory
+  entries coexisting. A new `mc-tool-memory supersede <old_id> "<new content>"`
+  replaces an entry with its current version: the new fact inherits the old
+  one's type and scope, and the old row is kept for audit but hidden from recall,
+  search, listing, and deduplication. See it with `list --include-superseded`,
+  and `stats` now reports the superseded count.
+- **Contradiction surfacing at write time.** Storing a related-but-different
+  fact (cosine similarity in the new `[0.60, 0.92)` band) now stores the new
+  entry _and_ flags the near-neighbours it may contradict — `mc-tool-memory
+  store` prints a `⚠ This may contradict …` notice with a supersede hint, so a
+  stale fact can be retired rather than silently shadowed. The lower edge is a
+  new advanced knob, `dedup-conflict-threshold`. Manually-driven throughout: it
+  suggests, you decide.
+
+### Changed
+
+- **The home hub's memory pane notes superseded entries,** and the memory-store
+  skill now guides superseding a stale fact when a write surfaces a conflict.
+
 ## [0.45.1] — 2026-06-09
 
 ### Added
@@ -1366,7 +1390,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.45.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.46.0...HEAD
+[0.46.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.0
 [0.45.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.1
 [0.45.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.0
 [0.44.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.44.0

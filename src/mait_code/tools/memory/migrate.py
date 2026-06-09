@@ -249,6 +249,19 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
         "Relabel extraction-sourced insight entries as decision",
         _migrate_10_decision_entry_type,
     ),
+    (
+        11,
+        "Add supersession columns for temporal/evolving memory",
+        [
+            "ALTER TABLE memory_entries ADD COLUMN superseded_by INTEGER "
+            "REFERENCES memory_entries(id)",
+            "ALTER TABLE memory_entries ADD COLUMN superseded_at DATETIME",
+            # Partial index over the rare superseded rows: keeps the default
+            # `superseded_by IS NULL` filter cheap and makes history lookups fast.
+            "CREATE INDEX IF NOT EXISTS idx_memory_entries_superseded "
+            "ON memory_entries(superseded_by) WHERE superseded_by IS NOT NULL",
+        ],
+    ),
 ]
 
 
