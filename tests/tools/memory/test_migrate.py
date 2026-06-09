@@ -38,7 +38,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 10  # Exactly 10 migrations
+    assert versions == 11  # Exactly 11 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -47,9 +47,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 10
+    assert len(rows) == 11
     assert rows[0][0] == 1
-    assert rows[-1][0] == 10
+    assert rows[-1][0] == 11
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -127,6 +127,8 @@ def test_memory_entries_columns(memory_db: sqlite3.Connection):
         "scope",
         "project",
         "branch",
+        "superseded_by",
+        "superseded_at",
     }
     assert expected == columns
 
@@ -161,6 +163,15 @@ def test_migration_7_recreates_vec_768(memory_db: sqlite3.Connection):
         "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_vec'"
     ).fetchall()
     assert len(tables) == 1
+
+
+def test_migration_11_supersede_index(memory_db: sqlite3.Connection):
+    """The partial superseded index should exist after migration 11."""
+    indexes = memory_db.execute(
+        "SELECT name FROM sqlite_master WHERE type='index' "
+        "AND name='idx_memory_entries_superseded'"
+    ).fetchall()
+    assert len(indexes) == 1
 
     # Verify migration 7 is recorded
     row = memory_db.execute(

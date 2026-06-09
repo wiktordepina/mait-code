@@ -40,6 +40,25 @@ class TestSearchEntries:
         results = search_entries(populated_db, "nonexistent_xyz_query")
         assert results == []
 
+    def test_fts_search_hides_superseded(self, populated_db: sqlite3.Connection):
+        """Superseded entries are excluded from FTS results by default."""
+        rows = populated_db.execute(
+            "SELECT id FROM memory_entries WHERE content LIKE 'User prefers dark%'"
+        ).fetchall()
+        target = rows[0][0]
+        populated_db.execute(
+            "UPDATE memory_entries SET superseded_by = -1, "
+            "superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (target,),
+        )
+        populated_db.commit()
+
+        hidden = search_entries(populated_db, "dark mode")
+        assert all(r["id"] != target for r in hidden)
+
+        shown = search_entries(populated_db, "dark mode", include_superseded=True)
+        assert any(r["id"] == target for r in shown)
+
     def test_fts_search_with_type_filter(self, populated_db: sqlite3.Connection):
         """Should filter by entry_type when specified."""
         results = search_entries(populated_db, "dark mode", entry_type="preference")
@@ -78,6 +97,25 @@ class TestListEntries:
         """Empty database should return empty list."""
         results = list_entries(memory_db)
         assert results == []
+
+    def test_list_hides_superseded_by_default(self, populated_db: sqlite3.Connection):
+        """Superseded entries are dropped from list_entries unless opted in."""
+        target = populated_db.execute("SELECT id FROM memory_entries").fetchone()[0]
+        populated_db.execute(
+            "UPDATE memory_entries SET superseded_by = -1, "
+            "superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (target,),
+        )
+        populated_db.commit()
+
+        default = list_entries(populated_db)
+        assert len(default) == 6
+        assert all(r["id"] != target for r in default)
+
+        with_superseded = list_entries(populated_db, include_superseded=True)
+        assert len(with_superseded) == 7
+        marked = [r for r in with_superseded if r["id"] == target]
+        assert marked and marked[0]["superseded_by"] == -1
 
     def test_list_ordered_by_date(self, populated_db: sqlite3.Connection):
         """Results should be ordered by created_at descending."""
@@ -228,6 +266,24 @@ class TestVectorSearch:
 
         assert len(results) == 1
         assert results[0]["entry_type"] == "fact"
+
+    def test_vector_search_hides_superseded(self, memory_db: sqlite3.Connection):
+        """Superseded entries are excluded from vector results by default."""
+        vec = [1.0] + [0.0] * 767
+        target = self._insert_with_embedding(memory_db, "old vector entry", "fact", vec)
+        memory_db.execute(
+            "UPDATE memory_entries SET superseded_by = -1, "
+            "superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (target,),
+        )
+        memory_db.commit()
+
+        with patch("mait_code.tools.memory.search.embed_text", return_value=vec):
+            hidden = vector_search_entries(memory_db, "test")
+            shown = vector_search_entries(memory_db, "test", include_superseded=True)
+
+        assert all(r["id"] != target for r in hidden)
+        assert any(r["id"] == target for r in shown)
 
 
 class TestHybridSearch:

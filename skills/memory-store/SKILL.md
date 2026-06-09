@@ -2,7 +2,7 @@
 name: memory-store
 description: Store observations to memory when you learn something new about the user, their preferences, projects, or technical decisions. Use proactively after learning new facts.
 user-invocable: false
-allowed-tools: Bash(mc-tool-memory store *)
+allowed-tools: Bash(mc-tool-memory store *), Bash(mc-tool-memory supersede *)
 ---
 
 # Memory Store
@@ -33,3 +33,20 @@ Importance: 1 (trivial) to 10 (critical), default 5
 - Memories are automatically scoped to the current project and branch
 - User preferences are promoted to global scope automatically
 - If the user explicitly says something applies to all their projects, add `--scope global`
+
+## When a fact has changed (supersede, don't duplicate)
+
+A `store` of related-but-different content (e.g. "uses X" when an earlier entry
+says "uses Y") doesn't merge — it's stored as a new entry, and the command
+prints a `⚠ This may contradict …` block listing the conflicting entries.
+
+When that happens, don't silently leave two contradictory facts coexisting:
+
+1. Decide whether this is a genuine evolution (the old fact is now wrong) or a
+   distinct new fact (both are true).
+2. If it's an evolution, **suggest superseding** the stale entry — surface it to
+   the user rather than acting unprompted (the store is manually-driven):
+   `mc-tool-memory supersede <old_id> "<new content>"`.
+3. Supersession keeps the old entry for audit but hides it from recall, and
+   carries over the old entry's type and scope. If the entries are simply
+   different facts that happen to be similar, leave both.

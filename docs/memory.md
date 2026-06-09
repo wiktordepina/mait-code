@@ -60,7 +60,28 @@ Before storing a new memory, the writer checks for near-duplicates:
 3. Compares candidates two ways — `SequenceMatcher` string similarity ≥ 0.85, or vector cosine similarity ≥ 0.92; a hit on either marks it a duplicate
 4. Duplicates update the existing entry's timestamp and keep the highest importance
 
-This means the same fact can be re-observed across sessions without creating clutter.
+This means the same fact can be re-observed across sessions without creating clutter. Superseded entries (see below) are never offered as duplicate candidates.
+
+### Evolving memory: supersede, don't duplicate
+
+A duplicate is the *same* fact restated. A **contradiction** is a related-but-different fact — "uses X" when an earlier entry says "uses Y". Those sit below the dedup thresholds, so they aren't merged. Instead the writer flags them:
+
+- Cosine similarity in the band `[dedup-conflict-threshold, dedup-vector-threshold)` (default `[0.60, 0.92)`) marks a **possible conflict**.
+- The new entry is still stored — the write is never blocked. `store_memory` returns the conflicting entries under `potential_conflicts`, and `mc-tool-memory store` prints a `⚠ This may contradict …` notice.
+
+When a fact has genuinely changed, replace the stale entry rather than letting two coexist:
+
+```bash
+mc-tool-memory supersede <old_id> "<new, current content>"
+```
+
+This inserts the new content as a fresh entry (inheriting the old one's type and scope), then marks the old entry **superseded** — recording `superseded_by` (the new id) and `superseded_at` (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:
+
+```bash
+mc-tool-memory list --include-superseded
+```
+
+This is manually-driven: the companion *suggests* superseding a conflicting entry, and you decide — nothing is replaced automatically.
 
 ## Storage: The Memory Database
 
@@ -80,6 +101,8 @@ The core table stores every observation with metadata:
 | `project` | Project identifier (null for global scope) |
 | `branch` | Git branch (set only for branch scope) |
 | `created_at` | Timestamp, refreshed on deduplication |
+| `superseded_by` | Id of the entry that replaced this one (null = current) |
+| `superseded_at` | When it was superseded (null = current) |
 
 ### Scoping
 
@@ -233,7 +256,8 @@ The scoring and deduplication knobs are exposed as **advanced** settings (commen
 | `half-life-episodic` | `3.0` | days | Too short and events vanish; too long and they crowd out facts. |
 | `half-life-semantic` | `90.0` | days | Too short and facts fade; too long and stale facts persist. |
 | `dedup-string-threshold` | `0.85` | 0.0–1.0 | Too low misses near-duplicates; too high admits false positives. |
-| `dedup-vector-threshold` | `0.92` | 0.0–1.0 | Same trade-off, on cosine similarity. |
+| `dedup-vector-threshold` | `0.92` | 0.0–1.0 | Same trade-off, on cosine similarity. Also the upper edge of the conflict band. |
+| `dedup-conflict-threshold` | `0.60` | 0.0–1.0 | Lower edge of the contradiction band. Too low floods every write with spurious conflicts; too high lets real contradictions slip through as separate facts. |
 | `scope-boost-global` | `0.7` | 0.0–1.0 | Relevance multiplier for global memories. |
 | `scope-boost-cross-project` | `0.3` | 0.0–1.0 | Relevance multiplier across project boundaries. |
 
@@ -318,12 +342,14 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 | `search <query> --mode fts` | Keyword-only search |
 | `search <query> --mode vector` | Semantic-only search |
 | `search <query> --type fact` | Filter by entry type |
-| `store <content> --type preference --importance 8` | Store a memory manually |
+| `store <content> --type preference --importance 8` | Store a memory manually (prints any contradiction warnings) |
+| `supersede <old_id> <content>` | Replace an entry with an evolved version; the old one is kept for audit but hidden from recall |
 | `list` | Recent entries by creation time |
 | `list --since 24h` | Filter by time period (`24h`, `7d`, `1w`, etc.) |
 | `list --type event` | Filter by type |
+| `list --include-superseded` | Include superseded entries (hidden by default) |
 | `delete <id>` | Delete an entry (embedding cleaned up by trigger) |
-| `stats` | Entry counts, class/scope/project distribution, embedding coverage, provider info, unreflected backlog + last reflection run |
+| `stats` | Entry counts, class/scope/project distribution, superseded count, embedding coverage, provider info, unreflected backlog + last reflection run |
 | `entities [query]` | Search or list knowledge graph entities |
 | `relationships <entity>` | Show relationships for an entity |
 | `reindex` | Recompute all vector embeddings from scratch |

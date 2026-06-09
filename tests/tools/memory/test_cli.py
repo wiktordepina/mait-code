@@ -146,6 +146,27 @@ class TestCmdStore:
         with pytest.raises(SystemExit):
             cmd_store(args)
 
+    def test_store_surfaces_conflict(self, mem_db, capsys):
+        """A mid-band conflict prints a contradiction warning with a supersede hint."""
+        from mait_code.tools.memory.cli import cmd_store
+
+        original = db_store(mem_db, "The deploy target is staging", "fact", 5)
+        args = _make_args(
+            content=["The", "deploy", "target", "is", "production"],
+            type="fact",
+            importance=5,
+        )
+        with patch(
+            "mait_code.tools.memory.writer._vector_candidates",
+            return_value=[(original["id"], "The deploy target is staging", 0.75)],
+        ):
+            cmd_store(args)
+        out = capsys.readouterr().out
+        assert "stored" in out.lower()
+        assert "may contradict" in out
+        assert f"#{original['id']}" in out
+        assert "supersede" in out
+
 
 class TestCmdList:
     def test_with_entries(self, populated_mem_db, capsys):
@@ -197,6 +218,64 @@ class TestCmdList:
         out = capsys.readouterr().out
         assert "No memories found" in out
 
+    def test_include_superseded_flag(self, populated_mem_db, capsys):
+        """--include-superseded surfaces hidden entries with a marker."""
+        from mait_code.tools.memory.cli import cmd_list
+
+        target = populated_mem_db.execute(
+            "SELECT id FROM memory_entries WHERE content = 'User prefers dark mode'"
+        ).fetchone()[0]
+        populated_mem_db.execute(
+            "UPDATE memory_entries SET superseded_by = -1, "
+            "superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (target,),
+        )
+        populated_mem_db.commit()
+
+        # Hidden by default
+        cmd_list(_make_args(limit=10, type=None, since=None, include_superseded=False))
+        assert "dark mode" not in capsys.readouterr().out
+
+        # Shown (and marked) with the flag
+        cmd_list(_make_args(limit=10, type=None, since=None, include_superseded=True))
+        out = capsys.readouterr().out
+        assert "dark mode" in out
+        assert "superseded by #-1" in out
+
+
+class TestCmdSupersede:
+    def test_supersede_success(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_supersede
+
+        old_id = populated_mem_db.execute(
+            "SELECT id FROM memory_entries WHERE content = 'User prefers dark mode'"
+        ).fetchone()[0]
+        args = _make_args(
+            old_id=old_id, content=["User", "prefers", "light", "mode"], importance=None
+        )
+        cmd_supersede(args)
+        out = capsys.readouterr().out
+        assert f"#{old_id} superseded by #" in out
+
+        row = populated_mem_db.execute(
+            "SELECT superseded_by FROM memory_entries WHERE id = ?", (old_id,)
+        ).fetchone()
+        assert row[0] is not None
+
+    def test_supersede_not_found(self, mem_db):
+        from mait_code.tools.memory.cli import cmd_supersede
+
+        args = _make_args(old_id=99999, content=["whatever"], importance=None)
+        with pytest.raises(SystemExit):
+            cmd_supersede(args)
+
+    def test_supersede_empty_content(self, mem_db):
+        from mait_code.tools.memory.cli import cmd_supersede
+
+        args = _make_args(old_id=1, content=[""], importance=None)
+        with pytest.raises(SystemExit):
+            cmd_supersede(args)
+
 
 class TestCmdDelete:
     def test_delete_existing(self, populated_mem_db, capsys):
@@ -236,6 +315,23 @@ class TestCmdStats:
         cmd_stats(None)
         out = capsys.readouterr().out
         assert "No memories" in out
+
+    def test_superseded_count(self, populated_mem_db, capsys):
+        """The superseded line appears once an entry has been superseded."""
+        from mait_code.tools.memory.cli import cmd_stats
+
+        target = populated_mem_db.execute("SELECT id FROM memory_entries").fetchone()[0]
+        populated_mem_db.execute(
+            "UPDATE memory_entries SET superseded_by = -1, "
+            "superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (target,),
+        )
+        populated_mem_db.commit()
+
+        cmd_stats(None)
+        out = capsys.readouterr().out
+        assert "Superseded" in out
+        assert "1" in out
 
 
 class TestCmdReindex:

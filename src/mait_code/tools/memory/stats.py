@@ -28,6 +28,7 @@ class MemoryStats:
     by_class: list[tuple[str, int]]
     by_scope: list[tuple[str, int]]
     by_project: list[tuple[str, int]]
+    superseded: int
     embedded: int
     provider: str
     model: str
@@ -75,6 +76,10 @@ def collect_stats(conn: sqlite3.Connection) -> MemoryStats:
         "GROUP BY project ORDER BY COUNT(*) DESC"
     ).fetchall()
 
+    superseded = conn.execute(
+        "SELECT COUNT(*) FROM memory_entries WHERE superseded_by IS NOT NULL"
+    ).fetchone()[0]
+
     try:
         embedded = conn.execute("SELECT COUNT(*) FROM memory_vec").fetchone()[0]
     except sqlite3.Error:
@@ -86,6 +91,7 @@ def collect_stats(conn: sqlite3.Connection) -> MemoryStats:
         by_class=[(c, n) for c, n in by_class],
         by_scope=[(s, n) for s, n in by_scope],
         by_project=[(p, n) for p, n in by_project],
+        superseded=superseded,
         embedded=embedded,
         provider=_embedding_provider_name(),
         model=EMBEDDING_MODEL,

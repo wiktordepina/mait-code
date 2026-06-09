@@ -548,6 +548,13 @@ class HomeApp(MaitApp):
             Label("By type", classes="subhead"),
         ]
         widgets += _kv_rows([(name, str(count)) for name, count in stats.by_type])
+        if stats.superseded:
+            widgets.append(
+                Label(
+                    f"{stats.superseded} superseded (kept for audit, hidden from recall)",
+                    classes="help",
+                )
+            )
         return widgets
 
     def _detail_memory_by_type(self) -> list[Widget]:

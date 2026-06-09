@@ -171,7 +171,10 @@ new entry's project) using two complementary measures:
 2. Gather candidates from **both** FTS5 keyword search and vector similarity search
 3. Compare each candidate two ways: `SequenceMatcher` string similarity and vector cosine similarity
 4. If string similarity ≥ `dedup-string-threshold` (default 0.85) **or** cosine similarity ≥ `dedup-vector-threshold` (default 0.92): treat as a duplicate — update the existing entry's timestamp and keep max importance
-5. If no match: insert as new entry
+5. If cosine similarity falls in the contradiction band `[dedup-conflict-threshold, dedup-vector-threshold)` (default `[0.60, 0.92)`): insert as new entry **and** return the near-neighbours as `potential_conflicts` so a stale fact can be superseded
+6. If no match: insert as new entry
+
+Superseded entries (replaced via `supersede_memory`) are excluded as dedup candidates and hidden from default search/listing.
 
 ### Data Flow
 

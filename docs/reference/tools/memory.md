@@ -83,6 +83,8 @@
 
 ::: mait_code.tools.memory.store_memory
 
+::: mait_code.tools.memory.supersede_memory
+
 ## Stats
 
 ::: mait_code.tools.memory.MemoryStats

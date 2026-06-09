@@ -30,6 +30,7 @@ VALID_ENTRY_TYPES: set[str] = set(MEMORY_CLASS_MAP)
 
 STRING_SIMILARITY_THRESHOLD: float = config.get_float("dedup-string-threshold")
 VECTOR_SIMILARITY_THRESHOLD: float = config.get_float("dedup-vector-threshold")
+CONFLICT_SIMILARITY_THRESHOLD: float = config.get_float("dedup-conflict-threshold")
 
 
 def _project_condition(project: str | None) -> tuple[str, list]:
@@ -68,14 +69,16 @@ def _fts_candidates(
                 f"""SELECT m.id, m.content FROM memory_entries m
                    JOIN memory_entries_fts f ON m.id = f.rowid
                    WHERE memory_entries_fts MATCH ? AND m.entry_type = ?
+                   AND m.superseded_by IS NULL
                    {proj_cond}
                    LIMIT 20""",
                 [fts_query, entry_type, *proj_params],
             )
         else:
             cursor = conn.execute(
-                f"""SELECT id, content FROM memory_entries
-                    WHERE entry_type = ? {proj_cond} LIMIT 20""",
+                f"""SELECT m.id, m.content FROM memory_entries m
+                    WHERE m.entry_type = ? AND m.superseded_by IS NULL
+                    {proj_cond} LIMIT 20""",
                 [entry_type, *proj_params],
             )
         return cursor.fetchall()
@@ -83,8 +86,9 @@ def _fts_candidates(
         # FTS table doesn't exist yet — fall back to LIKE
         first_words = " ".join(content.split()[:5])
         cursor = conn.execute(
-            f"""SELECT id, content FROM memory_entries
-               WHERE entry_type = ? AND content LIKE ?
+            f"""SELECT m.id, m.content FROM memory_entries m
+               WHERE m.entry_type = ? AND m.content LIKE ?
+               AND m.superseded_by IS NULL
                {proj_cond}
                LIMIT 20""",
             [entry_type, f"%{first_words}%", *proj_params],
@@ -117,7 +121,8 @@ def _vector_candidates(
                FROM memory_vec v
                JOIN memory_entries m ON m.id = v.rowid
                WHERE v.embedding MATCH ? AND k = 30
-                 AND m.entry_type = ?""",
+                 AND m.entry_type = ?
+                 AND m.superseded_by IS NULL""",
             (serialize_f32(vec), entry_type),
         )
         results = []
@@ -134,20 +139,20 @@ def _vector_candidates(
         return []
 
 
-def find_duplicate(
+def _assess_candidates(
     conn: sqlite3.Connection,
     content: str,
     entry_type: str,
     *,
     project: str | None = None,
-) -> int | None:
-    """Check for near-duplicate content in the database.
+) -> tuple[int | None, list[tuple[int, str, float]]]:
+    """Classify candidate content against existing (non-superseded) entries.
 
     Uses two candidate sources (FTS5 keywords plus vector similarity) and
     two similarity measures: ``SequenceMatcher`` >= 0.85 for string-level
     duplicates, cosine similarity >= 0.92 for semantic duplicates. Dedup is
     project-scoped — identical content in different projects is treated as
-    separate entries.
+    separate entries. Superseded entries are excluded as candidates.
 
     Args:
         conn: Open memory database connection.
@@ -156,7 +161,13 @@ def find_duplicate(
         project: Project identifier; ``None`` matches global-only entries.
 
     Returns:
-        The id of the duplicate if found, otherwise ``None``.
+        ``(duplicate_id, conflicts)``. ``duplicate_id`` is the id of a
+        near-duplicate to merge into, or ``None``. ``conflicts`` is a list of
+        ``(id, content, similarity)`` for entries in the contradiction band
+        ``[CONFLICT_SIMILARITY_THRESHOLD, VECTOR_SIMILARITY_THRESHOLD)`` —
+        candidates that say something related-but-different. It is only
+        populated when ``duplicate_id`` is ``None`` (a clear duplicate
+        short-circuits the scan) and is sorted by similarity, highest first.
     """
     # Gather candidates from FTS
     fts_hits = _fts_candidates(conn, content, entry_type, project=project)
@@ -167,24 +178,53 @@ def find_duplicate(
             SequenceMatcher(None, content, existing_content).ratio()
             >= STRING_SIMILARITY_THRESHOLD
         ):
-            return row_id
+            return row_id, []
 
-    # Check vector candidates for semantic duplicates
+    # Check vector candidates for semantic duplicates and contradictions
     seen_ids = {row_id for row_id, _ in fts_hits}
     vec_hits = _vector_candidates(conn, content, entry_type, project=project)
 
+    conflicts: list[tuple[int, str, float]] = []
     for row_id, existing_content, similarity in vec_hits:
         if similarity >= VECTOR_SIMILARITY_THRESHOLD:
-            return row_id
+            return row_id, []
         # Also string-check vector candidates not seen via FTS
         if row_id not in seen_ids:
             if (
                 SequenceMatcher(None, content, existing_content).ratio()
                 >= STRING_SIMILARITY_THRESHOLD
             ):
-                return row_id
+                return row_id, []
+        if similarity >= CONFLICT_SIMILARITY_THRESHOLD:
+            conflicts.append((row_id, existing_content, similarity))
 
-    return None
+    conflicts.sort(key=lambda c: c[2], reverse=True)
+    return None, conflicts
+
+
+def find_duplicate(
+    conn: sqlite3.Connection,
+    content: str,
+    entry_type: str,
+    *,
+    project: str | None = None,
+) -> int | None:
+    """Check for near-duplicate content in the database.
+
+    Thin wrapper over :func:`_assess_candidates` that discards the
+    contradiction-band candidates and returns only the merge target.
+
+    Args:
+        conn: Open memory database connection.
+        content: The candidate memory content.
+        entry_type: Entry type used to scope the candidate search.
+        project: Project identifier; ``None`` matches global-only entries.
+
+    Returns:
+        The id of the duplicate if found, otherwise ``None``.
+    """
+    dup_id, _ = _assess_candidates(conn, content, entry_type, project=project)
+    return dup_id
 
 
 def store_memory(
@@ -216,7 +256,12 @@ def store_memory(
 
     Returns:
         A dict with keys ``action`` (``"created"`` or ``"deduplicated"``),
-        ``id``, ``content``, ``scope``, ``project``, and ``branch``.
+        ``id``, ``content``, ``scope``, ``project``, ``branch``, and
+        ``potential_conflicts`` — a list of ``{"id", "content", "similarity"}``
+        for existing entries in the contradiction band that this write may
+        contradict. The write is never blocked; the conflicts are surfaced so
+        the companion can suggest superseding one of them. Empty on a
+        deduplicated write.
     """
     importance = max(1, min(10, importance))
     if entry_type not in VALID_ENTRY_TYPES:
@@ -225,7 +270,7 @@ def store_memory(
         scope = "global"
     project = canonical_project(project)
 
-    dup_id = find_duplicate(conn, content, entry_type, project=project)
+    dup_id, conflicts = _assess_candidates(conn, content, entry_type, project=project)
     if dup_id is not None:
         conn.execute(
             """UPDATE memory_entries
@@ -242,6 +287,7 @@ def store_memory(
             "scope": scope,
             "project": project,
             "branch": branch,
+            "potential_conflicts": [],
         }
 
     memory_class = MEMORY_CLASS_MAP.get(entry_type, "episodic")
@@ -260,6 +306,79 @@ def store_memory(
     return {
         "action": "created",
         "id": entry_id,
+        "content": content,
+        "scope": scope,
+        "project": project,
+        "branch": branch,
+        "potential_conflicts": [
+            {"id": cid, "content": ccontent, "similarity": round(sim, 4)}
+            for cid, ccontent, sim in conflicts
+        ],
+    }
+
+
+def supersede_memory(
+    conn: sqlite3.Connection,
+    old_id: int,
+    content: str,
+    *,
+    importance: int | None = None,
+) -> dict:
+    """Supersede an existing memory entry with an evolved version.
+
+    Inserts ``content`` as a fresh entry that inherits the old entry's type,
+    class, and scope (project/branch), then marks the old entry superseded —
+    pointing ``superseded_by`` at the new id and stamping ``superseded_at``.
+    The old row is kept for auditability but hidden from default surfacing.
+    This is the explicit, manually-driven counterpart to dedup: it is called
+    when a fact has genuinely changed rather than merely been repeated.
+
+    Args:
+        conn: Open memory database connection.
+        old_id: Id of the entry being superseded.
+        content: The new, current content.
+        importance: Optional importance for the new entry (1-10, clamped).
+            Defaults to the superseded entry's importance.
+
+    Returns:
+        On success, a dict with ``action="superseded"``, ``old_id``, ``id``
+        (the new entry), ``content``, ``scope``, ``project``, ``branch``. If
+        ``old_id`` does not exist, ``{"action": "not_found", "old_id": old_id}``.
+    """
+    row = conn.execute(
+        """SELECT entry_type, importance, memory_class, scope, project, branch
+           FROM memory_entries WHERE id = ?""",
+        (old_id,),
+    ).fetchone()
+    if row is None:
+        return {"action": "not_found", "old_id": old_id}
+
+    entry_type, old_importance, memory_class, scope, project, branch = row
+    new_importance = (
+        old_importance if importance is None else max(1, min(10, importance))
+    )
+
+    cursor = conn.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, scope, project, branch)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (content, entry_type, new_importance, memory_class, scope, project, branch),
+    )
+    new_id = cursor.lastrowid
+    assert new_id is not None  # lastrowid is populated after a successful INSERT
+    conn.execute(
+        """UPDATE memory_entries
+           SET superseded_by = ?, superseded_at = CURRENT_TIMESTAMP
+           WHERE id = ?""",
+        (new_id, old_id),
+    )
+    conn.commit()
+    _store_embedding(conn, new_id, content)
+
+    return {
+        "action": "superseded",
+        "old_id": old_id,
+        "id": new_id,
         "content": content,
         "scope": scope,
         "project": project,
