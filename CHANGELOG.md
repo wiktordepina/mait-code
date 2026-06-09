@@ -10,6 +10,39 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.45.1] — 2026-06-09
+
+### Added
+
+- **A view name on the brand banner.** The masthead now carries the name of the
+  surface — _Home Hub_, _Settings_, _Memory_ — on the middle-right, over the
+  tagline and version. The memory browser folds its live match count into it.
+- **A token estimate for the system prompt.** Identity → System prompt now tags
+  each block of the identity stack, and the live session context, with a rough
+  `~N tokens` badge and a budget total — so you can gauge what the context
+  window spends before a session even starts. An offline ~4-characters-per-token
+  heuristic; no tokenizer, no network.
+- **A home hub guide.** The home hub gets its own documentation page with
+  screenshots, and the `mait-code home` command (and bare `mait-code`) is now
+  documented in the CLI reference.
+
+### Changed
+
+- **The brand banner leads the settings editor and the memory browser too,** in
+  place of their stock headers — one identity across the surfaces. The board
+  keeps its header and drops the banner: the wordmark was crowding the columns.
+- **Opening a TUI from the home tree is now a dedicated `↗ Open …` leaf.** Board,
+  Memory and System are ordinary expand/collapse categories again; the
+  accent-coloured launch leaf hands off to the dedicated app, so a category no
+  longer has to choose between expanding and launching.
+
+### Fixed
+
+- **The home hub no longer crashes under the ansi themes.** Their colour names
+  (`ansi_yellow`…) aren't valid Rich styles, so the health line raised
+  `MissingStyle` on launch. Theme colours are normalised to Rich-parseable
+  values now, matching the guard the board already had.
+
 ## [0.45.0] — 2026-06-08
 
 ### Added
@@ -1333,7 +1366,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.45.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.45.1...HEAD
+[0.45.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.1
 [0.45.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.0
 [0.44.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.44.0
 [0.43.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.43.0
