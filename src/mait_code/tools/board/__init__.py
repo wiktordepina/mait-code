@@ -29,6 +29,15 @@ from mait_code.tools.board.db import (
     get_db_path,
     get_project,
 )
+from mait_code.tools.board.export import (
+    FORMATS,
+    JSON,
+    MARKDOWN,
+    board_markdown,
+    card_markdown,
+    export_board,
+    export_card,
+)
 from mait_code.tools.board.migrate import ensure_schema
 from mait_code.tools.board.service import (
     CardNotFound,
@@ -73,6 +82,14 @@ __all__ = [
     "get_data_dir",
     "get_db_path",
     "get_project",
+    # Export
+    "FORMATS",
+    "JSON",
+    "MARKDOWN",
+    "board_markdown",
+    "card_markdown",
+    "export_board",
+    "export_card",
     # Service
     "CardNotFound",
     "add_card",

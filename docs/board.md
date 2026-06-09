@@ -222,6 +222,7 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 | <kbd>c</kbd> | Add a comment |
 | <kbd>C</kbd> | Complete the card |
 | <kbd>b</kbd> / <kbd>u</kbd> | Block / unblock |
+| <kbd>x</kbd> | Export the card to markdown (prompts for the path, pre-filled with `card-N.md` in the current directory) |
 
 The edit form (<kbd>e</kbd>) is the single place a card is changed: title,
 priority, **status**, **tags**, **references**, description and acceptance
@@ -269,10 +270,22 @@ mc-tool-board block ID "<reason>"  /  mc-tool-board unblock ID
 mc-tool-board ref add ID <label> <value>
 mc-tool-board ref remove ID <position>
 mc-tool-board ref list ID [--json]
+
+# Export
+mc-tool-board export ID [--format markdown|json] [--out FILE]    # one card, full fidelity
+mc-tool-board export [--format ...] [--out FILE] \
+    [--all | --project ...] [--status STATUS] [--archived] [--search TEXT]   # whole board
 ```
 
 `--json` on the read commands gives machine-readable output — handy for scripting
 or for Claude to consume.
+
+`export` renders a card — or a whole board listing, grouped by column — as a
+portable document. Markdown embeds the stored description, acceptance criteria
+and completion summary verbatim, so what you wrote round-trips unchanged; JSON
+is full fidelity (tags, references and comments included, matching the
+`show --json` shape). Output goes to stdout unless `--out FILE` is given. The
+board-wide form takes the same filters as `list`.
 
 ## Tips for getting the most from it
 

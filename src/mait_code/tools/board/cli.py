@@ -16,10 +16,11 @@ import json
 import logging
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import NoReturn
 
 from mait_code.logging import log_invocation, setup_logging
-from mait_code.tools.board import service
+from mait_code.tools.board import export, service
 from mait_code.tools.board.columns import (
     ALL_STATUSES,
     ARCHIVED,
@@ -139,6 +140,33 @@ def cmd_show(args):
         print(f"\nComments ({len(comments)}):")
         for comment in comments:
             print(f"  [{comment['author']}] {comment['body']}")
+
+
+def cmd_export(args):
+    with connection() as conn:
+        if args.id is not None:
+            try:
+                document = export.export_card(conn, args.id, fmt=args.format)
+            except service.CardNotFound:
+                _not_found(args.id)
+        else:
+            project = None if args.all else (args.project or get_project())
+            statuses = [args.status] if args.status else None
+            document = export.export_board(
+                conn,
+                fmt=args.format,
+                project=project,
+                statuses=statuses,
+                include_archived=args.archived,
+                search=args.search,
+            )
+
+    if args.out:
+        out_path = Path(args.out).expanduser()
+        out_path.write_text(document + "\n", encoding="utf-8")
+        print(f"Exported to {out_path}")
+    else:
+        print(document)
 
 
 def cmd_edit(args):
@@ -417,6 +445,32 @@ def main():
     p_show.add_argument("id", type=int, help="Card ID")
     p_show.add_argument("--json", action="store_true", help="Emit JSON")
     p_show.set_defaults(func=cmd_show)
+
+    p_export = sub.add_parser(
+        "export", help="Export a card or the board to markdown/JSON"
+    )
+    p_export.add_argument(
+        "id", type=int, nargs="?", help="Card ID (omit to export the board)"
+    )
+    p_export.add_argument("--format", choices=export.FORMATS, default=export.MARKDOWN)
+    p_export.add_argument("--out", help="Write to a file instead of stdout")
+    p_export.add_argument(
+        "--all", action="store_true", help="Span all projects (board export)"
+    )
+    p_export.add_argument("--project", help="Project (defaults to git root or cwd)")
+    p_export.add_argument(
+        "--status", choices=ALL_STATUSES, help="Filter to one column (board export)"
+    )
+    p_export.add_argument(
+        "--archived", action="store_true", help="Include archived (board export)"
+    )
+    p_export.add_argument(
+        "--search",
+        "-q",
+        metavar="TEXT",
+        help="Filter by title substring (board export)",
+    )
+    p_export.set_defaults(func=cmd_export)
 
     p_move = sub.add_parser("move", help="Move a card to a column")
     p_move.add_argument("id", type=int, help="Card ID")

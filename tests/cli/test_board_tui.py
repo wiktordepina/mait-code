@@ -20,6 +20,7 @@ from mait_code.cli._board_tui import (
     CardScreen,
     CommentScreen,
     CompleteScreen,
+    ExportScreen,
     NewCardScreen,
     TagScreen,
     _ALL_PROJECTS,
@@ -1706,3 +1707,109 @@ class TestCardFormEditing:
                 return service.list_tags(app._conn, ids["card"])
 
         assert _run(scenario) == []
+
+
+class TestExport:
+    def test_x_prompts_with_suggestion_and_writes_on_accept(
+        self, board_path: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+        conn = get_connection(board_path)
+        service.add_comment(conn, ids["card"], "note", author="claude")
+        conn.close()
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                assert isinstance(app.screen, CardScreen)
+                await pilot.press("x")
+                await pilot.pause()
+                assert isinstance(app.screen, ExportScreen)
+                suggested = app.screen.query_one("#export-path", Input).value
+                await pilot.press("enter")  # accept the pre-filled suggestion
+                await pilot.pause()
+                await pilot.pause()
+                return suggested
+
+        suggested = _run(scenario)
+        exported = tmp_path / f"card-{ids['card']}.md"
+        assert suggested == str(exported)
+        content = exported.read_text(encoding="utf-8")
+        assert content.startswith("# card\n")
+        assert "> note" in content
+
+    def test_x_writes_to_an_edited_path(
+        self, board_path: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+        target = tmp_path / "elsewhere.md"
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("x")
+                await pilot.pause()
+                app.screen.query_one("#export-path", Input).value = str(target)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.pause()
+
+        _run(scenario)
+        assert target.read_text(encoding="utf-8").startswith("# card\n")
+        assert not (tmp_path / f"card-{ids['card']}.md").exists()
+
+    def test_x_cancel_writes_nothing(
+        self, board_path: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("x")
+                await pilot.pause()
+                assert isinstance(app.screen, ExportScreen)
+                await pilot.press("escape")
+                await pilot.pause()
+                await pilot.pause()
+                # Back on the card screen, still in view mode.
+                assert isinstance(app.screen, CardScreen)
+
+        _run(scenario)
+        assert not (tmp_path / f"card-{ids['card']}.md").exists()
+
+    def test_x_inert_in_edit_mode(
+        self, board_path: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("e")  # edit mode — x must stay with the form
+                await pilot.pause()
+                await pilot.press("x")
+                await pilot.pause()
+
+        _run(scenario)
+        assert not (tmp_path / f"card-{ids['card']}.md").exists()
