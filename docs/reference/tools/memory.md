@@ -98,3 +98,11 @@
 ::: mait_code.tools.memory.get_last_reflected_at
 
 ::: mait_code.tools.memory.reflect
+
+## Observations
+
+::: mait_code.tools.memory.daily_batches
+
+::: mait_code.tools.memory.list_observations
+
+::: mait_code.tools.memory.observation_projects

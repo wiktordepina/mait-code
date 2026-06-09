@@ -277,13 +277,13 @@ def test_health_line_renders_pinned_doctor_verdict() -> None:
 
 
 def test_rich_colour_normalises_theme_colours() -> None:
-    from mait_code.cli._home_tui import _rich_colour
+    from mait_code.tui.palette import rich_colour
 
-    assert _rich_colour("#abcdef", "#000") == "#abcdef"  # hex passes through
-    assert _rich_colour("ansi_yellow", "#000") == "yellow"  # ansi → Rich name
-    assert _rich_colour("ansi_bright_red", "#000") == "bright_red"
-    assert _rich_colour(None, "#000") == "#000"  # unset → fallback
-    assert _rich_colour("", "#000") == "#000"
+    assert rich_colour("#abcdef", "#000") == "#abcdef"  # hex passes through
+    assert rich_colour("ansi_yellow", "#000") == "yellow"  # ansi → Rich name
+    assert rich_colour("ansi_bright_red", "#000") == "bright_red"
+    assert rich_colour(None, "#000") == "#000"  # unset → fallback
+    assert rich_colour("", "#000") == "#000"
 
 
 def test_home_renders_under_ansi_theme() -> None:

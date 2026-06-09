@@ -10,6 +10,35 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.47.0] — 2026-06-09
+
+### Added
+
+- **The observations browser — the raw extraction tier, finally visible.**
+  `mait-code observations` is the fifth TUI surface: a read-only master–detail
+  browser over everything the observe hook has extracted, grouped by capture
+  day, each entry flagged **pending** or **reflected** against the reflection
+  watermark — so what reads pending is precisely what the next `/reflect` run
+  will consider. Highlighting a day shows its capture sessions (trigger,
+  project, per-category counts) from the daily JSONL logs; `/` filters live by
+  content, and `p` narrows to one project, judged against that project's own
+  watermark. Piped or redirected, the command prints a day-grouped summary
+  instead. The query layer lives in `tools/memory/observations.py`
+  (`list_observations`, `observation_projects`, `daily_batches`).
+- **Home knows the way there.** The hub's Memory section gains an
+  "↗ Open observations" launch leaf beneath Reflection status — the
+  "awaiting N observation(s)" count now has a drill-down instead of being a
+  dead end — and the hand-off also rides the `Ctrl+P` palette.
+- **A full guide, screenshots included.** `docs/observations.md` joins the
+  other TUI guides — main view, live filter, and a day's capture sessions —
+  with the shots rendered from the snapshot baselines like the rest.
+
+### Changed
+
+- **The Rich colour normaliser moved to the shared palette.** The home hub's
+  theme-colour helper now lives in `mait_code.tui.palette` as `rich_colour`,
+  where any surface that paints Rich text from the active theme can reach it.
+
 ## [0.46.1] — 2026-06-09
 
 ### Added
@@ -1411,7 +1440,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.46.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.47.0...HEAD
+[0.47.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.47.0
 [0.46.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.1
 [0.46.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.0
 [0.45.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.1

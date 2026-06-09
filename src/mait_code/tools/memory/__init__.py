@@ -39,6 +39,11 @@ from mait_code.tools.memory.entities import (
     upsert_relationship,
 )
 from mait_code.tools.memory.migrate import ensure_schema
+from mait_code.tools.memory.observations import (
+    daily_batches,
+    list_observations,
+    observation_projects,
+)
 from mait_code.tools.memory.reflect import (
     count_unreflected,
     get_last_reflected_at,
@@ -113,4 +118,8 @@ __all__ = [
     "count_unreflected",
     "get_last_reflected_at",
     "reflect",
+    # Observations
+    "daily_batches",
+    "list_observations",
+    "observation_projects",
 ]
