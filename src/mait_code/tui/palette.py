@@ -27,6 +27,8 @@ __all__ = [
     "SUCCESS",
     "WARNING",
     "ERROR",
+    # Helpers
+    "rich_colour",
 ]
 
 # -- Brand -------------------------------------------------------------------
@@ -44,3 +46,25 @@ PANEL = "#1d2230"
 SUCCESS = "#87d96c"
 WARNING = "#f9c560"
 ERROR = "#ef6b6b"
+
+
+# -- Helpers -------------------------------------------------------------------
+
+
+def rich_colour(value: str | None, fallback: str) -> str:
+    """A theme colour string Rich can parse as a ``Text`` span style.
+
+    House and built-in themes store ``#rrggbb`` (Rich-safe as-is). Textual's
+    *ansi* themes store names like ``ansi_yellow`` that Rich rejects with a
+    ``MissingStyle`` — strip the prefix to Rich's own ``yellow`` / ``green`` /
+    ``red``, which render through the terminal's ANSI palette, exactly what an
+    ansi theme intends. Anything missing or otherwise unrecognised falls back to
+    the given house hex, so a span style is never malformed.
+    """
+    if not value:
+        return fallback
+    if value.startswith("#"):
+        return value
+    if value.startswith("ansi_"):
+        return value[len("ansi_") :]
+    return fallback

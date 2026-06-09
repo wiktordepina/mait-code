@@ -38,6 +38,7 @@ from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.banner import BrandBanner, installed_version
 from mait_code.tui.brand import GLYPH, empty_state
 from mait_code.tui.markdown import md_parser
+from mait_code.tui.palette import rich_colour as _rich_colour
 
 __all__ = ["HomeApp", "HomeTarget", "NodeSpec", "run_home_tui"]
 
@@ -52,6 +53,7 @@ class HomeTarget(enum.Enum):
 
     BOARD = "board"
     MEMORY = "memory"
+    OBSERVATIONS = "observations"
     SETTINGS = "settings"
 
 
@@ -321,6 +323,14 @@ class HomeApp(MaitApp):
         leaf(memory, "By type", NodeSpec("memory:by_type"))
         leaf(memory, "Embedding coverage", NodeSpec("memory:embedding"))
         leaf(memory, "Reflection status", NodeSpec("memory:reflection"))
+        # Sits under Reflection status on purpose: the observations browser is
+        # the drill-down its "awaiting N" count used to lack. Same detail key,
+        # so highlighting the launch leaf previews the reflection numbers.
+        launch_leaf(
+            memory,
+            "Open observations",
+            NodeSpec("memory:reflection", HomeTarget.OBSERVATIONS),
+        )
 
         if b.rem_overdue:
             reminders = section(
@@ -621,7 +631,10 @@ class HomeApp(MaitApp):
         )
         widgets.append(
             Label(
-                empty_state("Run /reflect in a session to synthesise insights."),
+                empty_state(
+                    "Press Enter on “↗ Open observations” to see what's waiting; "
+                    "run /reflect in a session to synthesise insights."
+                ),
                 classes="hint",
             )
         )
@@ -894,6 +907,11 @@ class HomeApp(MaitApp):
             lambda: self.action_launch(HomeTarget.MEMORY),
         )
         yield SystemCommand(
+            "Open observations",
+            "Jump to the observations browser",
+            lambda: self.action_launch(HomeTarget.OBSERVATIONS),
+        )
+        yield SystemCommand(
             "Open settings",
             "Jump to the settings editor",
             lambda: self.action_launch(HomeTarget.SETTINGS),
@@ -943,25 +961,6 @@ def _sysprompt_subhead(title: str, text: str | None) -> Label:
         style="dim",
     )
     return Label(head, classes="subhead")
-
-
-def _rich_colour(value: str | None, fallback: str) -> str:
-    """A theme colour string Rich can parse as a ``Text`` span style.
-
-    House and built-in themes store ``#rrggbb`` (Rich-safe as-is). Textual's
-    *ansi* themes store names like ``ansi_yellow`` that Rich rejects with a
-    ``MissingStyle`` — strip the prefix to Rich's own ``yellow`` / ``green`` /
-    ``red``, which render through the terminal's ANSI palette, exactly what an
-    ansi theme intends. Anything missing or otherwise unrecognised falls back to
-    the house hex, so a span style is never malformed.
-    """
-    if not value:
-        return fallback
-    if value.startswith("#"):
-        return value
-    if value.startswith("ansi_"):
-        return value[len("ansi_") :]
-    return fallback
 
 
 def _health_line(colours: dict[str, str]) -> Text:

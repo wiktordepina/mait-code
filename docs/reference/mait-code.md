@@ -543,6 +543,64 @@ mait-code board | cat      # plain text render (e.g. for piping or logs)
 
 ---
 
+## `mait-code observations`
+
+**Synopsis**
+
+```
+mait-code observations                      # interactive browser (TTY) / text summary (piped)
+```
+
+**Description**
+
+Browse the raw extraction tier — what the observe hook has captured that
+reflection hasn't yet synthesised. Attached to a terminal it launches a
+full-screen [Textual](https://textual.textualize.io/) TUI: observations
+grouped by capture day, each flagged **pending** or **reflected** against the
+reflection watermark, with the selected one rendered in full. Piped or
+redirected it falls back to a read-only day-grouped summary.
+
+The browser is read-only — it never reflects, edits or deletes. See the
+[observations browser guide](../observations.md) for the full tour.
+
+### The interactive browser
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Move the highlight; the detail pane follows |
+| `Enter` / `Space` | Expand or collapse a day |
+| `/` | Focus the live content filter |
+| `p` | Filter by project (dropdown picker) |
+| `Esc` | Back to the tree; from the tree, quit |
+| `r` | Reload from the database |
+| `q` | Quit |
+
+### The non-TTY render
+
+Off a TTY, the command prints the pending tally and each day's entries,
+pending marked `●` and reflected `·`:
+
+```
+Observations: 12 pending of 87
+
+2026-06-09 (5 pending of 5):
+  ● [#1873] event Board snapshots failing on version bump …
+  …
+```
+
+When the store is empty it prints `No observations yet.`
+
+**Examples**
+
+```bash
+mait-code observations         # audit the backlog interactively
+mait-code observations | head  # quick pending check (e.g. for piping or logs)
+```
+
+**Exit code:** always `0`.
+
+---
+
 ## `mait-code home`
 
 **Synopsis**
@@ -579,12 +637,12 @@ full on the right.
 | `↑` / `↓` (or `k` / `j`) | Move the highlight; the detail pane follows |
 | `Enter` | Toggle a section, or open a TUI from a `↗ Open …` launch leaf |
 | `r` | Reload every store (refresh the badges and current detail) |
-| `Ctrl+P` | Command palette (Open board / memory / settings, Reload, themes) |
+| `Ctrl+P` | Command palette (Open board / memory / observations / settings, Reload, themes) |
 | `q` / `Esc` | Quit |
 
 Pressing `Enter` on a launch leaf (`↗ Open board`, `↗ Open memory browser`,
-`↗ Open settings`) hands off to that dedicated TUI and returns to the hub when
-it quits, with the badges refreshed.
+`↗ Open observations`, `↗ Open settings`) hands off to that dedicated TUI and
+returns to the hub when it quits, with the badges refreshed.
 
 ### The non-TTY render
 

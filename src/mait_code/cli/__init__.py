@@ -701,6 +701,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._memory_tui import run_memory_tui
 
             run_memory_tui()
+        elif target is HomeTarget.OBSERVATIONS:
+            from mait_code.cli._observations_tui import run_observations_tui
+
+            run_observations_tui()
         elif target is HomeTarget.SETTINGS:
             from mait_code.cli._settings_tui import run_interactive_editor
 
@@ -790,6 +794,50 @@ def _memory_render() -> None:
         for entry in group[:5]:
             first_line = entry["content"].strip().splitlines()[0]
             typer.echo(f"  [#{entry['id']}] {entry['created_at'][:10]} {first_line}")
+        if len(group) > 5:
+            typer.echo(f"  … and {len(group) - 5} more")
+        typer.echo("")
+
+
+@app.command("observations")
+def observations() -> None:
+    """Browse raw observations awaiting reflection (summary when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._observations_tui import run_observations_tui
+
+        run_observations_tui()
+    else:
+        _observations_render()
+
+
+def _observations_render() -> None:
+    """Print the tier as a day-grouped summary (the non-TTY fallback)."""
+    from mait_code.tools.memory.db import connection
+    from mait_code.tools.memory.observations import list_observations
+
+    with connection() as conn:
+        entries = list_observations(conn)
+
+    if not entries:
+        typer.echo("No observations yet.")
+        return
+
+    pending = sum(not e["reflected"] for e in entries)
+    typer.echo(f"Observations: {pending} pending of {len(entries)}")
+    typer.echo("")
+
+    by_day: dict[str, list[dict]] = {}
+    for entry in entries:
+        by_day.setdefault(str(entry["created_at"])[:10], []).append(entry)
+
+    for day in sorted(by_day, reverse=True):
+        group = by_day[day]
+        day_pending = sum(not e["reflected"] for e in group)
+        typer.echo(f"{day} ({day_pending} pending of {len(group)}):")
+        for entry in group[:5]:
+            mark = "·" if entry["reflected"] else "●"
+            first_line = entry["content"].strip().splitlines()[0]
+            typer.echo(f"  {mark} [#{entry['id']}] {entry['entry_type']} {first_line}")
         if len(group) > 5:
             typer.echo(f"  … and {len(group) - 5} more")
         typer.echo("")

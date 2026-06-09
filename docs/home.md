@@ -76,13 +76,16 @@ and `Enter` does the obvious thing on each:
 
 ### Opening the other TUIs
 
-[The board](board.md), [the memory browser](memory-browser.md) and
-[the settings editor](settings.md) are full applications in their own right. Each
-has a dedicated **launch leaf** at the top of its section, marked with a `↗` and
-shown in the accent colour so it reads as a hand-off rather than just another row:
+[The board](board.md), [the memory browser](memory-browser.md), [the
+observations browser](observations.md) and [the settings editor](settings.md)
+are full applications in their own right. Each has a dedicated **launch leaf**
+in its section, marked with a `↗` and shown in the accent colour so it reads as
+a hand-off rather than just another row:
 
 - `↗ Open board` — under **Board**
 - `↗ Open memory browser` — under **Memory**
+- `↗ Open observations` — under **Memory**, beneath *Reflection status* (it's
+  that count's drill-down)
 - `↗ Open settings` — under **System**
 
 Press `Enter` on one and home steps aside to run that TUI. When you quit it
@@ -91,15 +94,16 @@ each return rebuilds the tree from the stores. The category nodes themselves sta
 ordinary expand/collapse sections, so you never lose the ability to fold a branch
 away.
 
-The same three hand-offs live in the `Ctrl+P` command palette (**Open board**,
-**Open memory**, **Open settings**), alongside **Reload**.
+The same hand-offs live in the `Ctrl+P` command palette (**Open board**,
+**Open memory**, **Open observations**, **Open settings**), alongside
+**Reload**.
 
 ## What each section shows
 
 | Section | Highlighting it shows | Leaves |
 |---------|----------------------|--------|
 | **Board** | Live cards split into *In progress* and *Next up* | `↗ Open board`, In progress, Next up, By project |
-| **Memory** | Entry count and a by-type breakdown | `↗ Open memory browser`, By type, Embedding coverage, Reflection status |
+| **Memory** | Entry count and a by-type breakdown | `↗ Open memory browser`, By type, Embedding coverage, Reflection status, `↗ Open observations` |
 | **Reminders** | Overdue and upcoming, with the overdue count raised in alarm | Overdue, Upcoming |
 | **Inbox** | How many captured items are waiting for triage | — |
 | **Identity** | What Claude is made of | System prompt |
