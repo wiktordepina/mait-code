@@ -364,14 +364,18 @@ class ObservationsApp(MaitApp):
                 line = Text(no_wrap=True)
                 timestamp = batch["timestamp"] or ""
                 line.append(f"{str(timestamp)[11:16] or '--:--'}  ", style="dim")
-                line.append(batch["trigger"] or "unknown trigger")
-                if batch["project"]:
-                    line.append(f"  {batch['project']}", style="dim")
                 counts = " · ".join(
                     f"{n} {category}" for category, n in batch["counts"].items()
                 )
-                if counts:
-                    line.append(f"  —  {counts}", style="dim")
+                # Project and counts merge into a single dim run that starts
+                # with a word, with the gap riding the end of the trigger run —
+                # a run that *begins* with whitespace gets it trimmed (the
+                # run-whitespace gotcha).
+                tail = " — ".join(p for p in (batch["project"], counts) if p)
+                trigger = batch["trigger"] or "unknown trigger"
+                line.append(f"{trigger}  " if tail else trigger)
+                if tail:
+                    line.append(tail, style="dim")
                 widgets.append(Label(line))
         else:
             widgets.append(

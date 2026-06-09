@@ -28,6 +28,8 @@ _ASSETS = _REPO_ROOT / "docs/assets/observations"
 #: snapshot baseline (stem) -> published asset filename.
 _SCREENSHOTS = {
     "test_observations_snapshot": "observations.png",
+    "test_observations_filter_snapshot": "observations-filter.png",
+    "test_observations_day_detail_snapshot": "observations-day.png",
 }
 
 

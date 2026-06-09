@@ -62,11 +62,19 @@ and how much it extracted per category. The database stays the source of truth
 — the logs only contribute this per-capture metadata, and a day without a log
 simply says so.
 
+![A day highlighted: the detail pane lists the day's capture sessions — time,
+trigger, project, and per-category extraction counts read from the JSONL
+log.](assets/observations/observations-day.png)
+
 ## Narrowing the view
 
 Press `/` to focus the filter and type: the tree narrows live to observations
 whose content matches (case-insensitive substring), every day expanding to show
 its hits.
+
+![The browser filtered: typing in the filter box narrows the tree to matching
+observations and the subtitle shows `1/4 match` beside the pending
+tally.](assets/observations/observations-filter.png)
 
 Press `p` for the **project filter** — a dropdown of every project that has
 observations, exactly like the board's. Picking one narrows the tree to that

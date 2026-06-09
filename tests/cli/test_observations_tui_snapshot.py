@@ -13,6 +13,7 @@ Regenerate the baselines intentionally (and eyeball the diff) with::
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -112,11 +113,59 @@ def test_observations_empty_snapshot(snap_compare, tmp_path: Path) -> None:
     assert snap_compare(ObservationsApp(db_path=db_path), terminal_size=(120, 40))
 
 
-def test_observations_day_detail_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the day-group detail: cursor on the day node shows the observation
-    count and the no-capture-log hint (entries only, no JSONL in the fixture)."""
+def test_observations_filter_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the filtered view: ``/`` → type — every day expands to the matches
+    and the subtitle reports the narrowed count."""
     db_path = tmp_path / "memory.db"
     _seed_store(db_path)
+
+    async def run_before(pilot) -> None:
+        await pilot.press("slash")
+        await pilot.press(*"reminders")
+        await pilot.pause()
+
+    assert snap_compare(
+        ObservationsApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
+
+
+def test_observations_day_detail_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the day-group detail: cursor on the day node shows the observation
+    count and the day's capture sessions read from its JSONL log (the root
+    conftest pins ``MAIT_CODE_DATA_DIR`` to ``tmp_path/"data"``, so the log
+    seeded there is exactly what the app reads)."""
+    db_path = tmp_path / "memory.db"
+    _seed_store(db_path)
+
+    obs_dir = tmp_path / "data" / "memory" / "observations"
+    obs_dir.mkdir(parents=True)
+    records = [
+        {
+            "timestamp": "2026-06-04T09:42:00+00:00",
+            "trigger": "precompact",
+            "project": "mait-code",
+            "branch": "main",
+            "extraction": {
+                "facts": [{"content": "a"}],
+                "entities": [{"name": "x"}, {"name": "y"}],
+            },
+        },
+        {
+            "timestamp": "2026-06-04T17:05:00+00:00",
+            "trigger": "session-end",
+            "project": "mait-code",
+            "branch": "main",
+            "extraction": {
+                "decisions": [{"content": "b"}, {"content": "c"}],
+                "bugs_fixed": [{"content": "d"}],
+            },
+        },
+    ]
+    (obs_dir / "2026-06-04.jsonl").write_text(
+        "\n".join(json.dumps(r) for r in records) + "\n"
+    )
 
     async def run_before(pilot) -> None:
         # Boot lands the cursor on the first leaf via call_after_refresh, so

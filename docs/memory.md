@@ -51,6 +51,10 @@ Each item includes an importance rating (1-10) that influences search ranking.
 
 Every extraction is also appended to a daily JSONL file at `~/.claude/mait-code-data/memory/observations/YYYY-MM-DD.jsonl`. These serve as the source of truth — the database can be restored from them using `mc-tool-memory restore`.
 
+To *see* this tier — what's been captured, and what's still waiting for
+reflection — open the [observations browser](observations.md) with
+`mait-code observations`.
+
 ### Deduplication
 
 Before storing a new memory, the writer checks for near-duplicates:
@@ -390,6 +394,16 @@ scopes — the reading companion to `mc-tool-memory`'s query verbs.
 
 When you're not on a terminal that supports it (e.g. piping output, or in
 CI), `mait-code memory` falls back to a read-only grouped summary.
+
+### Observations browser (`mait-code observations`)
+
+The memory browser's sibling over **Tier 1**: the same full-screen,
+read-only layout, but scoped to the raw observations and their reflection
+standing — grouped by capture day, each entry flagged pending or reflected
+against the reflection watermark, with each day's capture sessions read from
+the JSONL logs. It answers "what has the observe hook collected, and what
+will the next `/reflect` chew on?" — see [the observations browser
+guide](observations.md) for the full tour.
 
 ### Skills
 
