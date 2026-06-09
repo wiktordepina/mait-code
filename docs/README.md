@@ -10,7 +10,7 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 - **Reactive hooks** — `SessionStart` injects companion context; `PreCompact` and `SessionEnd` extract observations asynchronously.
 - **Observation pipeline** — automatic extraction of facts, preferences, decisions, entities, and relationships via Claude Haiku.
 - **CLI tools** — memory, reminders, a cross-project kanban board, a quick-capture inbox, and web fetch (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-board`, `mc-tool-inbox`, `mc-tool-web-fetch`).
-- **TUIs** — full-screen Textual apps sharing one house theme: the home hub (`mait-code home`, or just `mait-code` on a terminal), the kanban board (`mait-code board`), the settings editor (`mait-code settings`), and the read-only memory browser (`mait-code memory`).
+- **TUIs** — full-screen Textual apps sharing one house theme: the [home hub](home.md) (`mait-code home`, or just `mait-code` on a terminal), the [kanban board](board.md) (`mait-code board`), the [settings editor](settings.md) (`mait-code settings`), and the read-only [memory browser](memory-browser.md) (`mait-code memory`).
 - **Skills** — slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), web fetch (`/web-fetch`), and workflow (`/commit`).
 
 ## Quick start

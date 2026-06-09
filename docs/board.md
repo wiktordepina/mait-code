@@ -7,7 +7,7 @@ of working: instead of writing a long plan up front, you jot a card, refine it
 when you get to it, and let Claude pick it up and do the work in the same
 session.
 
-![The board, mid-flight: Backlog, Refined, and In Progress columns side by side.](assets/board/board.svg)
+![The board, mid-flight: Backlog, Refined, and In Progress columns side by side.](assets/board/board.png)
 
 ## Why use it
 
@@ -71,7 +71,7 @@ work tucked out of sight so it can't pull your attention.
 
 Press `d` and `a` to reveal **Done** and **Archived** — the full five-column view:
 
-![The board uncollapsed: all five columns, including Done and Archived, in view.](assets/board/board-expanded.svg)
+![The board uncollapsed: all five columns, including Done and Archived, in view.](assets/board/board-expanded.png)
 
 This expanded layout is for *admin and reflection*, not for getting work done:
 reviewing what's shipped, re-reading completion summaries, sweeping stale cards
@@ -140,7 +140,7 @@ which is exactly why refining *before* picking up is worth the small ceremony.
 
 ## Anatomy of a card
 
-![A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread.](assets/board/card-detail.svg)
+![A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread.](assets/board/card-detail.png)
 
 The title and the meta line beneath it (project · status · priority · tags) are
 **pinned** above the scroll: as you page through a long description, acceptance
@@ -175,7 +175,7 @@ bullet and ordered lists (including nested ones), blockquotes, tables, inline
 code and fenced code blocks (with syntax highlighting) all display formatted
 rather than as raw `#`, `**` and `-`:
 
-![A card whose description and acceptance criteria use markdown: two heading levels, emphasis, a table, an inline and a fenced code block, a blockquote, and a nested ordered list.](assets/board/card-detail-markdown.svg)
+![A card whose description and acceptance criteria use markdown: two heading levels, emphasis, a table, an inline and a fenced code block, a blockquote, and a nested ordered list.](assets/board/card-detail-markdown.png)
 
 The key thing is that there's **no format to choose**. Plain text and markdown
 share the same field, and both render correctly — because plain text *is* valid

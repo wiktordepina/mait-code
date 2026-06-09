@@ -10,6 +10,27 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.46.1] — 2026-06-09
+
+### Added
+
+- **Guides for the settings editor and the memory browser.** `mait-code
+  settings` and `mait-code memory` now have their own documentation pages, with
+  screenshots, alongside the home hub and board guides — covering the adaptive
+  settings editor (and where settings live) and the read-only memory browser.
+
+### Changed
+
+- **The board wears the brand banner again.** It had kept its stock header
+  because the full six-row wordmark crowded the columns; the banner is now
+  height-responsive, dropping to a half-height wordmark on terminals of 30 rows
+  or fewer, so the board (and every other surface) gets the brand without losing
+  the room. This supersedes the 0.45.1 note that the board drops the banner.
+- **The documentation screenshots are rendered uniformly through the PNG path.**
+  Now that every surface carries the wordmark, the board guide's images move off
+  the SVG export (which seams across the block art) onto the same headless-Chrome
+  rasterisation the home hub already used.
+
 ## [0.46.0] — 2026-06-09
 
 ### Added
@@ -1390,7 +1411,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.46.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.46.1...HEAD
+[0.46.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.1
 [0.46.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.0
 [0.45.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.1
 [0.45.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.45.0

@@ -19,6 +19,13 @@
     border-bottom: solid $panel;
 }
 
+/* Compact masthead (short terminal): the half-height wordmark is three rows, so
+ * the banner shrinks to match — a lighter brand moment for surfaces that need
+ * the vertical room for their own content. */
+#brand.-compact {
+    height: 4;
+}
+
 #brand #wordmark {
     width: auto;
     color: $primary;

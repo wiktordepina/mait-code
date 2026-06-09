@@ -39,3 +39,12 @@ def test_settings_snapshot(
     # inherited ``MAIT_CODE_*`` var, pinning each row to its default source.
     monkeypatch.setattr(config, "_settings_cache", None)
     assert snap_compare(SettingsApp(), terminal_size=(120, 40))
+
+
+def test_settings_editor_snapshot(
+    snap_compare, fake_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The adaptive editor on an enum setting: one step down from ``data-dir``
+    lands on ``theme``, whose editor is a radio set of the installed themes."""
+    monkeypatch.setattr(config, "_settings_cache", None)
+    assert snap_compare(SettingsApp(), press=["down"], terminal_size=(120, 40))
