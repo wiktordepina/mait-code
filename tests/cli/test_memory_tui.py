@@ -71,6 +71,11 @@ def _group_labels(app: MemoryApp) -> list[str]:
     return [str(node.label) for node in tree.root.children]
 
 
+def _banner_subtitle(app: MemoryApp) -> str:
+    """The masthead's view-name line — where the live match count now lives."""
+    return str(app.query_one("#brand-subtitle", Static).render())
+
+
 class TestUnits:
     def test_leaf_label_uses_first_line_and_date(self) -> None:
         label = _leaf_label(
@@ -124,11 +129,11 @@ class TestBoot:
             app = MemoryApp(db_path=store_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                return _group_labels(app), app.sub_title
+                return _group_labels(app), _banner_subtitle(app)
 
         labels, sub_title = _run(scenario)
         assert labels == ["fact (2)", "preference (1)", "event (1)"]
-        assert "4 memories" in sub_title
+        assert "Memory — 4" in sub_title
 
     def test_first_memory_detail_shown_on_boot(self, store_path: Path) -> None:
         _seed(
@@ -212,12 +217,12 @@ class TestFiltering:
                 await pilot.pause()
                 tree = app.query_one("#list", Tree)
                 expanded = [n.is_expanded for n in tree.root.children]
-                return _group_labels(app), expanded, app.sub_title
+                return _group_labels(app), expanded, _banner_subtitle(app)
 
         labels, expanded, sub_title = _run(scenario)
         assert labels == ["fact (1)", "decision (1)"]
         assert all(expanded)
-        assert "2/3 memories match 'terraform'" in sub_title
+        assert "Memory — 2/3 match" in sub_title
 
     def test_filter_is_case_insensitive(self, store_path: Path) -> None:
         self._seed_mixed(store_path)
@@ -273,11 +278,11 @@ class TestFiltering:
                 await pilot.pause()
                 filter_input.value = ""
                 await pilot.pause()
-                return _group_labels(app), app.sub_title
+                return _group_labels(app), _banner_subtitle(app)
 
         labels, sub_title = _run(scenario)
         assert labels == ["fact (1)", "preference (1)", "decision (1)"]
-        assert "3 memories" in sub_title
+        assert "Memory — 3" in sub_title
 
     def test_enter_in_filter_moves_focus_to_list(self, store_path: Path) -> None:
         self._seed_mixed(store_path)

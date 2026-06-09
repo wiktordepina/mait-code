@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 import mait_code.cli._doctor as doctor_mod
-import mait_code.cli._home_tui as home_mod
+import mait_code.tui.banner as banner_mod
 from mait_code.cli._doctor import Check, DoctorReport
 from mait_code.cli._home_tui import HomeApp
 
@@ -32,7 +32,9 @@ def _pin_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         fixes_applied=[],
     )
     monkeypatch.setattr(doctor_mod, "run_doctor", lambda **_kw: report)
-    monkeypatch.setattr(home_mod, "_installed_version", lambda: "0.0.0")
+    # The banner masthead renders the version; pin it so the chrome stays
+    # release-stable (it's read through the shared banner module now).
+    monkeypatch.setattr(banner_mod, "installed_version", lambda: "0.0.0")
 
 
 def _seed_all_stores() -> None:
@@ -99,6 +101,39 @@ def _seed_all_stores() -> None:
         conn.close()
 
 
+def _seed_identity() -> None:
+    """Write the identity stack so the system-prompt pane has content to weigh."""
+    from mait_code.config import data_dir
+
+    ddir = data_dir()
+    (ddir / "memory").mkdir(parents=True, exist_ok=True)
+    (ddir / "soul_document.md").write_text(
+        "# Soul document\n\n"
+        "I'm a coding companion, not a generic assistant. I hold opinions, "
+        "push back when an approach looks wrong, and explain my reasoning. I "
+        "match my length to the task — concise by default, fuller when the "
+        "problem earns it.\n\n"
+        "## Core values\n\n"
+        "- **Empathy** — read the intent before acting.\n"
+        "- **Assertiveness** — advocate for the better approach.\n"
+        "- **Integrity** — never harmful, never deceptive.\n"
+    )
+    (ddir / "user_context.md").write_text(
+        "# User context\n\n"
+        "**Name:** Wiktor. **Role:** Senior DevOps Engineer in the UK.\n\n"
+        "Works in Python, Go and shell across AWS, Docker and Terraform. "
+        "Casual, direct, British spelling. Prefers deep focus and proper TUIs "
+        "over questionnaire-style prompts.\n"
+    )
+    (ddir / "memory" / "MEMORY.md").write_text(
+        "# Memory\n\n"
+        "## Feedback\n\n"
+        "- All changes go through a topic branch and a PR — never commit "
+        "straight to main.\n"
+        "- Run installed `mc-tool-*` binaries directly, not via `uv run`.\n"
+    )
+
+
 def test_home_empty_snapshot(snap_compare) -> None:
     """Lock the empty hub: the tree sidebar, the home overview speaking in the
     companion voice, the wordmark, tagline, version, and pinned health line."""
@@ -117,3 +152,17 @@ def test_home_board_detail_snapshot(snap_compare) -> None:
     section), rendering its full live-card breakdown beside the tree."""
     _seed_all_stores()
     assert snap_compare(HomeApp(), press=["down"], terminal_size=(120, 40))
+
+
+def test_home_sysprompt_snapshot(snap_compare) -> None:
+    """Lock the system-prompt pane: the identity stack and live session context,
+    each carrying its ~token estimate, with the budget total in the header."""
+    _seed_all_stores()
+    _seed_identity()
+
+    async def run_before(pilot) -> None:
+        await pilot.pause()
+        await pilot.app._show_detail("identity:sysprompt")
+        await pilot.pause()
+
+    assert snap_compare(HomeApp(), run_before=run_before, terminal_size=(120, 48))

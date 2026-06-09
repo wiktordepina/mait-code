@@ -1,36 +1,6 @@
-/* Home hub layout. The house theme and the shared styling come from
- * tui/app.tcss; only home-specific layout lives here. */
-
-/* --- Brand header --------------------------------------------------------- */
-
-/* A rule under the brand separates the wordmark from the tree + detail below,
- * so the header doesn't crowd the content. $panel matches the tree divider. */
-#brand {
-    height: 7;
-    padding: 0 2;
-    border-bottom: solid $panel;
-}
-
-#wordmark {
-    width: auto;
-    color: $primary;
-}
-
-#brand-meta {
-    width: 1fr;
-    align-horizontal: right;
-}
-
-#tagline {
-    text-align: right;
-    color: $text-muted;
-}
-
-#version {
-    text-align: right;
-    color: $text-muted;
-    text-style: dim;
-}
+/* Home hub layout. The house theme, the shared styling and the brand banner
+ * (tui/app.tcss + tui/banner.py) come from the shared layer; only home-specific
+ * layout lives here. */
 
 /* --- Tree sidebar + detail pane ------------------------------------------- */
 

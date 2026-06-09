@@ -29,7 +29,6 @@ from textual.validation import ValidationResult, Validator
 from textual.widgets import (
     Button,
     Footer,
-    Header,
     Input,
     Label,
     RadioButton,
@@ -46,6 +45,7 @@ from mait_code.cli._settings_edit import (
     validation_error,
 )
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.banner import BrandBanner
 
 __all__ = ["run_interactive_editor"]
 
@@ -292,7 +292,7 @@ class SettingsApp(MaitApp):
         self._setting_nodes: dict[str, TreeNode[str]] = {}
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield BrandBanner(subtitle="Settings")
         with Horizontal(id="body"):
             yield Tree("settings", id="list")
             yield VerticalScroll(id="detail")

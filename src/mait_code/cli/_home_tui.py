@@ -21,14 +21,13 @@ pane rather than taking the hub down.
 from __future__ import annotations
 
 import enum
-import importlib.metadata
 from collections.abc import Callable
 from pathlib import Path
 
 from rich.text import Text
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widget import Widget
 from textual.widgets import Footer, Label, Markdown, Static, Tree
@@ -36,7 +35,8 @@ from textual.widgets.tree import TreeNode
 
 from mait_code.config import data_dir
 from mait_code.tui.app import SHARED_TCSS, MaitApp
-from mait_code.tui.brand import GLYPH, TAGLINE, empty_state, wordmark
+from mait_code.tui.banner import BrandBanner, installed_version
+from mait_code.tui.brand import GLYPH, empty_state
 from mait_code.tui.markdown import md_parser
 
 __all__ = ["HomeApp", "HomeTarget", "NodeSpec", "run_home_tui"]
@@ -75,16 +75,6 @@ def _clip(text: str, width: int = _LINE_WIDTH) -> str:
     if len(first_line) > width:
         return first_line[: width - 1] + "…"
     return first_line
-
-
-def _installed_version() -> str:
-    """The installed package version, falling back to the source tree's."""
-    try:
-        return importlib.metadata.version("mait-code")
-    except importlib.metadata.PackageNotFoundError:
-        from mait_code import __version__
-
-        return __version__
 
 
 # -- tree model ----------------------------------------------------------------
@@ -257,11 +247,7 @@ class HomeApp(MaitApp):
         self.target: HomeTarget | None = None
 
     def compose(self) -> ComposeResult:
-        with Horizontal(id="brand"):
-            yield Static(id="wordmark")
-            with Vertical(id="brand-meta"):
-                yield Static(f"{GLYPH} {TAGLINE}", id="tagline")
-                yield Static(f"v{_installed_version()}", id="version")
+        yield BrandBanner(subtitle="Home Hub")
         with Horizontal(id="body"):
             yield Tree(f"{GLYPH} mait-code", id="tree")
             yield VerticalScroll(id="detail")
@@ -269,10 +255,9 @@ class HomeApp(MaitApp):
         yield Footer()
 
     def on_mount(self) -> None:
-        self._render_wordmark()
         tree: Tree[NodeSpec] = self.query_one("#tree", Tree)
         # Enter posts NodeSelected without auto-expanding (see on_tree_node_selected),
-        # so a launch node launches and a category toggles — no double action.
+        # so a launch leaf launches and a category toggles — no double action.
         tree.auto_expand = False
         tree.guide_depth = 2
         tree.root.data = NodeSpec("home")
@@ -284,15 +269,7 @@ class HomeApp(MaitApp):
         # its detail explicitly (same reasoning as the memory browser's tree).
         self.call_after_refresh(self._show_detail, "home")
 
-    def on_resize(self) -> None:
-        # The wordmark is width-dependent (art vs plain fallback); re-render on
-        # resize so shrinking the terminal degrades instead of wrapping.
-        self._render_wordmark()
-
     # -- rendering -------------------------------------------------------------
-
-    def _render_wordmark(self) -> None:
-        self.query_one("#wordmark", Static).update(wordmark(self.size.width))
 
     def _build_tree(self) -> None:
         """(Re)build the sidebar, folding live counts into the node badges."""
@@ -300,6 +277,7 @@ class HomeApp(MaitApp):
         tree.root.remove_children()
         b = _Badges()
         warn = self._level_colours()["warn"]
+        accent = self._accent_colour()
 
         def section(
             name: str, spec: NodeSpec, badge: str = "", style: str = "dim"
@@ -316,19 +294,29 @@ class HomeApp(MaitApp):
         def leaf(parent: TreeNode[NodeSpec], name: str, spec: NodeSpec) -> None:
             parent.add_leaf(name, data=spec)
 
+        def launch_leaf(parent: TreeNode[NodeSpec], name: str, spec: NodeSpec) -> None:
+            # A dedicated "open this TUI" leaf: the ↗ glyph and the accent hue
+            # mark it as a hand-off, distinct from the plain detail leaves. The
+            # category itself stays a normal expand/collapse node.
+            parent.add_leaf(Text(f"↗ {name}", style=accent), data=spec)
+
         board = section(
             "Board",
-            NodeSpec("board", HomeTarget.BOARD),
+            NodeSpec("board"),
             f"{b.board_live} active" if b.board_live else "",
         )
+        launch_leaf(board, "Open board", NodeSpec("board", HomeTarget.BOARD))
         leaf(board, "In progress", NodeSpec("board:in_progress"))
         leaf(board, "Next up", NodeSpec("board:refined"))
         leaf(board, "By project", NodeSpec("board:by_project"))
 
         memory = section(
             "Memory",
-            NodeSpec("memory", HomeTarget.MEMORY),
+            NodeSpec("memory"),
             f"{b.mem_total}" if b.mem_total else "",
+        )
+        launch_leaf(
+            memory, "Open memory browser", NodeSpec("memory", HomeTarget.MEMORY)
         )
         leaf(memory, "By type", NodeSpec("memory:by_type"))
         leaf(memory, "Embedding coverage", NodeSpec("memory:embedding"))
@@ -353,8 +341,10 @@ class HomeApp(MaitApp):
         leaf(identity, "System prompt", NodeSpec("identity:sysprompt"))
 
         system = section("System", NodeSpec("system"))
+        launch_leaf(
+            system, "Open settings", NodeSpec("system:settings", HomeTarget.SETTINGS)
+        )
         leaf(system, "Doctor", NodeSpec("system:doctor"))
-        leaf(system, "Settings", NodeSpec("system:settings", HomeTarget.SETTINGS))
         leaf(system, "Version & paths", NodeSpec("system:version"))
 
     # -- detail dispatch -------------------------------------------------------
@@ -421,7 +411,9 @@ class HomeApp(MaitApp):
                 classes="help",
             ),
             Label(
-                "Pick a section on the left; Enter opens the full tool.", classes="help"
+                "Pick a section on the left; open a full tool from its "
+                "“↗ Open …” leaf.",
+                classes="help",
             ),
         ]
 
@@ -469,7 +461,12 @@ class HomeApp(MaitApp):
         widgets.append(
             Label(f"{len(live)} live across {n_proj} project(s)", classes="help")
         )
-        widgets.append(Label("Press Enter to open the board.", classes="hint"))
+        widgets.append(
+            Label(
+                "Press Enter on “↗ Open board” to launch the full board.",
+                classes="hint",
+            )
+        )
         for status, head in (("in_progress", "In progress"), ("refined", "Next up")):
             group = [c for c in cards if c["status"] == status]
             if group:
@@ -544,7 +541,10 @@ class HomeApp(MaitApp):
         widgets: list[Widget] = [
             Label("Memory", classes="title"),
             Label(f"{stats.total} entries", classes="help"),
-            Label("Press Enter to browse memories.", classes="hint"),
+            Label(
+                "Press Enter on “↗ Open memory browser” to launch it.",
+                classes="hint",
+            ),
             Label("By type", classes="subhead"),
         ]
         widgets += _kv_rows([(name, str(count)) for name, count in stats.by_type])
@@ -712,19 +712,52 @@ class HomeApp(MaitApp):
         ]
 
     def _detail_sysprompt(self) -> list[Widget]:
-        widgets: list[Widget] = [
-            Label(
-                Text(f"{GLYPH} What I see when I wake up", style="bold"),
-                classes="title",
-            )
+        from mait_code.hooks.session_start.context import build_session_context
+
+        # Read each identity document once — the text feeds both the token
+        # estimate and the rendered body.
+        identity = [
+            (title, path, _read_identity(path)) for title, path in _identity_files()
         ]
-        for title, path in _identity_files():
-            widgets.append(Label(title, classes="subhead"))
-            widgets += _document_widgets(path)
+        session = build_session_context()
+
+        total = sum(_estimate_tokens(text) for _, _, text in identity if text)
+        total += _estimate_tokens(session) if session else 0
+
+        title_line = Text(f"{GLYPH} What I see when I wake up  ", style="bold")
+        title_line.append(f"{_fmt_tokens(total)} tokens total", style="dim")
+        widgets: list[Widget] = [
+            Label(title_line, classes="title"),
+            Label("Rough estimate — ~4 chars/token, no tokenizer.", classes="hint"),
+        ]
+
+        for title, path, text in identity:
+            widgets.append(_sysprompt_subhead(title, text))
+            if text is None:
+                widgets.append(
+                    Label(
+                        empty_state(
+                            f"{path.name} isn't written yet — "
+                            "this part of me is still blank."
+                        )
+                    )
+                )
+            else:
+                widgets.append(
+                    Markdown(text, parser_factory=md_parser, open_links=False)
+                )
+
         widgets.append(
-            Label("Session context — built live by the hook", classes="subhead")
+            _sysprompt_subhead("Session context — built live by the hook", session)
         )
-        widgets.append(_session_context_widget())
+        if session:
+            widgets.append(
+                Markdown(session, parser_factory=md_parser, open_links=False)
+            )
+        else:
+            widgets.append(
+                Label(empty_state("A quiet start — nothing to surface right now."))
+            )
         return widgets
 
     # -- detail builders: system -----------------------------------------------
@@ -761,7 +794,10 @@ class HomeApp(MaitApp):
 
         widgets: list[Widget] = [
             Label("Settings", classes="title"),
-            Label("Press Enter to open the settings editor.", classes="hint"),
+            Label(
+                "Press Enter on “↗ Open settings” to launch the editor.",
+                classes="hint",
+            ),
         ]
         try:
             snapshot = collect_settings()
@@ -777,7 +813,7 @@ class HomeApp(MaitApp):
         widgets: list[Widget] = [Label("Version & paths", classes="title")]
         widgets += _kv_rows(
             [
-                ("version", _installed_version()),
+                ("version", installed_version()),
                 ("data dir", str(data_dir()).replace(home, "~")),
                 ("settings", str(settings_path()).replace(home, "~")),
             ]
@@ -787,19 +823,31 @@ class HomeApp(MaitApp):
     # -- theme helpers ---------------------------------------------------------
 
     def _level_colours(self) -> dict[str, str]:
-        """Doctor levels → concrete colours from the active theme.
+        """Doctor levels → Rich-parseable colours from the active theme.
 
-        Falls back to the house palette when the active theme leaves a semantic
-        slot unset (the house themes set all three).
+        Normalised through :func:`_rich_colour`, so the ``ansi`` themes (whose
+        ``ansi_yellow``-style names Rich can't parse) render instead of crashing,
+        and falls back to the house palette when a slot is unset.
         """
         from mait_code.tui import palette
 
         theme = self.get_theme(self.theme)
         return {
-            "ok": (theme and theme.success) or palette.SUCCESS,
-            "warn": (theme and theme.warning) or palette.WARNING,
-            "fail": (theme and theme.error) or palette.ERROR,
+            "ok": _rich_colour(theme.success if theme else None, palette.SUCCESS),
+            "warn": _rich_colour(theme.warning if theme else None, palette.WARNING),
+            "fail": _rich_colour(theme.error if theme else None, palette.ERROR),
         }
+
+    def _accent_colour(self) -> str:
+        """The active theme's accent hue (Rich-safe), for the tree's launch leaves.
+
+        Normalised through :func:`_rich_colour`; falls back to the house accent
+        when the active theme leaves it unset.
+        """
+        from mait_code.tui import palette
+
+        theme = self.get_theme(self.theme)
+        return _rich_colour(theme.accent if theme else None, palette.ACCENT)
 
     # -- actions ---------------------------------------------------------------
 
@@ -857,27 +905,56 @@ def _identity_files() -> tuple[tuple[str, Path], ...]:
     )
 
 
-def _document_widgets(path: Path) -> list[Widget]:
+def _read_identity(path: Path) -> str | None:
+    """An identity document's text, or ``None`` when it isn't written yet."""
     try:
-        text = path.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8")
     except OSError:
-        return [
-            Label(
-                empty_state(
-                    f"{path.name} isn't written yet — this part of me is still blank."
-                )
-            )
-        ]
-    return [Markdown(text, parser_factory=md_parser, open_links=False)]
+        return None
 
 
-def _session_context_widget() -> Widget:
-    from mait_code.hooks.session_start.context import build_session_context
+def _estimate_tokens(text: str) -> int:
+    """Rough token estimate: ~4 characters per token for English prose.
 
-    context = build_session_context()
-    if not context:
-        return Label(empty_state("A quiet start — nothing to surface right now."))
-    return Markdown(context, parser_factory=md_parser, open_links=False)
+    A deliberate heuristic, not a tokenizer — mait-code ships no model SDK and
+    works offline. Close enough to gauge the budget the identity stack spends at
+    session start; the true count is whatever Claude's tokenizer lands on.
+    """
+    return round(len(text) / 4)
+
+
+def _fmt_tokens(n: int) -> str:
+    """A compact ``~1.2k`` / ``~840`` token count for a section header badge."""
+    return f"~{n / 1000:.1f}k" if n >= 1000 else f"~{n}"
+
+
+def _sysprompt_subhead(title: str, text: str | None) -> Label:
+    """A system-prompt section header carrying its token-estimate badge."""
+    head = Text(f"{title}  ")
+    head.append(
+        f"{_fmt_tokens(_estimate_tokens(text))} tokens" if text else "blank",
+        style="dim",
+    )
+    return Label(head, classes="subhead")
+
+
+def _rich_colour(value: str | None, fallback: str) -> str:
+    """A theme colour string Rich can parse as a ``Text`` span style.
+
+    House and built-in themes store ``#rrggbb`` (Rich-safe as-is). Textual's
+    *ansi* themes store names like ``ansi_yellow`` that Rich rejects with a
+    ``MissingStyle`` — strip the prefix to Rich's own ``yellow`` / ``green`` /
+    ``red``, which render through the terminal's ANSI palette, exactly what an
+    ansi theme intends. Anything missing or otherwise unrecognised falls back to
+    the house hex, so a span style is never malformed.
+    """
+    if not value:
+        return fallback
+    if value.startswith("#"):
+        return value
+    if value.startswith("ansi_"):
+        return value[len("ansi_") :]
+    return fallback
 
 
 def _health_line(colours: dict[str, str]) -> Text:

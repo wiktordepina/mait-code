@@ -14,8 +14,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+import mait_code.tui.banner as banner_mod
 from mait_code.cli._memory_tui import MemoryApp
 from mait_code.tools.memory.db import get_connection
+
+
+@pytest.fixture(autouse=True)
+def _pin_banner_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the masthead version so the brand banner stays release-stable."""
+    monkeypatch.setattr(banner_mod, "installed_version", lambda: "0.0.0")
 
 
 def _seed_store(db_path: Path) -> None:
