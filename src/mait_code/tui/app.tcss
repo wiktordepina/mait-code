@@ -6,6 +6,52 @@
  * app. App-specific layout lives in each app's sheet (e.g. cli/_board.tcss).
  */
 
+/* --- Brand banner --------------------------------------------------------- */
+
+/* The shared masthead (mait_code.tui.banner.BrandBanner): the wordmark on the
+ * left, the view name over the tagline + version on the right. Worn by every
+ * surface in place of the stock header. A rule beneath it separates the brand
+ * from the content below ($panel matches the tree dividers). Every colour is a
+ * theme role, so the banner reskins with a Ctrl+P theme switch. */
+#brand {
+    height: 7;
+    padding: 0 2;
+    border-bottom: solid $panel;
+}
+
+#brand #wordmark {
+    width: auto;
+    color: $primary;
+}
+
+/* The right block sits in the space beside the wordmark, vertically centred so
+ * the view name reads as a subtitle floating off the brand's middle-right. */
+#brand-meta {
+    width: 1fr;
+    height: 100%;
+    align: right middle;
+}
+
+#brand #brand-subtitle {
+    width: auto;
+    text-align: right;
+    text-style: bold;
+    color: $text-primary;
+}
+
+#brand #tagline {
+    width: auto;
+    text-align: right;
+    color: $text-muted;
+}
+
+#brand #version {
+    width: auto;
+    text-align: right;
+    color: $text-muted;
+    text-style: dim;
+}
+
 /* --- Modals --------------------------------------------------------------- */
 
 /* A type selector matches subclasses too, so this centres every ModalScreen. */

@@ -5,6 +5,10 @@ The `mait-code` binary owns the install lifecycle. It's installed via
 (`scripts/install.sh`) handles that bootstrap step the first time.
 After that, everything goes through the CLI.
 
+Run bare on a terminal — `mait-code` with no subcommand — it opens the
+[home hub](../home.md), the companion's front door; piped or redirected it
+prints this help instead. The subcommands below are the rest of the surface.
+
 This page documents every subcommand: synopsis, flags, behaviour,
 examples, exit codes.
 
@@ -536,6 +540,73 @@ mait-code board | cat      # plain text render (e.g. for piping or logs)
 
 > The board is also reachable mid-session through the `board` skill — see
 > [Skills](skills.md). The CLI tool behind both is `mc-tool-board`.
+
+---
+
+## `mait-code home`
+
+**Synopsis**
+
+```
+mait-code home                              # interactive hub (TTY) / text summary (piped)
+mait-code                                   # bare invocation — same hub on a TTY
+```
+
+**Description**
+
+Open the companion's home hub — a navigable map over the board, memory,
+reminders, the quick-capture inbox, the identity stack, and the install's
+health. Attached to a terminal it launches a full-screen
+[Textual](https://textual.textualize.io/) TUI; piped or redirected it prints a
+compact text summary instead.
+
+A bare `mait-code` with no subcommand is the same front door: it opens the hub
+on a TTY and falls back to the root help when piped, so scripts and
+`mait-code | grep` are unaffected.
+
+The hub is read-only — it never writes a store or shells out. It renders the
+same data the `mc-tool-*` CLIs and skills work from, so it always reflects the
+real state. See the [home hub guide](../home.md) for the full tour.
+
+### The interactive hub
+
+A tree of sections down the left (Board, Memory, Reminders, Inbox, Identity,
+System), each carrying a live status badge; the highlighted section renders in
+full on the right.
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` (or `k` / `j`) | Move the highlight; the detail pane follows |
+| `Enter` | Toggle a section, or open a TUI from a `↗ Open …` launch leaf |
+| `r` | Reload every store (refresh the badges and current detail) |
+| `Ctrl+P` | Command palette (Open board / memory / settings, Reload, themes) |
+| `q` / `Esc` | Quit |
+
+Pressing `Enter` on a launch leaf (`↗ Open board`, `↗ Open memory browser`,
+`↗ Open settings`) hands off to that dedicated TUI and returns to the hub when
+it quits, with the badges refreshed.
+
+### The non-TTY render
+
+Off a TTY, `mait-code home` prints a one-block summary of each store:
+
+```
+Board:
+  mait-code: 1 in progress · 1 refined
+Reminders: 1 overdue · 0 upcoming
+Inbox: 1
+Memory: 128 entries · 0 unembedded · 3 unreflected
+```
+
+**Examples**
+
+```bash
+mait-code                  # open the hub — the front door
+mait-code home             # the same, explicitly
+mait-code home | cat       # plain text summary (e.g. for piping or logs)
+```
+
+**Exit code:** always `0`.
 
 ---
 

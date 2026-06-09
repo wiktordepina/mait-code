@@ -22,12 +22,13 @@ from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Input, Label, Markdown, Static, Tree
+from textual.widgets import Footer, Input, Label, Markdown, Static, Tree
 from textual.widgets.tree import TreeNode
 
 from mait_code.tools.memory.db import get_connection
 from mait_code.tools.memory.search import list_entries
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.banner import BrandBanner
 from mait_code.tui.brand import empty_state
 from mait_code.tui.markdown import md_parser
 
@@ -124,7 +125,7 @@ class MemoryApp(MaitApp):
         self._conn.close()
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield BrandBanner(subtitle="Memory")
         with Horizontal(id="body"):
             with Vertical(id="nav"):
                 yield Input(placeholder="filter memories…", id="filter")
@@ -196,11 +197,15 @@ class MemoryApp(MaitApp):
             self.call_after_refresh(self._show_empty)
 
     def _update_subtitle(self, shown: int) -> None:
+        # The masthead carries the view name and its live state (the stock header
+        # the count used to live in is gone). Filtering shows the match count;
+        # otherwise the plain total beside the "Memory" name.
         total = len(self._entries)
         if self._query:
-            self.sub_title = f"{shown}/{total} memories match {self._query!r}"
+            text = f"Memory — {shown}/{total} match"
         else:
-            self.sub_title = f"{total} memories  (/ to filter)"
+            text = f"Memory — {total}"
+        self.query_one(BrandBanner).set_subtitle(text)
 
     # -- detail --------------------------------------------------------------
 

@@ -114,6 +114,7 @@ nav:
   - Home: README.md
   - Guide:
       - Setup: setup.md
+      - The home hub: home.md
       - The board: board.md
       - Multi-machine sync: sync.md
   - Concepts:

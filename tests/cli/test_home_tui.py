@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 import pytest
 
 import mait_code.cli._doctor as doctor_mod
-import mait_code.cli._home_tui as home_mod
+import mait_code.tui.banner as banner_mod
 from mait_code.cli._doctor import Check, DoctorReport
 from mait_code.cli._home_tui import HomeApp, HomeTarget
 
@@ -30,7 +30,7 @@ def _pin_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         fixes_applied=[],
     )
     monkeypatch.setattr(doctor_mod, "run_doctor", lambda **_kw: report)
-    monkeypatch.setattr(home_mod, "_installed_version", lambda: "1.2.3")
+    monkeypatch.setattr(banner_mod, "installed_version", lambda: "1.2.3")
 
 
 def _seed_board() -> None:
@@ -154,7 +154,8 @@ def test_board_detail_lists_live_cards_and_launch_hint() -> None:
     text = _run(scenario)
     assert "In progress" in text and "Work the thing" in text
     assert "Next up" in text and "Refine the spec" in text
-    assert "Enter to open the board" in text
+    # The launch hint now points at the dedicated "↗ Open board" leaf.
+    assert "Open board" in text and "launch the full board" in text
 
 
 def test_board_by_project_breakdown() -> None:
@@ -275,6 +276,36 @@ def test_health_line_renders_pinned_doctor_verdict() -> None:
     assert "1 warning" in text and "1 passed" in text and "doctor" in text
 
 
+def test_rich_colour_normalises_theme_colours() -> None:
+    from mait_code.cli._home_tui import _rich_colour
+
+    assert _rich_colour("#abcdef", "#000") == "#abcdef"  # hex passes through
+    assert _rich_colour("ansi_yellow", "#000") == "yellow"  # ansi → Rich name
+    assert _rich_colour("ansi_bright_red", "#000") == "bright_red"
+    assert _rich_colour(None, "#000") == "#000"  # unset → fallback
+    assert _rich_colour("", "#000") == "#000"
+
+
+def test_home_renders_under_ansi_theme() -> None:
+    """The ansi themes store colour names Rich can't parse (e.g. ``ansi_yellow``);
+    the health line and tree must render under them, not raise ``MissingStyle``."""
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.theme = "ansi-dark"
+            await pilot.pause()
+            # Reload re-renders the health line and rebuilds the tree (launch
+            # leaves carry the accent) with the active theme's colours — the
+            # exact path that crashed on mount under an ansi theme.
+            app.action_reload()
+            await pilot.pause()
+            return str(app.query_one("#health").render())
+
+    assert "passed" in _run(scenario)  # rendered, not crashed
+
+
 def test_wordmark_falls_back_when_narrow() -> None:
     async def scenario():
         app = HomeApp()
@@ -334,7 +365,7 @@ def test_system_prompt_node_renders_identity_and_context() -> None:
 # --- launch + reload ---
 
 
-def test_selecting_a_launch_node_sets_the_target() -> None:
+def test_selecting_a_launch_leaf_sets_the_target() -> None:
     from textual.widgets import Tree
 
     async def scenario():
@@ -342,12 +373,32 @@ def test_selecting_a_launch_node_sets_the_target() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
-            board = tree.root.children[0]  # Board is the first section
-            app.on_tree_node_selected(Tree.NodeSelected(board))
+            board = tree.root.children[0]  # Board section (expands, no launch)
+            open_board = board.children[0]  # "↗ Open board" launch leaf
+            app.on_tree_node_selected(Tree.NodeSelected(open_board))
             await pilot.pause()
             return app.target
 
     assert _run(scenario) is HomeTarget.BOARD
+
+
+def test_selecting_a_category_toggles_without_launching() -> None:
+    from textual.widgets import Tree
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            board = tree.root.children[0]  # Board section
+            was_expanded = board.is_expanded
+            app.on_tree_node_selected(Tree.NodeSelected(board))
+            await pilot.pause()
+            return app.target, was_expanded, board.is_expanded
+
+    target, was_expanded, now_expanded = _run(scenario)
+    assert target is None  # the category never launches
+    assert was_expanded and not now_expanded  # Enter toggled it closed
 
 
 def test_escape_quits(monkeypatch: pytest.MonkeyPatch) -> None:
