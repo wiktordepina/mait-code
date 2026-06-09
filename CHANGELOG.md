@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.48.0] — 2026-06-09
+
 ### Added
 
 - **Export cards to markdown and JSON.** `mc-tool-board export N` renders one
@@ -1453,7 +1455,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.47.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.48.0...HEAD
+[0.48.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.48.0
 [0.47.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.47.0
 [0.46.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.1
 [0.46.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.0
