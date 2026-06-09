@@ -41,6 +41,22 @@
 
 ::: mait_code.tools.board.get_project
 
+## Export
+
+::: mait_code.tools.board.FORMATS
+
+::: mait_code.tools.board.JSON
+
+::: mait_code.tools.board.MARKDOWN
+
+::: mait_code.tools.board.board_markdown
+
+::: mait_code.tools.board.card_markdown
+
+::: mait_code.tools.board.export_board
+
+::: mait_code.tools.board.export_card
+
 ## Service
 
 ::: mait_code.tools.board.CardNotFound

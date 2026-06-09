@@ -50,7 +50,7 @@ from textual.widgets import (
 )
 from textual.widgets.option_list import Option, OptionDoesNotExist
 
-from mait_code.tools.board import service
+from mait_code.tools.board import export, service
 from mait_code.tools.board.columns import (
     ARCHIVED,
     BACKLOG,
@@ -223,6 +223,7 @@ _VIEW_ACTIONS: frozenset[str] = frozenset(
         "complete",
         "block",
         "unblock",
+        "export",
     }
 )
 
@@ -323,6 +324,7 @@ class CardScreen(ModalScreen[None]):
         Binding("C", "complete", "Complete"),
         Binding("b", "block", "Block"),
         Binding("u", "unblock", "Unblock"),
+        Binding("x", "export", "Export"),
         Binding("escape", "close", "Close"),
     ]
 
@@ -544,6 +546,21 @@ class CardScreen(ModalScreen[None]):
         summary = await self.app.push_screen_wait(CompleteScreen(self._card["id"]))
         if summary:
             self.post_message(self.Mutate(self._card["id"], "complete", summary))
+
+    def action_export(self) -> None:
+        """``x`` in view mode writes the on-screen card to ``card-N.md`` in the
+        cwd, rendered through the same export layer as the CLI."""
+        if self._mode != "view":
+            return
+        card = dict(self._card)
+        card["comments"] = self._comments
+        path = Path.cwd() / f"card-{card['id']}.md"
+        try:
+            path.write_text(export.card_markdown(card) + "\n", encoding="utf-8")
+        except OSError as exc:
+            self.notify(f"Export failed: {exc}", severity="error")
+            return
+        self.notify(f"Exported to {path}")
 
     def action_block(self) -> None:
         if self._mode == "view":

@@ -50,6 +50,11 @@ The **description**, **acceptance criteria** and **completion summary** fields r
 
 - This project: `mc-tool-board list`. All projects: `mc-tool-board list --all`. Include archived: add `--archived`. Filter by title: `--search`/`-q <text>` (case-insensitive substring; composes with the others — pair with `--all` to sweep every project). Machine-readable: add `--json`.
 
+### Exporting
+
+- One card: `mc-tool-board export N [--format markdown|json] [--out FILE]` — a portable, full-fidelity document (meta, description, acceptance criteria, completion summary, references, comments). Markdown is the default; output goes to stdout unless `--out` is given.
+- Whole board: `mc-tool-board export [--format ...] [--out FILE]` — one markdown document grouped by column, or a JSON array. Takes the same filters as `list` (`--all`, `--project`, `--status`, `--archived`, `-q`).
+
 ## Proactive behaviour
 
 If you spot work worth tracking during a session, you may **suggest** adding a card — but always ask before adding. When you finish a chunk of work that maps to an in-progress card, offer to complete it with a summary. Never move, complete, or archive cards without the user's say-so.

@@ -10,6 +10,18 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **Export cards to markdown and JSON.** `mc-tool-board export N` renders one
+  card as a portable, full-fidelity document — meta, description, acceptance
+  criteria, completion summary, references and comments; stored markdown
+  round-trips verbatim. The board-wide form (`mc-tool-board export`) produces
+  one markdown document grouped by column, or a JSON array, and takes the same
+  filters as `list` (`--all`, `--project`, `--status`, `--archived`, `-q`).
+  Output goes to stdout, or to a file with `--out`. In the board TUI,
+  <kbd>x</kbd> on the card screen writes `card-N.md` to the current directory.
+  The rendering layer lives in `tools/board/export.py`, shared by CLI and TUI.
+
 ## [0.47.0] — 2026-06-09
 
 ### Added
