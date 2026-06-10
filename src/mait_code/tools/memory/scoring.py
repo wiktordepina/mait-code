@@ -11,6 +11,7 @@ Where:
 
   - episodic (events, tasks): 3-day half-life (fast decay)
   - semantic (facts, preferences, insights): 90-day half-life (slow decay)
+  - procedural (workflows, how-tos): 180-day half-life (slowest decay)
   - fallback: 7-day half-life
 
 * ``importance`` — normalised to 0.0-1.0 from the 1-10 scale.
@@ -59,6 +60,7 @@ W_RECENCY, W_IMPORTANCE, W_RELEVANCE = _load_weights()
 HALF_LIFE_DAYS: dict[str, float] = {
     "episodic": config.get_float("half-life-episodic"),  # ~50% at 3 days
     "semantic": config.get_float("half-life-semantic"),  # ~50% at 90 days
+    "procedural": config.get_float("half-life-procedural"),  # ~50% at 180 days
 }
 DEFAULT_HALF_LIFE = 7.0  # Fallback when memory_class is unknown
 
@@ -79,6 +81,7 @@ def recency_score(
 
     * ``episodic``: 3 days (events decay fast).
     * ``semantic``: 90 days (facts persist).
+    * ``procedural``: 180 days (workflows go stale when superseded, not with time).
     * ``None``/unknown: 7 days (fallback).
 
     Args:
@@ -181,7 +184,8 @@ def composite_score(
         created_at: When the entry was created (ISO string or datetime).
         importance: Importance level 1-10.
         relevance: Relevance score 0.0-1.0 (from search or default 0.5).
-        memory_class: ``"episodic"`` or ``"semantic"`` (controls decay rate).
+        memory_class: ``"episodic"``, ``"semantic"``, or ``"procedural"``
+            (controls decay rate).
         entry_scope: Scope of the entry (``"global"``, ``"project"``,
             ``"branch"``).
         entry_project: Project of the entry.

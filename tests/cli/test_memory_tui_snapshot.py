@@ -137,6 +137,16 @@ def _seed_store(db_path: Path) -> None:
                 "2026-05-26 15:00:00",
             ),
             (
+                "To regenerate reference docs: run `docs/gen_ref_pages.py`, "
+                "then commit the result alongside the code.",
+                "procedure",
+                6,
+                "procedural",
+                "project",
+                "mait-code",
+                "2026-05-29 11:00:00",
+            ),
+            (
                 "Released 0.43.0 — removed the tasks subsystem.",
                 "event",
                 5,

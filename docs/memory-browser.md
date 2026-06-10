@@ -53,8 +53,8 @@ Highlight a leaf and the detail pane renders it:
 
 *Scope* tells you how widely a memory applies: `global` (everywhere), a project
 name (across that project), or `project:branch` (just that branch). *Class* is
-`semantic` (facts, preferences — slow to decay) or `episodic` (events, tasks —
-fast to decay).
+`semantic` (facts, preferences — slow to decay), `episodic` (events, tasks —
+fast to decay), or `procedural` (workflows, how-tos — slowest to decay).
 
 ## Finding something
 

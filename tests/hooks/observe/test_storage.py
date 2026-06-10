@@ -43,6 +43,9 @@ def test_store_extraction_creates_memories(data_dir: Path):
         "facts": [{"content": "project uses SQLite", "importance": 7}],
         "preferences": [{"content": "prefers dark mode", "importance": 6}],
         "decisions": [{"content": "chose REST over GraphQL", "importance": 8}],
+        "procedures": [
+            {"content": "to reindex: run mc-tool-memory reindex", "importance": 6}
+        ],
         "bugs_fixed": [{"content": "fixed null pointer in auth", "importance": 7}],
         "entities": [],
         "relationships": [],
@@ -58,12 +61,13 @@ def test_store_extraction_creates_memories(data_dir: Path):
 
         store_extraction(extraction)
 
-        assert mock_store.call_count == 4
+        assert mock_store.call_count == 5
         # Check entry types
         call_types = [call.args[2] for call in mock_store.call_args_list]
         assert "fact" in call_types
         assert "preference" in call_types
         assert "decision" in call_types
+        assert "procedure" in call_types
         assert "event" in call_types
 
 

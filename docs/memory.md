@@ -41,11 +41,17 @@ Claude Haiku analyses the conversation and returns structured JSON:
 | **Facts** | `fact` (semantic) | "The auth service uses JWT with RS256", "Database runs on PostgreSQL 16" |
 | **Preferences** | `preference` (semantic) | "User prefers dark mode", "Always use tabs for Go code" |
 | **Decisions** | `decision` (semantic) | "Chose REST over GraphQL for the public API" |
+| **Procedures** | `procedure` (procedural) | "To debug a failing pages deploy: check the env protection rules first, then the tag ref" |
 | **Bugs fixed** | `event` (episodic) | "Fixed race condition in the connection pool" |
 | **Entities** | knowledge graph | People, projects, tools, services, concepts, organisations |
 | **Relationships** | knowledge graph | "User → contributes_to → mait-code", "mait-code → depends_on → sqlite-vec" |
 
 Each item includes an importance rating (1-10) that influences search ranking.
+
+The boundary between the three semantic-adjacent categories: a **procedure**
+answers *"how do I do X next time?"* (a repeatable workflow, usually with
+steps); a **decision** answers *"what did we pick?"* (a choice made once); a
+**preference** answers *"what does the user like?"*.
 
 ### Raw observation logs
 
@@ -98,9 +104,9 @@ The core table stores every observation with metadata:
 | Field | Description |
 |-------|-------------|
 | `content` | The memory text |
-| `entry_type` | `fact`, `preference`, `event`, `decision`, `insight`, `task`, `relationship` |
+| `entry_type` | `fact`, `preference`, `event`, `decision`, `procedure`, `insight`, `task`, `relationship` |
 | `importance` | 1-10 scale |
-| `memory_class` | `episodic` (fast decay) or `semantic` (slow decay) |
+| `memory_class` | `episodic` (fast decay), `semantic` (slow decay), or `procedural` (slowest decay) |
 | `scope` | `global`, `project`, or `branch` (controls visibility) |
 | `project` | Project identifier (null for global scope) |
 | `branch` | Git branch (set only for branch scope) |
@@ -233,6 +239,7 @@ Exponential decay based on memory class:
 |-------|-------|-----------|--------|
 | Episodic | `event`, `task` | 3 days | Fades fast — yesterday's deploy matters less next week |
 | Semantic | `fact`, `preference`, `decision`, `insight`, `relationship` | 90 days | Persists — architectural decisions stay relevant for months |
+| Procedural | `procedure` | 180 days | Most durable — workflows go stale when superseded, not with time |
 
 Formula: `recency = exp(-ln(2) × age_days / half_life)`
 
@@ -259,6 +266,7 @@ The scoring and deduplication knobs are exposed as **advanced** settings (commen
 | `score-weight-relevance` | `0.4` | 0.0–1.0 | |
 | `half-life-episodic` | `3.0` | days | Too short and events vanish; too long and they crowd out facts. |
 | `half-life-semantic` | `90.0` | days | Too short and facts fade; too long and stale facts persist. |
+| `half-life-procedural` | `180.0` | days | Procedures decay when superseded, not with time — keep this long. |
 | `dedup-string-threshold` | `0.85` | 0.0–1.0 | Too low misses near-duplicates; too high admits false positives. |
 | `dedup-vector-threshold` | `0.92` | 0.0–1.0 | Same trade-off, on cosine similarity. Also the upper edge of the conflict band. |
 | `dedup-conflict-threshold` | `0.60` | 0.0–1.0 | Lower edge of the contradiction band. Too low floods every write with spurious conflicts; too high lets real contradictions slip through as separate facts. |

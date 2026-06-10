@@ -33,6 +33,14 @@ class TestRecencyScore:
         score = recency_score(created, now, memory_class="semantic")
         assert abs(score - 0.5) < 0.01
 
+    def test_procedural_half_life(self):
+        """Procedural memories decay slowest of the three classes."""
+        now = datetime.now(UTC)
+        created = now - timedelta(days=HALF_LIFE_DAYS["procedural"])
+        score = recency_score(created, now, memory_class="procedural")
+        assert abs(score - 0.5) < 0.01
+        assert HALF_LIFE_DAYS["procedural"] > HALF_LIFE_DAYS["semantic"]
+
     def test_default_half_life(self):
         """Unknown memory_class uses default half-life."""
         now = datetime.now(UTC)

@@ -60,6 +60,10 @@ class TestStoreMemory:
                 f"{entry_type} should map to {expected_class}"
             )
 
+    def test_procedure_maps_to_procedural(self):
+        """The procedure entry type carries its own memory class."""
+        assert MEMORY_CLASS_MAP["procedure"] == "procedural"
+
     def test_dedup_identical_content(self, memory_db: sqlite3.Connection):
         """Exact duplicate content should be deduplicated."""
         content = "User prefers dark mode in all editors"
@@ -533,6 +537,7 @@ class TestFindDuplicate:
             "fact",
             "preference",
             "decision",
+            "procedure",
             "event",
             "insight",
             "task",

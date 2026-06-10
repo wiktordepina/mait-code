@@ -4,6 +4,7 @@ import json
 from unittest.mock import patch
 
 from mait_code.hooks.observe.extractor import (
+    EXPECTED_KEYS,
     build_extraction_prompt,
     extract_observations,
     parse_extraction,
@@ -15,6 +16,13 @@ def test_build_extraction_prompt():
     assert "USER: hello" in prompt
     assert "ASSISTANT: hi" in prompt
     assert "facts" in prompt  # Contains the system prompt
+
+
+def test_prompt_covers_expected_keys():
+    """Every key the parser accepts must be asked for in the prompt."""
+    prompt = build_extraction_prompt("x")
+    for key in EXPECTED_KEYS:
+        assert f'"{key}"' in prompt, key
 
 
 def test_parse_extraction_valid_json():

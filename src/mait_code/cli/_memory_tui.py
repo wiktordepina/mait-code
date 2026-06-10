@@ -56,6 +56,7 @@ _TYPE_ORDER: tuple[str, ...] = (
     "fact",
     "preference",
     "decision",
+    "procedure",
     "insight",
     "event",
     "task",

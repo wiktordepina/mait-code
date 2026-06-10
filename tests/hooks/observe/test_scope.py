@@ -50,6 +50,19 @@ class TestResolveScope:
         item = {"content": "x", "scope": "branch"}
         assert resolve_scope(item, "decisions", "proj", "feature/a") == "branch"
 
+    def test_procedures_default_project(self):
+        """Procedures default to project scope, even on a branch."""
+        assert (
+            resolve_scope({"content": "x"}, "procedures", "proj", "feature/a")
+            == "project"
+        )
+        assert resolve_scope({"content": "x"}, "procedures", "proj", None) == "project"
+
+    def test_procedures_respect_llm_scope(self):
+        """Procedures honour a valid LLM scope; project is only the fallback."""
+        item = {"content": "x", "scope": "global"}
+        assert resolve_scope(item, "procedures", "proj", "feature/a") == "global"
+
     def test_bugs_fixed_on_branch_defaults_branch(self):
         """Bugs fixed on a feature branch default to branch scope."""
         assert (
