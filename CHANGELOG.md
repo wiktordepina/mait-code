@@ -10,6 +10,22 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.53.0] — 2026-06-10
+
+### Added
+
+- **Procedural memory class** — the memory system now knows *how things are
+  done*, not just what happened and what's true. A new `procedure` entry
+  type carries its own `procedural` class with the slowest decay of the
+  three (180-day half-life, tunable via `half-life-procedural`) — workflows
+  go stale when superseded, not with time. The observe hook extracts a
+  `procedures` category with crisp boundary guidance (a procedure answers
+  *"how do I do X next time?"*; a decision answers *"what did we pick?"*; a
+  preference answers *"what does the user like?"*), defaulting to project
+  scope. The new type flows through `mc-tool-memory store`/`search
+  --type procedure`, gets its own group in the memory browser, and shows up
+  in the observations browser and the settings editor.
+
 ## [0.52.0] — 2026-06-10
 
 ### Changed
@@ -1556,7 +1572,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.52.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.53.0...HEAD
+[0.53.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.53.0
 [0.52.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.52.0
 [0.51.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.51.0
 [0.50.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.50.0
