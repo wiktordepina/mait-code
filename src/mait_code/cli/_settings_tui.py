@@ -46,6 +46,7 @@ from mait_code.cli._settings_edit import (
 )
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.banner import BrandBanner
+from mait_code.tui.confirm import ConfirmScreen
 
 __all__ = ["run_interactive_editor"]
 
@@ -182,29 +183,6 @@ def _leaf_label(key: str, value_width: int = _VALUE_WIDTH) -> Text:
         _truncate(value, value_width), style="dim" if source == "default" else ""
     )
     return label
-
-
-class ConfirmScreen(ModalScreen[bool]):
-    """A yes/no modal; ``push_screen_wait`` resolves to the chosen bool."""
-
-    BINDINGS = [("escape", "dismiss_no", "No")]
-
-    def __init__(self, question: str) -> None:
-        super().__init__()
-        self._question = question
-
-    def compose(self) -> ComposeResult:
-        with Vertical(classes="modal-dialog"):
-            yield Label(self._question, classes="modal-title")
-            with Horizontal(classes="modal-buttons"):
-                yield Button("Yes", id="yes", variant="primary")
-                yield Button("No", id="no")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "yes")
-
-    def action_dismiss_no(self) -> None:
-        self.dismiss(False)
 
 
 class WeightsScreen(ModalScreen[bool]):

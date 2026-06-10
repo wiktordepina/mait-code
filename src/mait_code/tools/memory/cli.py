@@ -371,39 +371,50 @@ def cmd_relationships(args):
                 print(f"    {r['context']}")
 
 
-def _reindex_embeddings(conn):
-    """Recompute all vector embeddings. Returns count or exits on failure."""
-    total = conn.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
-    if total == 0:
+class ReindexError(RuntimeError):
+    """Reindex could not run (e.g. the embedding provider is unavailable)."""
+
+
+#: SQL tail selecting entries that have no vector yet.
+_MISSING_VEC = (
+    "FROM memory_entries m WHERE NOT EXISTS "
+    "(SELECT 1 FROM memory_vec v WHERE v.rowid = m.id)"
+)
+
+
+def _embed_missing(conn):
+    """Embed the entries that lack a vector, in id order, 64 per commit.
+
+    Each committed batch shrinks the missing set, so the query pages
+    itself — no OFFSET bookkeeping. Returns the count written.
+
+    Raises:
+        ReindexError: if a batch fails to embed.
+    """
+    if conn.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0] == 0:
         print("No memory entries to embed.")
         return 0
-
-    # Clear existing embeddings
-    try:
-        conn.execute("DELETE FROM memory_vec")
-        conn.commit()
-    except Exception:
-        pass  # Table may not exist
+    total = conn.execute(f"SELECT COUNT(*) {_MISSING_VEC}").fetchone()[0]
+    if total == 0:
+        print("Nothing to embed — every entry already has a vector.")
+        return 0
 
     batch_size = 64
     embedded = 0
-
-    for offset in range(0, total, batch_size):
+    while True:
         rows = conn.execute(
-            "SELECT id, content FROM memory_entries ORDER BY id LIMIT ? OFFSET ?",
-            (batch_size, offset),
+            f"SELECT m.id, m.content {_MISSING_VEC} ORDER BY m.id LIMIT ?",
+            (batch_size,),
         ).fetchall()
+        if not rows:
+            break
 
-        ids = [r[0] for r in rows]
-        texts = [r[1] for r in rows]
-
-        vectors = embed_texts(texts, prefix="search_document")
+        vectors = embed_texts([r[1] for r in rows], prefix="search_document")
         if vectors is None:
             logger.error("embedding failed")
-            print("Error: embedding failed.", file=sys.stderr)
-            sys.exit(1)
+            raise ReindexError("embedding failed")
 
-        for entry_id, vec in zip(ids, vectors):
+        for (entry_id, _), vec in zip(rows, vectors):
             conn.execute(
                 "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
                 (entry_id, serialize_f32(vec)),
@@ -414,6 +425,21 @@ def _reindex_embeddings(conn):
         print(f"Embedded {embedded}/{total} entries...")
 
     return embedded
+
+
+def _reindex_embeddings(conn):
+    """Recompute all vector embeddings from scratch. Returns the count written.
+
+    Raises:
+        ReindexError: if a batch fails to embed.
+    """
+    # Clear existing embeddings; every entry is then "missing".
+    try:
+        conn.execute("DELETE FROM memory_vec")
+        conn.commit()
+    except Exception:
+        pass  # Table may not exist
+    return _embed_missing(conn)
 
 
 def _recreate_vec_table(conn, dim: int):
@@ -433,23 +459,29 @@ def _recreate_vec_table(conn, dim: int):
     conn.commit()
 
 
-class ReindexError(RuntimeError):
-    """Reindex could not run (e.g. the embedding provider is unavailable)."""
-
-
-def run_reindex() -> int:
-    """Recompute all vector embeddings, recreating the vec table on a
+def run_reindex(db_path=None, *, missing_only=False) -> int:
+    """Recompute vector embeddings, recreating the vec table on a
     dimension change.
 
     The programmatic counterpart to :func:`cmd_reindex`: callers (the
-    ``mait-code settings`` follow-up, for one) get a return value instead
-    of a process exit. Progress is still printed to stdout.
+    ``mait-code settings`` follow-up, the home hub, and ``doctor --fix``)
+    get a return value instead of a process exit. Progress is still
+    printed to stdout.
+
+    Args:
+        db_path: Override the memory database path (defaults to the
+            configured ``{data_dir}/memory.db``).
+        missing_only: Embed only the entries that lack a vector instead
+            of re-embedding everything. A dimension mismatch still
+            recreates (and so empties) the vec table first — at that
+            point every entry is missing and the two modes converge.
 
     Returns:
         The number of embeddings written.
 
     Raises:
-        ReindexError: if the embedding provider is unavailable.
+        ReindexError: if the embedding provider is unavailable or a
+            batch fails to embed.
     """
     if not is_available():
         provider = _embedding_provider_name()
@@ -459,7 +491,7 @@ def run_reindex() -> int:
             hint = "Ensure fastembed is installed: pip install fastembed"
         raise ReindexError(f"embedding model unavailable. {hint}")
 
-    with connection() as conn:
+    with connection(db_path) as conn:
         matches, table_dim, expected_dim = check_dimension_match(conn)
         if not matches:
             print(
@@ -468,6 +500,8 @@ def run_reindex() -> int:
             )
             _recreate_vec_table(conn, expected_dim)
 
+        if missing_only:
+            return _embed_missing(conn)
         return _reindex_embeddings(conn)
 
 

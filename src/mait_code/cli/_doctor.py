@@ -5,7 +5,8 @@ Each check returns a :class:`Check` with a level (``ok`` / ``warn`` /
 ``fail``, ``0`` otherwise.
 
 With ``--fix``: applies the safe fixes &mdash; removing dangling skill /
-agent symlinks, creating the data directory if missing.
+agent symlinks, creating the data directory if missing, embedding the
+memory entries that lack vectors (existing vectors are left alone).
 """
 
 from __future__ import annotations
@@ -13,7 +14,9 @@ from __future__ import annotations
 import json
 import shutil
 import sqlite3
+import sys
 import tomllib
+from contextlib import redirect_stdout
 from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
@@ -301,7 +304,33 @@ def _embedding_config() -> str:
     return f"provider '{provider}', model '{model}'"
 
 
-def _check_memory_embeddings(ddir: Path) -> Check:
+def _fix_memory_embeddings(
+    db: Path, total: int, missing: int, fixes: list[str]
+) -> Check:
+    """Embed the entries missing a vector and report the outcome.
+
+    Existing vectors are left alone — only the gap the check found is
+    filled. Progress is redirected to stderr so ``doctor --fix --json``
+    keeps a parseable stdout. A provider that can't run leaves the
+    original warn standing, with the failure folded into the message.
+    """
+    from mait_code.tools.memory.cli import ReindexError, run_reindex
+
+    try:
+        with redirect_stdout(sys.stderr):
+            embedded = run_reindex(db, missing_only=True)
+    except ReindexError as exc:
+        return Check(
+            "memory-embeddings",
+            "warn",
+            f"{missing} of {total} live entries have no embedding "
+            f"and embedding them failed: {exc}",
+        )
+    fixes.append(f"embedded {embedded} missing memory vectors")
+    return Check("memory-embeddings", "ok", f"embedded {embedded} missing entries")
+
+
+def _check_memory_embeddings(ddir: Path, fix: bool, fixes: list[str]) -> Check:
     """Live memory entries should all carry a vector for semantic search."""
     db = _memory_db_path(ddir)
     if not db.exists():
@@ -324,12 +353,14 @@ def _check_memory_embeddings(ddir: Path) -> Check:
             "memory-embeddings", "warn", f"could not inspect embeddings: {exc}"
         )
     if missing:
+        if fix:
+            return _fix_memory_embeddings(db, total, missing, fixes)
         return Check(
             "memory-embeddings",
             "warn",
             f"{missing} of {total} live entries have no embedding — "
             "invisible to semantic search",
-            fix_hint="mc-tool-memory reindex",
+            fix_hint="mc-tool-memory reindex (or mait-code doctor --fix)",
         )
     if not total:
         return Check("memory-embeddings", "ok", "no live entries yet")
@@ -436,9 +467,9 @@ def run_doctor(
     """Run all diagnostic checks, optionally applying safe fixes.
 
     Args:
-        fix: When ``True``, apply the fixes for the dangling-symlinks
-            and missing-data-dir checks; otherwise leave them as
-            findings.
+        fix: When ``True``, apply the fixes for the dangling-symlinks,
+            missing-data-dir, and missing-embeddings checks; otherwise
+            leave them as findings.
         claude_dir: Override the Claude Code config dir.
         data_dir: Override the data dir.
 
@@ -460,7 +491,7 @@ def run_doctor(
         _check_hook_commands(cdir),
         _check_symlinks(cdir, fix, fixes),
         _check_data_dir(ddir, fix, fixes),
-        _check_memory_embeddings(ddir),
+        _check_memory_embeddings(ddir, fix, fixes),
         _check_vector_search(ddir),
         _check_observe_pipeline(ddir),
         _check_uv(ddir),

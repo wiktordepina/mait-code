@@ -78,7 +78,10 @@ ModalScreen {
     border: round $primary;
 }
 
+/* Full width, not auto: an auto-width Label never wraps, it clips at the
+ * dialog edge — a long confirm question must fold onto extra lines. */
 .modal-title {
+    width: 100%;
     text-style: bold;
     color: $text-primary;
     margin-bottom: 1;

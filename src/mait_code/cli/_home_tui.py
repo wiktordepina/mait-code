@@ -8,7 +8,12 @@ Settings node leaves home and opens that dedicated TUI, returning here when it
 quits (the relaunch loop lives in :func:`mait_code.cli.home`).
 
 Pure presentation over the same store layers the ``mc-tool-*`` CLIs use &mdash;
-nothing here writes, and nothing shells out. The brand debuts here too: the
+nothing here writes, and nothing shells out. The one maintenance action is
+``e`` (reindex): after a confirm it drops out via :meth:`App.suspend` so
+``run_reindex`` can embed the entries missing a vector with its normal
+terminal progress, then home reloads with the fresh embedding counts.
+
+The brand debuts here too: the
 wordmark (with a plain-text fallback on narrow terminals), the signature glyph,
 and the companion voice in every empty state. The Identity section renders what
 Claude is presented with at session start &mdash; the identity stack plus the
@@ -25,6 +30,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from rich.text import Text
+from textual import work
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
@@ -35,6 +41,7 @@ from textual.widgets.tree import TreeNode
 
 from mait_code.config import data_dir
 from mait_code.tui.app import SHARED_TCSS, MaitApp
+from mait_code.tui.confirm import ConfirmScreen
 from mait_code.tui.banner import BrandBanner, installed_version
 from mait_code.tui.brand import GLYPH, empty_state
 from mait_code.tui.markdown import md_parser
@@ -237,6 +244,7 @@ class HomeApp(MaitApp):
 
     BINDINGS = [
         ("r", "reload", "Reload"),
+        ("e", "reindex", "Reindex"),
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
     ]
@@ -613,6 +621,12 @@ class HomeApp(MaitApp):
                 ("dimensions", str(stats.dim)),
             ]
         )
+        widgets.append(
+            Label(
+                empty_state("Press e to embed the entries missing a vector."),
+                classes="hint",
+            )
+        )
         return widgets
 
     def _detail_memory_reflection(self) -> list[Widget]:
@@ -871,15 +885,66 @@ class HomeApp(MaitApp):
 
     # -- actions ---------------------------------------------------------------
 
-    def action_reload(self) -> None:
-        """Re-read every store — refreshes the badges and the current detail."""
+    def _refresh(self) -> None:
+        """Re-read every store — rebuilds the badges, health line, and detail."""
         tree: Tree[NodeSpec] = self.query_one("#tree", Tree)
         current = tree.cursor_node
         key = current.data.detail if current and current.data else "home"
         self._build_tree()
         self.query_one("#health", Static).update(_health_line(self._level_colours()))
         self.call_after_refresh(self._show_detail, key)
+
+    def action_reload(self) -> None:
+        """Re-read every store — refreshes the badges and the current detail."""
+        self._refresh()
         self.notify("Home reloaded", title="Home")
+
+    @work
+    async def action_reindex(self) -> None:
+        """Confirm, embed the entries missing a vector, then refresh the hub."""
+        try:
+            missing = self._memory_stats().unembedded
+        except Exception as exc:  # noqa: BLE001 — a broken store mustn't kill home
+            self.notify(
+                f"Couldn't read the memory store: {exc}",
+                title="Reindex",
+                severity="error",
+            )
+            return
+        if missing == 0:
+            self.notify("Every memory entry already has a vector.", title="Reindex")
+            return
+        noun = "entry" if missing == 1 else "entries"
+        confirmed = await self.push_screen_wait(
+            ConfirmScreen(f"Embed the {missing} memory {noun} missing a vector?")
+        )
+        if not confirmed:
+            return
+        note, failed = self._run_reindex_suspended()
+        self._refresh()
+        self.notify(
+            note, title="Reindex", severity="error" if failed else "information"
+        )
+
+    def _run_reindex_suspended(self) -> tuple[str, bool]:
+        """Drop out of the app to embed with normal terminal output.
+
+        Returns:
+            The outcome line for the toast, and whether the reindex failed.
+        """
+        from mait_code.tools.memory.cli import ReindexError, run_reindex
+
+        with self.suspend():
+            try:
+                note, failed = (
+                    f"Embedded {run_reindex(missing_only=True)} entries",
+                    False,
+                )
+            except ReindexError as exc:
+                note, failed = f"Reindex failed: {exc}", True
+                print(f"\n{note}")
+            input("\nPress Enter to return home… ")
+        return note, failed
 
     def action_launch(self, target: HomeTarget) -> None:
         """Leave home and open a sibling TUI; the home command relaunches us."""
@@ -896,6 +961,11 @@ class HomeApp(MaitApp):
         """Expose the hub's actions in the Ctrl+P command palette."""
         yield from super().get_system_commands(screen)
         yield SystemCommand("Reload", "Re-read every store", self.action_reload)
+        yield SystemCommand(
+            "Reindex memory",
+            "Embed the memory entries that lack a vector",
+            self.action_reindex,
+        )
         yield SystemCommand(
             "Open board",
             "Jump to the board TUI",
