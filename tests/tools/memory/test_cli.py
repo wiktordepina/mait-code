@@ -29,7 +29,7 @@ def mem_db(tmp_path):
     conn = get_connection(db_path)
 
     @contextmanager
-    def patched_connection():
+    def patched_connection(db_path=None):
         yield conn
 
     with (
@@ -364,6 +364,64 @@ class TestCmdReindex:
 
         with patch("mait_code.tools.memory.cli.is_available", return_value=True):
             assert run_reindex() == 0
+
+    @staticmethod
+    def _embed_one_entry(conn) -> None:
+        """Hand-embed the first entry so the missing set is the other two."""
+        from mait_code.tools.memory.embeddings import serialize_f32
+
+        first = conn.execute("SELECT id FROM memory_entries ORDER BY id").fetchone()[0]
+        conn.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (first, serialize_f32([0.5] * 768)),
+        )
+        conn.commit()
+
+    @staticmethod
+    def _reindex_patches():
+        return (
+            patch("mait_code.tools.memory.cli.is_available", return_value=True),
+            patch(
+                "mait_code.tools.memory.cli.check_dimension_match",
+                return_value=(True, 768, 768),
+            ),
+            patch(
+                "mait_code.tools.memory.cli.embed_texts",
+                side_effect=lambda texts, prefix: [[0.1] * 768 for _ in texts],
+            ),
+        )
+
+    def test_run_reindex_missing_only_skips_embedded(self, populated_mem_db):
+        from mait_code.tools.memory.cli import run_reindex
+
+        self._embed_one_entry(populated_mem_db)
+        available, dim_match, embed = self._reindex_patches()
+        with available, dim_match, embed as embed_mock:
+            assert run_reindex(missing_only=True) == 2
+        # The pre-embedded entry was never re-sent to the model.
+        sent = [t for call in embed_mock.call_args_list for t in call.args[0]]
+        assert "User prefers dark mode" not in sent
+        n_vec = populated_mem_db.execute("SELECT COUNT(*) FROM memory_vec").fetchone()
+        assert n_vec[0] == 3
+
+    def test_run_reindex_full_reembeds_everything(self, populated_mem_db):
+        from mait_code.tools.memory.cli import run_reindex
+
+        self._embed_one_entry(populated_mem_db)
+        available, dim_match, embed = self._reindex_patches()
+        with available, dim_match, embed:
+            assert run_reindex() == 3
+
+    def test_run_reindex_missing_only_noop_when_complete(
+        self, populated_mem_db, capsys
+    ):
+        from mait_code.tools.memory.cli import run_reindex
+
+        available, dim_match, embed = self._reindex_patches()
+        with available, dim_match, embed:
+            assert run_reindex(missing_only=True) == 3  # first run fills the gap
+            assert run_reindex(missing_only=True) == 0  # second finds nothing
+        assert "Nothing to embed" in capsys.readouterr().out
 
 
 class TestCmdRestore:

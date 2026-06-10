@@ -10,6 +10,44 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.51.0] — 2026-06-10
+
+### Added
+
+- **Reindex from the home hub** — `e` (or **Reindex memory** in the `Ctrl+P`
+  palette) embeds the memory entries missing a vector. The confirm names the
+  live missing count, the hub suspends to the terminal so the embed prints
+  its normal progress, then home reloads with fresh badges and health. When
+  nothing is missing it says so and skips the confirm entirely.
+- **`mait-code doctor --fix` fills embedding gaps** — the `memory-embeddings`
+  check now embeds the missing entries itself instead of just pointing at
+  `mc-tool-memory reindex`. Progress goes to stderr, so `--fix --json` keeps
+  a parseable stdout; when the embedding provider can't run, the warning
+  stands and reports why.
+- **`run_reindex(missing_only=True)`** — the programmatic reindex can now
+  embed only the entries lacking a vector. A full reindex is unchanged
+  (and is still what the bare `mc-tool-memory reindex` and the settings
+  provider-switch follow-up do); a dimension mismatch recreates the vec
+  table first, so missing-only degrades to a full re-embed exactly when
+  it must.
+
+### Changed
+
+- **`ConfirmScreen` is shared TUI furniture** — the yes/no modal moved from
+  the settings editor into `tui.confirm`, so the home hub and settings stay
+  pixel-consistent instead of each carrying a copy.
+
+### Fixed
+
+- **Long confirm questions wrap inside modals** — `.modal-title` now takes
+  the dialog's width; an auto-width label never wraps, so an over-long
+  question clipped at the border (the settings re-embed confirm was
+  affected).
+- **A failed embedding batch no longer kills the calling app** — mid-run
+  embedding failure in a reindex now raises `ReindexError` instead of
+  exiting the process, so the home hub, settings editor, and doctor survive
+  it; the CLI still exits `1`.
+
 ## [0.50.0] — 2026-06-10
 
 ### Added
@@ -1504,7 +1542,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.50.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.51.0...HEAD
+[0.51.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.51.0
 [0.50.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.50.0
 [0.49.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.49.0
 [0.48.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.48.0

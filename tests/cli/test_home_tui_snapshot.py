@@ -166,3 +166,11 @@ def test_home_sysprompt_snapshot(snap_compare) -> None:
         await pilot.pause()
 
     assert snap_compare(HomeApp(), run_before=run_before, terminal_size=(120, 48))
+
+
+def test_home_reindex_confirm_snapshot(snap_compare) -> None:
+    """Lock the reindex confirm modal: the question carries the live missing
+    count (the three seeded entries store no vectors), rendered in full inside
+    the dialog with the Yes/No buttons beneath."""
+    _seed_all_stores()
+    assert snap_compare(HomeApp(), press=["e"], terminal_size=(120, 40))

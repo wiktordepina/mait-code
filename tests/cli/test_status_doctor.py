@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 from typer.testing import CliRunner
 
@@ -288,7 +289,60 @@ class TestDoctorMemoryChecks:
         check = self._check("memory-embeddings")
         assert check.level == "warn"
         assert "2 of 3" in check.message
-        assert check.fix_hint == "mc-tool-memory reindex"
+        assert check.fix_hint == "mc-tool-memory reindex (or mait-code doctor --fix)"
+
+    def test_missing_embeddings_not_fixed_without_flag(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=3, embedded=1)
+        with patch("mait_code.tools.memory.cli.run_reindex") as reindex:
+            run_doctor()
+        reindex.assert_not_called()
+
+    def test_fix_embeds_missing_and_reports(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=3, embedded=1)
+        with patch("mait_code.tools.memory.cli.run_reindex", return_value=2) as reindex:
+            report = run_doctor(fix=True)
+        check = next(c for c in report.checks if c.name == "memory-embeddings")
+        assert check.level == "ok"
+        assert "embedded 2 missing entries" in check.message
+        reindex.assert_called_once_with(
+            self._data_dir(fake_home).resolve() / "memory.db", missing_only=True
+        )
+        assert any("embedded 2 missing" in f for f in report.fixes_applied)
+
+    def test_fix_progress_goes_to_stderr(self, fake_home: Path, capsys) -> None:
+        # ``doctor --fix --json`` must keep a parseable stdout, so the
+        # reindex progress lines are redirected to stderr.
+        self._make_db(fake_home, entries=3, embedded=1)
+
+        def fake_reindex(_db, missing_only=False):
+            print("Embedded 2/2 entries...")
+            return 2
+
+        with patch("mait_code.tools.memory.cli.run_reindex", side_effect=fake_reindex):
+            run_doctor(fix=True)
+        captured = capsys.readouterr()
+        assert "Embedded 2/2" in captured.err
+        assert "Embedded" not in captured.out
+
+    def test_fix_failure_keeps_warn(self, fake_home: Path) -> None:
+        from mait_code.tools.memory.cli import ReindexError
+
+        self._make_db(fake_home, entries=3, embedded=1)
+        with patch(
+            "mait_code.tools.memory.cli.run_reindex",
+            side_effect=ReindexError("embedding model unavailable"),
+        ):
+            report = run_doctor(fix=True)
+        check = next(c for c in report.checks if c.name == "memory-embeddings")
+        assert check.level == "warn"
+        assert "embedding them failed: embedding model unavailable" in check.message
+        assert report.fixes_applied == []
+
+    def test_fix_noop_when_all_embedded(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=2, embedded=2)
+        with patch("mait_code.tools.memory.cli.run_reindex") as reindex:
+            run_doctor(fix=True)
+        reindex.assert_not_called()
 
     def test_all_embedded_ok(self, fake_home: Path) -> None:
         self._make_db(fake_home, entries=2, embedded=2)

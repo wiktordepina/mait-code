@@ -96,7 +96,7 @@ away.
 
 The same hand-offs live in the `Ctrl+P` command palette (**Open board**,
 **Open memory**, **Open observations**, **Open settings**), alongside
-**Reload**.
+**Reload** and **Reindex memory**.
 
 ## What each section shows
 
@@ -143,7 +143,8 @@ header.](assets/home/home-sysprompt.png)
 | `↑` / `↓` (or `k` / `j`) | Move the highlight; the detail pane follows |
 | `Enter` | Toggle a section, open a launch leaf, or re-show a detail leaf |
 | `r` | Reload every store — refreshes the badges and the current detail |
-| `Ctrl+P` | Command palette (Open board / memory / settings, Reload, themes) |
+| `e` | Reindex — embed the memory entries missing a vector, after a confirm |
+| `Ctrl+P` | Command palette (Open board / memory / settings, Reload, Reindex memory, themes) |
 | `?` | Show the key cheat-sheet |
 | `q` / `Esc` | Quit |
 
@@ -154,6 +155,13 @@ header.](assets/home/home-sysprompt.png)
   loud.
 - **`r` after a session.** If a session moved cards or wrote memories while the
   hub was open, `r` re-reads every store so the numbers catch up.
+- **`e` when embeddings lag.** If *Embedding coverage* (or the health line's
+  `memory-embeddings` warning) shows unembedded entries, press `e` — after a
+  confirm naming the missing count, home drops to the terminal to embed just
+  those entries, then comes back with fresh numbers. When nothing is missing
+  it says so and skips the confirm. The same fix runs non-interactively via
+  `mait-code doctor --fix`; a full from-scratch re-embed stays with
+  `mc-tool-memory reindex`.
 - **Mind the budget.** When sessions start to feel like they're carrying too much,
   open *Identity → System prompt* and see what the identity stack is spending; a
   bloated `MEMORY.md` shows up here first.

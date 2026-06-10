@@ -471,3 +471,72 @@ def test_reload_refreshes_detail_and_badges() -> None:
     assert "1 waiting" in after_detail  # detail re-rendered with fresh count
     assert "Inbox\n" in before_labels or before_labels.rstrip().endswith("Inbox")
     assert "Inbox  1" in after_labels  # badge picked up the new item
+
+
+# --- reindex ---
+
+
+def test_reindex_confirm_yes_runs_suspended_reindex(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[bool] = []
+
+    def fake_suspended_reindex() -> tuple[str, bool]:
+        calls.append(True)
+        return "Embedded 2 entries", False
+
+    async def scenario():
+        # Unembedded entries (the seed helper stores no vectors), so the
+        # action reaches the confirm modal instead of the all-clear exit.
+        _seed_memory(("a fact", "fact"), ("a decision", "decision"))
+        app = HomeApp()
+        monkeypatch.setattr(app, "_run_reindex_suspended", fake_suspended_reindex)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.press("e")
+            await pilot.pause()  # confirm modal is up
+            await pilot.click("#yes")
+            await pilot.pause()
+            await pilot.pause()  # worker finishes, hub refreshes
+
+    _run(scenario)
+    assert calls == [True]
+
+
+def test_reindex_confirm_no_skips(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[bool] = []
+
+    async def scenario():
+        _seed_memory(("a fact", "fact"))
+        app = HomeApp()
+        monkeypatch.setattr(app, "_run_reindex_suspended", lambda: calls.append(True))
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.press("e")
+            await pilot.pause()
+            await pilot.press("escape")  # dismisses the modal as "No"
+            await pilot.pause()
+            await pilot.pause()
+
+    _run(scenario)
+    assert calls == []
+
+
+def test_reindex_skips_modal_when_nothing_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With nothing missing a vector the action notifies and never confirms."""
+    calls: list[bool] = []
+
+    async def scenario():
+        app = HomeApp()  # empty store: zero entries means zero missing
+        monkeypatch.setattr(app, "_run_reindex_suspended", lambda: calls.append(True))
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.press("e")
+            await pilot.pause()
+            return len(app.screen_stack)
+
+    depth = _run(scenario)
+    assert depth == 1  # no ConfirmScreen was pushed
+    assert calls == []
