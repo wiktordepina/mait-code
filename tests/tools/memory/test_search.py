@@ -468,3 +468,34 @@ class TestScopedSearch:
         assert results[0]["scope"] == "branch"
         assert results[0]["project"] == "my-proj"
         assert results[0]["branch"] == "feat/y"
+
+
+class TestVectorFailureVisibility:
+    """A failed vector search degrades to keyword-only and warns about it."""
+
+    def test_vector_search_failure_warns(self, caplog, monkeypatch):
+        # setup_logging() (run by earlier tests) sets propagate=False on the
+        # "mait_code" logger; caplog captures at root, so restore propagation.
+        import logging as _logging
+
+        monkeypatch.setattr(_logging.getLogger("mait_code"), "propagate", True)
+
+        from mait_code.tools.memory.search import vector_search_entries
+
+        bare = sqlite3.connect(":memory:")  # no memory_vec table, no sqlite-vec
+        try:
+            with (
+                patch(
+                    "mait_code.tools.memory.search.embed_text",
+                    return_value=[0.1] * 768,
+                ),
+                caplog.at_level("WARNING", logger="mait_code.tools.memory.search"),
+            ):
+                assert vector_search_entries(bare, "anything") == []
+        finally:
+            bare.close()
+
+        assert any(
+            "keyword-only" in r.message and r.levelname == "WARNING"
+            for r in caplog.records
+        )

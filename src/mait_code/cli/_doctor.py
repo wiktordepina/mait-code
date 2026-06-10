@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import json
 import shutil
+import sqlite3
 import tomllib
 from dataclasses import asdict, dataclass
+from datetime import date
 from pathlib import Path
 from typing import Literal
 
@@ -25,6 +27,7 @@ from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._paths import settings_path
 from mait_code.cli._record import RecordError, read_record
 from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
+from mait_code.config import get as config_get
 from mait_code.config import validate_settings
 from mait_code.console import GLYPH, console
 
@@ -263,6 +266,155 @@ def _is_writable(path: Path) -> bool:
         return False
 
 
+#: An observe capture older than this many days is flagged as stale.
+_OBSERVE_STALE_DAYS = 7
+
+
+def _memory_db_path(ddir: Path) -> Path:
+    return ddir / "memory.db"
+
+
+def _open_memory_db(db: Path) -> sqlite3.Connection:
+    """Open ``memory.db`` raw, with sqlite-vec loaded but no migrations.
+
+    Doctor is diagnostic — it must observe the database as the tools left
+    it, not create or migrate it as :func:`tools.memory.db.get_connection`
+    would.
+    """
+    import sqlite_vec
+
+    conn = sqlite3.connect(str(db))
+    conn.enable_load_extension(True)
+    sqlite_vec.load(conn)
+    conn.enable_load_extension(False)
+    return conn
+
+
+def _embedding_config() -> str:
+    """Describe the configured embedding provider/model for check messages."""
+    provider = config_get("embedding-provider").lower()
+    model = (
+        config_get("bedrock-model-id")
+        if provider == "bedrock"
+        else config_get("embedding-model")
+    )
+    return f"provider '{provider}', model '{model}'"
+
+
+def _check_memory_embeddings(ddir: Path) -> Check:
+    """Live memory entries should all carry a vector for semantic search."""
+    db = _memory_db_path(ddir)
+    if not db.exists():
+        return Check("memory-embeddings", "ok", "no memory database yet")
+    try:
+        conn = _open_memory_db(db)
+        try:
+            total, missing = conn.execute(
+                """SELECT COUNT(*),
+                          COALESCE(SUM(CASE WHEN NOT EXISTS
+                              (SELECT 1 FROM memory_vec v WHERE v.rowid = m.id)
+                              THEN 1 ELSE 0 END), 0)
+                   FROM memory_entries m
+                   WHERE m.superseded_by IS NULL"""
+            ).fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
+        return Check(
+            "memory-embeddings", "warn", f"could not inspect embeddings: {exc}"
+        )
+    if missing:
+        return Check(
+            "memory-embeddings",
+            "warn",
+            f"{missing} of {total} live entries have no embedding — "
+            "invisible to semantic search",
+            fix_hint="mc-tool-memory reindex",
+        )
+    if not total:
+        return Check("memory-embeddings", "ok", "no live entries yet")
+    return Check("memory-embeddings", "ok", f"all {total} live entries embedded")
+
+
+def _check_vector_search(ddir: Path) -> Check:
+    """sqlite-vec must load and ``memory_vec`` must be queryable."""
+    try:
+        import sqlite_vec
+
+        probe = sqlite3.connect(":memory:")
+        try:
+            probe.enable_load_extension(True)
+            sqlite_vec.load(probe)
+            version = probe.execute("SELECT vec_version()").fetchone()[0]
+        finally:
+            probe.close()
+    except Exception as exc:
+        return Check(
+            "vector-search",
+            "warn",
+            f"sqlite-vec unavailable ({exc}) — recall degrades to "
+            f"keyword-only ({_embedding_config()})",
+            fix_hint="reinstall dependencies: mait-code update",
+        )
+    db = _memory_db_path(ddir)
+    if not db.exists():
+        return Check(
+            "vector-search", "ok", f"sqlite-vec {version} loads (no database yet)"
+        )
+    try:
+        conn = _open_memory_db(db)
+        try:
+            n_vec = conn.execute("SELECT COUNT(*) FROM memory_vec").fetchone()[0]
+        finally:
+            conn.close()
+    except Exception as exc:
+        return Check(
+            "vector-search",
+            "warn",
+            f"memory_vec is not queryable ({exc}) — recall degrades to "
+            f"keyword-only ({_embedding_config()})",
+            fix_hint="mc-tool-memory stats applies pending migrations",
+        )
+    return Check(
+        "vector-search", "ok", f"sqlite-vec {version} loads, {n_vec} vectors stored"
+    )
+
+
+def _check_observe_pipeline(ddir: Path) -> Check:
+    """The observe hook should have captured something recently."""
+    obs_dir = ddir / "memory" / "observations"
+    latest: date | None = None
+    if obs_dir.is_dir():
+        for path in obs_dir.glob("*.jsonl"):
+            try:
+                day = date.fromisoformat(path.stem)
+            except ValueError:
+                continue
+            if latest is None or day > latest:
+                latest = day
+    if latest is None:
+        if not _memory_db_path(ddir).exists():
+            return Check(
+                "observe-pipeline", "ok", "no captures yet (memory not in use)"
+            )
+        return Check(
+            "observe-pipeline",
+            "warn",
+            "memory database exists but the observe hook has never recorded a capture",
+            fix_hint="check hook registration (mait-code status) and the "
+            "logs in $XDG_STATE_HOME/mait-code",
+        )
+    age = (date.today() - latest).days
+    if age > _OBSERVE_STALE_DAYS:
+        return Check(
+            "observe-pipeline",
+            "warn",
+            f"last observe capture {latest.isoformat()} ({age} days ago)",
+            fix_hint="check the observe hook logs in $XDG_STATE_HOME/mait-code",
+        )
+    return Check("observe-pipeline", "ok", f"last observe capture {latest.isoformat()}")
+
+
 def _check_uv(_ddir: Path) -> Check:
     """``uv`` must be on PATH for install/update to work."""
     if shutil.which("uv") is None:
@@ -308,6 +460,9 @@ def run_doctor(
         _check_hook_commands(cdir),
         _check_symlinks(cdir, fix, fixes),
         _check_data_dir(ddir, fix, fixes),
+        _check_memory_embeddings(ddir),
+        _check_vector_search(ddir),
+        _check_observe_pipeline(ddir),
         _check_uv(ddir),
     ]
 
@@ -349,7 +504,7 @@ def render(report: DoctorReport) -> None:
     for check in report.checks:
         line = Text("  ")
         line.append(f"{GLYPH[check.level]}  ", style=check.level)
-        line.append(f"{check.name:<16}", style="bold")
+        line.append(f"{check.name:<18}", style="bold")
         line.append(check.message)
         if check.fix_hint:
             line.append(f"   → {check.fix_hint}", style="muted")

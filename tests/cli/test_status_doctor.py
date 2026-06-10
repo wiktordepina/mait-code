@@ -123,6 +123,9 @@ class TestDoctor:
         assert levels["settings-values"] == "ok"
         assert levels["symlinks"] == "ok"
         assert levels["data-dir"] == "ok"
+        assert levels["memory-embeddings"] == "ok"
+        assert levels["vector-search"] == "ok"
+        assert levels["observe-pipeline"] == "ok"
 
     def test_bad_setting_value_marks_settings_values_fail(
         self, fake_home: Path, fake_source: Path, monkeypatch
@@ -243,3 +246,121 @@ class TestDoctorCommand:
         result = runner.invoke(app, ["--no-color", "doctor"])
         # uv-on-path may fail in a sandbox, so accept either clean or failing.
         assert result.exit_code in (0, 1)
+
+
+class TestDoctorMemoryChecks:
+    """The memory-health checks: embeddings, vector search, observe pipeline."""
+
+    @staticmethod
+    def _data_dir(fake_home: Path) -> Path:
+        return fake_home / ".claude" / "mait-code-data"
+
+    def _make_db(self, fake_home: Path, *, entries: int, embedded: int):
+        """Create a real memory.db with `entries` rows, `embedded` of them vectored."""
+        from mait_code.tools.memory.db import get_connection
+        from mait_code.tools.memory.embeddings import serialize_f32
+
+        conn = get_connection(self._data_dir(fake_home) / "memory.db")
+        for i in range(entries):
+            cur = conn.execute(
+                "INSERT INTO memory_entries (content) VALUES (?)", (f"entry {i}",)
+            )
+            if i < embedded:
+                conn.execute(
+                    "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+                    (cur.lastrowid, serialize_f32([0.1] * 768)),
+                )
+        conn.commit()
+        conn.close()
+
+    def _check(self, name: str):
+        report = run_doctor()
+        return next(c for c in report.checks if c.name == name)
+
+    def test_no_memory_db_all_ok(self, fake_home: Path) -> None:
+        levels = {c.name: c.level for c in run_doctor().checks}
+        assert levels["memory-embeddings"] == "ok"
+        assert levels["vector-search"] == "ok"
+        assert levels["observe-pipeline"] == "ok"
+
+    def test_missing_embeddings_warn_with_reindex_hint(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=3, embedded=1)
+        check = self._check("memory-embeddings")
+        assert check.level == "warn"
+        assert "2 of 3" in check.message
+        assert check.fix_hint == "mc-tool-memory reindex"
+
+    def test_all_embedded_ok(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=2, embedded=2)
+        check = self._check("memory-embeddings")
+        assert check.level == "ok"
+        assert "all 2 live entries embedded" in check.message
+
+    def test_superseded_entries_not_counted(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=2, embedded=1)
+        from mait_code.tools.memory.db import connection
+
+        with connection(self._data_dir(fake_home) / "memory.db") as conn:
+            conn.execute(
+                "UPDATE memory_entries SET superseded_by = 1 WHERE id = 2"
+            )
+            conn.commit()
+        check = self._check("memory-embeddings")
+        assert check.level == "ok"
+
+    def test_vector_search_reports_vector_count(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=2, embedded=2)
+        check = self._check("vector-search")
+        assert check.level == "ok"
+        assert "2 vectors stored" in check.message
+
+    def test_vector_search_warns_when_sqlite_vec_broken(
+        self, fake_home: Path, monkeypatch
+    ) -> None:
+        import sqlite_vec
+
+        def _boom(_conn) -> None:
+            raise RuntimeError("extension load failed")
+
+        monkeypatch.setattr(sqlite_vec, "load", _boom)
+        check = self._check("vector-search")
+        assert check.level == "warn"
+        assert "keyword-only" in check.message
+        assert "provider 'local'" in check.message
+
+    def test_observe_recent_capture_ok(self, fake_home: Path) -> None:
+        from datetime import date
+
+        self._make_db(fake_home, entries=1, embedded=1)
+        obs_dir = self._data_dir(fake_home) / "memory" / "observations"
+        obs_dir.mkdir(parents=True, exist_ok=True)
+        (obs_dir / f"{date.today().isoformat()}.jsonl").write_text("{}\n")
+        check = self._check("observe-pipeline")
+        assert check.level == "ok"
+        assert date.today().isoformat() in check.message
+
+    def test_observe_stale_capture_warns(self, fake_home: Path) -> None:
+        from datetime import date, timedelta
+
+        self._make_db(fake_home, entries=1, embedded=1)
+        obs_dir = self._data_dir(fake_home) / "memory" / "observations"
+        obs_dir.mkdir(parents=True, exist_ok=True)
+        old = date.today() - timedelta(days=30)
+        (obs_dir / f"{old.isoformat()}.jsonl").write_text("{}\n")
+        check = self._check("observe-pipeline")
+        assert check.level == "warn"
+        assert "30 days ago" in check.message
+
+    def test_observe_never_captured_with_db_warns(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=1, embedded=1)
+        check = self._check("observe-pipeline")
+        assert check.level == "warn"
+        assert "never" in check.message
+
+    def test_non_date_capture_files_ignored(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=1, embedded=1)
+        obs_dir = self._data_dir(fake_home) / "memory" / "observations"
+        obs_dir.mkdir(parents=True, exist_ok=True)
+        (obs_dir / "not-a-date.jsonl").write_text("{}\n")
+        check = self._check("observe-pipeline")
+        assert check.level == "warn"  # still counts as never captured
