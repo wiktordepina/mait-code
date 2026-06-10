@@ -10,6 +10,7 @@ from mait_code.tools.memory.search import (
     delete_entry,
     hybrid_search,
     list_entries,
+    list_projects,
     search_entries,
     vector_search_entries,
 )
@@ -499,3 +500,30 @@ class TestVectorFailureVisibility:
             "keyword-only" in r.message and r.levelname == "WARNING"
             for r in caplog.records
         )
+
+
+class TestListProjects:
+    def _insert(self, conn, content, project=None, superseded_by=None):
+        conn.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, project,
+                superseded_by)
+               VALUES (?, 'fact', 5, 'semantic', ?, ?)""",
+            (content, project, superseded_by),
+        )
+        conn.commit()
+
+    def test_distinct_sorted_case_insensitively(self, memory_db):
+        self._insert(memory_db, "a", project="zeta")
+        self._insert(memory_db, "b", project="Alpha")
+        self._insert(memory_db, "c", project="zeta")
+        assert list_projects(memory_db) == ["Alpha", "zeta"]
+
+    def test_global_entries_contribute_nothing(self, memory_db):
+        self._insert(memory_db, "a global entry")
+        assert list_projects(memory_db) == []
+
+    def test_superseded_entries_keep_no_project_alive(self, memory_db):
+        self._insert(memory_db, "old", project="ghost", superseded_by=99)
+        self._insert(memory_db, "live", project="real")
+        assert list_projects(memory_db) == ["real"]

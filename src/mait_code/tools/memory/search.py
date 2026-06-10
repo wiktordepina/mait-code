@@ -219,6 +219,27 @@ def list_entries(
     return [_row_to_dict(r) for r in cursor.fetchall()]
 
 
+def list_projects(conn: sqlite3.Connection) -> list[str]:
+    """List the distinct projects current memory entries span, alphabetically.
+
+    Feeds filter UIs (the memory browser's project ``Select``); global entries
+    carry no project and so don't contribute a name, and superseded entries
+    don't keep a project alive on their own.
+
+    Args:
+        conn: Open memory database connection.
+
+    Returns:
+        Sorted distinct project names (possibly empty).
+    """
+    rows = conn.execute(
+        """SELECT DISTINCT project FROM memory_entries
+           WHERE project IS NOT NULL AND superseded_by IS NULL
+           ORDER BY project COLLATE NOCASE"""
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
 def vector_search_entries(
     conn: sqlite3.Connection,
     query: str,

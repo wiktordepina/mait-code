@@ -7,6 +7,12 @@ plus its metadata on the right. Pure presentation over the same code paths as
 ``mc-tool-memory`` (:func:`~mait_code.tools.memory.search.list_entries`); the
 browser performs no mutations &mdash; nothing here writes, edits, or deletes.
 
+``n`` switches to a second, equally read-only view over **Claude Code's
+native auto memory** (:mod:`mait_code.tools.memory.native`): every project's
+``~/.claude/projects/<slug>/memory/`` files, grouped by project, regardless of
+where the browser was launched. Both views filter live with ``/`` and narrow
+to one project with ``p`` &mdash; the two curated memory layers, one cockpit.
+
 The app holds a single connection for its lifetime (opened in ``__init__``,
 closed on unmount), mirroring the board. Requires a TTY; the bare ``memory``
 command only routes here when attached to one, falling back to a read-only
@@ -18,6 +24,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rich.text import Text
+from textual import work
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -26,10 +33,12 @@ from textual.widgets import Footer, Input, Label, Markdown, Static, Tree
 from textual.widgets.tree import TreeNode
 
 from mait_code.tools.memory.db import get_connection
-from mait_code.tools.memory.search import list_entries
+from mait_code.tools.memory.native import list_native_memories
+from mait_code.tools.memory.search import list_entries, list_projects
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.banner import BrandBanner
 from mait_code.tui.brand import empty_state
+from mait_code.tui.filters import ProjectFilterScreen
 from mait_code.tui.markdown import md_parser
 
 __all__ = ["MemoryApp", "run_memory_tui"]
@@ -62,16 +71,29 @@ _FETCH_LIMIT = 100_000
 _LEAF_WIDTH = 64
 
 
+def _clip(line: str) -> str:
+    """Clip a leaf's text to :data:`_LEAF_WIDTH` with an ellipsis."""
+    if len(line) > _LEAF_WIDTH:
+        return line[: _LEAF_WIDTH - 1] + "…"
+    return line
+
+
 def _leaf_label(entry: dict) -> Text:
     """One tree row for a memory: dimmed date + the first line of its content."""
     first_line = entry["content"].strip().splitlines()[0] if entry["content"] else ""
-    if len(first_line) > _LEAF_WIDTH:
-        first_line = first_line[: _LEAF_WIDTH - 1] + "…"
     label = Text(no_wrap=True)
     # The gap rides inside the dim run (not as a separate unstyled segment), so
     # renderers that trim leading run whitespace can't swallow it.
     label.append(f"{str(entry['created_at'])[:10]}  ", style="dim")
-    label.append(first_line)
+    label.append(_clip(first_line))
+    return label
+
+
+def _native_leaf_label(file: dict) -> Text:
+    """One tree row for a native memory file: dimmed modified date + name."""
+    label = Text(no_wrap=True)
+    label.append(f"{file['modified']}  ", style="dim")
+    label.append(_clip(file["name"]))
     return label
 
 
@@ -101,24 +123,37 @@ def _group_entries(entries: list[dict]) -> dict[str, list[dict]]:
 
 
 class MemoryApp(MaitApp):
-    """Master–detail, read-only browser over the memory store."""
+    """Master–detail, read-only browser over both curated memory layers."""
 
     TITLE = "mait-code memory"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_memory.tcss"]
 
     BINDINGS = [
         ("slash", "focus_filter", "Filter"),
+        # One key, two gated bindings: check_action() enables exactly the one
+        # that leaves the current view, so the footer reads as the destination.
+        Binding("n", "show_native", "Native"),
+        Binding("n", "show_store", "Store"),
+        ("p", "filter_project", "Project"),
         ("escape", "escape", "Back"),
         ("r", "reload", "Reload"),
         Binding("1", "focus_list", "List", show=False),
         Binding("2", "focus_detail", "Detail", show=False),
     ]
 
-    def __init__(self, db_path: Path | None = None) -> None:
+    def __init__(
+        self, db_path: Path | None = None, native_dir: Path | None = None
+    ) -> None:
         super().__init__()
         self._conn = get_connection(db_path)  # one connection for the app's life
+        self._native_dir = native_dir  # None → Claude Code's real projects dir
+        self._view = "store"
         self._entries: list[dict] = []
+        self._native_projects: list[dict] = []
+        self._native_text_cache: dict[Path, str] = {}
         self._query = ""
+        self._project: str | None = None  # store-view project filter
+        self._native_project: str | None = None  # native-view project filter
 
     def on_unmount(self) -> None:
         super().on_unmount()  # persists the active theme (MaitApp)
@@ -144,11 +179,36 @@ class MemoryApp(MaitApp):
         self._rebuild_tree()
         tree.focus()
 
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == "show_native":
+            return self._view == "store"
+        if action == "show_store":
+            return self._view == "native"
+        return True
+
     # -- data ----------------------------------------------------------------
 
     def _load_entries(self) -> None:
-        """(Re)read the whole store, unscoped — a browser shows everything."""
-        self._entries = list_entries(self._conn, limit=_FETCH_LIMIT)
+        """(Re)read the store — everything, unless narrowed to one project."""
+        self._entries = list_entries(
+            self._conn, limit=_FETCH_LIMIT, project=self._project
+        )
+
+    def _load_native(self) -> None:
+        """(Re)scan every project's native memory files."""
+        self._native_projects = list_native_memories(self._native_dir)
+
+    def _native_text(self, path: Path) -> str:
+        """A native file's content, cached until reload (the live filter
+        re-reads the visible set on every keystroke otherwise)."""
+        cached = self._native_text_cache.get(path)
+        if cached is None:
+            try:
+                cached = path.read_text(encoding="utf-8")
+            except OSError:
+                cached = ""
+            self._native_text_cache[path] = cached
+        return cached
 
     def _filtered(self) -> list[dict]:
         """The entries the active filter leaves visible (all, when no filter)."""
@@ -157,9 +217,39 @@ class MemoryApp(MaitApp):
         needle = self._query.casefold()
         return [e for e in self._entries if needle in e["content"].casefold()]
 
+    def _filtered_native(self) -> list[dict]:
+        """The native projects/files the active filters leave visible.
+
+        The project filter keeps whole projects; the text filter matches a
+        file's name or content and drops projects it empties.
+        """
+        projects = self._native_projects
+        if self._native_project:
+            projects = [p for p in projects if p["label"] == self._native_project]
+        if not self._query:
+            return projects
+        needle = self._query.casefold()
+        narrowed = []
+        for project in projects:
+            files = [
+                f
+                for f in project["files"]
+                if needle in f["name"].casefold()
+                or needle in self._native_text(f["path"]).casefold()
+            ]
+            if files:
+                narrowed.append({**project, "files": files})
+        return narrowed
+
     # -- tree ----------------------------------------------------------------
 
     def _rebuild_tree(self) -> None:
+        if self._view == "native":
+            self._rebuild_native_tree()
+        else:
+            self._rebuild_store_tree()
+
+    def _rebuild_store_tree(self) -> None:
         """Re-populate the tree from the filtered entries.
 
         Without a filter, the first group opens with the cursor on its newest
@@ -185,6 +275,40 @@ class MemoryApp(MaitApp):
                     first_leaf = leaf
 
         self._update_subtitle(len(visible))
+        self._land_cursor(tree, first_leaf, self._show_detail)
+
+    def _rebuild_native_tree(self) -> None:
+        """Re-populate the tree from the filtered native projects.
+
+        Same expansion policy as the store view: first project open, the rest
+        collapsed behind their file counts; everything expands under a filter.
+        """
+        tree: Tree[dict] = self.query_one("#list", Tree)
+        tree.root.remove_children()
+
+        visible = self._filtered_native()
+        filtering = bool(self._query)
+        first_leaf: TreeNode[dict] | None = None
+        for index, project in enumerate(visible):
+            group = tree.root.add(
+                f"{project['label']} ({len(project['files'])})",
+                data=project,
+                expand=filtering or index == 0,
+            )
+            for file in project["files"]:
+                # Leaves carry their project's label so the detail pane can
+                # show which project a file belongs to without re-deriving it.
+                leaf = group.add_leaf(
+                    _native_leaf_label(file),
+                    data={**file, "project": project["label"]},
+                )
+                if first_leaf is None:
+                    first_leaf = leaf
+
+        self._update_native_subtitle(visible)
+        self._land_cursor(tree, first_leaf, self._show_native_file_detail)
+
+    def _land_cursor(self, tree: Tree[dict], first_leaf, show) -> None:
         if first_leaf is not None:
             # Deferred until after the first refresh: the tree's visible-line
             # map (which move_cursor indexes into) isn't built until then. The
@@ -192,7 +316,7 @@ class MemoryApp(MaitApp):
             # a rebuild lands the cursor on the same line index, Tree emits no
             # NodeHighlighted and the pane would go stale.
             self.call_after_refresh(tree.move_cursor, first_leaf)
-            self.call_after_refresh(self._show_detail, first_leaf.data)
+            self.call_after_refresh(show, first_leaf.data)
         else:
             self.call_after_refresh(self._show_empty)
 
@@ -201,22 +325,50 @@ class MemoryApp(MaitApp):
         # the count used to live in is gone). Filtering shows the match count;
         # otherwise the plain total beside the "Memory" name.
         total = len(self._entries)
+        text = f"Memory — {total}"
+        if self._project:
+            text += f" · {self._project}"
         if self._query:
             text = f"Memory — {shown}/{total} match"
-        else:
-            text = f"Memory — {total}"
+        self.query_one(BrandBanner).set_subtitle(text)
+
+    def _update_native_subtitle(self, visible: list[dict]) -> None:
+        # The native view's masthead leads with the layer name, then the same
+        # live state the store view carries: totals, the project narrowing,
+        # the match count while a text filter is active.
+        total = sum(len(p["files"]) for p in self._native_projects)
+        projects = len(self._native_projects)
+        text = (
+            f"Memory — native · {total} file{'s' if total != 1 else ''}"
+            f" · {projects} project{'s' if projects != 1 else ''}"
+        )
+        if self._native_project:
+            text += f" · {self._native_project}"
+        if self._query:
+            shown = sum(len(p["files"]) for p in visible)
+            text += f" · {shown}/{total} match"
         self.query_one(BrandBanner).set_subtitle(text)
 
     # -- detail --------------------------------------------------------------
 
     async def on_tree_node_highlighted(self, event: Tree.NodeHighlighted) -> None:
-        # Leaves carry their entry dict as node data; group nodes carry None
-        # and get a read-only summary instead of a body.
-        entry = event.node.data
-        if entry is None:
-            await self._show_group_detail(event.node)
+        data = event.node.data
+        if self._view == "native":
+            # Project nodes carry their project dict (it has "files"); leaves
+            # carry a file dict augmented with the project label.
+            if data is None:
+                return
+            if "files" in data:
+                await self._show_native_project_detail(data)
+            else:
+                await self._show_native_file_detail(data)
         else:
-            await self._show_detail(entry)
+            # Leaves carry their entry dict as node data; group nodes carry
+            # None and get a read-only summary instead of a body.
+            if data is None:
+                await self._show_group_detail(event.node)
+            else:
+                await self._show_detail(data)
 
     async def _show_detail(self, entry: dict) -> None:
         detail = self.query_one("#detail", VerticalScroll)
@@ -249,15 +401,56 @@ class MemoryApp(MaitApp):
             ),
         )
 
+    async def _show_native_file_detail(self, file: dict) -> None:
+        detail = self.query_one("#detail", VerticalScroll)
+        await detail.remove_children()
+        content = self._native_text(file["path"])
+        await detail.mount(
+            Label(file["name"], classes="title"),
+            Label(
+                f"{file['project']} · modified {file['modified']} · native",
+                classes="help",
+            ),
+            Markdown(
+                content or "*This file is empty or could not be read.*",
+                parser_factory=md_parser,
+                open_links=False,
+            ),
+        )
+
+    async def _show_native_project_detail(self, project: dict) -> None:
+        detail = self.query_one("#detail", VerticalScroll)
+        await detail.remove_children()
+        count = len(project["files"])
+        await detail.mount(
+            Label(project["label"], classes="title"),
+            Label(
+                f"{count} file{'s' if count != 1 else ''} — "
+                "expand and pick one to read.",
+                classes="help",
+            ),
+            # The resolved path when the de-munge found one; the raw slug
+            # otherwise — either way, where this memory actually lives.
+            Label(str(project["memory_dir"]), classes="help"),
+        )
+
     async def _show_empty(self) -> None:
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
-        message = empty_state(
-            f"I don't remember anything matching {self._query!r}."
-            if self._query
-            else "Nothing remembered yet — we're just getting started."
-        )
-        await detail.mount(Static(message, classes="help"))
+        if self._view == "native":
+            if self._query:
+                message = f"Nothing in native memory matching {self._query!r}."
+            elif self._native_project:
+                message = f"No native memory for {self._native_project} yet."
+            else:
+                message = "No native memory yet — Claude Code writes it as you work."
+        elif self._query:
+            message = f"I don't remember anything matching {self._query!r}."
+        elif self._project:
+            message = f"I don't remember anything about {self._project} yet."
+        else:
+            message = "Nothing remembered yet — we're just getting started."
+        await detail.mount(Static(empty_state(message), classes="help"))
 
     # -- filtering -----------------------------------------------------------
 
@@ -292,11 +485,58 @@ class MemoryApp(MaitApp):
     def action_focus_detail(self) -> None:
         self.query_one("#detail", VerticalScroll).focus()
 
-    def action_reload(self) -> None:
-        """Re-read the store — picks up memories written since launch."""
-        self._load_entries()
+    def action_show_native(self) -> None:
+        """Switch to the native auto-memory view (fresh scan on entry)."""
+        self._view = "native"
+        self._load_native()
+        self.query_one("#filter", Input).placeholder = "filter native memory…"
         self._rebuild_tree()
-        self.notify("Memory store reloaded", title="Memory")
+        self.refresh_bindings()  # the n binding swaps Native ⇄ Store
+        self.action_focus_list()
+
+    def action_show_store(self) -> None:
+        """Switch back to the mait-code store view."""
+        self._view = "store"
+        self.query_one("#filter", Input).placeholder = "filter memories…"
+        self._rebuild_tree()
+        self.refresh_bindings()
+        self.action_focus_list()
+
+    @work
+    async def action_filter_project(self) -> None:
+        # Each view narrows independently: the store by its entries' project
+        # scope (judged against the live store, so a project remembered this
+        # session shows), the native view by its scanned project labels.
+        if self._view == "native":
+            projects = [p["label"] for p in self._native_projects]
+            current = self._native_project
+        else:
+            projects = list_projects(self._conn)
+            current = self._project
+        result = await self.push_screen_wait(ProjectFilterScreen(projects, current))
+        if result is None:
+            return  # escape/cancel — leave the active filter as-is
+        # A project name filters to it; the ALL_PROJECTS sentinel clears it.
+        choice = result if isinstance(result, str) else None
+        if self._view == "native":
+            self._native_project = choice
+        else:
+            self._project = choice
+            self._load_entries()
+        self._rebuild_tree()
+        self.action_focus_list()
+
+    def action_reload(self) -> None:
+        """Re-read the active layer — picks up memories written since launch."""
+        if self._view == "native":
+            self._native_text_cache.clear()
+            self._load_native()
+            self._rebuild_tree()
+            self.notify("Native memory rescanned", title="Memory")
+        else:
+            self._load_entries()
+            self._rebuild_tree()
+            self.notify("Memory store reloaded", title="Memory")
 
     def get_system_commands(self, screen: Screen):
         """Expose the browser's actions in the Ctrl+P command palette."""
@@ -305,6 +545,21 @@ class MemoryApp(MaitApp):
             "Filter", "Jump to the filter input", self.action_focus_filter
         )
         yield SystemCommand(
+            "Filter by project", "Narrow to one project", self.action_filter_project
+        )
+        if self._view == "store":
+            yield SystemCommand(
+                "Native memory",
+                "Browse Claude Code's per-project auto memory",
+                self.action_show_native,
+            )
+        else:
+            yield SystemCommand(
+                "Store memory",
+                "Back to the mait-code memory store",
+                self.action_show_store,
+            )
+        yield SystemCommand(
             "Focus list", "Jump to the memory tree", self.action_focus_list
         )
-        yield SystemCommand("Reload", "Re-read the memory store", self.action_reload)
+        yield SystemCommand("Reload", "Re-read the active layer", self.action_reload)
