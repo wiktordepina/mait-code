@@ -4,6 +4,7 @@ import sqlite3
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 
 from mait_code.tools.memory.writer import (
     CONFLICT_SIMILARITY_THRESHOLD,
@@ -557,3 +558,51 @@ class TestFindDuplicate:
             result = _vector_candidates(memory_db, "test content", "fact")
 
         assert result == []
+
+
+class TestEmbeddingFailureVisibility:
+    """Degradation stays graceful but is logged at warning, not debug."""
+
+    @pytest.fixture(autouse=True)
+    def _propagate_to_caplog(self, monkeypatch):
+        # setup_logging() (run by earlier tests) sets propagate=False on the
+        # "mait_code" logger; caplog captures at root, so restore propagation.
+        import logging as _logging
+
+        monkeypatch.setattr(_logging.getLogger("mait_code"), "propagate", True)
+
+    def test_store_without_embedding_warns_with_reindex_hint(
+        self, memory_db: sqlite3.Connection, caplog
+    ):
+        with (
+            patch("mait_code.tools.memory.writer.embed_text", return_value=None),
+            caplog.at_level("WARNING", logger="mait_code.tools.memory.writer"),
+        ):
+            result = store_memory(memory_db, "fact without a vector", "fact", 5)
+
+        assert result["action"] == "created"  # storage itself still succeeds
+        assert any(
+            "reindex" in r.message and r.levelname == "WARNING" for r in caplog.records
+        )
+
+    def test_vector_candidate_failure_warns(self, caplog):
+        from unittest.mock import Mock
+
+        from mait_code.tools.memory.writer import _vector_candidates
+
+        # sqlite3.Connection is a C type, so fake the whole connection.
+        broken_conn = Mock()
+        broken_conn.execute.side_effect = sqlite3.OperationalError("boom")
+        with (
+            patch(
+                "mait_code.tools.memory.writer.embed_text",
+                return_value=[0.1] * 768,
+            ),
+            caplog.at_level("WARNING", logger="mait_code.tools.memory.writer"),
+        ):
+            assert _vector_candidates(broken_conn, "query", "fact") == []
+
+        assert any(
+            "dedup" in r.message.lower() and r.levelname == "WARNING"
+            for r in caplog.records
+        )

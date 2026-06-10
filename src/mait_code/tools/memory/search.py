@@ -276,7 +276,10 @@ def vector_search_entries(
             )
         rows = cursor.fetchall()
     except Exception as e:
-        logger.debug("Vector search failed: %s", e)
+        logger.warning(
+            "Vector search failed (%s) — results are keyword-only for this query",
+            e,
+        )
         return []
 
     results = []

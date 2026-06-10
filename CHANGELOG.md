@@ -10,6 +10,27 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.49.0] — 2026-06-10
+
+### Added
+
+- **Memory-health checks in `mait-code doctor`** — three new checks surface
+  silent memory degradation: `memory-embeddings` counts live entries with no
+  vector (invisible to semantic search) and points at `mc-tool-memory reindex`;
+  `vector-search` verifies the sqlite-vec extension loads and the vector table
+  is queryable, naming the configured embedding provider and model on failure;
+  `observe-pipeline` warns when the observe hook hasn't recorded a capture in
+  over a week, or has never captured despite an existing memory database. The
+  checks open the database raw — a diagnostic run never creates or migrates it.
+
+### Changed
+
+- **Memory-pipeline failures now log at warning, not debug** — embedding
+  storage failures (the entry is kept, but stored without a vector), vector
+  dedup fallbacks, and vector searches degrading to keyword-only were
+  previously swallowed at debug level; each now logs an actionable warning.
+  Graceful degradation behaviour is unchanged.
+
 ## [0.48.0] — 2026-06-09
 
 ### Added
@@ -1455,7 +1476,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.48.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.49.0...HEAD
+[0.49.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.49.0
 [0.48.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.48.0
 [0.47.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.47.0
 [0.46.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.46.1

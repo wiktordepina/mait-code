@@ -135,7 +135,11 @@ def _vector_candidates(
             results.append((r[0], r[1], max(0.0, 1.0 - r[2])))
         return results
     except Exception as e:
-        logger.debug("Vector dedup search failed: %s", e)
+        logger.warning(
+            "Vector dedup search failed (%s) — deduplication is falling back "
+            "to keyword candidates only",
+            e,
+        )
         return []
 
 
@@ -390,11 +394,23 @@ def _store_embedding(conn: sqlite3.Connection, entry_id: int, content: str) -> N
     """Compute and store the embedding for a memory entry; never raises."""
     try:
         vec = embed_text(content, prefix="search_document")
-        if vec is not None:
-            conn.execute(
-                "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
-                (entry_id, serialize_f32(vec)),
+        if vec is None:
+            logger.warning(
+                "No embedding for entry %d (provider unavailable) — stored "
+                "without a vector; run 'mc-tool-memory reindex' once the "
+                "embedding provider is back",
+                entry_id,
             )
-            conn.commit()
+            return
+        conn.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (entry_id, serialize_f32(vec)),
+        )
+        conn.commit()
     except Exception as e:
-        logger.debug("Embedding storage failed for entry %d: %s", entry_id, e)
+        logger.warning(
+            "Embedding storage failed for entry %d (%s) — stored without a "
+            "vector; run 'mc-tool-memory reindex'",
+            entry_id,
+            e,
+        )
