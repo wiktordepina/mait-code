@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.52.0] — 2026-06-10
+
+### Changed
+
+- **Multi-colour wordmark** — the brand wordmark across every TUI now wears
+  a horizon gradient with a depth shadow: a per-column sweep from the active
+  theme's primary through secondary to accent across the glyph fills, with
+  the box-drawing drop shadow blended toward the background so it sits
+  *behind* the letters instead of competing with them. Same art, same banner
+  height (full and compact), and the plain-text fallback for narrow
+  terminals carries the same gradient. Switching theme re-paints the
+  wordmark in that theme's colours; themes whose colour slots aren't hex
+  (the `ansi` family) fall back to the house palette per slot.
+
 ## [0.51.0] — 2026-06-10
 
 ### Added
@@ -1542,7 +1556,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.51.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.52.0...HEAD
+[0.52.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.52.0
 [0.51.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.51.0
 [0.50.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.50.0
 [0.49.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.49.0

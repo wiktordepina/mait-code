@@ -16,7 +16,10 @@ so a surface can fold live state into it — the memory browser shows its match
 count there.
 
 Styling is shared (``tui/app.tcss``), keyed off theme ``$``-roles, so every
-banner reskins with the active theme.
+banner reskins with the active theme. The wordmark itself is painted in code
+(:func:`~mait_code.tui.brand.wordmark_text` bakes the active theme's brand
+colours into Rich spans, beyond the stylesheet's reach) and re-painted on
+theme switch, so it reskins too.
 """
 
 from __future__ import annotations
@@ -27,7 +30,9 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Static
 
-from mait_code.tui.brand import GLYPH, TAGLINE, wordmark
+from mait_code.tui import palette
+from mait_code.tui.brand import GLYPH, TAGLINE, wordmark_text
+from mait_code.tui.palette import rich_colour
 
 __all__ = ["BrandBanner", "installed_version"]
 
@@ -80,6 +85,9 @@ class BrandBanner(Horizontal):
 
     def on_mount(self) -> None:
         self._render_wordmark()
+        # The painted wordmark bakes the active theme's colours into Rich spans
+        # (out of the stylesheet's reach), so a theme switch must re-paint it.
+        self.watch(self.app, "theme", self._render_wordmark, init=False)
 
     def on_resize(self) -> None:
         # The wordmark is size-dependent (full vs compact art by height, art vs
@@ -95,6 +103,20 @@ class BrandBanner(Horizontal):
     def _render_wordmark(self) -> None:
         self._compact = self.app.size.height <= self.COMPACT_MAX_HEIGHT
         self.set_class(self._compact, "-compact")
+        # Paint from the active theme's brand slots (house palette when a slot
+        # is unset or names an ansi colour the gradient maths can't blend).
+        theme = self.app.get_theme(self.app.theme)
         self.query_one("#wordmark", Static).update(
-            wordmark(self.app.size.width, compact=self._compact)
+            wordmark_text(
+                self.app.size.width,
+                compact=self._compact,
+                primary=rich_colour(theme.primary if theme else None, palette.PRIMARY),
+                secondary=rich_colour(
+                    theme.secondary if theme else None, palette.SECONDARY
+                ),
+                accent=rich_colour(theme.accent if theme else None, palette.ACCENT),
+                background=rich_colour(
+                    theme.background if theme else None, palette.BACKGROUND
+                ),
+            )
         )

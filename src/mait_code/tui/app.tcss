@@ -12,7 +12,9 @@
  * left, the view name over the tagline + version on the right. Worn by every
  * surface in place of the stock header. A rule beneath it separates the brand
  * from the content below ($panel matches the tree dividers). Every colour is a
- * theme role, so the banner reskins with a Ctrl+P theme switch. */
+ * theme role, so the banner reskins with a Ctrl+P theme switch — except the
+ * wordmark, which BrandBanner paints in code (a gradient needs per-character
+ * spans) and re-paints itself on theme change. */
 #brand {
     height: 7;
     padding: 0 2;
@@ -28,7 +30,6 @@
 
 #brand #wordmark {
     width: auto;
-    color: $primary;
 }
 
 /* The right block sits in the space beside the wordmark, vertically centred so
