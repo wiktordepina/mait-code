@@ -51,6 +51,8 @@
 
 ::: mait_code.tools.memory.list_entries
 
+::: mait_code.tools.memory.list_projects
+
 ::: mait_code.tools.memory.search_entries
 
 ::: mait_code.tools.memory.vector_search_entries
@@ -106,3 +108,11 @@
 ::: mait_code.tools.memory.list_observations
 
 ::: mait_code.tools.memory.observation_projects
+
+## Native auto memory
+
+::: mait_code.tools.memory.list_native_memories
+
+::: mait_code.tools.memory.native_projects_dir
+
+::: mait_code.tools.memory.resolve_slug

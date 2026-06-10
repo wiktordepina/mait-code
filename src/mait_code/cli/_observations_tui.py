@@ -27,8 +27,8 @@ from rich.text import Text
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import ModalScreen, Screen
-from textual.widgets import Footer, Input, Label, Markdown, Select, Static, Tree
+from textual.screen import Screen
+from textual.widgets import Footer, Input, Label, Markdown, Static, Tree
 from textual import work
 from textual.widgets.tree import TreeNode
 
@@ -42,6 +42,7 @@ from mait_code.tui import palette
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.banner import BrandBanner
 from mait_code.tui.brand import empty_state
+from mait_code.tui.filters import ProjectFilterScreen
 from mait_code.tui.markdown import md_parser
 
 __all__ = ["ObservationsApp", "run_observations_tui"]
@@ -59,11 +60,6 @@ _LEAF_WIDTH = 56
 #: Markers for an observation's standing against the reflection watermark.
 _PENDING_MARK = "●"
 _REFLECTED_MARK = "✓"
-
-#: Sentinel ``Select`` value for the "every project" option in the project
-#: filter modal — kept distinct from the ``None`` that escape/cancel
-#: dismisses with (mirrors the board's filter).
-_ALL_PROJECTS = object()
 
 
 def _scope_label(entry: dict) -> str:
@@ -90,56 +86,6 @@ def _group_by_day(entries: list[dict]) -> dict[str, list[dict]]:
     for entry in entries:
         by_day.setdefault(str(entry["created_at"])[:10], []).append(entry)
     return {day: by_day[day] for day in sorted(by_day, reverse=True)}
-
-
-class ProjectFilterScreen(ModalScreen[object | None]):
-    """Pick the project to filter the observations by, via a ``Select``.
-
-    Resolves to one of three outcomes, kept distinct so "all" never collapses
-    into the cancel ``None``:
-
-    * a project name — filter to that project (plus global entries);
-    * :data:`_ALL_PROJECTS` — clear the filter;
-    * ``None`` — escape/cancel, leave the active filter untouched.
-
-    The dropdown auto-expands and applies on selection (no Apply button). The
-    one wrinkle is that ``Select`` posts a :class:`Select.Changed` for its
-    *initial* value on mount, which would dismiss instantly — so a change back
-    to the value we opened with is ignored (the board's filter, verbatim).
-    """
-
-    BINDINGS = [("escape", "cancel", "Cancel")]
-
-    def __init__(self, projects: list[str], current: str | None = None) -> None:
-        super().__init__()
-        self._projects = projects
-        self._initial: object = _ALL_PROJECTS if current is None else current
-
-    def compose(self) -> ComposeResult:
-        with Vertical(classes="modal-dialog"):
-            yield Label("Filter by project", classes="modal-title")
-            yield Select(
-                [
-                    ("All projects", _ALL_PROJECTS),
-                    *((proj, proj) for proj in self._projects),
-                ],
-                value=self._initial,
-                allow_blank=False,
-                id="project-select",
-            )
-
-    def on_mount(self) -> None:
-        select = self.query_one("#project-select", Select)
-        select.focus()
-        select.expanded = True  # open the dropdown so picking is one gesture
-
-    def on_select_changed(self, event: Select.Changed) -> None:
-        if event.value == self._initial:
-            return
-        self.dismiss(event.value)
-
-    def action_cancel(self) -> None:
-        self.dismiss(None)
 
 
 class ObservationsApp(MaitApp):
@@ -441,7 +387,7 @@ class ObservationsApp(MaitApp):
         )
         if result is None:
             return  # escape/cancel — leave the active filter as-is
-        # A project name filters to it; the _ALL_PROJECTS sentinel clears it.
+        # A project name filters to it; the ALL_PROJECTS sentinel clears it.
         self._project = result if isinstance(result, str) else None
         self._load_observations()
         self._rebuild_tree()

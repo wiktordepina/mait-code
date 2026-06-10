@@ -39,6 +39,11 @@ from mait_code.tools.memory.entities import (
     upsert_relationship,
 )
 from mait_code.tools.memory.migrate import ensure_schema
+from mait_code.tools.memory.native import (
+    list_native_memories,
+    native_projects_dir,
+    resolve_slug,
+)
 from mait_code.tools.memory.observations import (
     daily_batches,
     list_observations,
@@ -59,6 +64,7 @@ from mait_code.tools.memory.search import (
     delete_entry,
     hybrid_search,
     list_entries,
+    list_projects,
     search_entries,
     vector_search_entries,
 )
@@ -94,6 +100,7 @@ __all__ = [
     "delete_entry",
     "hybrid_search",
     "list_entries",
+    "list_projects",
     "search_entries",
     "vector_search_entries",
     # Scoring
@@ -122,4 +129,8 @@ __all__ = [
     "daily_batches",
     "list_observations",
     "observation_projects",
+    # Native auto memory
+    "list_native_memories",
+    "native_projects_dir",
+    "resolve_slug",
 ]

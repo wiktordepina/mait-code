@@ -29,6 +29,11 @@ Importance: 1 (trivial) to 10 (critical), default 5
 - Keep content concise — one fact per entry
 - Don't store session-specific ephemera (current file being edited, temporary errors)
 - Don't store information already in MEMORY.md or user_context.md
+- Don't store per-project *code* facts (architecture, build/test commands,
+  repo gotchas) — those belong in Claude Code's native auto memory
+  (`~/.claude/projects/<munged-path>/memory/`), which it maintains itself.
+  mait-code memory carries facts about the **user**: preferences,
+  conventions, working style, and cross-project context
 - Deduplication is automatic — storing similar content updates the existing entry
 - Memories are automatically scoped to the current project and branch
 - User preferences are promoted to global scope automatically

@@ -10,6 +10,34 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.50.0] — 2026-06-10
+
+### Added
+
+- **Native auto-memory view in the memory browser** — `mait-code memory` now
+  surfaces Claude Code's native per-project auto memory alongside the
+  mait-code store. `n` switches to a read-only view over every project's
+  `~/.claude/projects/<slug>/memory/` files — all projects, regardless of
+  where the browser was launched — grouped by project with best-effort
+  de-munged labels, `MEMORY.md` first, and each file's markdown rendered in
+  the detail pane. Backed by the new `tools.memory.native` reader
+  (`list_native_memories`, `native_projects_dir`, `resolve_slug`).
+- **Project filter in the memory browser** — `p` opens the same project
+  `Select` the observations browser uses, in both views: the store view
+  narrows to one project's entries (plus globals, via the new
+  `search.list_projects`), the native view to one project's files. The
+  modal now lives in `tui.filters` as `ProjectFilterScreen`, shared by both
+  browsers.
+
+### Changed
+
+- **The two curated memory layers are now formally separated** — Claude
+  Code's native auto memory carries per-project *code* facts; mait-code
+  memory carries cross-project *user/identity* facts. `docs/memory.md`
+  documents the split and the routing rule, and the `/reflect` and
+  `memory-store` skills apply it, so project knowledge no longer accretes
+  into mait-code's MEMORY.md.
+
 ## [0.49.0] — 2026-06-10
 
 ### Added
@@ -1476,7 +1504,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.49.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.50.0...HEAD
+[0.50.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.50.0
 [0.49.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.49.0
 [0.48.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.48.0
 [0.47.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.47.0

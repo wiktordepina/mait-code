@@ -18,6 +18,24 @@ Synthesise recent observations into high-level insights.
 3. If approved, edit `~/.claude/mait-code-data/memory/MEMORY.md` to incorporate the updates
 4. Keep MEMORY.md under ~150 lines
 
+## Routing: which curated layer?
+
+mait-code's MEMORY.md and Claude Code's native auto memory
+(`~/.claude/projects/<munged-path>/memory/`) are kept cleanly separated —
+facts about the **project** belong in the native layer; facts about the
+**user** belong in mait-code:
+
+- **Cross-project user/identity facts** (preferences, conventions, working
+  style, decisions about how the user works) → mait-code MEMORY.md. This is
+  what the proposals above are for.
+- **Per-project code facts** (architecture, build/test commands, repo
+  gotchas) → Claude Code's native auto memory, which it maintains itself.
+
+When a proposed MEMORY.md update is a project/code fact, do **not** add it to
+mait-code's MEMORY.md — write it to the native per-project memory instead (or
+skip it if the native layer already records it). Putting the same fact in
+both layers makes them drift and double-spends context tokens.
+
 Reflection is idempotent — each observation is only reflected on once, tracked by a per-project watermark. Running `/reflect` twice without new observations is a no-op.
 
 If reflection was skipped (not enough new observations), explain that there isn't enough new data since the last reflection and suggest trying again later.

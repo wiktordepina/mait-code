@@ -335,6 +335,39 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 - Temporary tasks or in-progress work
 - Session-specific details
 - Anything that changes frequently
+- Per-project *code* facts — those belong to Claude Code's native auto memory (see below)
+
+## The Other Curated Layer: Claude Code's Native Auto Memory
+
+Claude Code (v2.1.59+) ships its own **auto memory**: a per-project directory
+at `~/.claude/projects/<munged-path>/memory/` holding a `MEMORY.md` index plus
+one markdown file per fact, loaded automatically into that project's sessions.
+It sits alongside mait-code's curated tier — two curated layers that would
+drift and double-spend context tokens if they carried the same facts.
+
+mait-code keeps them **cleanly separated** rather than merged:
+
+| Layer | Carries | Scope | Maintained by |
+|-------|---------|-------|---------------|
+| **Native auto memory** | Code facts: architecture, build/test commands, repo gotchas | Per project | Claude Code itself |
+| **mait-code memory** | User/identity facts: preferences, conventions, working style, cross-project decisions | Cross-project | The three-tier pipeline above |
+
+The routing rule of thumb: **facts about the project belong in the native
+layer; facts about you belong in mait-code.** The `/reflect` and
+`memory-store` skills apply this rule when deciding where a fact goes, so
+project-specific code knowledge no longer accretes into mait-code's
+MEMORY.md.
+
+The native directory name is the project's absolute path with `/` replaced by
+`-` (`/home/w/mait-code` → `-home-w-mait-code`). That munging is lossy — a
+literal dash is indistinguishable from a path separator — so the memory
+browser's native view recovers readable project names best-effort, by
+checking which candidate paths actually exist on disk.
+
+Both layers are visible from one surface: the [memory
+browser](#memory-browser-mait-code-memory)'s native view (`n`) lists every
+project's native memory files, read-only, regardless of where the browser was
+launched.
 
 ## CLI Reference
 
@@ -388,9 +421,18 @@ This is a full-screen [Textual](https://textual.textualize.io/) app over the
 same store: a tree of memories grouped by entry type on the left (newest
 first, counts per group), and the selected memory's body — rendered as
 markdown — with its metadata (created, importance, scope, class) on the
-right. `/` filters the list live by substring, `r` re-reads the store, and
-`?` shows the key cheat-sheet. It browses *everything*, across projects and
-scopes — the reading companion to `mc-tool-memory`'s query verbs.
+right. `/` filters the list live by substring, `p` narrows to one project,
+`r` re-reads the store, and `?` shows the key cheat-sheet. It browses
+*everything*, across projects and scopes — the reading companion to
+`mc-tool-memory`'s query verbs.
+
+`n` switches to the **native view**: Claude Code's [native auto
+memory](#the-other-curated-layer-claude-codes-native-auto-memory) across
+*every* project — not just the one the browser was launched from — grouped
+by project, with each file's markdown rendered in the detail pane. The same
+keys apply (`/` filters by file name or content, `p` narrows to one project,
+`r` rescans, `n` returns to the store view). Like the rest of the browser
+it is strictly read-only: the native layer is Claude Code's to maintain.
 
 When you're not on a terminal that supports it (e.g. piping output, or in
 CI), `mait-code memory` falls back to a read-only grouped summary.
