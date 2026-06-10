@@ -301,9 +301,7 @@ class TestDoctorMemoryChecks:
         from mait_code.tools.memory.db import connection
 
         with connection(self._data_dir(fake_home) / "memory.db") as conn:
-            conn.execute(
-                "UPDATE memory_entries SET superseded_by = 1 WHERE id = 2"
-            )
+            conn.execute("UPDATE memory_entries SET superseded_by = 1 WHERE id = 2")
             conn.commit()
         check = self._check("memory-embeddings")
         assert check.level == "ok"

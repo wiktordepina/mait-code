@@ -582,8 +582,7 @@ class TestEmbeddingFailureVisibility:
 
         assert result["action"] == "created"  # storage itself still succeeds
         assert any(
-            "reindex" in r.message and r.levelname == "WARNING"
-            for r in caplog.records
+            "reindex" in r.message and r.levelname == "WARNING" for r in caplog.records
         )
 
     def test_vector_candidate_failure_warns(self, caplog):
