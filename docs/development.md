@@ -182,6 +182,7 @@ This injects the OS trust store into Python's `ssl` module via the `truststore` 
 3. Choose the appropriate memory class:
    - `episodic` — Short-lived, 3-day half-life (events, tasks)
    - `semantic` — Long-lived, 90-day half-life (facts, preferences, insights)
+   - `procedural` — Most durable, 180-day half-life (workflows, how-tos)
 4. Add tests once `tests/` exists (see the Tests section above)
 
 ## Writing Tests for Memory Components

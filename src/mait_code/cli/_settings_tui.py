@@ -109,6 +109,7 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             _WEIGHTS_KEY,
             "half-life-episodic",
             "half-life-semantic",
+            "half-life-procedural",
             "dedup-string-threshold",
             "dedup-vector-threshold",
             "dedup-conflict-threshold",

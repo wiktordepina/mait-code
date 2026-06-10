@@ -20,7 +20,8 @@ def resolve_scope(
 
     Args:
         item: Extracted item dict (may contain "scope" from LLM).
-        category: Extraction category (facts, preferences, decisions, bugs_fixed).
+        category: Extraction category (facts, preferences, decisions,
+            procedures, bugs_fixed).
         project: Current project identifier, or None.
         branch: Current branch name, or None.
 
@@ -43,6 +44,11 @@ def resolve_scope(
         return "global"
 
     if category == "decisions":
+        return "project"
+
+    if category == "procedures":
+        # Project workflows are the common case; the LLM marks the
+        # user-level ones global (handled above).
         return "project"
 
     if category == "bugs_fixed" and branch is not None:

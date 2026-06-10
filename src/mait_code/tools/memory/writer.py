@@ -24,6 +24,7 @@ MEMORY_CLASS_MAP: dict[str, str] = {
     "decision": "semantic",
     "insight": "semantic",
     "relationship": "semantic",
+    "procedure": "procedural",
 }
 
 VALID_ENTRY_TYPES: set[str] = set(MEMORY_CLASS_MAP)

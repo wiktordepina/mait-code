@@ -371,6 +371,15 @@ SETTINGS: tuple[Setting, ...] = (
         help="Recency half-life (days) for semantic memories (facts, preferences).",
     ),
     Setting(
+        "half-life-procedural",
+        "MAIT_CODE_HALF_LIFE_PROCEDURAL",
+        "180.0",
+        kind="float",
+        advanced=True,
+        validate=_positive_float,
+        help="Recency half-life (days) for procedural memories (workflows, how-tos).",
+    ),
+    Setting(
         "dedup-string-threshold",
         "MAIT_CODE_DEDUP_STRING_THRESHOLD",
         "0.85",

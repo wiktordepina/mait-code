@@ -20,6 +20,7 @@ CATEGORY_TO_TYPE = {
     "facts": "fact",
     "preferences": "preference",
     "decisions": "decision",
+    "procedures": "procedure",
     "bugs_fixed": "event",
 }
 

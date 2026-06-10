@@ -64,7 +64,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 | `content` | TEXT | The memory content |
 | `entry_type` | TEXT | fact, preference, event, decision, insight, task, relationship |
 | `importance` | INTEGER | 1-10 scale (default 5) |
-| `memory_class` | TEXT | episodic or semantic (controls decay rate) |
+| `memory_class` | TEXT | episodic, semantic, or procedural (controls decay rate) |
 | `scope` | TEXT | `global`, `project`, or `branch` (default `global`) |
 | `project` | TEXT | Project identifier (null for global scope) |
 | `branch` | TEXT | Git branch (set only for branch scope) |

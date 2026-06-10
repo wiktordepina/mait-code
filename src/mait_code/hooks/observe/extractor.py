@@ -30,6 +30,9 @@ Return ONLY a JSON object with these arrays (use empty arrays if none found):
   "decisions": [
     {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
   ],
+  "procedures": [
+    {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
+  ],
   "bugs_fixed": [
     {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
   ],
@@ -45,6 +48,11 @@ Guidelines:
 - facts: Technical facts about the codebase, architecture, or environment
 - preferences: User preferences about tools, workflows, coding style
 - decisions: Architectural or design decisions made during the session
+- procedures: Repeatable workflows or how-tos worth reusing — the steps or
+  recipe for getting something done ("to debug X: check Y first, then Z").
+  Boundary: if it answers "how do I do X next time?" it is a procedure; if it
+  answers "what did we pick?" it is a decision; if it answers "what does the
+  user like?" it is a preference.
 - bugs_fixed: Bugs identified and fixed, with root cause if mentioned
 - entities: People, projects, tools, services, or concepts discussed
 - relationships: How entities relate to each other
@@ -54,7 +62,8 @@ Guidelines:
   - "project": project-specific facts, architecture decisions, conventions
   - "branch": task-specific context, WIP notes, branch-specific bugs
   Hints: preferences are usually global; decisions are usually project-scoped;
-  bugs_fixed on feature branches are usually branch-scoped.
+  procedures about the user's general workflow are global, project workflows
+  are project-scoped; bugs_fixed on feature branches are usually branch-scoped.
 - Be specific and concise. Each item should stand alone without context.
 - Do NOT extract generic observations. Focus on project-specific, actionable knowledge.
 - If the conversation is routine with nothing notable, return all empty arrays.
@@ -71,6 +80,7 @@ EXPECTED_KEYS = {
     "facts",
     "preferences",
     "decisions",
+    "procedures",
     "bugs_fixed",
     "entities",
     "relationships",

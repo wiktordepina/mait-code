@@ -465,6 +465,7 @@ class TestTier4Scoring:
         "score-weight-relevance": "0.4",
         "half-life-episodic": "3.0",
         "half-life-semantic": "90.0",
+        "half-life-procedural": "180.0",
         "dedup-string-threshold": "0.85",
         "dedup-vector-threshold": "0.92",
         "scope-boost-global": "0.7",

@@ -35,6 +35,7 @@ BATCH_CATEGORIES: tuple[str, ...] = (
     "facts",
     "preferences",
     "decisions",
+    "procedures",
     "bugs_fixed",
     "entities",
     "relationships",
