@@ -42,6 +42,9 @@ from mait_code import config
 from mait_code.cli._settings_edit import (
     SettingError,
     apply_setting,
+    env_name_error,
+    set_env_var,
+    unset_env_var,
     validation_error,
 )
 from mait_code.tui.app import SHARED_TCSS, MaitApp
@@ -54,7 +57,10 @@ _WEIGHTS_KEY = "__weights__"
 """Sentinel list-row key for the grouped scoring-weight editor."""
 
 _ENV_PREFIX = "env:"
-"""Row-key prefix for custom [env] variables — dynamic, read-only rows."""
+"""Row-key prefix for custom [env] variables — dynamic rows."""
+
+_ENV_ADD_KEY = "env:+"
+"""Sentinel row key for the 'add variable' leaf ('+' can't start a name)."""
 
 _ENV_GROUP_LABEL = "Custom env"
 
@@ -137,7 +143,7 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 # Common groups open on boot; advanced/derived groups start collapsed to keep
 # the initial list short.
-_EXPANDED_GROUPS = frozenset({"General", "Logging", "Embeddings"})
+_EXPANDED_GROUPS = frozenset({"General", "Logging", "Embeddings", _ENV_GROUP_LABEL})
 
 # Leaf labels render "<key>  <value>" on one line. The key column is padded to
 # this width so values line up down the tree; the value is then truncated to
@@ -163,6 +169,14 @@ def _env_display_value(name: str, table_value: str) -> tuple[str, bool]:
     if config._looks_secret(name):
         value = config._mask(value)
     return value, source == "env"
+
+
+def _env_source_text(name: str, table_value: str) -> str:
+    """Provenance line for an [env] variable's detail pane."""
+    _, shadowed = _env_display_value(name, table_value)
+    if shadowed:
+        return "source: env — set in the real environment, which wins over [env]"
+    return "source: settings ([env] table)"
 
 
 def _env_leaf_label(name: str, table_value: str) -> Text:
@@ -298,6 +312,43 @@ class SettingsApp(MaitApp):
         self._current_key: str | None = None
         self._row_order: list[str] = []
         self._setting_nodes: dict[str, TreeNode[str]] = {}
+        self._env_group: TreeNode[str] | None = None
+
+    def _mount_env_group(self, tree: Tree[str]) -> None:
+        """(Re)build the Custom env group from the settings [env] table.
+
+        Dynamic rows — they come from the file's [env] table, not the
+        registry — plus a trailing 'add variable' leaf, so the group is
+        always present even when the table is empty.
+        """
+        if self._env_group is not None:
+            self._env_group.remove()
+        self._row_order = [k for k in self._row_order if not k.startswith(_ENV_PREFIX)]
+        for key in [k for k in self._setting_nodes if k.startswith(_ENV_PREFIX)]:
+            del self._setting_nodes[key]
+
+        group = tree.root.add(
+            _ENV_GROUP_LABEL, expand=_ENV_GROUP_LABEL in _EXPANDED_GROUPS
+        )
+        self._env_group = group
+        env_table = config.read_env_table()
+        for name in sorted(env_table):
+            key = _ENV_PREFIX + name
+            node = group.add_leaf(_env_leaf_label(name, env_table[name]), data=key)
+            self._setting_nodes[key] = node
+            self._row_order.append(key)
+        add_node = group.add_leaf(
+            Text("+ add variable…", style="dim"), data=_ENV_ADD_KEY
+        )
+        self._setting_nodes[_ENV_ADD_KEY] = add_node
+        self._row_order.append(_ENV_ADD_KEY)
+
+    async def _rebuild_env_group(self, select: str | None = None) -> None:
+        """Rebuild the env group after a change and re-land the cursor."""
+        tree: Tree[str] = self.query_one("#list", Tree)
+        self._mount_env_group(tree)
+        target = select if select in self._setting_nodes else _ENV_ADD_KEY
+        self.call_after_refresh(tree.move_cursor, self._setting_nodes[target])
 
     def compose(self) -> ComposeResult:
         yield BrandBanner(subtitle="Settings")
@@ -319,16 +370,7 @@ class SettingsApp(MaitApp):
                 node = group.add_leaf(_leaf_label(key), data=key)
                 self._setting_nodes[key] = node
                 self._row_order.append(key)
-        # Custom [env] variables get a dynamic, read-only group — they come
-        # from the settings file's [env] table, not the registry.
-        env_table = config.read_env_table()
-        if env_table:
-            group = tree.root.add(_ENV_GROUP_LABEL, expand=True)
-            for name in sorted(env_table):
-                key = _ENV_PREFIX + name
-                node = group.add_leaf(_env_leaf_label(name, env_table[name]), data=key)
-                self._setting_nodes[key] = node
-                self._row_order.append(key)
+        self._mount_env_group(tree)
         tree.focus()
         # Land on the first real setting rather than a category header, so the
         # detail pane shows an editor on boot. Deferred until after the first
@@ -365,7 +407,8 @@ class SettingsApp(MaitApp):
         )
 
     def _focus_editor(self) -> None:
-        for selector in ("#editor", "#edit-weights", "#apply"):
+        # env-name first: on the add-variable pane the name field leads.
+        for selector in ("#env-name", "#editor", "#edit-weights", "#apply"):
             found = self.query(selector)
             if found:
                 found.first().focus()
@@ -376,6 +419,9 @@ class SettingsApp(MaitApp):
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
 
+        if key == _ENV_ADD_KEY:
+            await self._show_env_add_detail()
+            return
         if key.startswith(_ENV_PREFIX):
             await self._show_env_detail(key.removeprefix(_ENV_PREFIX))
             return
@@ -447,17 +493,12 @@ class SettingsApp(MaitApp):
         await detail.mount(*widgets)
 
     async def _show_env_detail(self, name: str) -> None:
-        """Read-only detail pane for a custom [env] variable."""
+        """Editable detail pane for a custom [env] variable."""
         detail = self.query_one("#detail", VerticalScroll)
-        value, shadowed = _env_display_value(
-            name, config.read_env_table().get(name, "")
-        )
-        if shadowed:
-            source = "source: env — set in the real environment, which wins over [env]"
-        else:
-            source = "source: settings ([env] table)"
-        # Text() throughout — "[env]" (and arbitrary user values) must not be
-        # parsed as console markup.
+        table_value = config.read_env_table().get(name, "")
+        source = _env_source_text(name, table_value)
+        # Text() for static copy — "[env]" (and arbitrary user values) must
+        # not be parsed as console markup.
         await detail.mount(
             Label(Text(name), classes="title"),
             Label(
@@ -467,9 +508,37 @@ class SettingsApp(MaitApp):
                 ),
                 classes="help",
             ),
-            Static(Text(value), classes="value"),
+            # The unmasked table value — it has to be editable; the tree
+            # label stays masked for secret-looking names.
+            Input(value=table_value, id="editor"),
             Static(Text(source), id="source"),
-            Label("Read-only here — edit settings.toml by hand.", classes="help"),
+            Static("", id="msg"),
+            Horizontal(
+                Button("Apply", id="apply", variant="primary"),
+                Button("Remove", id="env-remove", variant="error"),
+                classes="env-buttons",
+            ),
+        )
+
+    async def _show_env_add_detail(self) -> None:
+        """Detail pane for adding a new [env] variable — name + value form."""
+        detail = self.query_one("#detail", VerticalScroll)
+        await detail.mount(
+            Label("add [env] variable", classes="title"),
+            Label(
+                Text(
+                    "Adds a custom environment variable to the settings.toml "
+                    "[env] table. Variables already set in the real "
+                    "environment win; MAIT_CODE_* names are not allowed."
+                ),
+                classes="help",
+            ),
+            Label("name", classes="env-field-label"),
+            Input(placeholder="AWS_PROFILE", id="env-name"),
+            Label("value", classes="env-field-label"),
+            Input(placeholder="dev-bedrock", id="editor"),
+            Static("", id="msg"),
+            Button("Add", id="apply", variant="primary"),
         )
 
     # -- editing -----------------------------------------------------------
@@ -496,6 +565,18 @@ class SettingsApp(MaitApp):
         # and the weights modal's own inputs (it validates them itself).
         if self._current_key is None or self._current_key == _WEIGHTS_KEY:
             return
+        if self._current_key == _ENV_ADD_KEY:
+            # Live-validate the name field; the value is free text.
+            if event.input.id == "env-name":
+                msg_slots = self.query("#msg")
+                if msg_slots:
+                    msg = env_name_error(event.value) if event.value else None
+                    msg_slots.first(Static).update(
+                        Text("" if msg is None else f"✗ {msg}")
+                    )
+            return
+        if self._current_key.startswith(_ENV_PREFIX):
+            return  # env values are free text — nothing to validate live
         editors = self.query("#editor")
         msg_slots = self.query("#msg")
         if not editors or not msg_slots or event.input is not editors.first():
@@ -512,6 +593,10 @@ class SettingsApp(MaitApp):
             self.action_apply()
         elif event.button.id == "edit-weights":
             self._edit_weights()
+        elif event.button.id == "env-remove":
+            key = self._current_key
+            if key and key.startswith(_ENV_PREFIX) and key != _ENV_ADD_KEY:
+                self._remove_env(key.removeprefix(_ENV_PREFIX))
 
     def action_apply(self) -> None:
         if self._current_key == _WEIGHTS_KEY:
@@ -562,8 +647,12 @@ class SettingsApp(MaitApp):
 
     @work
     async def _apply(self, key: str) -> None:
+        if key == _ENV_ADD_KEY:
+            await self._add_env()
+            return
         if key.startswith(_ENV_PREFIX):
-            return  # [env] rows are read-only — edited in settings.toml by hand
+            await self._apply_env_edit(key.removeprefix(_ENV_PREFIX))
+            return
         setting = _by_key()[key]
         if not setting.settable:
             return
@@ -608,6 +697,47 @@ class SettingsApp(MaitApp):
             self.theme = value
 
         self._after_apply(setting, outcome)
+
+    async def _apply_env_edit(self, name: str) -> None:
+        """Persist an edited [env] value and refresh the row in place."""
+        value = self.query_one("#editor", Input).value
+        try:
+            outcome = set_env_var(name, value)
+        except SettingError as exc:
+            self.query_one("#msg", Static).update(Text(f"✗ {exc}"))
+            return
+        self._setting_nodes[_ENV_PREFIX + name].set_label(_env_leaf_label(name, value))
+        self.query_one("#source", Static).update(Text(_env_source_text(name, value)))
+        note = "✓ applied"
+        if outcome.warnings:
+            note += "  ⚠ " + "; ".join(outcome.warnings)
+        self.query_one("#msg", Static).update(Text(note))
+
+    async def _add_env(self) -> None:
+        """Add the variable described by the add-form inputs."""
+        name = self.query_one("#env-name", Input).value.strip()
+        value = self.query_one("#editor", Input).value
+        try:
+            set_env_var(name, value)
+        except SettingError as exc:
+            self.query_one("#msg", Static).update(Text(f"✗ {exc}"))
+            return
+        await self._rebuild_env_group(select=_ENV_PREFIX + name)
+
+    @work
+    async def _remove_env(self, name: str) -> None:
+        """Remove an [env] variable after confirmation."""
+        confirmed = await self.push_screen_wait(
+            ConfirmScreen(f"Remove {name} from the [env] table?")
+        )
+        if not confirmed:
+            return
+        try:
+            unset_env_var(name)
+        except SettingError as exc:
+            self.query_one("#msg", Static).update(Text(f"✗ {exc}"))
+            return
+        await self._rebuild_env_group()
 
     def _run_reindex_suspended(self) -> None:
         """Drop out of the app to re-embed with normal terminal output."""

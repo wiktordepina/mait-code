@@ -51,6 +51,23 @@
     margin-top: 1;
 }
 
+/* Custom env rows: side-by-side Apply/Remove, and field labels on the
+ * add-variable form. */
+#detail .env-buttons {
+    height: auto;
+    margin-top: 1;
+}
+
+#detail .env-buttons #apply {
+    margin-top: 0;
+    margin-right: 2;
+}
+
+#detail .env-field-label {
+    color: $text-muted;
+    margin-top: 1;
+}
+
 /* Weights modal: per-field bits; container geometry from .modal-dialog. */
 .weight-label {
     color: $text-muted;

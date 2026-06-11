@@ -97,6 +97,8 @@ from mait_code.cli._settings_edit import (
     ApplyOutcome,
     SettingError as _SettingError,
     apply_setting,
+    set_env_var as _set_env_var,
+    unset_env_var as _unset_env_var,
 )
 from mait_code.config import (
     SETTINGS as _SETTINGS,
@@ -570,12 +572,22 @@ def settings_get(
 ) -> None:
     """Print one resolved setting value and its source (for scripting)."""
     _require_settings_file()
-    by_key = {s.key: s for s in _SETTINGS}
-    setting = by_key.get(key)
-    if setting is None:
-        typer.echo(f"error: unknown setting {key!r}", err=True)
-        raise typer.Exit(code=1)
-    value, source = _resolve_setting(setting)
+    if key.startswith("env."):
+        from mait_code import config as _config
+
+        name = key.removeprefix("env.")
+        env_table = _config.read_env_table()
+        if name not in env_table:
+            typer.echo(f"error: {key!r} is not in the [env] table", err=True)
+            raise typer.Exit(code=1)
+        value, source = _config._env_effective(name, env_table[name])
+    else:
+        by_key = {s.key: s for s in _SETTINGS}
+        setting = by_key.get(key)
+        if setting is None:
+            typer.echo(f"error: unknown setting {key!r}", err=True)
+            raise typer.Exit(code=1)
+        value, source = _resolve_setting(setting)
     if as_json:
         import json
 
@@ -603,8 +615,25 @@ def settings_set(
         ),
     ] = None,
 ) -> None:
-    """Validate and persist a setting, then run any required follow-up."""
+    """Validate and persist a setting, then run any required follow-up.
+
+    ``env.<NAME>`` keys add or update a custom variable in the settings
+    [env] table (injected into the environment at every startup).
+    """
     _require_settings_file()
+    if key.startswith("env."):
+        try:
+            env_outcome = _set_env_var(key.removeprefix("env."), value)
+        except _SettingError as exc:
+            typer.echo(f"error: {exc}", err=True)
+            raise typer.Exit(code=1) from None
+        typer.echo(
+            f"env.{env_outcome.name}: "
+            f"{env_outcome.old_value!r} → {env_outcome.new_value!r}"
+        )
+        for warning in env_outcome.warnings:
+            typer.echo(f"warning: {warning}", err=True)
+        return
     try:
         outcome = apply_setting(key, value, reindex=reindex, move_data=move_data)
     except _SettingError as exc:
@@ -626,6 +655,29 @@ def settings_set(
             if outcome.followup_done
             else "  left existing data at the old location."
         )
+
+
+@settings_app.command("unset")
+def settings_unset(key: str) -> None:
+    """Remove a custom [env] variable from settings.toml.
+
+    Only ``env.<NAME>`` keys can be unset — registry settings always have
+    a value (env → settings file → built-in default).
+    """
+    _require_settings_file()
+    if not key.startswith("env."):
+        typer.echo(
+            f"error: only env.<NAME> keys can be unset, not {key!r} — "
+            "registry settings fall back to their defaults instead",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    try:
+        outcome = _unset_env_var(key.removeprefix("env."))
+    except _SettingError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from None
+    typer.echo(f"env.{outcome.name} removed (was {outcome.old_value!r})")
 
 
 @app.command("board")

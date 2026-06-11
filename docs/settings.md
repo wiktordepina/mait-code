@@ -149,11 +149,26 @@ The rules:
 - **The table survives rewrites.** `settings set`, the interactive editor and
   install/update all carry it over untouched.
 
+### Managing them
+
+You don't have to edit the file by hand (though that works too):
+
+- **Interactive editor** — the **Custom env** group lists every variable;
+  pick one to change its value or remove it, or use the *+ add variable…*
+  row to create one. Names are validated live as you type.
+- **CLI** — address a variable as `env.<NAME>`:
+
+  ```console
+  $ mait-code settings set env.AWS_PROFILE dev-bedrock
+  $ mait-code settings get env.AWS_PROFILE
+  dev-bedrock	(settings)
+  $ mait-code settings unset env.AWS_PROFILE
+  ```
+
 `settings list` shows each entry as an `env.<NAME>` row with its provenance
-(`settings` when the table supplies it, `env` when your shell shadows it), and
-the interactive editor lists them in a read-only **Custom env** group — edit
-the file by hand to change them. Values whose names look secret (`KEY`,
-`TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL`) are masked in both views.
+(`settings` when the table supplies it, `env` when your shell shadows it).
+Values whose names look secret (`KEY`, `TOKEN`, `SECRET`, `PASSWORD`,
+`CREDENTIAL`) are masked in the list and tree views.
 
 ## Off the terminal
 
