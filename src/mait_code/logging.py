@@ -4,6 +4,23 @@ Call ``setup_logging()`` once in each entry point's ``main()`` to configure
 file-based logging for the ``mait_code`` namespace. Uses a
 ``TimedRotatingFileHandler`` to rotate logs daily.
 
+Log lines are structured JSON Lines (one JSON object per line) with a
+deterministic, ECS-inspired schema. Core fields on every line:
+
+* ``ts`` — epoch seconds as a float (``LogRecord.created``)
+* ``level`` — ``debug`` / ``info`` / ``warning`` / ``error`` (lowercase)
+* ``logger`` — logger name with the ``mait_code.`` prefix stripped
+* ``msg`` — the rendered message
+* ``tool`` — entry-point name (e.g. ``mc-tool-board``), captured at
+  ``setup_logging()`` from ``sys.argv[0]``
+* ``pid`` — process id
+
+Invocation events (from :func:`log_invocation`) add ``event``
+(``invoked``/``completed``/``failed``/``exited``), ``duration_ms`` and
+``args``. Exceptions add ``error_type``, ``error_message`` and ``stack``.
+Call sites may pass ``extra={...}`` to merge additional fields into the
+line at top level; core fields win on collision.
+
 Configuration via environment variables (settable in settings.json env):
 
 * ``MAIT_CODE_LOG_LEVEL`` — DEBUG, INFO, WARNING, ERROR (default: INFO)
@@ -14,6 +31,7 @@ interfere with hook JSON output or tool results.
 """
 
 import functools
+import json
 import logging
 import sys
 import time
@@ -37,7 +55,53 @@ _SENSITIVE_PARAMS = {"content", "query", "what", "description", "prompt", "messa
 
 _TRUNCATE_LEN = 80
 
+# Attributes present on every vanilla LogRecord — anything else on a record's
+# __dict__ arrived via ``extra={...}`` and is merged into the JSON line.
+# Built dynamically so new stdlib attributes (e.g. taskName) are covered.
+_STANDARD_RECORD_ATTRS = set(logging.LogRecord("", 0, "", 0, "", (), None).__dict__) | {
+    "message",
+    "asctime",
+}
+
+# ``args`` is reserved on LogRecord (printf interpolation), so the invocation
+# decorator transports the parsed params under this key and the formatter
+# publishes it under the schema name ``args``.
+_ARGS_TRANSPORT_KEY = "args_"
+
 _setup_done = False
+
+# Entry-point name captured at setup_logging() so every line carries it.
+_tool_name = ""
+
+
+class _JsonLinesFormatter(logging.Formatter):
+    """Serialise each record as one JSON object per line."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        line: dict[str, Any] = {
+            "ts": record.created,
+            "level": record.levelname.lower(),
+            "logger": record.name.removeprefix("mait_code."),
+            "msg": record.getMessage(),
+            "tool": _tool_name,
+            "pid": record.process,
+        }
+
+        # Extras merge after the core fields, which win on collision.
+        for key, value in record.__dict__.items():
+            if key in _STANDARD_RECORD_ATTRS or key.startswith("_"):
+                continue
+            key = "args" if key == _ARGS_TRANSPORT_KEY else key
+            if key not in line:
+                line[key] = value
+
+        if record.exc_info and record.exc_info[0] is not None:
+            exc_type, exc_value, _ = record.exc_info
+            line["error_type"] = exc_type.__name__
+            line["error_message"] = str(exc_value)
+            line["stack"] = self.formatException(record.exc_info)
+
+        return json.dumps(line, ensure_ascii=False, default=repr)
 
 
 def _get_log_path() -> Path:
@@ -46,7 +110,7 @@ def _get_log_path() -> Path:
     if "<" not in value:
         path = Path(value)
     else:
-        path = mait_code_log_dir() / "mait-code.log"
+        path = mait_code_log_dir() / "mait-code.jsonl"
 
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -61,12 +125,14 @@ def setup_logging() -> None:
     (:func:`mait_code.config.apply_env`): every tool and hook entry point
     passes through here, making it the shared startup path.
     """
-    global _setup_done
+    global _setup_done, _tool_name
     if _setup_done:
         return
     _setup_done = True
 
     apply_env()
+
+    _tool_name = Path(sys.argv[0]).name if sys.argv and sys.argv[0] else "python"
 
     level_name = config_get("log-level").upper()
     level = getattr(logging, level_name, logging.INFO)
@@ -75,7 +141,7 @@ def setup_logging() -> None:
 
     # Rotate at midnight rather than by size. In short-lived hook/CLI
     # processes the rollover is checked on the first emit using the log file's
-    # mtime, so the previous day's file is rolled to mait-code.log.YYYY-MM-DD
+    # mtime, so the previous day's file is rolled to mait-code.jsonl.YYYY-MM-DD
     # before the first write of a new day — no long-running process needed.
     handler = TimedRotatingFileHandler(
         log_path,
@@ -83,13 +149,7 @@ def setup_logging() -> None:
         backupCount=config_get_int("log-backup-count"),
         encoding="utf-8",
     )
-
-    # Strip the mait_code. prefix from logger names for readability
-    formatter = logging.Formatter(
-        fmt="%(asctime)s %(levelname)-5s %(name)s — %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-    )
-    handler.setFormatter(formatter)
+    handler.setFormatter(_JsonLinesFormatter())
 
     root_logger = logging.getLogger("mait_code")
     root_logger.setLevel(level)
@@ -107,7 +167,7 @@ def _truncate(value: str) -> str:
 
 
 def _format_arg(name: str, value) -> str:
-    """Format a single argument for the invocation log line."""
+    """Format a single argument for the invocation ``args`` field."""
     if name in _SENSITIVE_PARAMS and isinstance(value, (str, list)):
         if isinstance(value, list):
             value = " ".join(str(v) for v in value)
@@ -122,8 +182,9 @@ def log_invocation(
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorate CLI tool/hook entry points so invocations are logged.
 
-    Logs the command name and parsed arguments on entry, and status plus
-    duration on exit.
+    Logs the command name and parsed arguments on entry (``event: invoked``,
+    ``args``), and status plus duration on exit (``event: completed`` /
+    ``failed`` / ``exited``, ``duration_ms``).
 
     Args:
         name: Override the logged command name (default: the wrapped
@@ -162,26 +223,42 @@ def log_invocation(
                     else:
                         param_parts.append(f"{k}={v!r}")
 
-            if param_parts:
-                logger.info("invoked: %s %s", cmd_name, " ".join(param_parts))
-            else:
-                logger.info("invoked: %s %s", cmd_name, argv_str)
+            params = " ".join(param_parts) if param_parts else argv_str
+            logger.info(
+                "invoked: %s",
+                cmd_name,
+                extra={"event": "invoked", _ARGS_TRANSPORT_KEY: params},
+            )
 
             t0 = time.monotonic()
             try:
                 result = func(*args, **kwargs)
-                elapsed = time.monotonic() - t0
-                logger.info("completed: %s (%.2fs)", cmd_name, elapsed)
+                logger.info(
+                    "completed: %s",
+                    cmd_name,
+                    extra={"event": "completed", "duration_ms": _elapsed_ms(t0)},
+                )
                 return result
             except SystemExit:
-                elapsed = time.monotonic() - t0
-                logger.info("exited: %s (%.2fs)", cmd_name, elapsed)
+                logger.info(
+                    "exited: %s",
+                    cmd_name,
+                    extra={"event": "exited", "duration_ms": _elapsed_ms(t0)},
+                )
                 raise
             except Exception:
-                elapsed = time.monotonic() - t0
-                logger.exception("failed: %s (%.2fs)", cmd_name, elapsed)
+                logger.exception(
+                    "failed: %s",
+                    cmd_name,
+                    extra={"event": "failed", "duration_ms": _elapsed_ms(t0)},
+                )
                 raise
 
         return wrapper
 
     return decorator
+
+
+def _elapsed_ms(t0: float) -> float:
+    """Milliseconds elapsed since the monotonic timestamp ``t0``."""
+    return round((time.monotonic() - t0) * 1000.0, 3)

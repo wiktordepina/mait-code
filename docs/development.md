@@ -126,6 +126,29 @@ maintained.
 
 All entry points use the shared logging module at `src/mait_code/logging.py`.
 
+### Log format
+
+Logs are structured JSON Lines — one JSON object per line, with a deterministic, ECS-inspired schema. Core fields on every line:
+
+| Field | Content |
+|-------|---------|
+| `ts` | Epoch seconds as a float (cast to a timezone at the presentation layer) |
+| `level` | `debug` / `info` / `warning` / `error` (lowercase) |
+| `logger` | Logger name with the `mait_code.` prefix stripped |
+| `msg` | The rendered message |
+| `tool` | Entry-point name (e.g. `mc-tool-board`), captured at `setup_logging()` |
+| `pid` | Process id |
+
+Invocation events (emitted by `@log_invocation`) add `event` (`invoked` / `completed` / `failed` / `exited`), `duration_ms`, and `args` (the parsed parameters, with sensitive values truncated). Exceptions add `error_type`, `error_message`, and `stack` (the traceback as a single string — every line stays one JSON object).
+
+Call sites can attach structured fields via `extra`:
+
+```python
+logger.info("memory stored", extra={"memory_id": 42, "store": "semantic"})
+```
+
+Extra fields merge into the line at top level; core fields win on collision.
+
 ### Adding logging to a new component
 
 ```python
@@ -172,7 +195,7 @@ This injects the OS trust store into Python's `ssl` module via the `truststore` 
 
 - `MAIT_CODE_LOG_LEVEL` env var (default: `INFO`) — set via `settings.json` `env` block
 - `MAIT_CODE_LOG_FILE` env var — override log file path
-- Logs write to `~/.local/state/mait-code/mait-code.log` (rotates at midnight, keeps `log-backup-count` days — default 14)
+- Logs write to `~/.local/state/mait-code/mait-code.jsonl` (rotates at midnight, keeps `log-backup-count` days — default 14)
 - Logs never go to stdout/stderr
 
 ## Adding New Memory Types
