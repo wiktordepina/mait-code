@@ -1,8 +1,10 @@
 """Tests for the shared logging module."""
 
+import json
 import logging
 import os
 import sys
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -35,9 +37,16 @@ def _reset_logging_state():
     log_mod._setup_done = False
 
 
+def _read_lines(log_file: Path) -> list[dict]:
+    """Parse every line of the log file as a JSON object."""
+    return [
+        json.loads(line) for line in log_file.read_text().splitlines() if line.strip()
+    ]
+
+
 class TestSetupLogging:
     def test_creates_log_file(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
             setup_logging()
 
@@ -45,11 +54,10 @@ class TestSetupLogging:
         logger.info("test message")
 
         assert log_file.exists()
-        content = log_file.read_text()
-        assert "test message" in content
+        assert any(line["msg"] == "test message" for line in _read_lines(log_file))
 
     def test_uses_daily_rotating_handler(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
             setup_logging()
 
@@ -64,7 +72,7 @@ class TestSetupLogging:
         assert handlers[0].backupCount == 14
 
     def test_idempotent(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
             setup_logging()
             setup_logging()
@@ -76,7 +84,7 @@ class TestSetupLogging:
         assert len(file_handlers) == 1
 
     def test_respects_log_level(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(
             os.environ,
             {
@@ -90,7 +98,7 @@ class TestSetupLogging:
         assert logger.level == logging.WARNING
 
     def test_default_level_is_info(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         env = {"MAIT_CODE_LOG_FILE": str(log_file)}
         # Remove MAIT_CODE_LOG_LEVEL if set
         with patch.dict(os.environ, env, clear=False):
@@ -101,7 +109,7 @@ class TestSetupLogging:
         assert logger.level == logging.INFO
 
     def test_no_propagation(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
             setup_logging()
 
@@ -120,21 +128,92 @@ class TestSetupLogging:
             _config._settings_cache = None
             setup_logging()
 
-        expected = state_dir / "mait-code" / "mait-code.log"
-        assert expected.parent.exists()
+        logger = logging.getLogger("mait_code")
+        file_handlers = [h for h in logger.handlers if hasattr(h, "baseFilename")]
+        expected = state_dir / "mait-code" / "mait-code.jsonl"
+        assert Path(file_handlers[0].baseFilename) == expected
 
-    def test_log_format(self, tmp_path):
-        log_file = tmp_path / "test.log"
+
+class TestJsonSchema:
+    def test_core_fields_on_every_line(self, tmp_path):
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
             setup_logging()
 
-        logger = logging.getLogger("mait_code.tools.memory")
-        logger.info("test format")
+        logging.getLogger("mait_code.tools.memory").info("test format")
 
-        content = log_file.read_text()
-        assert "INFO" in content
-        assert "mait_code.tools.memory" in content
-        assert "test format" in content
+        (line,) = _read_lines(log_file)
+        assert isinstance(line["ts"], float)
+        assert line["level"] == "info"
+        assert line["logger"] == "tools.memory"
+        assert line["msg"] == "test format"
+        assert line["tool"] == Path(sys.argv[0]).name
+        assert line["pid"] == os.getpid()
+
+    def test_level_is_lowercase(self, tmp_path):
+        log_file = tmp_path / "test.jsonl"
+        with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+            setup_logging()
+
+        logging.getLogger("mait_code.test").warning("careful")
+
+        (line,) = _read_lines(log_file)
+        assert line["level"] == "warning"
+
+    def test_extra_fields_merge_at_top_level(self, tmp_path):
+        log_file = tmp_path / "test.jsonl"
+        with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+            setup_logging()
+
+        logging.getLogger("mait_code.test").info(
+            "stored", extra={"memory_id": 42, "store": "procedural"}
+        )
+
+        (line,) = _read_lines(log_file)
+        assert line["memory_id"] == 42
+        assert line["store"] == "procedural"
+
+    def test_core_fields_win_collisions(self, tmp_path):
+        log_file = tmp_path / "test.jsonl"
+        with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+            setup_logging()
+
+        logging.getLogger("mait_code.test").info(
+            "real message", extra={"tool": "imposter", "pid": -1}
+        )
+
+        (line,) = _read_lines(log_file)
+        assert line["tool"] != "imposter"
+        assert line["pid"] == os.getpid()
+
+    def test_non_serialisable_extra_falls_back_to_repr(self, tmp_path):
+        log_file = tmp_path / "test.jsonl"
+        with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+            setup_logging()
+
+        logging.getLogger("mait_code.test").info(
+            "odd extra", extra={"path": Path("/tmp/x")}
+        )
+
+        (line,) = _read_lines(log_file)
+        assert "/tmp/x" in line["path"]
+
+    def test_exception_serialises_to_one_line(self, tmp_path):
+        log_file = tmp_path / "test.jsonl"
+        with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
+            setup_logging()
+
+        logger = logging.getLogger("mait_code.test")
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            logger.exception("it failed")
+
+        (line,) = _read_lines(log_file)
+        assert line["error_type"] == "ValueError"
+        assert line["error_message"] == "boom"
+        assert "Traceback" in line["stack"]
+        assert "\n" in line["stack"]  # multiline traceback inside one JSON line
 
 
 class TestTruncate:
@@ -173,7 +252,7 @@ class TestFormatArg:
 
 class TestLogInvocation:
     def test_logs_invocation_and_completion(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
 
             @log_invocation(name="test-cmd")
@@ -183,12 +262,16 @@ class TestLogInvocation:
             result = my_func()
 
         assert result == 42
-        content = log_file.read_text()
-        assert "invoked: test-cmd" in content
-        assert "completed: test-cmd" in content
+        invoked, completed = _read_lines(log_file)
+        assert invoked["msg"] == "invoked: test-cmd"
+        assert invoked["event"] == "invoked"
+        assert completed["msg"] == "completed: test-cmd"
+        assert completed["event"] == "completed"
+        assert isinstance(completed["duration_ms"], (int, float))
+        assert completed["duration_ms"] >= 0
 
     def test_logs_argparse_namespace(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
 
             @log_invocation(name="test-cmd")
@@ -200,12 +283,12 @@ class TestLogInvocation:
             ns = Namespace(query=["dark", "mode"], limit=10, type=None)
             my_func(ns)
 
-        content = log_file.read_text()
-        assert 'query="dark mode"' in content
-        assert "limit=10" in content
+        invoked = _read_lines(log_file)[0]
+        assert 'query="dark mode"' in invoked["args"]
+        assert "limit=10" in invoked["args"]
 
     def test_truncates_sensitive_args(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
 
             @log_invocation(name="test-cmd")
@@ -217,11 +300,11 @@ class TestLogInvocation:
             ns = Namespace(content=["x"] * 100)
             my_func(ns)
 
-        content = log_file.read_text()
-        assert "..." in content
+        invoked = _read_lines(log_file)[0]
+        assert "..." in invoked["args"]
 
     def test_logs_exception(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
 
             @log_invocation(name="test-cmd")
@@ -231,12 +314,16 @@ class TestLogInvocation:
             with pytest.raises(ValueError, match="boom"):
                 my_func()
 
-        content = log_file.read_text()
-        assert "failed: test-cmd" in content
-        assert "boom" in content
+        failed = _read_lines(log_file)[-1]
+        assert failed["msg"] == "failed: test-cmd"
+        assert failed["event"] == "failed"
+        assert failed["error_type"] == "ValueError"
+        assert failed["error_message"] == "boom"
+        assert "Traceback" in failed["stack"]
+        assert failed["duration_ms"] >= 0
 
     def test_logs_system_exit(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
 
             @log_invocation(name="test-cmd")
@@ -246,11 +333,13 @@ class TestLogInvocation:
             with pytest.raises(SystemExit):
                 my_func()
 
-        content = log_file.read_text()
-        assert "exited: test-cmd" in content
+        exited = _read_lines(log_file)[-1]
+        assert exited["msg"] == "exited: test-cmd"
+        assert exited["event"] == "exited"
+        assert exited["duration_ms"] >= 0
 
     def test_extra_truncate_params(self, tmp_path):
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
 
             @log_invocation(name="test-cmd", truncate_params={"custom_field"})
@@ -262,12 +351,12 @@ class TestLogInvocation:
             ns = Namespace(custom_field="x" * 200)
             my_func(ns)
 
-        content = log_file.read_text()
-        assert "..." in content
+        invoked = _read_lines(log_file)[0]
+        assert "..." in invoked["args"]
 
     def test_skips_func_attribute(self, tmp_path):
         """The argparse 'func' attribute should not be logged."""
-        log_file = tmp_path / "test.log"
+        log_file = tmp_path / "test.jsonl"
         with patch.dict(os.environ, {"MAIT_CODE_LOG_FILE": str(log_file)}):
 
             @log_invocation(name="test-cmd")
@@ -279,9 +368,9 @@ class TestLogInvocation:
             ns = Namespace(func=lambda: None, limit=5)
             my_func(ns)
 
-        content = log_file.read_text()
-        assert "func=" not in content
-        assert "limit=5" in content
+        invoked = _read_lines(log_file)[0]
+        assert "func=" not in invoked["args"]
+        assert "limit=5" in invoked["args"]
 
 
 class TestSetupLoggingAppliesEnv:

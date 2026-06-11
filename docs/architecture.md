@@ -413,7 +413,7 @@ Primary knobs:
 |----------|---------|-------------|
 | `MAIT_CODE_DATA_DIR` | `~/.claude/mait-code-data` | Data directory (memories, personalised files) |
 | `MAIT_CODE_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `MAIT_CODE_LOG_FILE` | `~/.local/state/mait-code/mait-code.log` | Override log file path |
+| `MAIT_CODE_LOG_FILE` | `~/.local/state/mait-code/mait-code.jsonl` | Override log file path |
 | `MAIT_CODE_THEME` | `mait-dark` | TUI colour theme; unknown names fall back to `mait-dark` |
 | `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | Embedding provider: `local` (fastembed) or `bedrock` (AWS) |
 | `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local embedding provider |
@@ -503,8 +503,8 @@ Adding a new migration:
 ```
 
 > Rotating log files do **not** live in the data directory — they go to the XDG
-> state dir (`~/.local/state/mait-code/mait-code.log` by default), configurable
-> via `MAIT_CODE_LOG_FILE`.
+> state dir (`~/.local/state/mait-code/mait-code.jsonl` by default, structured
+> JSON Lines), configurable via `MAIT_CODE_LOG_FILE`.
 
 ## Key Technical Decisions
 
