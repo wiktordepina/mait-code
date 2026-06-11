@@ -23,8 +23,8 @@ jobs:
     name: Build (strict)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
       - run: uv sync --locked --group docs
@@ -51,14 +51,14 @@ jobs:
       group: docs-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       # When pyproject.toml is bumped on main, two docs.yml runs target
       # the same git SHA: the push-to-main run (which only updates the
       # `dev` alias) and the release.yml-dispatched run on the new v-tag
-      # (which deploys the version + `latest`). `actions/deploy-pages@v4`
+      # (which deploys the version + `latest`). `actions/deploy-pages`
       # keys on the SHA, so two deployments for one SHA race in the
       # Pages backend — non-deterministically the dev artefact can win,
       # leaving the new version invisible. Skip the push-to-main deploy
@@ -77,7 +77,7 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v8.2.0
         if: steps.tagcheck.outputs.skip != 'true'
         with:
           enable-cache: true
@@ -147,19 +147,19 @@ jobs:
 
       - name: Check out gh-pages for Pages artefact
         if: steps.tagcheck.outputs.skip != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: gh-pages
           path: gh-pages-site
 
       - if: steps.tagcheck.outputs.skip != 'true'
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - if: steps.tagcheck.outputs.skip != 'true'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: gh-pages-site
 
       - id: deployment
         if: steps.tagcheck.outputs.skip != 'true'
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
