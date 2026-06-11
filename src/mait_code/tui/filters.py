@@ -1,9 +1,11 @@
 """Shared filter modals for mait-code TUIs.
 
-:class:`ProjectFilterScreen` is the project ``Select`` the observations and
-memory browsers both open on ``p`` — extracted here so the surfaces stay
+:class:`ChoiceFilterScreen` is the generic pick-one-value ``Select`` modal;
+:class:`ProjectFilterScreen` is its project-flavoured face — the one the
+observations and memory browsers open on ``p``, kept here so the surfaces stay
 pixel-consistent instead of each carrying a copy (the board's filter is the
-same gesture, built into its column layout).
+same gesture, built into its column layout). The log viewer reuses the generic
+screen for its tool and day filters.
 """
 
 from __future__ import annotations
@@ -13,22 +15,24 @@ from textual.containers import Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Label, Select
 
-__all__ = ["ALL_PROJECTS", "ProjectFilterScreen"]
+__all__ = ["ALL_CHOICES", "ALL_PROJECTS", "ChoiceFilterScreen", "ProjectFilterScreen"]
 
-#: Sentinel ``Select`` value for the "every project" option in the project
-#: filter modal — kept distinct from the ``None`` that escape/cancel
-#: dismisses with (mirrors the board's filter).
-ALL_PROJECTS = object()
+#: Sentinel ``Select`` value for the "everything" option in a filter modal —
+#: kept distinct from the ``None`` that escape/cancel dismisses with.
+ALL_CHOICES = object()
+
+#: The same sentinel under its original, project-flavoured name.
+ALL_PROJECTS = ALL_CHOICES
 
 
-class ProjectFilterScreen(ModalScreen[object | None]):
-    """Pick the project to filter a browser by, via a ``Select``.
+class ChoiceFilterScreen(ModalScreen[object | None]):
+    """Pick one value to filter a browser by, via a ``Select``.
 
     Resolves to one of three outcomes, kept distinct so "all" never collapses
     into the cancel ``None``:
 
-    * a project name — filter to that project;
-    * :data:`ALL_PROJECTS` — clear the filter;
+    * a choice — filter to that value;
+    * :data:`ALL_CHOICES` — clear the filter;
     * ``None`` — escape/cancel, leave the active filter untouched.
 
     The dropdown auto-expands and applies on selection (no Apply button). The
@@ -39,26 +43,35 @@ class ProjectFilterScreen(ModalScreen[object | None]):
 
     BINDINGS = [("escape", "cancel", "Cancel")]
 
-    def __init__(self, projects: list[str], current: str | None = None) -> None:
+    def __init__(
+        self,
+        title: str,
+        choices: list[str],
+        current: str | None = None,
+        *,
+        all_label: str = "All",
+    ) -> None:
         super().__init__()
-        self._projects = projects
-        self._initial: object = ALL_PROJECTS if current is None else current
+        self._title = title
+        self._choices = choices
+        self._all_label = all_label
+        self._initial: object = ALL_CHOICES if current is None else current
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
-            yield Label("Filter by project", classes="modal-title")
+            yield Label(self._title, classes="modal-title")
             yield Select(
                 [
-                    ("All projects", ALL_PROJECTS),
-                    *((proj, proj) for proj in self._projects),
+                    (self._all_label, ALL_CHOICES),
+                    *((choice, choice) for choice in self._choices),
                 ],
                 value=self._initial,
                 allow_blank=False,
-                id="project-select",
+                id="choice-select",
             )
 
     def on_mount(self) -> None:
-        select = self.query_one("#project-select", Select)
+        select = self.query_one("#choice-select", Select)
         select.focus()
         select.expanded = True  # open the dropdown so picking is one gesture
 
@@ -69,3 +82,12 @@ class ProjectFilterScreen(ModalScreen[object | None]):
 
     def action_cancel(self) -> None:
         self.dismiss(None)
+
+
+class ProjectFilterScreen(ChoiceFilterScreen):
+    """The project filter the memory and observations browsers share."""
+
+    def __init__(self, projects: list[str], current: str | None = None) -> None:
+        super().__init__(
+            "Filter by project", projects, current, all_label="All projects"
+        )

@@ -1,0 +1,65 @@
+/* Log viewer layout. The house theme and the shared styling come from
+ * tui/app.tcss; only log-viewer-specific layout lives here. */
+
+#body {
+    height: 1fr;
+}
+
+#nav {
+    width: 1fr;
+    border-right: solid $panel;
+    padding: 0 1;
+}
+
+#filter {
+    margin-bottom: 1;
+}
+
+#list {
+    height: 1fr;
+}
+
+/* Day rows read as section headers; leaves inherit the theme. */
+#list > .tree--guides,
+#list > .tree--guides-hover,
+#list > .tree--guides-selected {
+    color: $panel;
+}
+
+/* The detail pane gets the wider share: it renders whole records and stacks. */
+#detail {
+    width: 2fr;
+    padding: 1 2;
+}
+
+#detail .title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+#detail .help {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#detail .subhead {
+    text-style: bold;
+    margin-top: 1;
+}
+
+#detail .message {
+    margin-bottom: 1;
+}
+
+/* A long field's name sits dim above its wrapped block. */
+#detail .fieldname {
+    color: $text-muted;
+    margin-top: 1;
+}
+
+/* Wrapped blocks (invocation args, stack traces) sit on a panel inset so they
+ * read as preformatted matter, distinct from the metadata rows. */
+#detail .block {
+    background: $surface;
+    padding: 0 1;
+}

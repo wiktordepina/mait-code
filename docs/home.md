@@ -77,16 +77,18 @@ and `Enter` does the obvious thing on each:
 ### Opening the other TUIs
 
 [The board](board.md), [the memory browser](memory-browser.md), [the
-observations browser](observations.md) and [the settings editor](settings.md)
-are full applications in their own right. Each has a dedicated **launch leaf**
-in its section, marked with a `↗` and shown in the accent colour so it reads as
-a hand-off rather than just another row:
+observations browser](observations.md), [the settings editor](settings.md) and
+[the log viewer](logs.md) are full applications in their own right. Each has a
+dedicated **launch leaf** in its section, marked with a `↗` and shown in the
+accent colour so it reads as a hand-off rather than just another row:
 
 - `↗ Open board` — under **Board**
 - `↗ Open memory browser` — under **Memory**
 - `↗ Open observations` — under **Memory**, beneath *Reflection status* (it's
   that count's drill-down)
 - `↗ Open settings` — under **System**
+- `↗ Open logs` — under **System** (highlighting it previews the log file's
+  whereabouts and today's tallies)
 
 Press `Enter` on one and home steps aside to run that TUI. When you quit it
 (`q`), home comes back — and its badges reflect anything you just changed, because
@@ -95,8 +97,8 @@ ordinary expand/collapse sections, so you never lose the ability to fold a branc
 away.
 
 The same hand-offs live in the `Ctrl+P` command palette (**Open board**,
-**Open memory**, **Open observations**, **Open settings**), alongside
-**Reload** and **Reindex memory**.
+**Open memory**, **Open observations**, **Open settings**, **Open logs**),
+alongside **Reload** and **Reindex memory**.
 
 ## What each section shows
 
@@ -107,7 +109,7 @@ The same hand-offs live in the `Ctrl+P` command palette (**Open board**,
 | **Reminders** | Overdue and upcoming, with the overdue count raised in alarm | Overdue, Upcoming |
 | **Inbox** | How many captured items are waiting for triage | — |
 | **Identity** | What Claude is made of | System prompt |
-| **System** | Health, configuration, and where things live | `↗ Open settings`, Doctor, Version & paths |
+| **System** | Health, configuration, and where things live | `↗ Open settings`, `↗ Open logs`, Doctor, Version & paths |
 
 A section's badge carries the headline number — `3 active`, `1 overdue!` — so the
 tree is a status readout on its own, before you open anything.

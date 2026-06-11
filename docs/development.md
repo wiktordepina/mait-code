@@ -311,12 +311,13 @@ def mem_db(tmp_path):
    `MaitApp.notify`.
 7. Add a snapshot test (see "Snapshot tests" above).
 
-The five shipped surfaces are worked examples: `cli/_home_tui.py` (the home
+The six shipped surfaces are worked examples: `cli/_home_tui.py` (the home
 hub, a tree-navigable master–detail that launches the others), `cli/_board_tui.py`
 (the board), `cli/_settings_tui.py` (the settings editor, a master–detail tree),
-`cli/_memory_tui.py` (the memory browser, a read-only master–detail), and
+`cli/_memory_tui.py` (the memory browser, a read-only master–detail),
 `cli/_observations_tui.py` (the observations browser, the same shape over the
-raw extraction tier). Theme
+raw extraction tier), and `cli/_logs_tui.py` (the log viewer, the same shape
+again over the structured JSONL logs). Theme
 persistence is free — `MaitApp.on_unmount` writes the active theme back to the
 `theme` setting for every surface, so a user's pick survives across sessions.
 
