@@ -33,7 +33,9 @@ from mait_code.tools.memory.embeddings import (
 )
 from mait_code.tools.memory.entities import (
     find_entity_by_name,
+    get_ego_graph,
     get_entity_relationships,
+    list_graph_entities,
     merge_entities,
     search_entities,
     upsert_entity,
@@ -111,7 +113,9 @@ __all__ = [
     "scope_boost",
     # Entities
     "find_entity_by_name",
+    "get_ego_graph",
     "get_entity_relationships",
+    "list_graph_entities",
     "merge_entities",
     "search_entities",
     "upsert_entity",

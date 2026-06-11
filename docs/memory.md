@@ -240,6 +240,10 @@ tuples (`ENTITY_TYPES`, `RELATIONSHIP_TYPES` in `tools/memory/entities.py`),
 so prompt and enforcement cannot drift. Every relationship carries a free-text
 context field explaining the connection.
 
+The graph has its own interactive surface — [the graph
+explorer](graph.md) (`mait-code graph`) — which renders any entity's
+neighbourhood as a node-link diagram or a flat relationship table.
+
 Aliases the extractor coins for the same thing (e.g. `User` alongside the
 user's actual name) can be folded together with
 `mc-tool-memory entities merge <source> <target>`: the source's relationships
@@ -479,6 +483,14 @@ against the reflection watermark, with each day's capture sessions read from
 the JSONL logs. It answers "what has the observe hook collected, and what
 will the next `/reflect` chew on?" — see [the observations browser
 guide](observations.md) for the full tour.
+
+### Graph explorer (`mait-code graph`)
+
+The knowledge graph's own surface: a mention-ranked entity list, the selected
+entity's 1-hop neighbourhood as a node-link diagram or a flat relationship
+table (`t` swaps), and a detail pane carrying each relationship's free-text
+context. Single-mention and orphan entities are hidden by default (`a`
+reveals them). See [the graph explorer guide](graph.md) for the full tour.
 
 ### Skills
 

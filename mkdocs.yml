@@ -119,6 +119,7 @@ nav:
       - The settings editor: settings.md
       - The memory browser: memory-browser.md
       - The observations browser: observations.md
+      - The graph explorer: graph.md
       - The log viewer: logs.md
       - Multi-machine sync: sync.md
   - Concepts:

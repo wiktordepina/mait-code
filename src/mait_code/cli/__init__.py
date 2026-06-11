@@ -758,6 +758,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._observations_tui import run_observations_tui
 
             run_observations_tui()
+        elif target is HomeTarget.GRAPH:
+            from mait_code.cli._graph_tui import run_graph_tui
+
+            run_graph_tui()
         elif target is HomeTarget.SETTINGS:
             from mait_code.cli._settings_tui import run_interactive_editor
 
@@ -854,6 +858,40 @@ def _memory_render() -> None:
         if len(group) > 5:
             typer.echo(f"  … and {len(group) - 5} more")
         typer.echo("")
+
+
+@app.command("graph")
+def graph() -> None:
+    """Explore the entity knowledge graph (text summary when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._graph_tui import run_graph_tui
+
+        run_graph_tui()
+    else:
+        _graph_render()
+
+
+def _graph_render() -> None:
+    """Print the graph's hubs as a text summary (the non-TTY fallback)."""
+    from mait_code.tools.memory.db import connection
+    from mait_code.tools.memory.entities import list_graph_entities
+
+    with connection() as conn:
+        entities = list_graph_entities(conn, min_mentions=2, require_relationship=True)
+
+    if not entities:
+        typer.echo("No connected entities yet — the graph grows as sessions run.")
+        return
+
+    typer.echo(f"Knowledge graph: {len(entities)} connected entities")
+    for entity in entities[:30]:
+        typer.echo(
+            f"  {entity['entity_type']:<8} {entity['name']}"
+            f" — {entity['mention_count']} mentions"
+            f" · {entity['degree']} link{'s' if entity['degree'] != 1 else ''}"
+        )
+    if len(entities) > 30:
+        typer.echo(f"  … and {len(entities) - 30} more")
 
 
 @app.command("observations")

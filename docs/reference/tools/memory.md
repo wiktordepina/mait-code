@@ -71,7 +71,11 @@
 
 ::: mait_code.tools.memory.find_entity_by_name
 
+::: mait_code.tools.memory.get_ego_graph
+
 ::: mait_code.tools.memory.get_entity_relationships
+
+::: mait_code.tools.memory.list_graph_entities
 
 ::: mait_code.tools.memory.merge_entities
 
