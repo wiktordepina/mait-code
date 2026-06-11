@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **`--json` on mutating board subcommands** — `add`, `move`, `refine`,
+  `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`,
+  `archive`, `comment`, `edit` and `remove` now accept `--json`, emitting the
+  affected card after the mutation in the `show --json` shape (tags,
+  references and comments included). Scripted callers get e.g. the new
+  card's id from `add --json` instead of parsing it out of prose;
+  `remove --json` emits the card as it was before deletion. The read side
+  (`list`, `show`, `next`, `ref list`, `summary`) already spoke JSON.
+
 ## [0.58.0] — 2026-06-11
 
 ### Added

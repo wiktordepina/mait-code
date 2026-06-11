@@ -151,6 +151,7 @@ def _insert_card(
 
 
 def _ns(**kwargs):
+    kwargs.setdefault("json", False)  # parsers define --json on every subcommand
     return argparse.Namespace(**kwargs)
 
 
@@ -895,6 +896,189 @@ def test_cmd_remove_not_found(mock_conn):
 
     with pytest.raises(SystemExit):
         cmd_remove(_ns(id=999))
+
+
+# --- --json on mutating subcommands ---
+
+
+def test_cmd_add_json_emits_new_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_add
+
+    cmd_add(
+        _ns(
+            title=["Fix", "login"],
+            description="desc",
+            priority="high",
+            project=None,
+            json=True,
+        )
+    )
+    data = json.loads(capsys.readouterr().out)
+    assert data["title"] == "Fix login"
+    assert data["status"] == BACKLOG
+    assert data["priority"] == "high"
+    assert data["comments"] == []
+    assert isinstance(data["id"], int)
+
+
+def test_cmd_move_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_move
+
+    cid = _insert_card(mock_conn, "m")
+    cmd_move(_ns(id=cid, status=REFINED, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["id"] == cid
+    assert data["status"] == REFINED
+
+
+def test_cmd_refine_json_keeps_warning_on_stderr(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_refine
+
+    cid = _insert_card(mock_conn, "r")
+    cmd_refine(_ns(id=cid, description="d", acceptance=None, json=True))
+    captured = capsys.readouterr()
+    assert "no acceptance criteria" in captured.err
+    data = json.loads(captured.out)
+    assert data["status"] == REFINED
+    assert data["description"] == "d"
+
+
+def test_cmd_complete_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_complete
+
+    cid = _insert_card(mock_conn, "c", status=IN_PROGRESS)
+    cmd_complete(_ns(id=cid, summary=["shipped"], json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == DONE
+    assert data["completion_summary"] == "shipped"
+    assert data["completed_at"] is not None
+
+
+def test_cmd_block_json_emits_tag_and_comment(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_block
+
+    cid = _insert_card(mock_conn, "b")
+    cmd_block(_ns(id=cid, reason=["waiting", "on", "infra"], json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert BLOCKED_TAG in data["tags"]
+    assert data["comments"][-1]["body"] == "Blocked: waiting on infra"
+
+
+def test_cmd_unblock_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_unblock
+
+    cid = _insert_card(mock_conn, "b")
+    service.block_card(mock_conn, cid)
+    cmd_unblock(_ns(id=cid, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert BLOCKED_TAG not in data["tags"]
+
+
+def test_cmd_tag_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_tag
+
+    cid = _insert_card(mock_conn, "t")
+    cmd_tag(_ns(id=cid, tag="urgent", json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["tags"] == ["urgent"]
+
+
+def test_cmd_untag_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_untag
+
+    cid = _insert_card(mock_conn, "t")
+    service.add_tag(mock_conn, cid, "urgent")
+    cmd_untag(_ns(id=cid, tag="urgent", json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["tags"] == []
+
+
+def test_cmd_ref_add_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_ref_add
+
+    cid = _insert_card(mock_conn, "r")
+    cmd_ref_add(_ns(id=cid, label="PR", value=["https://example.com/x"], json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["references"] == [{"label": "PR", "value": "https://example.com/x"}]
+
+
+def test_cmd_ref_remove_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board import service
+    from mait_code.tools.board.cli import cmd_ref_remove
+
+    cid = _insert_card(mock_conn, "r")
+    service.add_reference(mock_conn, cid, "a", "1")
+    cmd_ref_remove(_ns(id=cid, position=1, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["references"] == []
+
+
+def test_cmd_archive_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_archive
+
+    cid = _insert_card(mock_conn, "a")
+    cmd_archive(_ns(id=cid, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == ARCHIVED
+
+
+def test_cmd_comment_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_comment
+
+    cid = _insert_card(mock_conn, "c")
+    cmd_comment(_ns(id=cid, body=["looks", "good"], author="claude", json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["comments"] == [
+        {
+            "author": "claude",
+            "body": "looks good",
+            "created_at": data["comments"][0]["created_at"],
+        }
+    ]
+
+
+def test_cmd_edit_json_emits_card(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_edit
+
+    cid = _insert_card(mock_conn, "old")
+    cmd_edit(
+        _ns(
+            id=cid,
+            title="new",
+            description=None,
+            priority=None,
+            acceptance=None,
+            json=True,
+        )
+    )
+    data = json.loads(capsys.readouterr().out)
+    assert data["title"] == "new"
+
+
+def test_cmd_remove_json_emits_card_as_it_was(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_remove
+
+    cid = _insert_card(mock_conn, "doomed")
+    cmd_remove(_ns(id=cid, json=True))
+    data = json.loads(capsys.readouterr().out)
+    assert data["id"] == cid
+    assert data["title"] == "doomed"
+    assert (
+        mock_conn.execute("SELECT id FROM cards WHERE id = ?", (cid,)).fetchone()
+        is None
+    )
+
+
+def test_cmd_remove_json_not_found_exits(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_remove
+
+    with pytest.raises(SystemExit):
+        cmd_remove(_ns(id=999, json=True))
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "not found" in captured.err
 
 
 # --- summary ---

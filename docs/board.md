@@ -250,25 +250,25 @@ mc-tool-board show ID [--json]
 mc-tool-board summary [--all] [--project PROJECT] [--json]
 
 # Create & edit
-mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ...]
-mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...]
-mc-tool-board comment ID "<note>" [--author me|claude]
+mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ...] [--json]
+mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--json]
+mc-tool-board comment ID "<note>" [--author me|claude] [--json]
 
 # Flow
-mc-tool-board refine ID [--description ...] [--acceptance ...]   # → refined
-mc-tool-board next [--project ...] [--claim] [--json]            # top refined card; --claim → in_progress
-mc-tool-board complete ID --summary "<what was done>"            # → done
-mc-tool-board move ID <backlog|refined|in_progress|done|archived>
-mc-tool-board archive ID                                         # hide without deleting
-mc-tool-board remove ID                                          # permanent delete
+mc-tool-board refine ID [--description ...] [--acceptance ...] [--json]   # → refined
+mc-tool-board next [--project ...] [--claim] [--json]                     # top refined card; --claim → in_progress
+mc-tool-board complete ID --summary "<what was done>" [--json]            # → done
+mc-tool-board move ID <backlog|refined|in_progress|done|archived> [--json]
+mc-tool-board archive ID [--json]                                         # hide without deleting
+mc-tool-board remove ID [--json]                                          # permanent delete
 
 # Tags & blocking
-mc-tool-board tag ID <tag>      /  mc-tool-board untag ID <tag>
-mc-tool-board block ID "<reason>"  /  mc-tool-board unblock ID
+mc-tool-board tag ID <tag> [--json]      /  mc-tool-board untag ID <tag> [--json]
+mc-tool-board block ID "<reason>" [--json]  /  mc-tool-board unblock ID [--json]
 
 # References
-mc-tool-board ref add ID <label> <value>
-mc-tool-board ref remove ID <position>
+mc-tool-board ref add ID <label> <value> [--json]
+mc-tool-board ref remove ID <position> [--json]
 mc-tool-board ref list ID [--json]
 
 # Export
@@ -277,8 +277,12 @@ mc-tool-board export [--format ...] [--out FILE] \
     [--all | --project ...] [--status STATUS] [--archived] [--search TEXT]   # whole board
 ```
 
-`--json` on the read commands gives machine-readable output — handy for scripting
-or for Claude to consume.
+`--json` gives machine-readable output everywhere — handy for scripting or for
+Claude to consume. On the read commands it emits what they list; on mutating
+commands it emits the affected card after the mutation (the `show --json`
+shape, comments included), so e.g. `add --json` hands a script the new card's
+id without parsing prose. `remove --json` emits the card as it was before
+deletion.
 
 `export` renders a card — or a whole board listing, grouped by column — as a
 portable document. Markdown embeds the stored description, acceptance criteria
