@@ -470,6 +470,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -670,6 +674,62 @@
     
   
     The observations browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The graph explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The log viewer
   
 
     
@@ -1318,6 +1378,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#mait_code.logging.log_file_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;log_file_path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.logging.log_invocation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1903,6 +1974,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#mait_code.logging.log_file_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;log_file_path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.logging.log_invocation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1958,6 +2040,30 @@
 <div class="doc doc-object doc-function">
 
 
+<h2 id="mait_code.logging.log_file_path" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">log_file_path</span>
+
+
+<a href="#mait_code.logging.log_file_path" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">log_file_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><span title="pathlib.Path">Path</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Return the active log file path, creating its directory if needed.</p>
+<p>The <code>log-file</code> setting when set to a concrete path, otherwise
+<code>&lt;state-dir&gt;/mait-code.jsonl</code>. The one resolution shared by the writing
+side (:func:<code>setup_logging</code>) and the read side (the <code>mait-code logs</code>
+viewer).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="mait_code.logging.log_invocation" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">log_invocation</span>
 
@@ -1973,8 +2079,9 @@
     <div class="doc doc-contents first">
 
         <p>Decorate CLI tool/hook entry points so invocations are logged.</p>
-<p>Logs the command name and parsed arguments on entry, and status plus
-duration on exit.</p>
+<p>Logs the command name and parsed arguments on entry (<code>event: invoked</code>,
+<code>args</code>), and status plus duration on exit (<code>event: completed</code> /
+<code>failed</code> / <code>exited</code>, <code>duration_ms</code>).</p>
 
 
 <table>
@@ -2074,6 +2181,9 @@ built-in sensitive set.</p>
 
         <p>Configure the <code>mait_code</code> logger hierarchy with a daily-rotating file handler.</p>
 <p>Safe to call multiple times — subsequent calls are no-ops.</p>
+<p>Also injects the settings <code>[env]</code> table into the process environment
+(:func:<code>mait_code.config.apply_env</code>): every tool and hook entry point
+passes through here, making it the shared startup path.</p>
 
 
     </div>

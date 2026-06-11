@@ -12,11 +12,13 @@
         <meta name="author" content="Wiktor de Pina">
       
       
-        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/contributing-docs/">
+        <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/graph/">
       
       
-        <link rel="prev" href="../development/">
+        <link rel="prev" href="../observations/">
       
+      
+        <link rel="next" href="../logs/">
       
       
         
@@ -27,7 +29,7 @@
     
     
       
-        <title>Contributing to docs - mait-code</title>
+        <title>The graph explorer - mait-code</title>
       
     
     
@@ -80,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contributing-to-the-docs" class="md-skip">
+        <a href="#the-graph-explorer" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Contributing to docs
+              The graph explorer
             
           </span>
         </div>
@@ -259,10 +261,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../setup/" class="md-tabs__link">
           
   
@@ -347,12 +351,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../development/" class="md-tabs__link">
           
   
@@ -449,8 +451,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -476,19 +480,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -506,7 +513,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -689,10 +696,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../graph/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The graph explorer
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -708,6 +742,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-it-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why it exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-views-of-a-neighbourhood" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two views of a neighbourhood
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#walking-the-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Walking the graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-noise-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The noise filter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-tty-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-TTY fallback
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1738,10 +1869,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1753,22 +1882,19 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -1786,7 +1912,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1829,37 +1955,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing to docs
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../contributing-docs/" class="md-nav__link">
         
   
   
@@ -1875,120 +1974,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#quick-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prose-docs-docsmd" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prose docs (docs/*.md)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#api-reference-docsreference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API reference (docs/reference/)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="API reference (docs/reference/)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-__all__-contract" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The __all__ contract
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-module-to-the-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a module to the reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#removing-a-symbol-from-the-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Removing a symbol from the reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#google-docstring-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Google docstring style
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-ci-runs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What CI runs
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2028,10 +2013,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-reference" class="md-nav__link">
+  <a href="#why-it-exists" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick reference
+        Why it exists
       
     </span>
   </a>
@@ -2039,10 +2024,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prose-docs-docsmd" class="md-nav__link">
+  <a href="#the-layout" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prose docs (docs/*.md)
+        The layout
       
     </span>
   </a>
@@ -2050,60 +2035,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#api-reference-docsreference" class="md-nav__link">
+  <a href="#two-views-of-a-neighbourhood" class="md-nav__link">
     <span class="md-ellipsis">
       
-        API reference (docs/reference/)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="API reference (docs/reference/)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-__all__-contract" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The __all__ contract
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-module-to-the-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a module to the reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#removing-a-symbol-from-the-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Removing a symbol from the reference
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#google-docstring-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Google docstring style
+        Two views of a neighbourhood
       
     </span>
   </a>
@@ -2111,10 +2046,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-ci-runs" class="md-nav__link">
+  <a href="#walking-the-graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What CI runs
+        Walking the graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-noise-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The noise filter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-tty-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-TTY fallback
       
     </span>
   </a>
@@ -2138,7 +2106,7 @@
 
 
   
-    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/contributing-docs.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/wiktordepina/mait-code/edit/main/docs/graph.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2146,181 +2114,135 @@
   
 
 
-<h1 id="contributing-to-the-docs">Contributing to the docs<a class="headerlink" href="#contributing-to-the-docs" title="Permanent link">&para;</a></h1>
-<p>This page covers the conventions for editing prose docs, adding API
-reference pages, and regenerating the auto-generated bits. It is the
-counterpart to <code>docs/gen_ref_pages.py</code> — read both if you are touching
-the reference surface.</p>
-<h2 id="quick-reference">Quick reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Install docs dependencies</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>docs
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Build the site locally and serve at http://127.0.0.1:8000</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>serve
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Strict build (used by CI; must be green before merging)</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Regenerate docs/reference/*.md after editing __all__</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>docs/gen_ref_pages.py
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Check for reference drift (CI-style)</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>docs/gen_ref_pages.py<span class="w"> </span>--check
-</span></code></pre></div>
-<h2 id="prose-docs-docsmd">Prose docs (<code>docs/*.md</code>)<a class="headerlink" href="#prose-docs-docsmd" title="Permanent link">&para;</a></h2>
-<p>The hand-authored pages under <code>docs/</code> populate six tabs:</p>
+<h1 id="the-graph-explorer">The graph explorer<a class="headerlink" href="#the-graph-explorer" title="Permanent link">&para;</a></h1>
+<p><code>mait-code graph</code> is a full-screen, <strong>read-only</strong> window onto the knowledge
+graph — the entities and relationships the observe hook quietly accumulates
+alongside your memories. Where <a href="../memory-browser/">the memory browser</a> shows
+what the companion <em>remembers</em>, this shows what it has <em>connected</em>: pick an
+entity and see its immediate neighbourhood, either as a node-link diagram or
+as a flat relationship table, with every edge's free-text context a glance
+away.</p>
+<p><img alt="The graph explorer: a filter box over a mention-ranked entity list on the
+left, the selected entity's neighbourhood drawn as a node-link diagram in the
+centre, and the entity's metadata with a relationship's context text on the
+right." src="../assets/graph/graph.png" /></p>
+<h2 id="why-it-exists">Why it exists<a class="headerlink" href="#why-it-exists" title="Permanent link">&para;</a></h2>
+<p>Every session, the observe hook extracts entities (people, projects, tools,
+services, concepts, organisations) and typed relationships between them into
+<code>memory.db</code>. The text verbs — <code>mc-tool-memory entities</code> and <code>relationships</code> —
+could already list them, but lists hide the one thing a graph is <em>for</em>: shape.
+That your projects share infrastructure, that one tool sits under half your
+stack, that a person connects two clusters. The explorer makes the
+neighbourhood visible, and surfaces the relationship <strong>context</strong> sentences —
+the richest field the graph holds, which nothing else displays.</p>
+<p>It is deliberately <strong>ego-centric</strong>: you always look at one entity's 1-hop
+neighbourhood, never the whole graph at once. The topology decides this — the
+graph is hub-and-spoke with a long noise tail, so a whole-graph view would be
+an unreadable hairball while any single neighbourhood renders cleanly.</p>
+<h2 id="the-layout">The layout<a class="headerlink" href="#the-layout" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>The masthead</strong> — the shared brand banner, labelled <em>Graph</em>, with the
+  entity count, the current centre and its link count, and the filter state
+  folded into the subtitle.</li>
+<li><strong>The body</strong> — a <strong>filter box</strong> over the <strong>entity list</strong> on the left
+  (ordered by mention count, each row glyph-typed), the <strong>neighbourhood</strong>
+  in the centre (the widest share), and the <strong>detail pane</strong> on the right.</li>
+<li><strong>The footer</strong> — the live key hints.</li>
+</ul>
+<p>Each entity type has a glyph and a theme colour: <code>●</code> person, <code>◆</code> project,
+<code>▲</code> tool, <code>■</code> service, <code>○</code> concept, <code>★</code> org, <code>·</code> unknown. The colours follow
+the active theme, so the graph re-skins with <code>Ctrl+P</code> like every other
+mait-code TUI.</p>
+<h2 id="two-views-of-a-neighbourhood">Two views of a neighbourhood<a class="headerlink" href="#two-views-of-a-neighbourhood" title="Permanent link">&para;</a></h2>
+<p>The centre pane has two interchangeable renderings — <strong><code>t</code> swaps them</strong>:</p>
+<ul>
+<li><strong>The graph view</strong> draws the neighbourhood as a node-link diagram (via
+  <a href="https://github.com/mahrz24/netext">netext</a>): boxes coloured by entity
+  type, the centre entity inverted, arrows showing direction. Edge labels
+  appear only on small neighbourhoods (≤15 nodes) — the renderer draws them
+  with no collision avoidance, so at hub density they would overdraw each
+  other. <code>+</code>/<code>-</code> zoom; the view starts auto-fitted.</li>
+<li><strong>The table view</strong> lists one relationship per row: glyph-typed entities,
+  a directional <code>─type─▶</code> column, and the context line (clipped — the detail
+  pane has it in full). At hub density this reads better than any diagram,
+  and it is the only view that shows <em>every</em> edge when two entities are
+  connected by more than one relationship type (the diagram draws one line
+  per pair).</li>
+</ul>
+<p><img alt="The table view: one relationship per row — glyph-typed entity columns
+flanking a directional relationship arrow, the centre entity underlined, and
+each edge's context line in italics." src="../assets/graph/table.png" /></p>
+<h2 id="walking-the-graph">Walking the graph<a class="headerlink" href="#walking-the-graph" title="Permanent link">&para;</a></h2>
+<p>Navigation is the same in both views:</p>
+<ul>
+<li><strong>Scroll</strong> the entity list and the explorer follows: the detail pane
+  previews each entity at once, and the neighbourhood re-centres when the
+  cursor rests for a beat (hub layouts are too heavy to redraw on every
+  arrow press). <strong>Enter</strong> re-centres immediately.</li>
+<li>In the <strong>graph view</strong>, click any node to re-centre on it; click an edge to
+  read its context in the detail pane.</li>
+<li>In the <strong>table view</strong>, moving the cursor previews each relationship's
+  context; <strong>Enter</strong> on a row walks to the entity at its other end.</li>
+</ul>
+<p>The detail pane always shows the selection: an entity's type, mention count,
+link count and seen window — or a relationship's endpoints, seen window, and
+its full context text.</p>
+<h2 id="the-noise-filter">The noise filter<a class="headerlink" href="#the-noise-filter" title="Permanent link">&para;</a></h2>
+<p>Most of the graph's entities are single-mention dust — session ephemera the
+extractor noticed once and never again. By default the entity list hides
+anything with <strong>fewer than two mentions or no relationships</strong>; <code>a</code> toggles
+the full, unfiltered list when you need to find something faint. Nothing is
+ever deleted by the explorer — the filter is a view, not a cleanup. (For
+actual cleanup, <code>mc-tool-memory entities merge</code> folds duplicate entities
+together — see <a href="../memory/#knowledge-graph">How memory works</a>.)</p>
+<h2 id="keys">Keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Tab</th>
-<th>What lives here</th>
+<th>Key</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Home</strong></td>
-<td><code>docs/README.md</code> — project intro, key features, quick start.</td>
+<td><code>/</code></td>
+<td>Focus the filter</td>
 </tr>
 <tr>
-<td><strong>Guide</strong></td>
-<td>Procedural how-to docs (<code>setup.md</code>, <code>board.md</code>, <code>sync.md</code>).</td>
+<td><code>t</code></td>
+<td>Swap graph ⇄ table</td>
 </tr>
 <tr>
-<td><strong>Concepts</strong></td>
-<td>Conceptual prose (<code>philosophy.md</code>, <code>memory.md</code>).</td>
+<td><code>a</code></td>
+<td>Toggle the noise filter (all ⇄ connected)</td>
 </tr>
 <tr>
-<td><strong>Architecture</strong></td>
-<td>System design (<code>architecture.md</code>).</td>
+<td><code>+</code> / <code>-</code></td>
+<td>Zoom the graph view</td>
 </tr>
 <tr>
-<td><strong>Reference</strong></td>
-<td><code>docs/reference/skills.md</code> (hand-authored) plus the Python API pages under <code>docs/reference/{tools,hooks}/</code> (auto-generated — see below).</td>
+<td><code>r</code></td>
+<td>Reload from the database</td>
 </tr>
 <tr>
-<td><strong>Contributing</strong></td>
-<td>Developer-facing docs (<code>development.md</code>, this file).</td>
+<td><code>1</code> / <code>2</code> / <code>3</code></td>
+<td>Focus list / centre / detail</td>
+</tr>
+<tr>
+<td><code>Esc</code></td>
+<td>Back to the list; from the list, quit</td>
+</tr>
+<tr>
+<td><code>q</code></td>
+<td>Quit</td>
 </tr>
 </tbody>
 </table>
-<p>When deciding where a new page belongs, think about why the reader is opening it: stepping through a procedure → Guide, building a mental model → Concepts, looking up specifics → Reference.</p>
-<p>Conventions:</p>
-<ul>
-<li><strong>Markdown</strong>, GitHub-style. The full set of pymdown extensions is
-  enabled in <code>mkdocs.yml</code> — admonitions, tabbed code blocks, mermaid
-  fences, footnotes, etc.</li>
-<li><strong>British English</strong> spelling and grammar (behaviour, organise,
-  centred).</li>
-<li><strong>Imperative</strong> mood in step-by-step guides ("Run the migration", not
-  "You should run the migration").</li>
-<li><strong>Headings start at H2</strong> within a page; the H1 is the page title
-  declared in the nav.</li>
-<li><strong>Internal links</strong> use relative Markdown paths (<code>./memory.md</code>,
-  <code>../architecture.md</code>); strict mode catches broken targets.</li>
-<li><strong>Code blocks</strong> declare their language for syntax highlighting:
-  <code>```python</code>, <code>```bash</code>, <code>```toml</code>, etc.</li>
-</ul>
-<p>To add a new prose page:</p>
-<ol>
-<li>Create the file under <code>docs/</code> (or a subdirectory if a section grows
-   that warrants nesting).</li>
-<li>Add it to the <code>nav:</code> block in <code>mkdocs.yml</code> under the appropriate
-   tab — <code>strict: true</code> will fail the build if a doc exists but is not
-   in the nav.</li>
-<li>Run <code>uv run mkdocs build --strict</code> to verify.</li>
-</ol>
-<h2 id="api-reference-docsreference">API reference (<code>docs/reference/</code>)<a class="headerlink" href="#api-reference-docsreference" title="Permanent link">&para;</a></h2>
-<p>The Python API pages — <code>docs/reference/{context,cli,config,llm,logging,ssl}.md</code> plus the nested <code>docs/reference/tools/*.md</code> and <code>docs/reference/hooks/*.md</code> — are <strong>regenerated from each module's <code>__all__</code></strong> by <code>docs/gen_ref_pages.py</code>. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's <code>--check</code> invocation will flag the drift.</p>
-<p><code>docs/reference/skills.md</code> and <code>docs/reference/mait-code.md</code> (the <code>mait-code</code> CLI command reference) are the only <strong>hand-authored</strong> files under <code>docs/reference/</code>. Edit them directly — <code>skills.md</code> when adding or renaming a slash command, <code>mait-code.md</code> when changing a CLI command. (Note the deliberate split: <code>reference/cli.md</code> is the <em>generated</em> <code>mait_code.cli</code> Python API, while <code>reference/mait-code.md</code> is the hand-authored command reference.)</p>
-<p>The nested layout mirrors the dotted module hierarchy: <code>mait_code.tools.memory</code> lives at <code>docs/reference/tools/memory.md</code> and renders at <code>/reference/tools/memory/</code>.</p>
-<h3 id="the-__all__-contract">The <code>__all__</code> contract<a class="headerlink" href="#the-__all__-contract" title="Permanent link">&para;</a></h3>
-<p>For a module to surface in the reference, it must:</p>
-<ol>
-<li>Be listed under one of the groups in <code>REFERENCE_MODULES</code> inside <code>docs/gen_ref_pages.py</code> (Core, Tools, or Hooks).</li>
-<li>Declare <code>__all__</code> as a list (or tuple) of string literals.</li>
-<li>Live at <code>src/mait_code/&lt;name&gt;.py</code> or <code>src/mait_code/&lt;dotted&gt;/&lt;name&gt;/__init__.py</code> (the generator resolves either layout).</li>
-</ol>
-<p>The generator parses <code>__all__</code> via <code>ast</code>, then re-scans the source
-text for <code># Section</code> comments interleaved inside the list. Those
-comments become H2 headings on the rendered page, grouping the
-symbols below them.</p>
-<p>Example from <code>src/mait_code/tools/memory/__init__.py</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="c1"># CLI</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="s2">&quot;main&quot;</span><span class="p">,</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="c1"># Storage</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">&quot;connection&quot;</span><span class="p">,</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s2">&quot;get_connection&quot;</span><span class="p">,</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="c1"># Embeddings</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="s2">&quot;EmbeddingProvider&quot;</span><span class="p">,</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="s2">&quot;embed_text&quot;</span><span class="p">,</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="o">...</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">]</span>
-</span></code></pre></div>
-<p>becomes a page with <code>## CLI</code>, <code>## Storage</code>, <code>## Embeddings</code>, …
-headings, each followed by a <code>:::</code> mkdocstrings directive per symbol.</p>
-<p>If a module has fewer than ~3 symbols, the section comments are
-usually noise — leave them out and let the symbols render as a flat
-list.</p>
-<h3 id="adding-a-module-to-the-reference">Adding a module to the reference<a class="headerlink" href="#adding-a-module-to-the-reference" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Add <code>__all__</code> to the module's <code>__init__.py</code> (or the single-file module). Re-export the public symbols you want documented; keep internals out.</li>
-<li>Optionally group with <code># Section</code> comments.</li>
-<li>Append a <code>(dotted_name, display)</code> tuple to the relevant group in <code>REFERENCE_MODULES</code> (<code>"Core"</code>, <code>"Tools"</code>, or <code>"Hooks"</code>) inside <code>docs/gen_ref_pages.py</code>. The display is the leaf name only — <code>"Memory"</code>, not <code>"Tools — Memory"</code> — since the group is conveyed by the surrounding nav section.</li>
-<li>Add the page to the corresponding nested sub-section of <code>Reference → Python API</code> in <code>mkdocs.yml</code>. The file path mirrors the dotted name: <code>tools.memory</code> → <code>reference/tools/memory.md</code>.</li>
-<li>Regenerate: <code>uv run python docs/gen_ref_pages.py</code>.</li>
-<li>Verify drift-free: <code>uv run python docs/gen_ref_pages.py --check</code>.</li>
-<li>Verify strict build: <code>uv run mkdocs build --strict</code>.</li>
-</ol>
-<h3 id="removing-a-symbol-from-the-reference">Removing a symbol from the reference<a class="headerlink" href="#removing-a-symbol-from-the-reference" title="Permanent link">&para;</a></h3>
-<p>Remove it from <code>__all__</code>. The next regeneration drops it from the
-page. Do not edit the generated Markdown directly.</p>
-<h2 id="google-docstring-style">Google docstring style<a class="headerlink" href="#google-docstring-style" title="Permanent link">&para;</a></h2>
-<p>mait-code uses Google-style docstrings throughout <code>src/mait_code/</code>
-because <code>mkdocstrings</code> (configured for <code>docstring_style: google</code>)
-renders them into the reference pages.</p>
-<p>The shape:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">store_memory</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">importance</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Persist an observation to the memory store.</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="sd">    Longer prose paragraph that explains the *why*, the side</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="sd">    effects, or any subtle behaviour. Omit if the summary line is</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="sd">    self-explanatory.</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="sd">    Args:</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="sd">        content: The observation text to store.</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="sd">        importance: 1-10 weight feeding the recency/importance</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="sd">            composite score.</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="sd">    Returns:</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="sd">        The new entry&#39;s primary-key ID.</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="sd">    Raises:</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="sd">        ValueError: If ``content`` is empty.</span>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span></code></pre></div>
-<p>Conventions:</p>
-<ul>
-<li><strong>Imperative</strong> summary line: "Persist X", not "Persists X" /
-  "This function persists X".</li>
-<li>Skip <code>Args:</code> if there are no parameters worth documenting beyond
-  what the signature already conveys.</li>
-<li>Skip <code>Returns:</code> if the function returns <code>None</code> obviously.</li>
-<li>Use double back-ticks for inline code (mkdocstrings renders them
-  cleanly in either Markdown or HTML contexts).</li>
-</ul>
-<p>If <code>mkdocs build --strict</code> complains about a symbol's docstring
-mentioning an annotation that isn't on the signature (<code>griffe: No
-type or annotation for parameter X</code>), add the missing type
-annotation rather than removing the documentation.</p>
-<h2 id="what-ci-runs">What CI runs<a class="headerlink" href="#what-ci-runs" title="Permanent link">&para;</a></h2>
-<p><code>.github/workflows/docs.yml</code> runs these on every push to <code>main</code>, every PR, every <code>v*</code> tag, and on <code>release: published</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--locked<span class="w"> </span>--group<span class="w"> </span>docs
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>docs/gen_ref_pages.py<span class="w"> </span>--check
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict
-</span></code></pre></div>
-<p>Pushes to <code>main</code> and tag pushes additionally deploy to GitHub Pages via <code>mike</code> — the <code>dev</code> alias from main, version + <code>latest</code> aliases from tags. PRs build but do not deploy.</p>
-<p>Run the same three commands locally before pushing to catch failures early.</p>
+<h2 id="non-tty-fallback">Non-TTY fallback<a class="headerlink" href="#non-tty-fallback" title="Permanent link">&para;</a></h2>
+<p>Like the other TUIs, <code>mait-code graph</code> only opens the explorer on a TTY.
+Piped or in CI it prints the graph's hubs instead — the connected entities
+with their types, mention counts and link counts — so the command always
+answers something.</p>
 
 
 

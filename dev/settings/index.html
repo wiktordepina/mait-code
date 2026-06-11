@@ -472,6 +472,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -743,6 +747,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#custom-environment-variables-the-env-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom environment variables — the [env] table
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom environment variables — the [env] table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#managing-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing them
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#off-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -844,6 +876,62 @@
     
   
     The observations browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The graph explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The log viewer
   
 
     
@@ -2070,6 +2158,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#custom-environment-variables-the-env-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom environment variables — the [env] table
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom environment variables — the [env] table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#managing-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing them
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#off-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2275,6 +2391,48 @@ the editor writes. If a change doesn't seem to take, check your environment —
 the <code>settings list</code> view names the source of every value, so a stray export
 shows up as <code>env</code>.</p>
 </div>
+<h2 id="custom-environment-variables-the-env-table">Custom environment variables — the <code>[env]</code> table<a class="headerlink" href="#custom-environment-variables-the-env-table" title="Permanent link">&para;</a></h2>
+<p>Some tools need environment variables that aren't mait-code settings at all —
+the classic case is <code>AWS_PROFILE</code> for Bedrock embeddings. Inside a Claude Code
+session the <code>env</code> block of <code>~/.claude/settings.json</code> supplies it, but a
+standalone <code>mait-code doctor --fix</code> or <code>mc-tool-memory reindex</code> would need a
+manual prefix on every invocation.</p>
+<p>Instead, declare them once in an <code>[env]</code> table at the end of <code>settings.toml</code>:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[env]</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
+</span></code></pre></div>
+<p>Every mait-code entry point — the <code>mait-code</code> CLI and TUIs, the <code>mc-tool-*</code>
+tools, the <code>mc-hook-*</code> hooks — injects these into its environment at startup.
+The rules:</p>
+<ul>
+<li><strong>The real environment wins.</strong> A variable already set in your shell is left
+  alone, so a one-off <code>AWS_PROFILE=other mc-tool-memory …</code> override still works.</li>
+<li><strong><code>MAIT_CODE_*</code> keys are not allowed.</strong> Those are first-class settings with
+  their own resolution order; <code>[env]</code> entries with that prefix are ignored at
+  startup and <code>doctor</code> warns about them.</li>
+<li><strong>The table survives rewrites.</strong> <code>settings set</code>, the interactive editor and
+  install/update all carry it over untouched.</li>
+</ul>
+<h3 id="managing-them">Managing them<a class="headerlink" href="#managing-them" title="Permanent link">&para;</a></h3>
+<p>You don't have to edit the file by hand (though that works too):</p>
+<ul>
+<li><strong>Interactive editor</strong> — the <strong>Custom env</strong> group lists every variable;
+  pick one to change its value or remove it, or use the <em>+ add variable…</em>
+  row to create one. Names are validated live as you type.</li>
+</ul>
+<p><img alt="The Custom env group in the settings editor: AWS_PROFILE selected with an
+editable value input, a provenance line naming the [env] table as the source,
+and Apply and Remove buttons." src="../assets/settings/settings-env.png" />
+- <strong>CLI</strong> — address a variable as <code>env.&lt;NAME&gt;</code>:</p>
+<div class="language-console highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>env.AWS_PROFILE<span class="w"> </span>dev-bedrock
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="gp">$ </span>mait-code<span class="w"> </span>settings<span class="w"> </span>get<span class="w"> </span>env.AWS_PROFILE
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="go">dev-bedrock   (settings)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="gp">$ </span>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">unset</span><span class="w"> </span>env.AWS_PROFILE
+</span></code></pre></div>
+<p><code>settings list</code> shows each entry as an <code>env.&lt;NAME&gt;</code> row with its provenance
+(<code>settings</code> when the table supplies it, <code>env</code> when your shell shadows it).
+Values whose names look secret (<code>KEY</code>, <code>TOKEN</code>, <code>SECRET</code>, <code>PASSWORD</code>,
+<code>CREDENTIAL</code>) are masked in the list and tree views.</p>
 <h2 id="off-the-terminal">Off the terminal<a class="headerlink" href="#off-the-terminal" title="Permanent link">&para;</a></h2>
 <p><code>mait-code settings</code> only opens the editor when it's attached to a TTY. Piped or
 redirected, it falls back to the read-only <code>settings list</code> — a provenance-aware

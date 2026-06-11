@@ -470,6 +470,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -670,6 +674,62 @@
     
   
     The observations browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The graph explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The log viewer
   
 
     
@@ -2938,6 +2998,21 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 <td>The data dir exists and is writable. With <code>--fix</code>, creates it (plus the <code>memory/observations</code> and <code>memory/reflections</code> subdirs) if missing.</td>
 </tr>
 <tr>
+<td><code>memory-embeddings</code></td>
+<td>ok / warn</td>
+<td>Every live memory entry carries a vector. Entries stored while the embedding provider was unavailable are invisible to semantic search; <code>warn</code> reports the count and points at <code>mc-tool-memory reindex</code>. With <code>--fix</code>, embeds just the missing entries — existing vectors are left alone (progress goes to stderr, so <code>--json</code> output stays parseable); if the embedding provider can't run, the warning stands and reports why.</td>
+</tr>
+<tr>
+<td><code>vector-search</code></td>
+<td>ok / warn</td>
+<td>The sqlite-vec extension loads and the vector table is queryable. <code>warn</code> means recall silently degrades to keyword-only search; the message names the configured embedding provider and model.</td>
+</tr>
+<tr>
+<td><code>observe-pipeline</code></td>
+<td>ok / warn</td>
+<td>The observe hook has recorded a capture recently. <code>warn</code> when the newest capture is over 7 days old, or when a memory database exists but the hook has never captured anything.</td>
+</tr>
+<tr>
 <td><code>uv-on-path</code></td>
 <td>ok / fail</td>
 <td><code>uv</code> is on <code>PATH</code> — required for <code>install</code> / <code>update</code>.</td>
@@ -3060,7 +3135,7 @@ the <code>settings-values</code> check).</p>
 <p>Settings fall into three groups:</p>
 <ul>
 <li><strong>Primary</strong> — written uncommented in <code>settings.toml</code>: <code>data-dir</code>, <code>log-level</code>, <code>log-file</code>, <code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code>, <code>bedrock-region</code>.</li>
-<li><strong>Advanced</strong> — written commented-out (the built-in default applies until you opt in via <code>set</code> or by uncommenting): <code>log-backup-count</code>, <code>extraction-model</code>, <code>reflection-model</code>, <code>llm-timeout</code>, <code>reflection-batch-size</code>, <code>reflection-novelty-gate</code>, <code>git-timeout</code>, and the scoring/dedup tuning knobs <code>score-weight-recency</code>, <code>score-weight-importance</code>, <code>score-weight-relevance</code>, <code>half-life-episodic</code>, <code>half-life-semantic</code>, <code>dedup-string-threshold</code>, <code>dedup-vector-threshold</code>, <code>dedup-conflict-threshold</code>, <code>scope-boost-global</code>, <code>scope-boost-cross-project</code>.</li>
+<li><strong>Advanced</strong> — written commented-out (the built-in default applies until you opt in via <code>set</code> or by uncommenting): <code>log-backup-count</code>, <code>extraction-model</code>, <code>reflection-model</code>, <code>llm-timeout</code>, <code>reflection-batch-size</code>, <code>reflection-novelty-gate</code>, <code>git-timeout</code>, and the scoring/dedup tuning knobs <code>score-weight-recency</code>, <code>score-weight-importance</code>, <code>score-weight-relevance</code>, <code>half-life-episodic</code>, <code>half-life-semantic</code>, <code>half-life-procedural</code>, <code>dedup-string-threshold</code>, <code>dedup-vector-threshold</code>, <code>dedup-conflict-threshold</code>, <code>scope-boost-global</code>, <code>scope-boost-cross-project</code>.</li>
 <li><strong>Derived</strong> (source <code>derived</code>, not settable): <code>embedding-dim</code>, <code>memory-db-path</code>, <code>reminders-db-path</code>, <code>model-cache-dir</code>, <code>observations-dir</code>, <code>project-aliases-path</code>.</li>
 </ul>
 <p>See the <a href="../../memory/">Memory guide</a> for per-setting defaults and the scoring/dedup tuning ranges.</p>

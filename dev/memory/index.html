@@ -470,6 +470,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -670,6 +674,62 @@
     
   
     The observations browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The graph explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The log viewer
   
 
     
@@ -1214,6 +1274,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-other-curated-layer-claude-codes-native-auto-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Other Curated Layer: Claude Code's Native Auto Memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#cli-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1252,6 +1323,17 @@
     <span class="md-ellipsis">
       
         Observations browser (mait-code observations)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graph-explorer-mait-code-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph explorer (mait-code graph)
       
     </span>
   </a>
@@ -2624,6 +2706,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-other-curated-layer-claude-codes-native-auto-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Other Curated Layer: Claude Code's Native Auto Memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#cli-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2662,6 +2755,17 @@
     <span class="md-ellipsis">
       
         Observations browser (mait-code observations)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graph-explorer-mait-code-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph explorer (mait-code graph)
       
     </span>
   </a>
@@ -2772,6 +2876,11 @@
 <td>"Chose REST over GraphQL for the public API"</td>
 </tr>
 <tr>
+<td><strong>Procedures</strong></td>
+<td><code>procedure</code> (procedural)</td>
+<td>"To debug a failing pages deploy: check the env protection rules first, then the tag ref"</td>
+</tr>
+<tr>
 <td><strong>Bugs fixed</strong></td>
 <td><code>event</code> (episodic)</td>
 <td>"Fixed race condition in the connection pool"</td>
@@ -2789,6 +2898,10 @@
 </tbody>
 </table>
 <p>Each item includes an importance rating (1-10) that influences search ranking.</p>
+<p>The boundary between the three semantic-adjacent categories: a <strong>procedure</strong>
+answers <em>"how do I do X next time?"</em> (a repeatable workflow, usually with
+steps); a <strong>decision</strong> answers <em>"what did we pick?"</em> (a choice made once); a
+<strong>preference</strong> answers <em>"what does the user like?"</em>.</p>
 <h3 id="raw-observation-logs">Raw observation logs<a class="headerlink" href="#raw-observation-logs" title="Permanent link">&para;</a></h3>
 <p>Every extraction is also appended to a daily JSONL file at <code>~/.claude/mait-code-data/memory/observations/YYYY-MM-DD.jsonl</code>. These serve as the source of truth — the database can be restored from them using <code>mc-tool-memory restore</code>.</p>
 <p>To <em>see</em> this tier — what's been captured, and what's still waiting for
@@ -2834,7 +2947,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 </tr>
 <tr>
 <td><code>entry_type</code></td>
-<td><code>fact</code>, <code>preference</code>, <code>event</code>, <code>decision</code>, <code>insight</code>, <code>task</code>, <code>relationship</code></td>
+<td><code>fact</code>, <code>preference</code>, <code>event</code>, <code>decision</code>, <code>procedure</code>, <code>insight</code>, <code>task</code>, <code>relationship</code></td>
 </tr>
 <tr>
 <td><code>importance</code></td>
@@ -2842,7 +2955,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 </tr>
 <tr>
 <td><code>memory_class</code></td>
-<td><code>episodic</code> (fast decay) or <code>semantic</code> (slow decay)</td>
+<td><code>episodic</code> (fast decay), <code>semantic</code> (slow decay), or <code>procedural</code> (slowest decay)</td>
 </tr>
 <tr>
 <td><code>scope</code></td>
@@ -3053,9 +3166,16 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <ol>
 <li>Install with the bedrock flag: <code>mait-code install --from &lt;source&gt; --embedding-provider bedrock</code>
    (or re-install if already installed)</li>
-<li>Ensure AWS credentials are available (e.g. via <code>aws configure</code> or IAM role)</li>
-<li>If you have existing local embeddings, run <code>mc-tool-memory reindex</code> to migrate</li>
+<li>Ensure AWS credentials are available (e.g. via <code>aws configure</code> or IAM role).
+   If you authenticate via a named profile, declare it once in the <code>[env]</code>
+   table of <code>settings.toml</code> so every tool picks it up — inside and outside
+   Claude Code sessions:</li>
 </ol>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[env]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
+</span></code></pre></div>
+<p>See <a href="../settings/#custom-environment-variables-the-env-table">Custom environment variables</a>.
+3. If you have existing local embeddings, run <code>mc-tool-memory reindex</code> to migrate</p>
 <p>The install command writes <code>embedding-provider = "bedrock"</code> to <code>~/.config/mait-code/settings.toml</code> and propagates it to <code>~/.claude/settings.json</code> automatically.</p>
 <h3 id="hybrid-search">Hybrid search<a class="headerlink" href="#hybrid-search" title="Permanent link">&para;</a></h3>
 <p>The default search mode (<code>hybrid</code>) runs both FTS5 and vector search, then merges:</p>
@@ -3073,10 +3193,26 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <li>Mention count (incremented each time the entity is seen)</li>
 <li>First and last seen timestamps</li>
 </ul>
-<p>Relationships between entities are typed (<code>uses</code>, <code>owns</code>, <code>contributes_to</code>, <code>depends_on</code>, <code>manages</code>, <code>related_to</code>) with a free-text context field explaining the connection.</p>
+<p>Both vocabularies are canonical and enforced at write time: entity types
+(<code>person</code>, <code>project</code>, <code>tool</code>, <code>service</code>, <code>concept</code>, <code>org</code>) coerce to <code>unknown</code>
+when the extraction model invents something else, and relationship types
+(<code>uses</code>, <code>owns</code>, <code>contributes_to</code>, <code>depends_on</code>, <code>manages</code>, <code>related_to</code>)
+coerce to <code>related_to</code>. The extraction prompt enums are built from the same
+tuples (<code>ENTITY_TYPES</code>, <code>RELATIONSHIP_TYPES</code> in <code>tools/memory/entities.py</code>),
+so prompt and enforcement cannot drift. Every relationship carries a free-text
+context field explaining the connection.</p>
+<p>The graph has its own interactive surface — <a href="../graph/">the graph
+explorer</a> (<code>mait-code graph</code>) — which renders any entity's
+neighbourhood as a node-link diagram or a flat relationship table.</p>
+<p>Aliases the extractor coins for the same thing (e.g. <code>User</code> alongside the
+user's actual name) can be folded together with
+<code>mc-tool-memory entities merge &lt;source&gt; &lt;target&gt;</code>: the source's relationships
+are repointed to the target (deduplicating where the target already has the
+edge), mention counts are summed, the seen window widens to span both, and
+the source entity is deleted.</p>
 <h2 id="scoring-how-results-are-ranked">Scoring: How Results Are Ranked<a class="headerlink" href="#scoring-how-results-are-ranked" title="Permanent link">&para;</a></h2>
 <p>Search results are ranked by a composite score:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 </span></code></pre></div>
 <h3 id="recency">Recency<a class="headerlink" href="#recency" title="Permanent link">&para;</a></h3>
 <p>Exponential decay based on memory class:</p>
@@ -3101,6 +3237,12 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <td><code>fact</code>, <code>preference</code>, <code>decision</code>, <code>insight</code>, <code>relationship</code></td>
 <td>90 days</td>
 <td>Persists — architectural decisions stay relevant for months</td>
+</tr>
+<tr>
+<td>Procedural</td>
+<td><code>procedure</code></td>
+<td>180 days</td>
+<td>Most durable — workflows go stale when superseded, not with time</td>
 </tr>
 </tbody>
 </table>
@@ -3155,6 +3297,12 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <td><code>90.0</code></td>
 <td>days</td>
 <td>Too short and facts fade; too long and stale facts persist.</td>
+</tr>
+<tr>
+<td><code>half-life-procedural</code></td>
+<td><code>180.0</code></td>
+<td>days</td>
+<td>Procedures decay when superseded, not with time — keep this long.</td>
 </tr>
 <tr>
 <td><code>dedup-string-threshold</code></td>
@@ -3235,11 +3383,11 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <li><strong>Batching:</strong> Processes entries in configurable batches (default 50), oldest first</li>
 </ul>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>/reflect                                    # Standard reflection
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/reflect                                    # Standard reflection
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 </span></code></pre></div>
 <h3 id="how-it-works_1">How it works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
 <ol>
@@ -3270,7 +3418,53 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <li>Temporary tasks or in-progress work</li>
 <li>Session-specific details</li>
 <li>Anything that changes frequently</li>
+<li>Per-project <em>code</em> facts — those belong to Claude Code's native auto memory (see below)</li>
 </ul>
+<h2 id="the-other-curated-layer-claude-codes-native-auto-memory">The Other Curated Layer: Claude Code's Native Auto Memory<a class="headerlink" href="#the-other-curated-layer-claude-codes-native-auto-memory" title="Permanent link">&para;</a></h2>
+<p>Claude Code (v2.1.59+) ships its own <strong>auto memory</strong>: a per-project directory
+at <code>~/.claude/projects/&lt;munged-path&gt;/memory/</code> holding a <code>MEMORY.md</code> index plus
+one markdown file per fact, loaded automatically into that project's sessions.
+It sits alongside mait-code's curated tier — two curated layers that would
+drift and double-spend context tokens if they carried the same facts.</p>
+<p>mait-code keeps them <strong>cleanly separated</strong> rather than merged:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Carries</th>
+<th>Scope</th>
+<th>Maintained by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Native auto memory</strong></td>
+<td>Code facts: architecture, build/test commands, repo gotchas</td>
+<td>Per project</td>
+<td>Claude Code itself</td>
+</tr>
+<tr>
+<td><strong>mait-code memory</strong></td>
+<td>User/identity facts: preferences, conventions, working style, cross-project decisions</td>
+<td>Cross-project</td>
+<td>The three-tier pipeline above</td>
+</tr>
+</tbody>
+</table>
+<p>The routing rule of thumb: <strong>facts about the project belong in the native
+layer; facts about you belong in mait-code.</strong> The <code>/reflect</code> and
+<code>memory-store</code> skills apply this rule when deciding where a fact goes, so
+project-specific code knowledge no longer accretes into mait-code's
+MEMORY.md.</p>
+<p>The native directory name is the project's absolute path with <code>/</code> replaced by
+<code>-</code> (<code>/home/w/mait-code</code> → <code>-home-w-mait-code</code>). That munging is lossy — a
+literal dash is indistinguishable from a path separator — so the memory
+browser's native view recovers readable project names best-effort, by
+checking which candidate paths actually exist on disk.</p>
+<p>Both layers are visible from one surface: the <a href="#memory-browser-mait-code-memory">memory
+browser</a>'s native view (<code>n</code>) lists every
+project's native memory files, read-only, regardless of where the browser was
+launched.</p>
 <h2 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
 <h3 id="memory-tool-mc-tool-memory">Memory tool (<code>mc-tool-memory</code>)<a class="headerlink" href="#memory-tool-mc-tool-memory" title="Permanent link">&para;</a></h3>
 <table>
@@ -3332,6 +3526,10 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <tr>
 <td><code>entities [query]</code></td>
 <td>Search or list knowledge graph entities</td>
+</tr>
+<tr>
+<td><code>entities merge &lt;source&gt; &lt;target&gt;</code></td>
+<td>Fold one entity into another: repoint relationships, sum mentions, delete the source (quote multi-word names)</td>
 </tr>
 <tr>
 <td><code>relationships &lt;entity&gt;</code></td>
@@ -3408,15 +3606,23 @@ reflection — open the <a href="../observations/">observations browser</a> with
 </table>
 <h3 id="memory-browser-mait-code-memory">Memory browser (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-mait-code-memory" title="Permanent link">&para;</a></h3>
 <p>Open the interactive, read-only memory browser with:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mait-code<span class="w"> </span>memory
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mait-code<span class="w"> </span>memory
 </span></code></pre></div>
 <p>This is a full-screen <a href="https://textual.textualize.io/">Textual</a> app over the
 same store: a tree of memories grouped by entry type on the left (newest
 first, counts per group), and the selected memory's body — rendered as
 markdown — with its metadata (created, importance, scope, class) on the
-right. <code>/</code> filters the list live by substring, <code>r</code> re-reads the store, and
-<code>?</code> shows the key cheat-sheet. It browses <em>everything</em>, across projects and
-scopes — the reading companion to <code>mc-tool-memory</code>'s query verbs.</p>
+right. <code>/</code> filters the list live by substring, <code>p</code> narrows to one project,
+<code>r</code> re-reads the store, and <code>?</code> shows the key cheat-sheet. It browses
+<em>everything</em>, across projects and scopes — the reading companion to
+<code>mc-tool-memory</code>'s query verbs.</p>
+<p><code>n</code> switches to the <strong>native view</strong>: Claude Code's <a href="#the-other-curated-layer-claude-codes-native-auto-memory">native auto
+memory</a> across
+<em>every</em> project — not just the one the browser was launched from — grouped
+by project, with each file's markdown rendered in the detail pane. The same
+keys apply (<code>/</code> filters by file name or content, <code>p</code> narrows to one project,
+<code>r</code> rescans, <code>n</code> returns to the store view). Like the rest of the browser
+it is strictly read-only: the native layer is Claude Code's to maintain.</p>
 <p>When you're not on a terminal that supports it (e.g. piping output, or in
 CI), <code>mait-code memory</code> falls back to a read-only grouped summary.</p>
 <h3 id="observations-browser-mait-code-observations">Observations browser (<code>mait-code observations</code>)<a class="headerlink" href="#observations-browser-mait-code-observations" title="Permanent link">&para;</a></h3>
@@ -3427,6 +3633,12 @@ against the reflection watermark, with each day's capture sessions read from
 the JSONL logs. It answers "what has the observe hook collected, and what
 will the next <code>/reflect</code> chew on?" — see <a href="../observations/">the observations browser
 guide</a> for the full tour.</p>
+<h3 id="graph-explorer-mait-code-graph">Graph explorer (<code>mait-code graph</code>)<a class="headerlink" href="#graph-explorer-mait-code-graph" title="Permanent link">&para;</a></h3>
+<p>The knowledge graph's own surface: a mention-ranked entity list, the selected
+entity's 1-hop neighbourhood as a node-link diagram or a flat relationship
+table (<code>t</code> swaps), and a detail pane carrying each relationship's free-text
+context. Single-mention and orphan entities are hidden by default (<code>a</code>
+reveals them). See <a href="../graph/">the graph explorer guide</a> for the full tour.</p>
 <h3 id="skills">Skills<a class="headerlink" href="#skills" title="Permanent link">&para;</a></h3>
 <table>
 <thead>

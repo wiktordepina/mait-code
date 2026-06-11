@@ -472,6 +472,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -743,6 +747,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-native-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The native view
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#off-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -816,6 +831,62 @@
     
   
     The observations browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The graph explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The log viewer
   
 
     
@@ -2014,6 +2085,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-native-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The native view
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#off-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2134,8 +2216,8 @@ fit, so a group is scannable without opening anything.</p>
 </ul>
 <p><em>Scope</em> tells you how widely a memory applies: <code>global</code> (everywhere), a project
 name (across that project), or <code>project:branch</code> (just that branch). <em>Class</em> is
-<code>semantic</code> (facts, preferences — slow to decay) or <code>episodic</code> (events, tasks —
-fast to decay).</p>
+<code>semantic</code> (facts, preferences — slow to decay), <code>episodic</code> (events, tasks —
+fast to decay), or <code>procedural</code> (workflows, how-tos — slowest to decay).</p>
 <h2 id="finding-something">Finding something<a class="headerlink" href="#finding-something" title="Permanent link">&para;</a></h2>
 <p>Press <code>/</code> to focus the filter and type: the tree narrows live to entries whose
 content matches (case-insensitive substring), every group expanding to show its
@@ -2145,6 +2227,26 @@ entries and the subtitle shows 1/6 match." src="../assets/memory/memory-filter.p
 <p><code>Enter</code> in the filter drops you onto the results to arrow through them; <code>Esc</code>
 steps back out. When nothing matches, the pane says so in the companion's voice
 rather than going blank.</p>
+<p>Press <code>p</code> to narrow by <strong>project</strong>: a picker lists every project seen in the
+store, and choosing one keeps that project's entries (plus globals), with the
+masthead subtitle carrying the project name. It composes with the text filter.</p>
+<h2 id="the-native-view">The native view<a class="headerlink" href="#the-native-view" title="Permanent link">&para;</a></h2>
+<p>mait-code's store isn't the only curated memory layer: Claude Code keeps its
+own <strong>native auto memory</strong> — per-project markdown files under
+<code>~/.claude/projects/&lt;slug&gt;/memory/</code>, a <code>MEMORY.md</code> index plus topic files,
+holding the <em>code</em> facts (architecture, build commands, repo gotchas) that
+<a href="../memory/#the-other-curated-layer-claude-codes-native-auto-memory">deliberately don't go in the store</a>.</p>
+<p>Press <code>n</code> and the browser flips to that layer: every project's native memory
+files, grouped by project with file counts, regardless of where you launched
+from. Highlight a file and the detail pane renders it as markdown, with the
+project and modified date as its metadata. The munged directory slugs are
+resolved back to readable project names best-effort.</p>
+<p><img alt="The native view: projects grouped with file counts on the left — MEMORY.md
+and topic files — and the selected file rendered as markdown on the
+right." src="../assets/memory/memory-native.png" /></p>
+<p>Both views are equally read-only, and the same tools work in each: <code>/</code> filters
+live, <code>p</code> narrows to one project, <code>r</code> re-scans. The footer's binding flips to
+<em>Store</em> while you're in the native view — <code>n</code> again returns.</p>
 <h2 id="off-the-terminal">Off the terminal<a class="headerlink" href="#off-the-terminal" title="Permanent link">&para;</a></h2>
 <p>Like the other TUIs, <code>mait-code memory</code> only opens the browser on a TTY. Piped or
 redirected, it prints a grouped read-only summary instead, so it stays useful in
@@ -2172,12 +2274,20 @@ a log or an SSH one-liner.</p>
 <td>Focus the filter</td>
 </tr>
 <tr>
+<td><kbd>n</kbd></td>
+<td>Flip between the store and the native view</td>
+</tr>
+<tr>
+<td><kbd>p</kbd></td>
+<td>Narrow to one project (picker; works in both views)</td>
+</tr>
+<tr>
 <td><kbd>Esc</kbd></td>
 <td>Back to the tree (from the filter/detail); quit (from the tree)</td>
 </tr>
 <tr>
 <td><kbd>r</kbd></td>
-<td>Re-read the store</td>
+<td>Re-read the store (or re-scan the native files)</td>
 </tr>
 <tr>
 <td><kbd>?</kbd></td>

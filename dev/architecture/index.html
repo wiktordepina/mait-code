@@ -470,6 +470,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -670,6 +674,62 @@
     
   
     The observations browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../graph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The graph explorer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The log viewer
   
 
     
@@ -2631,7 +2691,7 @@
 <tr>
 <td><code>memory_class</code></td>
 <td>TEXT</td>
-<td>episodic or semantic (controls decay rate)</td>
+<td>episodic, semantic, or procedural (controls decay rate)</td>
 </tr>
 <tr>
 <td><code>scope</code></td>
@@ -3287,7 +3347,7 @@ new entry's project) using two complementary measures:</p>
 </table>
 <p>Content-type routing: HTML→markdown (via <code>markdownify</code>), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.</p>
 <h2 id="home-hub-tui-mait-code-home">Home Hub TUI (<code>mait-code home</code>)<a class="headerlink" href="#home-hub-tui-mait-code-home" title="Permanent link">&para;</a></h2>
-<p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
+<p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>e</code> embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
 <p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the observations browser, or the settings editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and the board/memory/observations/settings apps are launched unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with.</p>
 <p>This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from <code>mait_code.tui.brand</code>. The <code>BrandBanner</code> (<code>mait_code.tui.banner</code>) wraps them into one size-responsive masthead worn by every TUI — home, board, settings, the memory browser and the observations browser — in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the <code>mc-tool-*</code> CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, <code>mait-code home</code> prints a compact text summary and bare <code>mait-code</code> keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.</p>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
@@ -3361,7 +3421,7 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>MAIT_CODE_LOG_FILE</code></td>
-<td><code>~/.local/state/mait-code/mait-code.log</code></td>
+<td><code>~/.local/state/mait-code/mait-code.jsonl</code></td>
 <td>Override log file path</td>
 </tr>
 <tr>
@@ -3499,8 +3559,8 @@ new entry's project) using two complementary measures:</p>
 </span></code></pre></div>
 <blockquote>
 <p>Rotating log files do <strong>not</strong> live in the data directory — they go to the XDG
-state dir (<code>~/.local/state/mait-code/mait-code.log</code> by default), configurable
-via <code>MAIT_CODE_LOG_FILE</code>.</p>
+state dir (<code>~/.local/state/mait-code/mait-code.jsonl</code> by default, structured
+JSON Lines), configurable via <code>MAIT_CODE_LOG_FILE</code>.</p>
 </blockquote>
 <h2 id="key-technical-decisions">Key Technical Decisions<a class="headerlink" href="#key-technical-decisions" title="Permanent link">&para;</a></h2>
 <table>
