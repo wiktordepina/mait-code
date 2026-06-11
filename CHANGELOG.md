@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.59.0] — 2026-06-11
+
 ### Added
 
 - **`--json` on mutating board subcommands** — `add`, `move`, `refine`,
@@ -20,6 +22,14 @@ don't change the public surface. Everything is still in flux.
   card's id from `add --json` instead of parsing it out of prose;
   `remove --json` emits the card as it was before deletion. The read side
   (`list`, `show`, `next`, `ref list`, `summary`) already spoke JSON.
+
+### Changed
+
+- **CI runs on Node 24-ready actions** — every workflow action bumped to its
+  Node 24 major (`checkout` v6, `configure-pages` v6, `deploy-pages` v5,
+  `upload-pages-artifact` v5, `setup-uv` v8.2.0) ahead of GitHub's 2026-06-16
+  runtime flip. `setup-uv` is pinned to a full version because v8 stopped
+  publishing moving major tags.
 
 ## [0.58.0] — 2026-06-11
 
@@ -1714,7 +1724,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.58.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.0...HEAD
+[0.59.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.0
 [0.58.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.58.0
 [0.57.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.57.0
 [0.56.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.56.0
