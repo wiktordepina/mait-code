@@ -17,6 +17,23 @@ RELATIONSHIP_TYPES: tuple[str, ...] = (
 VALID_RELATIONSHIP_TYPES: frozenset[str] = frozenset(RELATIONSHIP_TYPES)
 DEFAULT_RELATIONSHIP_TYPE: str = "related_to"
 
+# Canonical entity vocabulary, mirroring the relationship pattern. The
+# extraction prompt enum is built from this tuple; types outside it are
+# coerced to ``DEFAULT_ENTITY_TYPE`` on write. ``unknown`` is the write-time
+# fallback (and the type given to entities auto-created from relationship
+# endpoints) — deliberately not offered to the model, so it stays out of
+# ENTITY_TYPES but counts as valid.
+ENTITY_TYPES: tuple[str, ...] = (
+    "person",
+    "project",
+    "tool",
+    "service",
+    "concept",
+    "org",
+)
+DEFAULT_ENTITY_TYPE: str = "unknown"
+VALID_ENTITY_TYPES: frozenset[str] = frozenset(ENTITY_TYPES) | {DEFAULT_ENTITY_TYPE}
+
 
 def upsert_entity(conn: sqlite3.Connection, name: str, entity_type: str) -> int:
     """Insert or update an entity by name and return its id.
@@ -190,3 +207,122 @@ def search_entities(
         }
         for row in cursor.fetchall()
     ]
+
+
+def merge_entities(
+    conn: sqlite3.Connection, source_name: str, target_name: str
+) -> dict:
+    """Merge one entity into another, repointing its relationships.
+
+    Aliases accumulate in the graph (e.g. ``"User"`` alongside the user's real
+    name) and split what should be one node. Merging folds the source entity
+    into the target: relationships are repointed (deduplicating against the
+    target's existing edges on the ``(source, target, type)`` unique index),
+    mention counts are summed, the seen window widens to span both, the
+    target's type is upgraded from ``"unknown"`` if the source's is more
+    specific, and the source entity is deleted. Edges directly between the
+    two (which would become self-loops) are dropped.
+
+    Args:
+        conn: Open memory database connection.
+        source_name: Name of the entity to fold in (case-insensitive).
+        target_name: Name of the surviving entity (case-insensitive).
+
+    Returns:
+        A summary dict: ``target`` (the surviving entity's fields, post-merge),
+        ``relationships_repointed``, ``relationships_deduplicated``, and
+        ``self_loops_dropped``.
+
+    Raises:
+        ValueError: If either entity does not exist, or both names resolve to
+            the same entity.
+    """
+    source = find_entity_by_name(conn, source_name)
+    if source is None:
+        raise ValueError(f"entity '{source_name}' not found")
+    target = find_entity_by_name(conn, target_name)
+    if target is None:
+        raise ValueError(f"entity '{target_name}' not found")
+    if source["id"] == target["id"]:
+        raise ValueError(f"'{source_name}' and '{target_name}' are the same entity")
+
+    src_id, dst_id = source["id"], target["id"]
+    repointed = deduplicated = self_loops = 0
+
+    # Drop edges between the pair — they would become self-loops.
+    cursor = conn.execute(
+        """DELETE FROM memory_relationships
+           WHERE (source_entity_id = ? AND target_entity_id = ?)
+              OR (source_entity_id = ? AND target_entity_id = ?)""",
+        (src_id, dst_id, dst_id, src_id),
+    )
+    self_loops = cursor.rowcount
+
+    # Repoint the source's remaining edges one by one: an edge whose repointed
+    # form already exists on the target merges into it (widening the seen
+    # window) instead of violating the unique index.
+    for rel_id, s, t, rel_type in conn.execute(
+        """SELECT id, source_entity_id, target_entity_id, relationship_type
+           FROM memory_relationships
+           WHERE source_entity_id = ? OR target_entity_id = ?""",
+        (src_id, src_id),
+    ).fetchall():
+        new_s = dst_id if s == src_id else s
+        new_t = dst_id if t == src_id else t
+        existing = conn.execute(
+            """SELECT id FROM memory_relationships
+               WHERE source_entity_id = ? AND target_entity_id = ?
+                 AND relationship_type = ?""",
+            (new_s, new_t, rel_type),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                """UPDATE memory_relationships SET
+                       first_seen = MIN(
+                           first_seen,
+                           (SELECT first_seen FROM memory_relationships WHERE id = ?)),
+                       last_seen = MAX(
+                           last_seen,
+                           (SELECT last_seen FROM memory_relationships WHERE id = ?))
+                   WHERE id = ?""",
+                (rel_id, rel_id, existing[0]),
+            )
+            conn.execute("DELETE FROM memory_relationships WHERE id = ?", (rel_id,))
+            deduplicated += 1
+        else:
+            conn.execute(
+                """UPDATE memory_relationships
+                   SET source_entity_id = ?, target_entity_id = ?
+                   WHERE id = ?""",
+                (new_s, new_t, rel_id),
+            )
+            repointed += 1
+
+    conn.execute(
+        """UPDATE memory_entities SET
+               mention_count = mention_count + ?,
+               first_seen = MIN(first_seen, ?),
+               last_seen = MAX(last_seen, ?),
+               entity_type = CASE
+                   WHEN entity_type = 'unknown' THEN ?
+                   ELSE entity_type
+               END
+           WHERE id = ?""",
+        (
+            source["mention_count"],
+            source["first_seen"],
+            source["last_seen"],
+            source["entity_type"],
+            dst_id,
+        ),
+    )
+    conn.execute("DELETE FROM memory_entities WHERE id = ?", (src_id,))
+    conn.commit()
+
+    merged = find_entity_by_name(conn, target["name"])
+    return {
+        "target": merged,
+        "relationships_repointed": repointed,
+        "relationships_deduplicated": deduplicated,
+        "self_loops_dropped": self_loops,
+    }

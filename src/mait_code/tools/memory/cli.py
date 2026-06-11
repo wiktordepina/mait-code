@@ -21,6 +21,7 @@ from mait_code.tools.memory.embeddings import (
 from mait_code.tools.memory.entities import (
     find_entity_by_name,
     get_entity_relationships,
+    merge_entities,
     search_entities as _search_entities,
 )
 from mait_code.tools.memory.scoring import composite_score
@@ -325,6 +326,39 @@ def cmd_stats(_args):
 
 
 def cmd_entities(args):
+    # `merge` is a verb, not a search term: `entities merge <src> <dst>`
+    # folds the first entity into the second (shell quoting keeps multi-word
+    # names as single arguments).
+    if args.query and args.query[0] == "merge":
+        if len(args.query) != 3:
+            logger.warning("merge requires exactly two entity names")
+            print(
+                "Usage: entities merge <source> <target>  "
+                '(quote multi-word names, e.g. entities merge "User" "Wiktor")',
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        source_name, target_name = args.query[1], args.query[2]
+        with connection() as conn:
+            try:
+                result = merge_entities(conn, source_name, target_name)
+            except ValueError as e:
+                logger.warning("merge failed: %s", e)
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+        merged = result["target"]
+        print(
+            f"Merged '{source_name}' into "
+            f"[#{merged['id']}] {merged['name']} ({merged['entity_type']}) "
+            f"— {merged['mention_count']} mentions."
+        )
+        print(
+            f"  Relationships repointed: {result['relationships_repointed']}, "
+            f"deduplicated: {result['relationships_deduplicated']}, "
+            f"self-loops dropped: {result['self_loops_dropped']}"
+        )
+        return
+
     query = " ".join(args.query) if args.query else ""
     with connection() as conn:
         if not query:
@@ -887,8 +921,14 @@ def main():
     p_stats.set_defaults(func=cmd_stats)
 
     # entities
-    p_entities = sub.add_parser("entities", help="Search entities")
-    p_entities.add_argument("query", nargs="*", help="Search query (optional)")
+    p_entities = sub.add_parser(
+        "entities", help="Search entities, or merge two: entities merge SRC DST"
+    )
+    p_entities.add_argument(
+        "query",
+        nargs="*",
+        help="Search query (optional), or: merge SOURCE TARGET",
+    )
     p_entities.add_argument("--limit", type=int, default=20)
     p_entities.set_defaults(func=cmd_entities)
 

@@ -38,7 +38,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 11  # Exactly 11 migrations
+    assert versions == 12  # Exactly 12 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -47,9 +47,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 11
+    assert len(rows) == 12
     assert rows[0][0] == 1
-    assert rows[-1][0] == 11
+    assert rows[-1][0] == 12
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -312,3 +312,79 @@ def test_vec_delete_trigger(memory_db: sqlite3.Connection):
         "SELECT COUNT(*) FROM memory_vec WHERE rowid = ?", (entry_id,)
     ).fetchone()[0]
     assert count == 0
+
+
+def _rewind_to_version_11_with_legacy_rows(conn: sqlite3.Connection) -> None:
+    """Insert pre-coercion rows and rewind schema_version so migration 12 re-runs."""
+    conn.executemany(
+        "INSERT INTO memory_entities (name, entity_type) VALUES (?, ?)",
+        [
+            ("svc", "tool"),  # canonical — untouched
+            ("box", "infrastructure"),  # legacy — service
+            ("widget", "component"),  # legacy — concept
+            ("mystery", "blob"),  # unmapped legacy — unknown
+        ],
+    )
+    ids = {
+        name: conn.execute(
+            "SELECT id FROM memory_entities WHERE name = ?", (name,)
+        ).fetchone()[0]
+        for name in ("svc", "box", "widget", "mystery")
+    }
+    conn.executemany(
+        """INSERT INTO memory_relationships
+           (source_entity_id, target_entity_id, relationship_type, context)
+           VALUES (?, ?, ?, ?)""",
+        [
+            (ids["svc"], ids["box"], "uses", "canonical, untouched"),
+            (ids["svc"], ids["box"], "runs_on", "remaps to depends_on"),
+            (ids["widget"], ids["box"], "wires_into", "unmapped, to related_to"),
+            # Collision pair: remapping the second onto the first must merge.
+            (ids["box"], ids["widget"], "related_to", "existing canonical"),
+            (ids["box"], ids["widget"], "connected_to", "collides on remap"),
+        ],
+    )
+    conn.execute("DELETE FROM schema_version WHERE version = 12")
+    conn.commit()
+
+
+def test_migration_12_remaps_legacy_types(memory_db: sqlite3.Connection):
+    """Legacy entity/relationship types end up canonical; collisions merge."""
+    _rewind_to_version_11_with_legacy_rows(memory_db)
+    ensure_schema(memory_db)
+
+    entity_types = dict(
+        memory_db.execute("SELECT name, entity_type FROM memory_entities").fetchall()
+    )
+    assert entity_types["svc"] == "tool"
+    assert entity_types["box"] == "service"
+    assert entity_types["widget"] == "concept"
+    assert entity_types["mystery"] == "unknown"
+
+    rels = memory_db.execute(
+        "SELECT relationship_type, context FROM memory_relationships ORDER BY id"
+    ).fetchall()
+    types = [r[0] for r in rels]
+    assert sorted(types) == ["depends_on", "related_to", "related_to", "uses"]
+    # The colliding connected_to row merged into the existing related_to one.
+    contexts = {r[1] for r in rels}
+    assert "existing canonical" in contexts
+    assert "collides on remap" not in contexts
+
+    from mait_code.tools.memory.entities import (
+        VALID_ENTITY_TYPES,
+        VALID_RELATIONSHIP_TYPES,
+    )
+
+    leftover_rels = memory_db.execute(
+        f"""SELECT COUNT(*) FROM memory_relationships
+            WHERE relationship_type NOT IN ({",".join("?" * len(VALID_RELATIONSHIP_TYPES))})""",
+        tuple(VALID_RELATIONSHIP_TYPES),
+    ).fetchone()[0]
+    leftover_entities = memory_db.execute(
+        f"""SELECT COUNT(*) FROM memory_entities
+            WHERE entity_type NOT IN ({",".join("?" * len(VALID_ENTITY_TYPES))})""",
+        tuple(VALID_ENTITY_TYPES),
+    ).fetchone()[0]
+    assert leftover_rels == 0
+    assert leftover_entities == 0

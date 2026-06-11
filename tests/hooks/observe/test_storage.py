@@ -214,3 +214,30 @@ def test_store_relationship_coerces_unknown_type(data_dir: Path):
         # Edge still written, but the invented label is normalised.
         assert mock_rel.call_count == 1
         assert mock_rel.call_args.args[3] == "related_to"
+
+
+def test_store_entity_coerces_unknown_type(data_dir: Path):
+    """An out-of-enum entity type is coerced to unknown (entity preserved)."""
+    extraction = {
+        "entities": [
+            {"name": "board TUI", "entity_type": "component"},
+            {"name": "Ruff", "entity_type": "tool"},
+        ],
+        "relationships": [],
+    }
+
+    with (
+        patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        mock_entity.side_effect = [1, 2]
+
+        store_entities_and_relationships(extraction)
+
+        # Both entities written; the invented type is normalised, the
+        # canonical one passes through.
+        assert mock_entity.call_count == 2
+        assert mock_entity.call_args_list[0].args[1:] == ("board TUI", "unknown")
+        assert mock_entity.call_args_list[1].args[1:] == ("Ruff", "tool")

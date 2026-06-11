@@ -231,7 +231,21 @@ Entities (people, projects, tools, services, concepts, organisations) and their 
 - Mention count (incremented each time the entity is seen)
 - First and last seen timestamps
 
-Relationships between entities are typed (`uses`, `owns`, `contributes_to`, `depends_on`, `manages`, `related_to`) with a free-text context field explaining the connection.
+Both vocabularies are canonical and enforced at write time: entity types
+(`person`, `project`, `tool`, `service`, `concept`, `org`) coerce to `unknown`
+when the extraction model invents something else, and relationship types
+(`uses`, `owns`, `contributes_to`, `depends_on`, `manages`, `related_to`)
+coerce to `related_to`. The extraction prompt enums are built from the same
+tuples (`ENTITY_TYPES`, `RELATIONSHIP_TYPES` in `tools/memory/entities.py`),
+so prompt and enforcement cannot drift. Every relationship carries a free-text
+context field explaining the connection.
+
+Aliases the extractor coins for the same thing (e.g. `User` alongside the
+user's actual name) can be folded together with
+`mc-tool-memory entities merge <source> <target>`: the source's relationships
+are repointed to the target (deduplicating where the target already has the
+edge), mention counts are summed, the seen window widens to span both, and
+the source entity is deleted.
 
 ## Scoring: How Results Are Ranked
 
@@ -406,6 +420,7 @@ launched.
 | `delete <id>` | Delete an entry (embedding cleaned up by trigger) |
 | `stats` | Entry counts, class/scope/project distribution, superseded count, embedding coverage, provider info, unreflected backlog + last reflection run |
 | `entities [query]` | Search or list knowledge graph entities |
+| `entities merge <source> <target>` | Fold one entity into another: repoint relationships, sum mentions, delete the source (quote multi-word names) |
 | `relationships <entity>` | Show relationships for an entity |
 | `reindex` | Recompute all vector embeddings from scratch |
 | `restore` | Replay observation JSONL logs into the database, then reindex |
