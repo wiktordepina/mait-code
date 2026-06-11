@@ -197,7 +197,17 @@ If HuggingFace is blocked on your corporate network, use the Bedrock provider:
 
 1. Install with the bedrock flag: `mait-code install --from <source> --embedding-provider bedrock`
    (or re-install if already installed)
-2. Ensure AWS credentials are available (e.g. via `aws configure` or IAM role)
+2. Ensure AWS credentials are available (e.g. via `aws configure` or IAM role).
+   If you authenticate via a named profile, declare it once in the `[env]`
+   table of `settings.toml` so every tool picks it up — inside and outside
+   Claude Code sessions:
+
+   ```toml
+   [env]
+   AWS_PROFILE = "dev-bedrock"
+   ```
+
+   See [Custom environment variables](settings.md#custom-environment-variables-the-env-table).
 3. If you have existing local embeddings, run `mc-tool-memory reindex` to migrate
 
 The install command writes `embedding-provider = "bedrock"` to `~/.config/mait-code/settings.toml` and propagates it to `~/.claude/settings.json` automatically.

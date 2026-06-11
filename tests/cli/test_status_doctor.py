@@ -122,6 +122,7 @@ class TestDoctor:
         assert levels["settings"] == "ok"
         assert levels["settings-file"] == "ok"
         assert levels["settings-values"] == "ok"
+        assert levels["env-table"] == "ok"
         assert levels["symlinks"] == "ok"
         assert levels["data-dir"] == "ok"
         assert levels["memory-embeddings"] == "ok"
@@ -141,6 +142,23 @@ class TestDoctor:
         assert names["settings-values"].level == "fail"
         assert "sum to" in names["settings-values"].message
         assert report.has_fail is True
+
+    def test_env_table_reserved_keys_warn(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _populate_source(fake_source)
+        install(source_dir=fake_source)
+        sp = fake_home / ".config" / "mait-code" / "settings.toml"
+        sp.write_text(
+            sp.read_text(encoding="utf-8")
+            + '\n[env]\nAWS_PROFILE = "dev"\nMAIT_CODE_LOG_LEVEL = "DEBUG"\n',
+            encoding="utf-8",
+        )
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["env-table"].level == "warn"
+        assert "MAIT_CODE_LOG_LEVEL" in names["env-table"].message
 
     def test_missing_settings_file_marks_fail(
         self, fake_home: Path, fake_source: Path

@@ -53,6 +53,11 @@ __all__ = ["run_interactive_editor"]
 _WEIGHTS_KEY = "__weights__"
 """Sentinel list-row key for the grouped scoring-weight editor."""
 
+_ENV_PREFIX = "env:"
+"""Row-key prefix for custom [env] variables — dynamic, read-only rows."""
+
+_ENV_GROUP_LABEL = "Custom env"
+
 
 def run_interactive_editor() -> None:
     """Launch the Textual settings editor (blocks until the user quits)."""
@@ -145,6 +150,29 @@ _MIGRATION_MARK = " ⚠"
 def _truncate(text: str, width: int = _VALUE_WIDTH) -> str:
     """Clip *text* to *width*, marking truncation with an ellipsis."""
     return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def _env_display_value(name: str, table_value: str) -> tuple[str, bool]:
+    """Return an [env] row's effective value (masked if secret-looking).
+
+    The second element is ``True`` when the real environment carries the
+    variable — it wins over the table, so the row is shadowed. Values
+    injected at startup by ``apply_env()`` don't count as shadowing.
+    """
+    value, source = config._env_effective(name, table_value)
+    if config._looks_secret(name):
+        value = config._mask(value)
+    return value, source == "env"
+
+
+def _env_leaf_label(name: str, table_value: str) -> Text:
+    """One-line tree label for a custom [env] variable row."""
+    value, shadowed = _env_display_value(name, table_value)
+    label = Text(no_wrap=True)
+    label.append(name)
+    label.append(" " * max(2, _KEY_WIDTH - len(name)))
+    label.append(_truncate(value), style="dim" if shadowed else "")
+    return label
 
 
 def _leaf_label(key: str, value_width: int = _VALUE_WIDTH) -> Text:
@@ -291,6 +319,16 @@ class SettingsApp(MaitApp):
                 node = group.add_leaf(_leaf_label(key), data=key)
                 self._setting_nodes[key] = node
                 self._row_order.append(key)
+        # Custom [env] variables get a dynamic, read-only group — they come
+        # from the settings file's [env] table, not the registry.
+        env_table = config.read_env_table()
+        if env_table:
+            group = tree.root.add(_ENV_GROUP_LABEL, expand=True)
+            for name in sorted(env_table):
+                key = _ENV_PREFIX + name
+                node = group.add_leaf(_env_leaf_label(name, env_table[name]), data=key)
+                self._setting_nodes[key] = node
+                self._row_order.append(key)
         tree.focus()
         # Land on the first real setting rather than a category header, so the
         # detail pane shows an editor on boot. Deferred until after the first
@@ -337,6 +375,10 @@ class SettingsApp(MaitApp):
         self._current_key = key
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
+
+        if key.startswith(_ENV_PREFIX):
+            await self._show_env_detail(key.removeprefix(_ENV_PREFIX))
+            return
 
         if key == _WEIGHTS_KEY:
             current = ", ".join(
@@ -403,6 +445,32 @@ class SettingsApp(MaitApp):
         widgets.append(Static("", id="msg"))
         widgets.append(Button("Apply", id="apply", variant="primary"))
         await detail.mount(*widgets)
+
+    async def _show_env_detail(self, name: str) -> None:
+        """Read-only detail pane for a custom [env] variable."""
+        detail = self.query_one("#detail", VerticalScroll)
+        value, shadowed = _env_display_value(
+            name, config.read_env_table().get(name, "")
+        )
+        if shadowed:
+            source = "source: env — set in the real environment, which wins over [env]"
+        else:
+            source = "source: settings ([env] table)"
+        # Text() throughout — "[env]" (and arbitrary user values) must not be
+        # parsed as console markup.
+        await detail.mount(
+            Label(Text(name), classes="title"),
+            Label(
+                Text(
+                    "Custom environment variable from the settings.toml [env] "
+                    "table — injected when any mait-code entry point starts."
+                ),
+                classes="help",
+            ),
+            Static(Text(value), classes="value"),
+            Static(Text(source), id="source"),
+            Label("Read-only here — edit settings.toml by hand.", classes="help"),
+        )
 
     # -- editing -----------------------------------------------------------
 
@@ -494,6 +562,8 @@ class SettingsApp(MaitApp):
 
     @work
     async def _apply(self, key: str) -> None:
+        if key.startswith(_ENV_PREFIX):
+            return  # [env] rows are read-only — edited in settings.toml by hand
         setting = _by_key()[key]
         if not setting.settable:
             return

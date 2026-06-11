@@ -122,6 +122,39 @@ comments you can't assign. Derived values are computed, never read from the file
     the `settings list` view names the source of every value, so a stray export
     shows up as `env`.
 
+## Custom environment variables — the `[env]` table
+
+Some tools need environment variables that aren't mait-code settings at all —
+the classic case is `AWS_PROFILE` for Bedrock embeddings. Inside a Claude Code
+session the `env` block of `~/.claude/settings.json` supplies it, but a
+standalone `mait-code doctor --fix` or `mc-tool-memory reindex` would need a
+manual prefix on every invocation.
+
+Instead, declare them once in an `[env]` table at the end of `settings.toml`:
+
+```toml
+[env]
+AWS_PROFILE = "dev-bedrock"
+```
+
+Every mait-code entry point — the `mait-code` CLI and TUIs, the `mc-tool-*`
+tools, the `mc-hook-*` hooks — injects these into its environment at startup.
+The rules:
+
+- **The real environment wins.** A variable already set in your shell is left
+  alone, so a one-off `AWS_PROFILE=other mc-tool-memory …` override still works.
+- **`MAIT_CODE_*` keys are not allowed.** Those are first-class settings with
+  their own resolution order; `[env]` entries with that prefix are ignored at
+  startup and `doctor` warns about them.
+- **The table survives rewrites.** `settings set`, the interactive editor and
+  install/update all carry it over untouched.
+
+`settings list` shows each entry as an `env.<NAME>` row with its provenance
+(`settings` when the table supplies it, `env` when your shell shadows it), and
+the interactive editor lists them in a read-only **Custom env** group — edit
+the file by hand to change them. Values whose names look secret (`KEY`,
+`TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL`) are masked in both views.
+
 ## Off the terminal
 
 `mait-code settings` only opens the editor when it's attached to a TTY. Piped or

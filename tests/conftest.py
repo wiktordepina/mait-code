@@ -57,6 +57,7 @@ def _isolate_mait_settings(
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
     monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setattr(_config, "_settings_cache", None)
+    monkeypatch.setattr(_config, "_injected_env", set())
 
     logger = logging.getLogger("mait_code")
     saved_handlers = logger.handlers[:]

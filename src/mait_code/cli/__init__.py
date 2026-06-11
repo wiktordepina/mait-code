@@ -100,6 +100,7 @@ from mait_code.cli._settings_edit import (
 )
 from mait_code.config import (
     SETTINGS as _SETTINGS,
+    apply_env as _apply_env,
     collect_settings as _collect_settings,
     render as _settings_render,
     render_json as _settings_render_json,
@@ -845,6 +846,10 @@ def _observations_render() -> None:
 
 def main() -> None:
     """Console-script entry point declared in ``pyproject.toml``."""
+    # The mait-code CLI doesn't route through setup_logging(), so the
+    # settings [env] table is injected here — doctor --fix needs e.g.
+    # AWS_PROFILE for Bedrock embedding just like the mc-tool-* tools.
+    _apply_env()
     app()
 
 

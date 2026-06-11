@@ -19,6 +19,7 @@ from textual.widgets import Button, Input, RadioButton, RadioSet, Static, Tree
 
 from mait_code import config
 from mait_code.cli._settings_tui import (
+    _ENV_GROUP_LABEL,
     _EXPANDED_GROUPS,
     _GROUPS,
     _WEIGHTS_KEY,
@@ -477,3 +478,76 @@ class TestFollowupsDataDir:
         assert (new / "marker").read_text() == "x"
         assert not old.exists()
         assert config.read_settings_file()["data-dir"] == str(new)
+
+
+class TestEnvGroup:
+    """Custom [env] variables appear as a dynamic, read-only group."""
+
+    def test_env_rows_render_with_values(self, fake_home: Path) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"AWS_PROFILE": "dev-bedrock"},
+        )
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                tree = app.query_one("#list", Tree)
+                states = {str(n.label): n.is_expanded for n in tree.root.children}
+                node = app._setting_nodes["env:AWS_PROFILE"]
+                return states, str(node.label)
+
+        states, label = _run(scenario)
+        assert states[_ENV_GROUP_LABEL] is True
+        assert "AWS_PROFILE" in label
+        assert "dev-bedrock" in label
+
+    def test_no_env_table_no_group(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                tree = app.query_one("#list", Tree)
+                return [str(n.label) for n in tree.root.children]
+
+        assert _ENV_GROUP_LABEL not in _run(scenario)
+
+    def test_env_detail_is_read_only(self, fake_home: Path) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"AWS_PROFILE": "dev-bedrock"},
+        )
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, "env:AWS_PROFILE")
+                source = str(app.query_one("#source", Static).render())
+                has_editor = bool(app.query("#editor")) or bool(app.query("#apply"))
+                return source, has_editor
+
+        source, has_editor = _run(scenario)
+        assert source == "source: settings ([env] table)"
+        assert has_editor is False
+
+    def test_shadowed_env_var_reports_env_source(
+        self, fake_home: Path, monkeypatch
+    ) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"MAIT_TEST_SHADOWED": "from-file"},
+        )
+        monkeypatch.setenv("MAIT_TEST_SHADOWED", "from-env")
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, "env:MAIT_TEST_SHADOWED")
+                return str(app.query_one("#source", Static).render())
+
+        assert "real environment" in _run(scenario)

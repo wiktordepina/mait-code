@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import tempfile
 import tomllib
 from collections.abc import Callable
@@ -38,6 +39,9 @@ __all__ = [
     "read_settings_file",
     "write_settings_file",
     "reset_cache",
+    # Env injection
+    "read_env_table",
+    "apply_env",
     # Resolvers
     "data_dir",
     # Settings view
@@ -668,6 +672,8 @@ def read_settings_file(path: Path | None = None) -> dict[str, str]:
     Returns:
         A flat ``{key: value}`` dict with kebab-case keys and string
         values. Returns ``{}`` if the file is missing or malformed.
+        Tables (notably ``[env]``) are not part of the flat view — read
+        the env table with :func:`read_env_table`.
     """
     if path is None:
         from mait_code.cli._paths import settings_path
@@ -684,10 +690,98 @@ def read_settings_file(path: Path | None = None) -> dict[str, str]:
     return {k: str(v) for k, v in raw.items() if isinstance(v, str)}
 
 
-def _render_settings_toml(values: dict[str, str]) -> str:
+def read_env_table(path: Path | None = None) -> dict[str, str]:
+    """Read the ``[env]`` table of custom environment variables.
+
+    Args:
+        path: Override the settings file path (defaults to
+            :func:`~mait_code.cli._paths.settings_path`).
+
+    Returns:
+        A ``{NAME: value}`` dict of user-defined environment variables.
+        Returns ``{}`` if the file is missing or malformed, or there is
+        no ``[env]`` table. Non-string values are dropped, mirroring
+        :func:`read_settings_file`.
+    """
+    if path is None:
+        from mait_code.cli._paths import settings_path
+
+        path = settings_path()
+    if not path.exists():
+        return {}
+    try:
+        raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError):
+        return {}
+    table = raw.get("env") if isinstance(raw, dict) else None
+    if not isinstance(table, dict):
+        return {}
+    return {k: v for k, v in table.items() if isinstance(v, str)}
+
+
+def apply_env() -> list[str]:
+    """Inject the settings ``[env]`` table into :data:`os.environ`.
+
+    Called from each entry point's startup path (via
+    :func:`mait_code.logging.setup_logging` and the ``mait-code`` CLI), so
+    user-defined variables — e.g. ``AWS_PROFILE`` for Bedrock embeddings —
+    are present however a tool is invoked, not only inside Claude Code
+    sessions.
+
+    Variables already present in the real environment are left alone, so a
+    one-off ``AWS_PROFILE=other mc-tool-…`` override keeps working — and
+    repeat calls are naturally no-ops. ``MAIT_CODE_*`` keys are skipped
+    with a warning: first-class settings already resolve env → file →
+    default, and injecting them would create a second, conflicting
+    resolution path. ``doctor`` flags those too.
+
+    Returns:
+        The names of the variables actually injected.
+    """
+    applied: list[str] = []
+    for name, value in read_env_table().items():
+        if name.startswith("MAIT_CODE_"):
+            logger.warning(
+                "[env] cannot set %s — use the matching settings key instead", name
+            )
+            continue
+        if name in os.environ:
+            continue
+        os.environ[name] = value
+        _injected_env.add(name)
+        applied.append(name)
+    if applied:
+        logger.debug("applied [env] variables: %s", ", ".join(sorted(applied)))
+    return applied
+
+
+_injected_env: set[str] = set()
+"""Names :func:`apply_env` itself put into the environment this process.
+
+Provenance displays need to tell "the user's shell carries this variable"
+(source ``env``, it wins) apart from "we injected it at startup" (source
+``settings``) — by display time both are in :data:`os.environ`.
+"""
+
+
+def _env_effective(name: str, table_value: str) -> tuple[str, str]:
+    """Return ``(effective value, source)`` for an ``[env]`` variable.
+
+    Source ``"env"`` means the real environment carries the variable and
+    wins over the table; values injected by :func:`apply_env` still report
+    ``"settings"``.
+    """
+    if name in os.environ and name not in _injected_env:
+        return os.environ[name], "env"
+    return os.environ.get(name, table_value), "settings"
+
+
+def _render_settings_toml(
+    values: dict[str, str], env: dict[str, str] | None = None
+) -> str:
     """Generate a commented TOML string with all settings.
 
-    Three groups are written in order:
+    Four groups are written in order:
 
     1. **Primary** settable knobs — uncommented (placeholder defaults stay
        commented unless an explicit value is provided).
@@ -697,6 +791,9 @@ def _render_settings_toml(values: dict[str, str]) -> str:
        default stays authoritative until the user opts a line in.
     3. **Derived** read-only values — informational comments only; never an
        assignable line.
+    4. **The ``[env]`` table** of custom environment variables — written
+       last because everything after a TOML table header belongs to that
+       table. An empty table renders as a commented example.
     """
     lines = [
         "# mait-code settings",
@@ -747,13 +844,47 @@ def _render_settings_toml(values: dict[str, str]) -> str:
             lines.append(f"# {setting.key}: {setting.help}")
         lines.append("")
 
+    lines.append(_SECTION_RULE)
+    lines.append("# Custom environment variables — injected into the process")
+    lines.append("# environment whenever a mait-code entry point starts. Variables")
+    lines.append("# already set in the real environment win. MAIT_CODE_* keys are")
+    lines.append("# not allowed here — use the settings above instead.")
+    lines.append(_SECTION_RULE)
+    lines.append("")
+    if env:
+        lines.append("[env]")
+        for name in sorted(env):
+            lines.append(f"{_toml_key(name)} = {_toml_str(env[name])}")
+    else:
+        lines.append("# [env]")
+        lines.append('# AWS_PROFILE = "dev-bedrock"')
+    lines.append("")
+
     return "\n".join(lines)
+
+
+_BARE_KEY_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _toml_key(name: str) -> str:
+    """Render a TOML key — bare when possible, quoted otherwise."""
+    return name if _BARE_KEY_RE.match(name) else _toml_str(name)
+
+
+def _toml_str(value: str) -> str:
+    """Render a TOML basic string (JSON string escaping is a valid subset)."""
+    return json.dumps(value)
 
 
 _SECTION_RULE = "# " + "-" * 73
 
 
-def write_settings_file(values: dict[str, str], *, path: Path | None = None) -> Path:
+def write_settings_file(
+    values: dict[str, str],
+    *,
+    path: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> Path:
     """Write the settings TOML file atomically.
 
     Generates a fully commented TOML with all registered settings.
@@ -763,6 +894,10 @@ def write_settings_file(values: dict[str, str], *, path: Path | None = None) -> 
         values: Setting values to write (kebab-case keys).
         path: Override the settings file path (defaults to
             :func:`~mait_code.cli._paths.settings_path`).
+        env: Custom ``[env]`` table to write. ``None`` (the default)
+            preserves the table already in the file, so rewrites from
+            ``settings set``, the TUI editor and install/update round-trip
+            it untouched.
 
     Returns:
         The path the file was written to.
@@ -771,8 +906,10 @@ def write_settings_file(values: dict[str, str], *, path: Path | None = None) -> 
         from mait_code.cli._paths import settings_path
 
         path = settings_path()
+    if env is None:
+        env = read_env_table(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    content = _render_settings_toml(values)
+    content = _render_settings_toml(values, env)
     fd, tmp = tempfile.mkstemp(
         prefix=path.name + ".", suffix=".tmp", dir=str(path.parent)
     )
@@ -816,6 +953,15 @@ def _mask(value: str) -> str:
     return "…" + value[-4:]
 
 
+_SECRET_HINTS = ("SECRET", "TOKEN", "PASSWORD", "KEY", "CREDENTIAL")
+
+
+def _looks_secret(name: str) -> bool:
+    """Heuristic for ``[env]`` variable names whose values should be masked."""
+    upper = name.upper()
+    return any(hint in upper for hint in _SECRET_HINTS)
+
+
 def collect_settings() -> SettingsSnapshot:
     """Resolve every setting for display, and flag embedding-provider drift.
 
@@ -842,6 +988,16 @@ def collect_settings() -> SettingsSnapshot:
         rows.append(
             ResolvedSetting(setting.key, value, source, setting.requires_migration)
         )
+
+    # Custom [env] variables ride along as env.<NAME> rows. Source "env"
+    # means the real environment carries the variable and wins; "settings"
+    # means the [env] table value is what gets injected at startup.
+    env_table = read_env_table()
+    for name in sorted(env_table):
+        value, source = _env_effective(name, env_table[name])
+        if _looks_secret(name):
+            value = _mask(value)
+        rows.append(ResolvedSetting(f"env.{name}", value, source, False))
 
     drift: str | None = None
     if env_provider and file_provider and env_provider != file_provider:
