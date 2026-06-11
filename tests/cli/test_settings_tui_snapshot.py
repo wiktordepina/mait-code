@@ -21,6 +21,8 @@ from pathlib import Path
 
 import pytest
 
+from textual.widgets import Tree
+
 import mait_code.config as config
 import mait_code.tui.banner as banner_mod
 from mait_code.cli._settings_tui import SettingsApp
@@ -48,3 +50,22 @@ def test_settings_editor_snapshot(
     lands on ``theme``, whose editor is a radio set of the installed themes."""
     monkeypatch.setattr(config, "_settings_cache", None)
     assert snap_compare(SettingsApp(), press=["down"], terminal_size=(120, 40))
+
+
+def test_settings_env_snapshot(
+    snap_compare, fake_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Custom env group with a populated [env] table: the row selected,
+    its editable value, provenance line, and Apply/Remove buttons."""
+    config.write_settings_file({}, env={"AWS_PROFILE": "dev-bedrock"})
+    monkeypatch.setattr(config, "_settings_cache", None)
+
+    async def run_before(pilot) -> None:
+        await pilot.pause()
+        app = pilot.app
+        tree = app.query_one("#list", Tree)
+        tree.move_cursor(app._setting_nodes["env:AWS_PROFILE"])
+        await pilot.pause()
+        await pilot.pause()
+
+    assert snap_compare(SettingsApp(), run_before=run_before, terminal_size=(120, 40))

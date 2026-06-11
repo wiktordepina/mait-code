@@ -31,6 +31,8 @@
 #detail .help {
     color: $text-muted;
     margin-bottom: 1;
+    /* Fill the pane so long help copy wraps instead of clipping. */
+    width: 100%;
 }
 
 #detail .warn-note {

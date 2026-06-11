@@ -29,6 +29,7 @@ _ASSETS = _REPO_ROOT / "docs/assets/memory"
 _SCREENSHOTS = {
     "test_memory_snapshot": "memory.png",
     "test_memory_filter_snapshot": "memory-filter.png",
+    "test_memory_native_snapshot": "memory-native.png",
 }
 
 

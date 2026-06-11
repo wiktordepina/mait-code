@@ -156,6 +156,10 @@ You don't have to edit the file by hand (though that works too):
 - **Interactive editor** — the **Custom env** group lists every variable;
   pick one to change its value or remove it, or use the *+ add variable…*
   row to create one. Names are validated live as you type.
+
+![The Custom env group in the settings editor: AWS_PROFILE selected with an
+editable value input, a provenance line naming the [env] table as the source,
+and Apply and Remove buttons.](assets/settings/settings-env.png)
 - **CLI** — address a variable as `env.<NAME>`:
 
   ```console
