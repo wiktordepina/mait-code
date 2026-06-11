@@ -73,6 +73,8 @@
 
 ::: mait_code.tools.memory.get_entity_relationships
 
+::: mait_code.tools.memory.merge_entities
+
 ::: mait_code.tools.memory.search_entities
 
 ::: mait_code.tools.memory.upsert_entity

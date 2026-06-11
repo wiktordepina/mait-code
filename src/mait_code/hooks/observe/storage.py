@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from mait_code.hooks.observe.scope import resolve_scope
 from mait_code.tools.memory.db import connection, get_data_dir
 from mait_code.tools.memory.entities import (
+    DEFAULT_ENTITY_TYPE,
     DEFAULT_RELATIONSHIP_TYPE,
+    VALID_ENTITY_TYPES,
     VALID_RELATIONSHIP_TYPES,
     upsert_entity,
     upsert_relationship,
@@ -110,7 +112,14 @@ def store_entities_and_relationships(extraction: dict) -> None:
             name = entity.get("name", "").strip()
             if not name:
                 continue
-            entity_type = entity.get("entity_type", "unknown")
+            entity_type = entity.get("entity_type", DEFAULT_ENTITY_TYPE)
+            if entity_type not in VALID_ENTITY_TYPES:
+                logger.debug(
+                    "coercing unknown entity type '%s' to '%s'",
+                    entity_type,
+                    DEFAULT_ENTITY_TYPE,
+                )
+                entity_type = DEFAULT_ENTITY_TYPE
             try:
                 entity_ids[name.lower()] = upsert_entity(conn, name, entity_type)
             except Exception as e:

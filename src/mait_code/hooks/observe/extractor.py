@@ -6,13 +6,14 @@ import re
 
 from mait_code.config import get as config_get
 from mait_code.llm import call_claude
-from mait_code.tools.memory.entities import RELATIONSHIP_TYPES
+from mait_code.tools.memory.entities import ENTITY_TYPES, RELATIONSHIP_TYPES
 
 logger = logging.getLogger(__name__)
 
-# Built from the canonical vocabulary so the prompt and the write-time
+# Built from the canonical vocabularies so the prompt and the write-time
 # enforcement in storage.py can never drift apart.
 _RELATIONSHIP_TYPES_STR = "|".join(RELATIONSHIP_TYPES)
+_ENTITY_TYPES_STR = "|".join(ENTITY_TYPES)
 
 EXTRACTION_PROMPT = """\
 You are an observation extraction system. Analyze the following conversation
@@ -37,7 +38,7 @@ Return ONLY a JSON object with these arrays (use empty arrays if none found):
     {"content": "...", "importance": 1-10, "scope": "global|project|branch"}
   ],
   "entities": [
-    {"name": "...", "entity_type": "person|project|tool|service|concept|org", "context": "..."}
+    {"name": "...", "entity_type": "__ENTITY_TYPES__", "context": "..."}
   ],
   "relationships": [
     {"source": "entity name", "target": "entity name", "relationship_type": "__RELATIONSHIP_TYPES__", "context": "..."}
@@ -54,7 +55,12 @@ Guidelines:
   answers "what did we pick?" it is a decision; if it answers "what does the
   user like?" it is a preference.
 - bugs_fixed: Bugs identified and fixed, with root cause if mentioned
-- entities: People, projects, tools, services, or concepts discussed
+- entities: People, projects, tools, services, or concepts discussed.
+  Entities are durable things — never extract ephemeral identifiers as
+  entities: version strings (v1.2.3), commit hashes, PR/card/issue numbers,
+  or branch names. Use the canonical name for recurring entities: if the
+  user's name is known, use it (not "User" or "the user"), and reuse the
+  exact name an entity was introduced with rather than coining variants.
 - relationships: How entities relate to each other
 - importance: 1=trivial, 5=moderate, 8=significant, 10=critical
 - scope: How broadly this item applies:
@@ -67,7 +73,9 @@ Guidelines:
 - Be specific and concise. Each item should stand alone without context.
 - Do NOT extract generic observations. Focus on project-specific, actionable knowledge.
 - If the conversation is routine with nothing notable, return all empty arrays.
-""".replace("__RELATIONSHIP_TYPES__", _RELATIONSHIP_TYPES_STR)
+""".replace("__RELATIONSHIP_TYPES__", _RELATIONSHIP_TYPES_STR).replace(
+    "__ENTITY_TYPES__", _ENTITY_TYPES_STR
+)
 
 CONTEXT_HEADER = """\
 PROJECT CONTEXT:

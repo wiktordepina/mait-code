@@ -122,6 +122,116 @@ def _migrate_10_decision_entry_type(conn: sqlite3.Connection) -> None:
     )
 
 
+#: Migration 12 — legacy relationship types written before write-time coercion
+#: landed, remapped to the canonical vocabulary. Deliberately conservative:
+#: only types whose meaning maps cleanly *without flipping edge direction* get
+#: a specific target (e.g. ``hosts`` is inverse-``depends_on``, so it falls to
+#: the ``related_to`` catch-all instead). Anything absent here and outside the
+#: canonical set becomes ``related_to``.
+_LEGACY_RELATIONSHIP_REMAP: dict[str, str] = {
+    "runs_on": "depends_on",
+    "implements": "contributes_to",
+    "integrates_with": "uses",
+}
+
+#: Migration 12 — legacy entity types (never offered by the extraction prompt)
+#: remapped to the canonical vocabulary. Anything absent here and outside the
+#: canonical set becomes ``unknown``.
+_LEGACY_ENTITY_TYPE_REMAP: dict[str, str] = {
+    "component": "concept",
+    "module": "concept",
+    "feature": "concept",
+    "pattern": "concept",
+    "process": "concept",
+    "artifact": "concept",
+    "reference": "concept",
+    "resource": "concept",
+    "system": "service",
+    "infrastructure": "service",
+}
+
+
+def _migrate_12_canonical_graph_types(conn: sqlite3.Connection) -> None:
+    """Remap legacy entity and relationship types to the canonical vocabularies.
+
+    Relationship-type coercion only ever applied at write time, so rows written
+    before it landed carry free-form types; entity types were never coerced at
+    all. Remaps both via static lookups, then sweeps the remainder to the
+    defaults. A relationship whose remapped form collides with an existing row
+    on the ``(source, target, type)`` unique index merges into it instead
+    (widening the seen window, keeping the existing row's context).
+    """
+    # Local import to avoid hard-coding the vocabularies twice; entities.py
+    # imports nothing from this module, so there is no cycle.
+    from mait_code.tools.memory.entities import (
+        DEFAULT_ENTITY_TYPE,
+        DEFAULT_RELATIONSHIP_TYPE,
+        VALID_ENTITY_TYPES,
+        VALID_RELATIONSHIP_TYPES,
+    )
+
+    rel_placeholders = ",".join("?" * len(VALID_RELATIONSHIP_TYPES))
+    legacy_rels = conn.execute(
+        f"""SELECT id, source_entity_id, target_entity_id, relationship_type
+            FROM memory_relationships
+            WHERE relationship_type NOT IN ({rel_placeholders})""",
+        tuple(VALID_RELATIONSHIP_TYPES),
+    ).fetchall()
+
+    remapped = merged = 0
+    for rel_id, source_id, target_id, rel_type in legacy_rels:
+        new_type = _LEGACY_RELATIONSHIP_REMAP.get(rel_type, DEFAULT_RELATIONSHIP_TYPE)
+        existing = conn.execute(
+            """SELECT id FROM memory_relationships
+               WHERE source_entity_id = ? AND target_entity_id = ?
+                 AND relationship_type = ?""",
+            (source_id, target_id, new_type),
+        ).fetchone()
+        if existing:
+            conn.execute(
+                """UPDATE memory_relationships SET
+                       first_seen = MIN(
+                           first_seen,
+                           (SELECT first_seen FROM memory_relationships WHERE id = ?)),
+                       last_seen = MAX(
+                           last_seen,
+                           (SELECT last_seen FROM memory_relationships WHERE id = ?))
+                   WHERE id = ?""",
+                (rel_id, rel_id, existing[0]),
+            )
+            conn.execute("DELETE FROM memory_relationships WHERE id = ?", (rel_id,))
+            merged += 1
+        else:
+            conn.execute(
+                "UPDATE memory_relationships SET relationship_type = ? WHERE id = ?",
+                (new_type, rel_id),
+            )
+            remapped += 1
+
+    entity_total = 0
+    for legacy_type, new_type in _LEGACY_ENTITY_TYPE_REMAP.items():
+        cursor = conn.execute(
+            "UPDATE memory_entities SET entity_type = ? WHERE entity_type = ?",
+            (new_type, legacy_type),
+        )
+        entity_total += cursor.rowcount
+    entity_placeholders = ",".join("?" * len(VALID_ENTITY_TYPES))
+    cursor = conn.execute(
+        f"""UPDATE memory_entities SET entity_type = ?
+            WHERE entity_type NOT IN ({entity_placeholders})""",
+        (DEFAULT_ENTITY_TYPE, *VALID_ENTITY_TYPES),
+    )
+    entity_total += cursor.rowcount
+
+    logger.info(
+        "Migration 12: remapped %d relationship row(s), merged %d collision(s), "
+        "remapped %d entity row(s).",
+        remapped,
+        merged,
+        entity_total,
+    )
+
+
 MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
     (
         1,
@@ -261,6 +371,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "CREATE INDEX IF NOT EXISTS idx_memory_entries_superseded "
             "ON memory_entries(superseded_by) WHERE superseded_by IS NOT NULL",
         ],
+    ),
+    (
+        12,
+        "Remap legacy entity and relationship types to canonical vocabularies",
+        _migrate_12_canonical_graph_types,
     ),
 ]
 

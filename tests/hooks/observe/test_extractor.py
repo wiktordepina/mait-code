@@ -25,6 +25,25 @@ def test_prompt_covers_expected_keys():
         assert f'"{key}"' in prompt, key
 
 
+def test_prompt_embeds_canonical_vocabularies():
+    """The prompt enums are built from the canonical tuples, not hard-coded."""
+    from mait_code.tools.memory.entities import ENTITY_TYPES, RELATIONSHIP_TYPES
+
+    prompt = build_extraction_prompt("x")
+    assert "|".join(ENTITY_TYPES) in prompt
+    assert "|".join(RELATIONSHIP_TYPES) in prompt
+    assert "__ENTITY_TYPES__" not in prompt
+    assert "__RELATIONSHIP_TYPES__" not in prompt
+
+
+def test_prompt_forbids_ephemeral_entities():
+    """The guidelines steer the model away from ephemera as entities."""
+    prompt = build_extraction_prompt("x")
+    assert "version strings" in prompt
+    assert "commit hashes" in prompt
+    assert "branch names" in prompt
+
+
 def test_parse_extraction_valid_json():
     raw = json.dumps(
         {

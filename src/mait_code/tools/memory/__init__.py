@@ -34,6 +34,7 @@ from mait_code.tools.memory.embeddings import (
 from mait_code.tools.memory.entities import (
     find_entity_by_name,
     get_entity_relationships,
+    merge_entities,
     search_entities,
     upsert_entity,
     upsert_relationship,
@@ -111,6 +112,7 @@ __all__ = [
     # Entities
     "find_entity_by_name",
     "get_entity_relationships",
+    "merge_entities",
     "search_entities",
     "upsert_entity",
     "upsert_relationship",

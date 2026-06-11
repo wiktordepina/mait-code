@@ -10,6 +10,34 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.57.0] — 2026-06-11
+
+### Added
+
+- **Canonical entity types in the knowledge graph** — entity types now mirror
+  the relationship-type pattern: a canonical vocabulary (`person`, `project`,
+  `tool`, `service`, `concept`, `org`) defined once in
+  `tools/memory/entities.py`, fed into the extraction prompt enum, and
+  enforced at write time — types the extraction model invents coerce to
+  `unknown` instead of accumulating in the table.
+- **`mc-tool-memory entities merge <source> <target>`** — folds alias
+  duplicates into one entity: relationships are repointed (deduplicating
+  where the target already holds the edge), mention counts summed, the
+  first/last-seen window widened to span both, would-be self-loops dropped,
+  and the source deleted. Quote multi-word names.
+
+### Changed
+
+- **Migration 12 cleans the legacy graph** — relationship rows written before
+  write-time coercion landed are remapped to the canonical six via a
+  conservative static lookup (one that never flips edge direction), merging
+  rows that collide on the `(source, target, type)` uniqueness index; legacy
+  entity types are remapped likewise. The stored graph ends fully canonical.
+- **Extraction prompt guards against ephemera** — the model is now told not
+  to extract version strings, commit hashes, PR/card/issue numbers, or branch
+  names as entities, and to reuse canonical entity names (the user's actual
+  name, the name an entity was introduced with) rather than coining variants.
+
 ## [0.56.0] — 2026-06-11
 
 ### Added
@@ -1652,7 +1680,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.56.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.57.0...HEAD
+[0.57.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.57.0
 [0.56.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.56.0
 [0.55.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.55.0
 [0.54.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.54.0

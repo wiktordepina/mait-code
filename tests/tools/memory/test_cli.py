@@ -582,3 +582,39 @@ class TestCmdCanonicalizeProjects:
         self._setup(tmp_path, monkeypatch, aliases=None)
         cmd_canonicalize_projects(_make_args(dry_run=False))
         assert "No project aliases configured" in capsys.readouterr().out
+
+
+class TestCmdEntitiesMerge:
+    def _seed(self, conn):
+        from mait_code.tools.memory.entities import upsert_entity, upsert_relationship
+
+        user = upsert_entity(conn, "User", "unknown")
+        wiktor = upsert_entity(conn, "Wiktor", "person")
+        ghostty = upsert_entity(conn, "Ghostty", "tool")
+        upsert_relationship(conn, user, ghostty, "uses", "terminal")
+        return wiktor
+
+    def test_merge_success(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_entities
+
+        self._seed(mem_db)
+        cmd_entities(_make_args(query=["merge", "User", "Wiktor"], limit=20))
+        out = capsys.readouterr().out
+        assert "Merged 'User' into" in out
+        assert "Wiktor" in out
+        assert "repointed: 1" in out
+
+    def test_merge_wrong_arity(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_entities
+
+        with pytest.raises(SystemExit):
+            cmd_entities(_make_args(query=["merge", "User"], limit=20))
+        assert "Usage: entities merge" in capsys.readouterr().err
+
+    def test_merge_missing_entity(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_entities
+
+        self._seed(mem_db)
+        with pytest.raises(SystemExit):
+            cmd_entities(_make_args(query=["merge", "Nobody", "Wiktor"], limit=20))
+        assert "not found" in capsys.readouterr().err
