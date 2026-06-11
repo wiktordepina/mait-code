@@ -6,7 +6,9 @@ import pytest
 
 from mait_code.tools.memory.entities import (
     find_entity_by_name,
+    get_ego_graph,
     get_entity_relationships,
+    list_graph_entities,
     merge_entities,
     search_entities,
     upsert_entity,
@@ -211,3 +213,101 @@ def test_merge_entities_refuses_self_merge(memory_db: sqlite3.Connection):
     upsert_entity(memory_db, "Wiktor", "person")
     with pytest.raises(ValueError, match="same entity"):
         merge_entities(memory_db, "wiktor", "Wiktor")
+
+
+# -- graph queries ---------------------------------------------------------------
+
+
+def _seed_graph(conn: sqlite3.Connection) -> None:
+    """A small star: wiktor owns alpha/beta, uses hammer; alpha depends on forge.
+
+    ``dust`` is an orphan (degree 0, one mention); the others get extra
+    mentions so the noise filters keep them.
+    """
+    ids = {
+        "wiktor": upsert_entity(conn, "wiktor", "person"),
+        "alpha": upsert_entity(conn, "alpha", "project"),
+        "beta": upsert_entity(conn, "beta", "project"),
+        "hammer": upsert_entity(conn, "hammer", "tool"),
+        "forge": upsert_entity(conn, "forge", "service"),
+        "dust": upsert_entity(conn, "dust", "concept"),
+    }
+    for name in ("wiktor", "wiktor", "alpha"):  # mention bumps
+        upsert_entity(conn, name, "unknown")
+    upsert_relationship(conn, ids["wiktor"], ids["alpha"], "owns", "ctx wa")
+    upsert_relationship(conn, ids["wiktor"], ids["beta"], "owns", "ctx wb")
+    upsert_relationship(conn, ids["wiktor"], ids["hammer"], "uses", "ctx wh")
+    upsert_relationship(conn, ids["alpha"], ids["forge"], "depends_on", "ctx af")
+
+
+def test_list_graph_entities_degree_and_order(memory_db: sqlite3.Connection):
+    _seed_graph(memory_db)
+
+    entities = list_graph_entities(memory_db)
+
+    by_name = {e["name"]: e for e in entities}
+    assert by_name["wiktor"]["degree"] == 3
+    assert by_name["alpha"]["degree"] == 2
+    assert by_name["dust"]["degree"] == 0
+    # mention_count DESC puts the triple-mentioned centre first
+    assert entities[0]["name"] == "wiktor"
+
+
+def test_list_graph_entities_noise_filters(memory_db: sqlite3.Connection):
+    _seed_graph(memory_db)
+
+    names = {
+        e["name"]
+        for e in list_graph_entities(
+            memory_db, min_mentions=2, require_relationship=True
+        )
+    }
+    assert names == {"wiktor", "alpha"}
+
+
+def test_list_graph_entities_query_and_limit(memory_db: sqlite3.Connection):
+    _seed_graph(memory_db)
+
+    assert [e["name"] for e in list_graph_entities(memory_db, "lph")] == ["alpha"]
+    assert len(list_graph_entities(memory_db, limit=2)) == 2
+
+
+def test_get_ego_graph_shape(memory_db: sqlite3.Connection):
+    _seed_graph(memory_db)
+
+    ego = get_ego_graph(memory_db, "WIKTOR")  # case-insensitive
+
+    assert ego is not None
+    assert ego["centre"]["name"] == "wiktor"
+    assert [e["name"] for e in ego["entities"]][0] == "wiktor"  # centre first
+    assert {e["name"] for e in ego["entities"]} == {
+        "wiktor",
+        "alpha",
+        "beta",
+        "hammer",
+    }
+    # 1-hop only: alpha->forge is not incident to the centre
+    assert len(ego["relationships"]) == 3
+    assert all(
+        "wiktor" in (r["source_name"], r["target_name"]) for r in ego["relationships"]
+    )
+
+
+def test_get_ego_graph_deterministic_order(memory_db: sqlite3.Connection):
+    _seed_graph(memory_db)
+
+    first = get_ego_graph(memory_db, "wiktor")
+    second = get_ego_graph(memory_db, "wiktor")
+
+    assert first == second
+    rels = first["relationships"]
+    # centre-as-source edges lead, ordered by type then target
+    assert [(r["relationship_type"], r["target_name"]) for r in rels] == [
+        ("owns", "alpha"),
+        ("owns", "beta"),
+        ("uses", "hammer"),
+    ]
+
+
+def test_get_ego_graph_missing_entity(memory_db: sqlite3.Connection):
+    assert get_ego_graph(memory_db, "nobody") is None

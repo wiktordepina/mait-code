@@ -61,6 +61,7 @@ class HomeTarget(enum.Enum):
     BOARD = "board"
     MEMORY = "memory"
     OBSERVATIONS = "observations"
+    GRAPH = "graph"
     SETTINGS = "settings"
     LOGS = "logs"
 
@@ -340,6 +341,10 @@ class HomeApp(MaitApp):
             "Open observations",
             NodeSpec("memory:reflection", HomeTarget.OBSERVATIONS),
         )
+        # The graph explorer reads the same store the browser does, so it
+        # lives in the Memory section; the memory detail key keeps the
+        # store's headline numbers previewed while the leaf is highlighted.
+        launch_leaf(memory, "Open graph explorer", NodeSpec("memory", HomeTarget.GRAPH))
 
         if b.rem_overdue:
             reminders = section(

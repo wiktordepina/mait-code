@@ -16,6 +16,7 @@ dependencies = [
     "markdownify>=0.14",
     "typer>=0.12,<1",
     "textual>=0.86",
+    "netext>=0.5.0",
 ]
 
 [project.scripts]

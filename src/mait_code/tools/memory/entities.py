@@ -209,6 +209,135 @@ def search_entities(
     ]
 
 
+def list_graph_entities(
+    conn: sqlite3.Connection,
+    query: str = "",
+    *,
+    min_mentions: int = 1,
+    require_relationship: bool = False,
+    limit: int | None = None,
+) -> list[dict]:
+    """List entities with their relationship degree, for graph surfaces.
+
+    The graph explorer's entity list: every entity matching *query*, each
+    carrying a ``degree`` (the number of relationships it participates in)
+    so callers can filter or weight by connectedness. The default filters
+    are permissive; pass ``min_mentions=2`` and ``require_relationship=True``
+    for the noise-hiding defaults the explorer uses (84% of entities are
+    single-mention tail).
+
+    Args:
+        conn: Open memory database connection.
+        query: Substring to match against entity names ("" matches all).
+        min_mentions: Keep entities mentioned at least this many times.
+        require_relationship: Drop entities with no relationships (degree 0).
+        limit: Maximum number of results, or ``None`` for all.
+
+    Returns:
+        A list of entity dicts (including ``degree``), ordered by
+        ``mention_count`` descending, then ``last_seen`` descending, then id
+        — a deterministic order for rendering and tests.
+    """
+    cursor = conn.execute(
+        """SELECT e.id, e.name, e.entity_type, e.first_seen, e.last_seen,
+                  e.mention_count,
+                  (SELECT COUNT(*) FROM memory_relationships r
+                    WHERE r.source_entity_id = e.id
+                       OR r.target_entity_id = e.id) AS degree
+           FROM memory_entities e
+           WHERE e.name LIKE ?
+             AND e.mention_count >= ?
+             AND (? = 0 OR EXISTS (
+                 SELECT 1 FROM memory_relationships r
+                  WHERE r.source_entity_id = e.id
+                     OR r.target_entity_id = e.id))
+           ORDER BY e.mention_count DESC, e.last_seen DESC, e.id
+           LIMIT ?""",
+        (
+            f"%{query}%",
+            min_mentions,
+            1 if require_relationship else 0,
+            -1 if limit is None else limit,
+        ),
+    )
+    return [
+        {
+            "id": row[0],
+            "name": row[1],
+            "entity_type": row[2],
+            "first_seen": row[3],
+            "last_seen": row[4],
+            "mention_count": row[5],
+            "degree": row[6],
+        }
+        for row in cursor.fetchall()
+    ]
+
+
+def get_ego_graph(conn: sqlite3.Connection, name: str) -> dict | None:
+    """The 1-hop neighbourhood of an entity: its node, neighbours, and edges.
+
+    The graph explorer's centre query. Both orderings are deterministic
+    (neighbours by mention count then name; relationships with the centre's
+    own edges first, then by source/type/target) so renders and snapshot
+    tests are stable for a given database state.
+
+    Args:
+        conn: Open memory database connection.
+        name: Centre entity name (case-insensitive).
+
+    Returns:
+        A dict with ``centre`` (the entity's fields), ``entities`` (centre
+        first, then neighbours), and ``relationships`` (every edge incident
+        to the centre, with source/target names) — or ``None`` if no entity
+        matches *name*.
+    """
+    centre = find_entity_by_name(conn, name)
+    if centre is None:
+        return None
+
+    relationships = get_entity_relationships(conn, centre["id"])
+    relationships.sort(
+        key=lambda r: (
+            r["source_entity_id"] != centre["id"],
+            r["source_name"].casefold(),
+            r["relationship_type"],
+            r["target_name"].casefold(),
+        )
+    )
+
+    neighbour_ids = sorted(
+        (
+            {r["source_entity_id"] for r in relationships}
+            | {r["target_entity_id"] for r in relationships}
+        )
+        - {centre["id"]}
+    )
+    entities = [centre]
+    if neighbour_ids:
+        marks = ",".join("?" * len(neighbour_ids))
+        cursor = conn.execute(
+            f"""SELECT id, name, entity_type, first_seen, last_seen, mention_count
+                FROM memory_entities
+                WHERE id IN ({marks})
+                ORDER BY mention_count DESC, name COLLATE NOCASE, id""",
+            neighbour_ids,
+        )
+        entities.extend(
+            {
+                "id": row[0],
+                "name": row[1],
+                "entity_type": row[2],
+                "first_seen": row[3],
+                "last_seen": row[4],
+                "mention_count": row[5],
+            }
+            for row in cursor.fetchall()
+        )
+
+    return {"centre": centre, "entities": entities, "relationships": relationships}
+
+
 def merge_entities(
     conn: sqlite3.Connection, source_name: str, target_name: str
 ) -> dict:
