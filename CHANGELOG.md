@@ -10,6 +10,29 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.58.0] — 2026-06-11
+
+### Added
+
+- **Knowledge-graph explorer (`mait-code graph`)** — an ego-centric,
+  read-only TUI over the entity graph the observe hook accumulates: a
+  mention-ranked entity list, the selected entity's 1-hop neighbourhood, and
+  a detail pane surfacing each relationship's free-text context (previously
+  collected but never displayed). The centre pane renders two ways — a
+  [netext](https://github.com/mahrz24/netext) node-link diagram or a flat,
+  glyph-annotated relationship table — and `t` swaps them. The explorer
+  follows the list: highlights preview instantly, and the neighbourhood
+  re-centres when the cursor rests. Entity-type glyphs and colours follow
+  the active theme; single-mention and orphan entities hide behind a
+  toggleable noise filter (`a`). Off-TTY the command prints the graph's
+  hubs as text. Launchable from the home hub's Memory section.
+- **Graph query layer** — `list_graph_entities` (degree-annotated entity
+  listing with noise filters) and `get_ego_graph` (deterministic 1-hop
+  neighbourhood) join the public `tools.memory` surface.
+- **netext (≥0.5.0)** joins the runtime dependencies — the terminal
+  graph-rendering library behind the node-link view.
+
+
 ## [0.57.0] — 2026-06-11
 
 ### Added
@@ -1680,7 +1703,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.57.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.58.0...HEAD
+[0.58.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.58.0
 [0.57.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.57.0
 [0.56.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.56.0
 [0.55.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.55.0
