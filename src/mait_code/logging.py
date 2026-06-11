@@ -46,6 +46,7 @@ from mait_code.config import get as config_get
 from mait_code.config import get_int as config_get_int
 
 __all__ = [
+    "log_file_path",
     "log_invocation",
     "setup_logging",
 ]
@@ -104,11 +105,17 @@ class _JsonLinesFormatter(logging.Formatter):
         return json.dumps(line, ensure_ascii=False, default=repr)
 
 
-def _get_log_path() -> Path:
-    """Return the log file path, creating the directory if needed."""
+def log_file_path() -> Path:
+    """Return the active log file path, creating its directory if needed.
+
+    The ``log-file`` setting when set to a concrete path, otherwise
+    ``<state-dir>/mait-code.jsonl``. The one resolution shared by the writing
+    side (:func:`setup_logging`) and the read side (the ``mait-code logs``
+    viewer).
+    """
     value = config_get("log-file")
     if "<" not in value:
-        path = Path(value)
+        path = Path(value).expanduser()
     else:
         path = mait_code_log_dir() / "mait-code.jsonl"
 
@@ -137,7 +144,7 @@ def setup_logging() -> None:
     level_name = config_get("log-level").upper()
     level = getattr(logging, level_name, logging.INFO)
 
-    log_path = _get_log_path()
+    log_path = log_file_path()
 
     # Rotate at midnight rather than by size. In short-lived hook/CLI
     # processes the rollover is checked on the first emit using the log file's

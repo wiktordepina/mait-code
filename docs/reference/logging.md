@@ -3,6 +3,8 @@
 
 # Logging — API reference
 
+::: mait_code.logging.log_file_path
+
 ::: mait_code.logging.log_invocation
 
 ::: mait_code.logging.setup_logging

@@ -10,6 +10,33 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.56.0] — 2026-06-11
+
+### Added
+
+- **The log viewer** — a sixth TUI surface: `mait-code logs` (or **System ▸
+  ↗ Open logs** in the home hub) browses the structured JSON Lines logs
+  interactively instead of via `jq`. A master–detail tree groups lines by day
+  (the active file plus its rotated siblings), newest day expanded, each day
+  badged with its line/warning/error tallies; the detail pane renders the
+  selected line's full record — message, schema fields, invocation arguments,
+  and the stack trace when one was captured. Four composable filters: free-text
+  search over messages (`/`), a cycling severity floor (`l`), and tool / day
+  pickers (`t` / `d`) — the masthead subtitle always carries the active
+  narrowing. Read-only and forgiving: malformed lines are skipped, oversized
+  files are read from their tail, and off a TTY the command prints a
+  day-grouped summary instead. Documented with screenshots in the new
+  [log viewer guide](docs/logs.md).
+- **`mait_code.logging.log_file_path()`** — the active log file's resolution
+  (the `log-file` setting, else `<state-dir>/mait-code.jsonl`) is now public,
+  shared by the writing side and the viewer.
+
+### Fixed
+
+- **`MAIT_CODE_LOG_FILE` with a `~` path** — the configured log-file path is
+  now tilde-expanded instead of creating a literal `~` directory (the
+  recurring tilde-expansion bug class).
+
 ## [0.55.0] — 2026-06-11
 
 ### Changed
@@ -1625,7 +1652,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.55.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.56.0...HEAD
+[0.56.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.56.0
 [0.55.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.55.0
 [0.54.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.54.0
 [0.53.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.53.0

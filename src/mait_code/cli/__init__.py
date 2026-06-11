@@ -762,6 +762,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._settings_tui import run_interactive_editor
 
             run_interactive_editor()
+        elif target is HomeTarget.LOGS:
+            from mait_code.cli._logs_tui import run_logs_tui
+
+            run_logs_tui()
 
     target = run_home_tui()
     while target is not None:
@@ -894,6 +898,54 @@ def _observations_render() -> None:
         if len(group) > 5:
             typer.echo(f"  … and {len(group) - 5} more")
         typer.echo("")
+
+
+@app.command("logs")
+def logs() -> None:
+    """Explore the structured logs (day-grouped summary when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._logs_tui import run_logs_tui
+
+        run_logs_tui()
+    else:
+        _logs_render()
+
+
+def _logs_render() -> None:
+    """Print the logs as a day-grouped summary (the non-TTY fallback)."""
+    from mait_code.cli._logs import (
+        default_log_path,
+        group_by_day,
+        level_counts,
+        log_files,
+        read_log_entries,
+    )
+
+    entries, _ = read_log_entries(log_files(default_log_path()))
+    if not entries:
+        typer.echo("No logs yet.")
+        return
+
+    def plural(n: int, noun: str) -> str:
+        return f"{n} {noun}{'s' if n != 1 else ''}"
+
+    total_errors = level_counts(entries)["error"]
+    typer.echo(
+        f"Logs: {plural(len(entries), 'line')} · {plural(total_errors, 'error')}"
+    )
+    typer.echo("")
+
+    for day, group in group_by_day(entries).items():
+        counts = level_counts(group)
+        typer.echo(
+            f"{day}: {plural(len(group), 'line')} · "
+            f"{plural(counts['warning'], 'warning')} · "
+            f"{plural(counts['error'], 'error')}"
+        )
+        for entry in [e for e in group if e["level"] == "error"][:5]:
+            first_line = entry["msg"].strip().splitlines()[0] if entry["msg"] else ""
+            typer.echo(f"  ✗ {entry['tool']} {first_line}")
+    typer.echo("")
 
 
 def main() -> None:

@@ -62,6 +62,7 @@ class HomeTarget(enum.Enum):
     MEMORY = "memory"
     OBSERVATIONS = "observations"
     SETTINGS = "settings"
+    LOGS = "logs"
 
 
 def run_home_tui() -> HomeTarget | None:
@@ -362,6 +363,7 @@ class HomeApp(MaitApp):
         launch_leaf(
             system, "Open settings", NodeSpec("system:settings", HomeTarget.SETTINGS)
         )
+        launch_leaf(system, "Open logs", NodeSpec("system:logs", HomeTarget.LOGS))
         leaf(system, "Doctor", NodeSpec("system:doctor"))
         leaf(system, "Version & paths", NodeSpec("system:version"))
 
@@ -385,6 +387,7 @@ class HomeApp(MaitApp):
             "identity": self._detail_identity,
             "identity:sysprompt": self._detail_sysprompt,
             "system": self._detail_system,
+            "system:logs": self._detail_logs,
             "system:doctor": self._detail_doctor,
             "system:settings": self._detail_settings,
             "system:version": self._detail_version,
@@ -805,6 +808,56 @@ class HomeApp(MaitApp):
             ),
         ]
 
+    def _detail_logs(self) -> list[Widget]:
+        import time
+
+        from mait_code.cli._logs import (
+            default_log_path,
+            entry_day,
+            level_counts,
+            log_files,
+            read_log_entries,
+        )
+
+        widgets: list[Widget] = [
+            Label("Logs", classes="title"),
+            Label(
+                "Press Enter on “↗ Open logs” to launch the viewer.",
+                classes="hint",
+            ),
+        ]
+        path = default_log_path()
+        files = log_files(path)
+        if not files:
+            return widgets + [
+                Label(
+                    empty_state("Nothing logged yet — lines accrue as the tools run.")
+                )
+            ]
+        # The active file is the first listed and holds the current day; that's
+        # enough for the at-a-glance counts without parsing every rotated day.
+        entries, _ = read_log_entries(files[:1])
+        today = [e for e in entries if entry_day(e) == time.strftime("%Y-%m-%d")]
+        counts = level_counts(today)
+        home = str(Path.home())
+
+        def plural(n: int, noun: str) -> str:
+            return f"{n} {noun}{'s' if n != 1 else ''}"
+
+        widgets += _kv_rows(
+            [
+                ("log file", str(path).replace(home, "~")),
+                ("days on disk", str(len(files))),
+                (
+                    "today",
+                    f"{plural(len(today), 'line')} · "
+                    f"{plural(counts['warning'], 'warning')} · "
+                    f"{plural(counts['error'], 'error')}",
+                ),
+            ]
+        )
+        return widgets
+
     def _detail_doctor(self) -> list[Widget]:
         from mait_code.console import GLYPH as LEVEL_GLYPH
         from mait_code.cli._doctor import run_doctor
@@ -985,6 +1038,11 @@ class HomeApp(MaitApp):
             "Open settings",
             "Jump to the settings editor",
             lambda: self.action_launch(HomeTarget.SETTINGS),
+        )
+        yield SystemCommand(
+            "Open logs",
+            "Jump to the log viewer",
+            lambda: self.action_launch(HomeTarget.LOGS),
         )
 
 
