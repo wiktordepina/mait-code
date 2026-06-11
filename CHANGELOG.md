@@ -10,6 +10,25 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.55.0] — 2026-06-11
+
+### Changed
+
+- **Structured JSON Lines logging** — the shared logging layer now emits one
+  JSON object per line with a deterministic, ECS-inspired schema instead of
+  plain text. Every line carries `ts` (epoch seconds as a float — cast to a
+  timezone at the presentation layer), `level`, `logger`, `msg`, `tool` (the
+  entry-point name, on every line, not just invocation events) and `pid`.
+  `@log_invocation` events gain structured `event`
+  (`invoked`/`completed`/`failed`/`exited`), `duration_ms` and `args` fields
+  (sensitive-value truncation unchanged), exceptions serialise to
+  `error_type`/`error_message`/`stack` on a single line, and call sites can
+  merge their own fields with `extra={...}` (core fields win on collision).
+  Logs write to `mait-code.jsonl`; the old `mait-code.log` is no longer
+  written and its rotated history ages out on the usual schedule. Daily
+  rotation and the `log-level`/`log-file`/`log-backup-count` settings behave
+  exactly as before. This is the enabler for the log viewer.
+
 ## [0.54.0] — 2026-06-11
 
 ### Added
@@ -1606,7 +1625,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.54.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.55.0...HEAD
+[0.55.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.55.0
 [0.54.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.54.0
 [0.53.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.53.0
 [0.52.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.52.0
