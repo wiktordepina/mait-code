@@ -47,6 +47,28 @@ def _not_found(card_id: int) -> NoReturn:
     sys.exit(1)
 
 
+def _card_payload(conn, card_id: int) -> dict:
+    """Return a card in the ``show --json`` shape (comments included)."""
+    card = service.get_card(conn, card_id)
+    if card is None:
+        _not_found(card_id)
+    card["comments"] = service.get_comments(conn, card_id)
+    return card
+
+
+def _print_card(conn, args, card_id: int, message: str) -> None:
+    """Print *message*, or with ``--json`` the affected card instead.
+
+    Mutating subcommands route their success output through here so scripted
+    callers get the card back (same shape as ``show --json``) instead of
+    having to parse ids out of prose.
+    """
+    if args.json:
+        print(json.dumps(_card_payload(conn, card_id), indent=2))
+    else:
+        print(message)
+
+
 # --- Card CRUD ---
 
 
@@ -66,8 +88,9 @@ def cmd_add(args):
             description=args.description,
             priority=args.priority,
         )
-
-    print(f"Card #{card_id} added ({args.priority}): {title}")
+        _print_card(
+            conn, args, card_id, f"Card #{card_id} added ({args.priority}): {title}"
+        )
 
 
 def cmd_list(args):
@@ -189,18 +212,22 @@ def cmd_edit(args):
             service.edit_card(conn, args.id, **fields)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id} updated.")
+        _print_card(conn, args, args.id, f"Card #{args.id} updated.")
 
 
 def cmd_remove(args):
     with connection() as conn:
+        # With --json the card is emitted as it was, so snapshot it first.
+        payload = _card_payload(conn, args.id) if args.json else None
         try:
             service.remove_card(conn, args.id)
         except service.CardNotFound:
             _not_found(args.id)
 
-    print(f"Card #{args.id} removed.")
+    if payload is not None:
+        print(json.dumps(payload, indent=2))
+    else:
+        print(f"Card #{args.id} removed.")
 
 
 def cmd_comment(args):
@@ -214,8 +241,7 @@ def cmd_comment(args):
             service.add_comment(conn, args.id, body, author=args.author)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Comment added to card #{args.id}.")
+        _print_card(conn, args, args.id, f"Comment added to card #{args.id}.")
 
 
 # --- Workflow verbs ---
@@ -228,8 +254,7 @@ def cmd_move(args):
             service.move_card(conn, args.id, new_status)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id} → {label(new_status)}.")
+        _print_card(conn, args, args.id, f"Card #{args.id} → {label(new_status)}.")
 
 
 def cmd_refine(args):
@@ -242,10 +267,13 @@ def cmd_refine(args):
             conn, args.id, description=args.description, acceptance=args.acceptance
         )
 
-    # Warn if the card lands in Refined with no acceptance criteria at all.
-    if args.acceptance is None and not had_acceptance:
-        print(f"Warning: card #{args.id} has no acceptance criteria.", file=sys.stderr)
-    print(f"Card #{args.id} → {label(REFINED)}.")
+        # Warn if the card lands in Refined with no acceptance criteria at all.
+        if args.acceptance is None and not had_acceptance:
+            print(
+                f"Warning: card #{args.id} has no acceptance criteria.",
+                file=sys.stderr,
+            )
+        _print_card(conn, args, args.id, f"Card #{args.id} → {label(REFINED)}.")
 
 
 def cmd_next(args):
@@ -278,8 +306,7 @@ def cmd_complete(args):
             service.complete_card(conn, args.id, summary=summary or None)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id} completed.")
+        _print_card(conn, args, args.id, f"Card #{args.id} completed.")
 
 
 def cmd_block(args):
@@ -289,8 +316,7 @@ def cmd_block(args):
             service.block_card(conn, args.id, reason=reason or None)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id} tagged 'blocked'.")
+        _print_card(conn, args, args.id, f"Card #{args.id} tagged 'blocked'.")
 
 
 def cmd_unblock(args):
@@ -299,8 +325,7 @@ def cmd_unblock(args):
             service.unblock_card(conn, args.id)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id}: 'blocked' tag removed.")
+        _print_card(conn, args, args.id, f"Card #{args.id}: 'blocked' tag removed.")
 
 
 def cmd_tag(args):
@@ -315,8 +340,7 @@ def cmd_tag(args):
             service.add_tag(conn, args.id, tag)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id} tagged '{tag}'.")
+        _print_card(conn, args, args.id, f"Card #{args.id} tagged '{tag}'.")
 
 
 def cmd_untag(args):
@@ -326,8 +350,7 @@ def cmd_untag(args):
             service.remove_tag(conn, args.id, tag)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id}: '{tag}' tag removed.")
+        _print_card(conn, args, args.id, f"Card #{args.id}: '{tag}' tag removed.")
 
 
 def cmd_ref_add(args):
@@ -345,8 +368,9 @@ def cmd_ref_add(args):
             service.add_reference(conn, args.id, ref_label, value)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id}: added reference '{ref_label}'.")
+        _print_card(
+            conn, args, args.id, f"Card #{args.id}: added reference '{ref_label}'."
+        )
 
 
 def cmd_ref_remove(args):
@@ -356,13 +380,15 @@ def cmd_ref_remove(args):
         except service.CardNotFound:
             _not_found(args.id)
 
-    if not removed:
-        print(
-            f"Error: card #{args.id} has no reference at position {args.position}.",
-            file=sys.stderr,
+        if not removed:
+            print(
+                f"Error: card #{args.id} has no reference at position {args.position}.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        _print_card(
+            conn, args, args.id, f"Card #{args.id}: removed reference {args.position}."
         )
-        sys.exit(1)
-    print(f"Card #{args.id}: removed reference {args.position}.")
 
 
 def cmd_ref_list(args):
@@ -391,8 +417,7 @@ def cmd_archive(args):
             service.archive_card(conn, args.id)
         except service.CardNotFound:
             _not_found(args.id)
-
-    print(f"Card #{args.id} → {label(ARCHIVED)}.")
+        _print_card(conn, args, args.id, f"Card #{args.id} → {label(ARCHIVED)}.")
 
 
 def cmd_summary(args):
@@ -426,6 +451,7 @@ def main():
     p_add.add_argument("--priority", choices=PRIORITIES, default="medium")
     p_add.add_argument("--project", help="Project (defaults to git root or cwd)")
     p_add.add_argument("title", nargs="+", help="Card title")
+    p_add.add_argument("--json", action="store_true", help="Emit the new card as JSON")
     p_add.set_defaults(func=cmd_add)
 
     p_list = sub.add_parser("list", help="List cards grouped by column")
@@ -475,6 +501,7 @@ def main():
     p_move = sub.add_parser("move", help="Move a card to a column")
     p_move.add_argument("id", type=int, help="Card ID")
     p_move.add_argument("status", choices=ALL_STATUSES, help="Target column")
+    p_move.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_move.set_defaults(func=cmd_move)
 
     p_refine = sub.add_parser(
@@ -483,6 +510,7 @@ def main():
     p_refine.add_argument("id", type=int, help="Card ID")
     p_refine.add_argument("--description", help="Card description")
     p_refine.add_argument("--acceptance", help="Acceptance criteria")
+    p_refine.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_refine.set_defaults(func=cmd_refine)
 
     p_next = sub.add_parser("next", help="Show (or --claim) the next refined card")
@@ -494,6 +522,7 @@ def main():
     p_complete = sub.add_parser("complete", help="Complete a card with a summary")
     p_complete.add_argument("id", type=int, help="Card ID")
     p_complete.add_argument("--summary", nargs="+", default=[], help="Handoff summary")
+    p_complete.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_complete.set_defaults(func=cmd_complete)
 
     p_block = sub.add_parser(
@@ -501,20 +530,24 @@ def main():
     )
     p_block.add_argument("id", type=int, help="Card ID")
     p_block.add_argument("reason", nargs="*", help="Reason (recorded as a comment)")
+    p_block.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_block.set_defaults(func=cmd_block)
 
     p_unblock = sub.add_parser("unblock", help="Remove the 'blocked' tag from a card")
     p_unblock.add_argument("id", type=int, help="Card ID")
+    p_unblock.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_unblock.set_defaults(func=cmd_unblock)
 
     p_tag = sub.add_parser("tag", help="Add a tag to a card")
     p_tag.add_argument("id", type=int, help="Card ID")
     p_tag.add_argument("tag", help="Tag to add")
+    p_tag.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_tag.set_defaults(func=cmd_tag)
 
     p_untag = sub.add_parser("untag", help="Remove a tag from a card")
     p_untag.add_argument("id", type=int, help="Card ID")
     p_untag.add_argument("tag", help="Tag to remove")
+    p_untag.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_untag.set_defaults(func=cmd_untag)
 
     p_ref = sub.add_parser("ref", help="Manage a card's references (label→value links)")
@@ -526,12 +559,16 @@ def main():
     p_ref_add.add_argument(
         "value", nargs="+", help="Reference value (URL, file:// path, or bare ID)"
     )
+    p_ref_add.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_ref_add.set_defaults(func=cmd_ref_add)
 
     p_ref_remove = ref_sub.add_parser("remove", help="Remove a reference by position")
     p_ref_remove.add_argument("id", type=int, help="Card ID")
     p_ref_remove.add_argument(
         "position", type=int, help="1-based position (see 'ref list')"
+    )
+    p_ref_remove.add_argument(
+        "--json", action="store_true", help="Emit the card as JSON"
     )
     p_ref_remove.set_defaults(func=cmd_ref_remove)
 
@@ -542,12 +579,14 @@ def main():
 
     p_archive = sub.add_parser("archive", help="Archive a card (hide it)")
     p_archive.add_argument("id", type=int, help="Card ID")
+    p_archive.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_archive.set_defaults(func=cmd_archive)
 
     p_comment = sub.add_parser("comment", help="Append a comment to a card")
     p_comment.add_argument("id", type=int, help="Card ID")
     p_comment.add_argument("--author", choices=AUTHORS, default="me")
     p_comment.add_argument("body", nargs="+", help="Comment text")
+    p_comment.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_comment.set_defaults(func=cmd_comment)
 
     p_edit = sub.add_parser("edit", help="Edit card fields")
@@ -556,10 +595,14 @@ def main():
     p_edit.add_argument("--description", help="New description")
     p_edit.add_argument("--priority", choices=PRIORITIES, help="New priority")
     p_edit.add_argument("--acceptance", help="New acceptance criteria")
+    p_edit.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_edit.set_defaults(func=cmd_edit)
 
     p_remove = sub.add_parser("remove", help="Delete a card permanently")
     p_remove.add_argument("id", type=int, help="Card ID")
+    p_remove.add_argument(
+        "--json", action="store_true", help="Emit the removed card as JSON"
+    )
     p_remove.set_defaults(func=cmd_remove)
 
     p_summary = sub.add_parser(

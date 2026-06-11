@@ -45,6 +45,7 @@ The **description**, **acceptance criteria** and **completion summary** fields r
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
 - References (label→value links on a card): `mc-tool-board ref add N <label> <value>` — *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
 - Show one card with its comments and references: `mc-tool-board show N`.
+- Every mutating subcommand (`add`, `move`, `refine`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `comment`, `edit`, `remove`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape — e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.
 
 ### Viewing
 
