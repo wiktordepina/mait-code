@@ -27,6 +27,12 @@
 
 ::: mait_code.config.reset_cache
 
+## Env injection
+
+::: mait_code.config.read_env_table
+
+::: mait_code.config.apply_env
+
 ## Resolvers
 
 ::: mait_code.config.data_dir

@@ -282,3 +282,19 @@ class TestLogInvocation:
         content = log_file.read_text()
         assert "func=" not in content
         assert "limit=5" in content
+
+
+class TestSetupLoggingAppliesEnv:
+    def test_injects_env_table_at_startup(self):
+        """setup_logging is the shared startup path — it applies [env]."""
+        from mait_code.cli._paths import settings_path
+
+        sp = settings_path()
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        sp.write_text('[env]\nMAIT_TEST_LOGSETUP_VAR = "on"\n', encoding="utf-8")
+        os.environ.pop("MAIT_TEST_LOGSETUP_VAR", None)
+        try:
+            setup_logging()
+            assert os.environ["MAIT_TEST_LOGSETUP_VAR"] == "on"
+        finally:
+            os.environ.pop("MAIT_TEST_LOGSETUP_VAR", None)

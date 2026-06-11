@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,7 +19,10 @@ from mait_code.cli._settings import (
 from mait_code.cli._settings_edit import (
     SettingError,
     apply_setting,
+    env_name_error,
     move_data_dir,
+    set_env_var,
+    unset_env_var,
 )
 
 runner = CliRunner()
@@ -252,3 +256,132 @@ class TestGetCommand:
         config.write_settings_file({"embedding-provider": "local"})
         result = runner.invoke(app, ["settings", "get", "nope"])
         assert result.exit_code == 1
+
+
+# ---------------------------------------------------------------------------
+# Custom [env] variables — set_env_var / unset_env_var and the CLI on top
+# ---------------------------------------------------------------------------
+
+
+class TestEnvVarCore:
+    def test_set_adds_and_persists(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        outcome = set_env_var("AWS_PROFILE", "dev-bedrock")
+        assert (outcome.old_value, outcome.new_value) == (None, "dev-bedrock")
+        assert config.read_env_table() == {"AWS_PROFILE": "dev-bedrock"}
+        # Applied to the running process too (and marked as our injection).
+        assert os.environ["AWS_PROFILE"] == "dev-bedrock"
+        assert "AWS_PROFILE" in config._injected_env
+
+    def test_set_updates_existing(self, fake_home: Path) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"}, env={"AWS_PROFILE": "old"}
+        )
+        outcome = set_env_var("AWS_PROFILE", "new")
+        assert (outcome.old_value, outcome.new_value) == ("old", "new")
+        assert config.read_env_table() == {"AWS_PROFILE": "new"}
+
+    def test_set_preserves_flat_settings(self, fake_home: Path) -> None:
+        config.write_settings_file({"log-level": "DEBUG"})
+        set_env_var("AWS_PROFILE", "dev")
+        assert config.read_settings_file()["log-level"] == "DEBUG"
+
+    def test_set_warns_when_shell_shadows(
+        self, fake_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        monkeypatch.setenv("MAIT_TEST_SHADOW", "from-shell")
+        outcome = set_env_var("MAIT_TEST_SHADOW", "from-file")
+        assert any("overrides" in w for w in outcome.warnings)
+        # The shell export is left alone.
+        assert os.environ["MAIT_TEST_SHADOW"] == "from-shell"
+
+    def test_set_rejects_reserved_and_invalid_names(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        with pytest.raises(SettingError, match="first-class settings"):
+            set_env_var("MAIT_CODE_LOG_LEVEL", "DEBUG")
+        with pytest.raises(SettingError, match="valid environment variable"):
+            set_env_var("NOT VALID", "x")
+        with pytest.raises(SettingError, match="valid environment variable"):
+            set_env_var("1LEADING_DIGIT", "x")
+        assert config.read_env_table() == {}
+
+    def test_unset_removes_and_cleans_process_env(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        set_env_var("MAIT_TEST_REMOVE_ME", "x")
+        assert os.environ["MAIT_TEST_REMOVE_ME"] == "x"
+        outcome = unset_env_var("MAIT_TEST_REMOVE_ME")
+        assert outcome.old_value == "x"
+        assert outcome.new_value is None
+        assert config.read_env_table() == {}
+        # Our injection is rolled back...
+        assert "MAIT_TEST_REMOVE_ME" not in os.environ
+
+    def test_unset_leaves_real_shell_export(
+        self, fake_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"}, env={"MAIT_TEST_KEEP": "from-file"}
+        )
+        monkeypatch.setenv("MAIT_TEST_KEEP", "from-shell")
+        unset_env_var("MAIT_TEST_KEEP")
+        # ...but a variable the shell owns is not touched.
+        assert os.environ["MAIT_TEST_KEEP"] == "from-shell"
+
+    def test_unset_unknown_raises(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        with pytest.raises(SettingError, match="not set in the \\[env\\] table"):
+            unset_env_var("NOPE")
+
+    def test_name_validation_rules(self) -> None:
+        assert env_name_error("AWS_PROFILE") is None
+        assert env_name_error("_LEADING_UNDERSCORE") is None
+        assert env_name_error("MAIT_CODE_ANYTHING") is not None
+        assert env_name_error("has space") is not None
+        assert env_name_error("") is not None
+        assert env_name_error("9TO5") is not None
+
+
+class TestEnvVarCli:
+    def test_set_get_unset_round_trip(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        result = runner.invoke(app, ["settings", "set", "env.AWS_PROFILE", "dev"])
+        assert result.exit_code == 0, result.output
+        assert "env.AWS_PROFILE: None → 'dev'" in result.output
+
+        result = runner.invoke(app, ["settings", "get", "env.AWS_PROFILE"])
+        assert result.exit_code == 0, result.output
+        assert result.output.startswith("dev\t(settings)")
+
+        result = runner.invoke(app, ["settings", "get", "env.AWS_PROFILE", "--json"])
+        assert json.loads(result.output) == {
+            "key": "env.AWS_PROFILE",
+            "value": "dev",
+            "source": "settings",
+        }
+
+        result = runner.invoke(app, ["settings", "unset", "env.AWS_PROFILE"])
+        assert result.exit_code == 0, result.output
+        assert "removed" in result.output
+        assert config.read_env_table() == {}
+
+    def test_set_rejects_reserved_name(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        result = runner.invoke(
+            app, ["settings", "set", "env.MAIT_CODE_LOG_LEVEL", "DEBUG"]
+        )
+        assert result.exit_code == 1
+        assert "first-class settings" in result.output
+
+    def test_get_unknown_env_var_errors(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        result = runner.invoke(app, ["settings", "get", "env.NOPE"])
+        assert result.exit_code == 1
+        assert "not in the [env] table" in result.output
+
+    def test_unset_rejects_registry_keys(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+        result = runner.invoke(app, ["settings", "unset", "log-level"])
+        assert result.exit_code == 1
+        assert "only env.<NAME> keys" in result.output

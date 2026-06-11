@@ -10,6 +10,40 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.54.0] — 2026-06-11
+
+### Added
+
+- **Custom environment variables — the `[env]` table** — settings.toml gains
+  an `[env]` table of user-defined environment variables, injected into the
+  process environment whenever any mait-code entry point starts: the
+  `mait-code` CLI and TUIs, every `mc-tool-*` tool and `mc-hook-*` hook. The
+  headline use is `AWS_PROFILE` for Bedrock embeddings — `mait-code doctor
+  --fix` and `mc-tool-memory reindex` now authenticate outside Claude Code
+  sessions without a manual env prefix. The real environment always wins (a
+  one-off `AWS_PROFILE=other mc-tool-…` override keeps working, and startup
+  injection never masquerades as a shell export in provenance views), the
+  table survives every settings-file rewrite, `MAIT_CODE_*` keys are rejected
+  and flagged by `doctor`, and secret-looking values are masked in display.
+- **Manage `[env]` from the CLI and the editor** — `settings set env.NAME
+  value` adds or updates, `settings unset env.NAME` removes, `settings get
+  env.NAME` resolves with provenance, and `settings list` shows `env.<NAME>`
+  rows. The interactive editor grows an always-present *Custom env* group:
+  each variable is editable in place with Apply/Remove (removal confirms),
+  and a *+ add variable…* row opens an inline name + value form with live
+  name validation. Both surfaces funnel through one shared write path, which
+  also applies the change to the running process.
+
+### Changed
+
+- **Memory-browser guide caught up with the browser** — the native view
+  (`n`, Claude Code's per-project auto-memory files) and the `p` project
+  filter are now documented, with a new screenshot of the native view; both
+  existed in the TUI but were missing from the guide. The settings guide
+  gains the *Custom environment variables* section with a screenshot of the
+  env editor pane, and long help copy in the settings editor's detail pane
+  now wraps instead of clipping.
+
 ## [0.53.0] — 2026-06-10
 
 ### Added
@@ -1572,7 +1606,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.53.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.54.0...HEAD
+[0.54.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.54.0
 [0.53.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.53.0
 [0.52.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.52.0
 [0.51.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.51.0

@@ -31,7 +31,7 @@ from mait_code.cli._paths import settings_path
 from mait_code.cli._record import RecordError, read_record
 from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
 from mait_code.config import get as config_get
-from mait_code.config import validate_settings
+from mait_code.config import read_env_table, validate_settings
 from mait_code.console import GLYPH, console
 
 __all__ = [
@@ -153,6 +153,23 @@ def _check_setting_values() -> Check:
             "(e.g. scoring weights must sum to 1.0)",
         )
     return Check("settings-values", "ok", "setting values are valid")
+
+
+def _check_env_table() -> Check:
+    """The [env] table must not carry MAIT_CODE_* keys (ignored at startup)."""
+    env = read_env_table()
+    reserved = sorted(name for name in env if name.startswith("MAIT_CODE_"))
+    if reserved:
+        return Check(
+            "env-table",
+            "warn",
+            "[env] cannot set MAIT_CODE_* variables (ignored at startup): "
+            + ", ".join(reserved),
+            fix_hint="set them via the matching settings.toml keys instead",
+        )
+    if not env:
+        return Check("env-table", "ok", "no custom [env] variables")
+    return Check("env-table", "ok", f"{len(env)} custom [env] variable(s) configured")
 
 
 def _check_hook_commands(cdir: Path) -> Check:
@@ -487,6 +504,7 @@ def run_doctor(
         _check_source(source),
         _check_mait_settings(),
         _check_setting_values(),
+        _check_env_table(),
         _check_settings(cdir),
         _check_hook_commands(cdir),
         _check_symlinks(cdir, fix, fixes),

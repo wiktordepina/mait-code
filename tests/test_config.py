@@ -7,6 +7,7 @@ providers (the drift guard).
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -498,3 +499,134 @@ class TestTier4Scoring:
         monkeypatch.setenv("MAIT_CODE_DEDUP_VECTOR_THRESHOLD", "1.5")
         errors = config.validate_settings()
         assert any(e.startswith("dedup-vector-threshold:") for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Custom [env] table — read, write round-trip, and startup injection
+# ---------------------------------------------------------------------------
+
+
+def _write_default_settings_with_env(body: str) -> Path:
+    """Write a settings file with an [env] table at the default path.
+
+    The autouse isolation fixture points ``XDG_CONFIG_HOME`` at a temp dir,
+    so this is the path the no-arg readers (``read_env_table``,
+    ``apply_env``, ``collect_settings``) resolve to.
+    """
+    from mait_code.cli._paths import settings_path
+
+    sp = settings_path()
+    sp.parent.mkdir(parents=True, exist_ok=True)
+    sp.write_text("[env]\n" + body, encoding="utf-8")
+    return sp
+
+
+class TestEnvTable:
+    def test_read_missing_file_returns_empty(self, tmp_path: Path) -> None:
+        assert config.read_env_table(path=tmp_path / "nope.toml") == {}
+
+    def test_read_no_table_returns_empty(self, tmp_path: Path) -> None:
+        f = tmp_path / "settings.toml"
+        f.write_text('log-level = "DEBUG"\n')
+        assert config.read_env_table(path=f) == {}
+
+    def test_read_values_and_drops_non_strings(self, tmp_path: Path) -> None:
+        f = tmp_path / "settings.toml"
+        f.write_text('[env]\nAWS_PROFILE = "dev-bedrock"\nNOT_A_STRING = 5\n')
+        assert config.read_env_table(path=f) == {"AWS_PROFILE": "dev-bedrock"}
+
+    def test_flat_reader_ignores_env_table(self, tmp_path: Path) -> None:
+        f = tmp_path / "settings.toml"
+        f.write_text('log-level = "DEBUG"\n[env]\nAWS_PROFILE = "dev"\n')
+        assert config.read_settings_file(path=f) == {"log-level": "DEBUG"}
+
+    def test_write_with_explicit_env_round_trips(self, tmp_path: Path) -> None:
+        import tomllib
+
+        f = tmp_path / "settings.toml"
+        env = {"AWS_PROFILE": "dev-bedrock", "WEIRD KEY": 'va"lue\\path'}
+        config.write_settings_file({"log-level": "DEBUG"}, path=f, env=env)
+        # The file must stay valid TOML and the table must round-trip intact.
+        tomllib.loads(f.read_text(encoding="utf-8"))
+        assert config.read_env_table(path=f) == env
+        assert config.read_settings_file(path=f)["log-level"] == "DEBUG"
+
+    def test_rewrite_preserves_existing_env_table(self, tmp_path: Path) -> None:
+        f = tmp_path / "settings.toml"
+        config.write_settings_file({}, path=f, env={"AWS_PROFILE": "dev-bedrock"})
+        # A later rewrite that doesn't mention env (settings set, TUI, theme
+        # persist, install/update) must carry the table over untouched.
+        config.write_settings_file({"log-level": "DEBUG"}, path=f)
+        assert config.read_env_table(path=f) == {"AWS_PROFILE": "dev-bedrock"}
+        assert config.read_settings_file(path=f)["log-level"] == "DEBUG"
+
+    def test_empty_env_writes_commented_example(self, tmp_path: Path) -> None:
+        f = tmp_path / "settings.toml"
+        config.write_settings_file({}, path=f)
+        content = f.read_text(encoding="utf-8")
+        assert "# [env]" in content
+        assert '# AWS_PROFILE = "dev-bedrock"' in content
+        assert "\n[env]" not in content
+
+
+class TestApplyEnv:
+    def test_injects_missing_var(self) -> None:
+        _write_default_settings_with_env('MAIT_TEST_APPLY_VAR = "hello"\n')
+        os.environ.pop("MAIT_TEST_APPLY_VAR", None)
+        try:
+            assert config.apply_env() == ["MAIT_TEST_APPLY_VAR"]
+            assert os.environ["MAIT_TEST_APPLY_VAR"] == "hello"
+            # Second call is a no-op — the var is now present.
+            assert config.apply_env() == []
+        finally:
+            os.environ.pop("MAIT_TEST_APPLY_VAR", None)
+
+    def test_real_environment_wins(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _write_default_settings_with_env('MAIT_TEST_APPLY_VAR = "from-file"\n')
+        monkeypatch.setenv("MAIT_TEST_APPLY_VAR", "from-env")
+        assert config.apply_env() == []
+        assert os.environ["MAIT_TEST_APPLY_VAR"] == "from-env"
+
+    def test_mait_code_keys_are_skipped(self) -> None:
+        _write_default_settings_with_env('MAIT_CODE_LOG_LEVEL = "DEBUG"\n')
+        assert config.apply_env() == []
+        assert "MAIT_CODE_LOG_LEVEL" not in os.environ
+
+
+class TestCollectSettingsEnvRows:
+    def test_provenance_and_masking(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _write_default_settings_with_env(
+            'AWS_PROFILE = "dev-bedrock"\n'
+            'MY_API_TOKEN = "abcdef1234"\n'
+            'SHADOWED_VAR = "from-file"\n'
+        )
+        config.reset_cache()
+        monkeypatch.delenv("AWS_PROFILE", raising=False)
+        monkeypatch.delenv("MY_API_TOKEN", raising=False)
+        monkeypatch.setenv("SHADOWED_VAR", "from-env")
+
+        rows = {r.key: r for r in config.collect_settings().settings}
+        assert rows["env.AWS_PROFILE"].value == "dev-bedrock"
+        assert rows["env.AWS_PROFILE"].source == "settings"
+        # The real environment carries SHADOWED_VAR, so it wins.
+        assert rows["env.SHADOWED_VAR"].value == "from-env"
+        assert rows["env.SHADOWED_VAR"].source == "env"
+        # Secret-looking names are masked.
+        assert rows["env.MY_API_TOKEN"].value == "…1234"
+
+    def test_no_env_table_adds_no_rows(self) -> None:
+        keys = [r.key for r in config.collect_settings().settings]
+        assert not [k for k in keys if k.startswith("env.")]
+
+    def test_own_injection_is_not_shadowing(self) -> None:
+        """apply_env runs before collect_settings in the real CLI — the var
+        it injected must still report source 'settings', not 'env'."""
+        _write_default_settings_with_env('MAIT_TEST_INJECTED = "from-file"\n')
+        os.environ.pop("MAIT_TEST_INJECTED", None)
+        try:
+            config.apply_env()
+            rows = {r.key: r for r in config.collect_settings().settings}
+            assert rows["env.MAIT_TEST_INJECTED"].value == "from-file"
+            assert rows["env.MAIT_TEST_INJECTED"].source == "settings"
+        finally:
+            os.environ.pop("MAIT_TEST_INJECTED", None)

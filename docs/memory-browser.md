@@ -69,6 +69,32 @@ entries and the subtitle shows `1/6 match`.](assets/memory/memory-filter.png)
 steps back out. When nothing matches, the pane says so in the companion's voice
 rather than going blank.
 
+Press `p` to narrow by **project**: a picker lists every project seen in the
+store, and choosing one keeps that project's entries (plus globals), with the
+masthead subtitle carrying the project name. It composes with the text filter.
+
+## The native view
+
+mait-code's store isn't the only curated memory layer: Claude Code keeps its
+own **native auto memory** — per-project markdown files under
+`~/.claude/projects/<slug>/memory/`, a `MEMORY.md` index plus topic files,
+holding the *code* facts (architecture, build commands, repo gotchas) that
+[deliberately don't go in the store](memory.md#the-other-curated-layer-claude-codes-native-auto-memory).
+
+Press `n` and the browser flips to that layer: every project's native memory
+files, grouped by project with file counts, regardless of where you launched
+from. Highlight a file and the detail pane renders it as markdown, with the
+project and modified date as its metadata. The munged directory slugs are
+resolved back to readable project names best-effort.
+
+![The native view: projects grouped with file counts on the left — MEMORY.md
+and topic files — and the selected file rendered as markdown on the
+right.](assets/memory/memory-native.png)
+
+Both views are equally read-only, and the same tools work in each: `/` filters
+live, `p` narrows to one project, `r` re-scans. The footer's binding flips to
+*Store* while you're in the native view — `n` again returns.
+
 ## Off the terminal
 
 Like the other TUIs, `mait-code memory` only opens the browser on a TTY. Piped or
@@ -84,8 +110,10 @@ a log or an SSH one-liner.
 | <kbd>↑</kbd> / <kbd>↓</kbd> (or <kbd>k</kbd> / <kbd>j</kbd>) | Move the highlight; the detail pane follows |
 | <kbd>Enter</kbd> / <kbd>Space</kbd> | Expand or collapse a group |
 | <kbd>/</kbd> | Focus the filter |
+| <kbd>n</kbd> | Flip between the store and the native view |
+| <kbd>p</kbd> | Narrow to one project (picker; works in both views) |
 | <kbd>Esc</kbd> | Back to the tree (from the filter/detail); quit (from the tree) |
-| <kbd>r</kbd> | Re-read the store |
+| <kbd>r</kbd> | Re-read the store (or re-scan the native files) |
 | <kbd>?</kbd> | Key cheat-sheet |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd> | Command palette (incl. theme switching) |
 | <kbd>q</kbd> | Quit |

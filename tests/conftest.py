@@ -49,6 +49,12 @@ def _isolate_mait_settings(
     import mait_code.config as _config
     import mait_code.logging as _logging
 
+    # Snapshot the process environment and restore it wholesale afterwards:
+    # the code under test mutates os.environ directly (config.apply_env,
+    # set_env_var), which monkeypatch can't see — without this, an injected
+    # variable leaks into later tests as a phantom "shell export".
+    saved_environ = os.environ.copy()
+
     for key in list(os.environ):
         if key.startswith("MAIT_CODE_"):
             monkeypatch.delenv(key, raising=False)
@@ -57,6 +63,7 @@ def _isolate_mait_settings(
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
     monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setattr(_config, "_settings_cache", None)
+    monkeypatch.setattr(_config, "_injected_env", set())
 
     logger = logging.getLogger("mait_code")
     saved_handlers = logger.handlers[:]
@@ -67,3 +74,5 @@ def _isolate_mait_settings(
         handler.close()
     logger.handlers = saved_handlers
     _logging._setup_done = False
+    os.environ.clear()
+    os.environ.update(saved_environ)

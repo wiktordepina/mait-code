@@ -14,6 +14,8 @@ shell export that still shadows the change) → run the required follow-up
 
 from __future__ import annotations
 
+import os
+import re
 import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -22,11 +24,17 @@ from pathlib import Path
 from mait_code import config
 
 __all__ = [
+    # Registry settings
     "ApplyOutcome",
     "SettingError",
     "apply_setting",
     "move_data_dir",
     "validation_error",
+    # Custom [env] variables
+    "EnvOutcome",
+    "env_name_error",
+    "set_env_var",
+    "unset_env_var",
 ]
 
 
@@ -269,6 +277,113 @@ def _run_followup(
         return "move-data", decision
 
     return None, False
+
+
+# ---------------------------------------------------------------------------
+# Custom [env] variables — the shared write path for `settings set/unset
+# env.<NAME>` and the interactive editor's Custom env group.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class EnvOutcome:
+    """The result of a successful [env] table change.
+
+    Attributes:
+        name: The environment variable that was changed.
+        old_value: Its previous table value, or ``None`` when newly added.
+        new_value: The value written, or ``None`` when removed.
+        warnings: Human-readable warnings (e.g. a shell export shadows the
+            table value).
+    """
+
+    name: str
+    old_value: str | None
+    new_value: str | None
+    warnings: list[str] = field(default_factory=list)
+
+
+_ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def env_name_error(name: str) -> str | None:
+    """Return a validation error for an [env] variable name, or ``None``.
+
+    The single source of truth shared by :func:`set_env_var` and the
+    interactive editor's live validator, so both reject identically.
+    """
+    if not _ENV_NAME_RE.match(name):
+        return "must be a valid environment variable name ([A-Za-z_][A-Za-z0-9_]*)"
+    if name.startswith("MAIT_CODE_"):
+        return (
+            "MAIT_CODE_* variables are first-class settings — "
+            "set them via their settings.toml key instead"
+        )
+    return None
+
+
+def set_env_var(name: str, value: str) -> EnvOutcome:
+    """Add or update a custom [env] variable and persist it.
+
+    Also applies the change to the current process environment (unless a
+    shell export shadows it), so follow-on work in the same process sees
+    the new value without a restart.
+
+    Raises:
+        SettingError: The name is not a valid environment variable name,
+            or is a reserved ``MAIT_CODE_*`` key.
+    """
+    msg = env_name_error(name)
+    if msg is not None:
+        raise SettingError(f"env.{name}: {msg}")
+
+    env = config.read_env_table()
+    old_value = env.get(name)
+    env[name] = value
+    config.write_settings_file(config.read_settings_file(), env=env)
+    config._settings_cache = None
+
+    warnings: list[str] = []
+    shadow, source = config._env_effective(name, value)
+    if source == "env":
+        if shadow != value:
+            warnings.append(
+                f"{name} is set in your shell environment ({shadow!r}); "
+                "it overrides the [env] value until you unset it."
+            )
+    else:
+        os.environ[name] = value
+        config._injected_env.add(name)
+
+    return EnvOutcome(
+        name=name, old_value=old_value, new_value=value, warnings=warnings
+    )
+
+
+def unset_env_var(name: str) -> EnvOutcome:
+    """Remove a custom [env] variable and persist the change.
+
+    Also removes it from the current process environment when it was
+    injected from the table (a real shell export is left alone).
+
+    Raises:
+        SettingError: The variable is not in the [env] table.
+    """
+    env = config.read_env_table()
+    if name not in env:
+        raise SettingError(
+            f"env.{name} is not set in the [env] table. "
+            "Run `mait-code settings list` to see the configured variables."
+        )
+    old_value = env.pop(name)
+    config.write_settings_file(config.read_settings_file(), env=env)
+    config._settings_cache = None
+
+    if name in config._injected_env:
+        os.environ.pop(name, None)
+        config._injected_env.discard(name)
+
+    return EnvOutcome(name=name, old_value=old_value, new_value=None)
 
 
 def move_data_dir(old: Path, new: Path) -> None:

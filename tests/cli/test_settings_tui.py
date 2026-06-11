@@ -19,6 +19,8 @@ from textual.widgets import Button, Input, RadioButton, RadioSet, Static, Tree
 
 from mait_code import config
 from mait_code.cli._settings_tui import (
+    _ENV_ADD_KEY,
+    _ENV_GROUP_LABEL,
     _EXPANDED_GROUPS,
     _GROUPS,
     _WEIGHTS_KEY,
@@ -477,3 +479,159 @@ class TestFollowupsDataDir:
         assert (new / "marker").read_text() == "x"
         assert not old.exists()
         assert config.read_settings_file()["data-dir"] == str(new)
+
+
+class TestEnvGroup:
+    """Custom [env] variables: a dynamic group with add/edit/remove."""
+
+    def test_env_rows_render_with_values(self, fake_home: Path) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"AWS_PROFILE": "dev-bedrock"},
+        )
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                tree = app.query_one("#list", Tree)
+                states = {str(n.label): n.is_expanded for n in tree.root.children}
+                node = app._setting_nodes["env:AWS_PROFILE"]
+                return states, str(node.label)
+
+        states, label = _run(scenario)
+        assert states[_ENV_GROUP_LABEL] is True
+        assert "AWS_PROFILE" in label
+        assert "dev-bedrock" in label
+
+    def test_empty_table_still_offers_add_row(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                group = app._env_group
+                return [n.data for n in group.children]
+
+        assert _run(scenario) == [_ENV_ADD_KEY]
+
+    def test_env_detail_is_editable(self, fake_home: Path) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"AWS_PROFILE": "dev-bedrock"},
+        )
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, "env:AWS_PROFILE")
+                editor = app.query_one("#editor", Input).value
+                source = str(app.query_one("#source", Static).render())
+                has_remove = bool(app.query("#env-remove"))
+                return editor, source, has_remove
+
+        editor, source, has_remove = _run(scenario)
+        assert editor == "dev-bedrock"
+        assert source == "source: settings ([env] table)"
+        assert has_remove is True
+
+    def test_edit_env_value_persists(self, fake_home: Path) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"AWS_PROFILE": "dev-bedrock"},
+        )
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, "env:AWS_PROFILE")
+                app.query_one("#editor", Input).value = "prod-bedrock"
+                await pilot.pause()
+                app.action_apply()
+                await pilot.pause()
+                await pilot.pause()
+
+        _run(scenario)
+        assert config.read_env_table() == {"AWS_PROFILE": "prod-bedrock"}
+
+    def test_add_env_variable(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, _ENV_ADD_KEY)
+                app.query_one("#env-name", Input).value = "AWS_PROFILE"
+                app.query_one("#editor", Input).value = "dev-bedrock"
+                await pilot.pause()
+                app.action_apply()
+                await pilot.pause()
+                await pilot.pause()
+                return "env:AWS_PROFILE" in app._setting_nodes
+
+        assert _run(scenario) is True
+        assert config.read_env_table() == {"AWS_PROFILE": "dev-bedrock"}
+
+    def test_add_rejects_reserved_name(self, fake_home: Path) -> None:
+        config.write_settings_file({"embedding-provider": "local"})
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, _ENV_ADD_KEY)
+                app.query_one("#env-name", Input).value = "MAIT_CODE_LOG_LEVEL"
+                app.query_one("#editor", Input).value = "DEBUG"
+                await pilot.pause()
+                app.action_apply()
+                await pilot.pause()
+                await pilot.pause()
+                return str(app.query_one("#msg", Static).render())
+
+        msg = _run(scenario)
+        assert "✗" in msg
+        assert config.read_env_table() == {}
+
+    def test_remove_env_variable(self, fake_home: Path) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"AWS_PROFILE": "dev-bedrock"},
+        )
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, "env:AWS_PROFILE")
+                await pilot.click("#env-remove")
+                await pilot.pause()
+                # Confirm in the modal.
+                await pilot.click("#yes")
+                await pilot.pause()
+                await pilot.pause()
+                return "env:AWS_PROFILE" in app._setting_nodes
+
+        assert _run(scenario) is False
+        assert config.read_env_table() == {}
+
+    def test_shadowed_env_var_reports_env_source(
+        self, fake_home: Path, monkeypatch
+    ) -> None:
+        config.write_settings_file(
+            {"embedding-provider": "local"},
+            env={"MAIT_TEST_SHADOWED": "from-file"},
+        )
+        monkeypatch.setenv("MAIT_TEST_SHADOWED", "from-env")
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await _goto(pilot, app, "env:MAIT_TEST_SHADOWED")
+                return str(app.query_one("#source", Static).render())
+
+        assert "real environment" in _run(scenario)

@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from mait_code.cli._paths import mait_code_log_dir
+from mait_code.config import apply_env
 from mait_code.config import get as config_get
 from mait_code.config import get_int as config_get_int
 
@@ -55,11 +56,17 @@ def setup_logging() -> None:
     """Configure the ``mait_code`` logger hierarchy with a daily-rotating file handler.
 
     Safe to call multiple times — subsequent calls are no-ops.
+
+    Also injects the settings ``[env]`` table into the process environment
+    (:func:`mait_code.config.apply_env`): every tool and hook entry point
+    passes through here, making it the shared startup path.
     """
     global _setup_done
     if _setup_done:
         return
     _setup_done = True
+
+    apply_env()
 
     level_name = config_get("log-level").upper()
     level = getattr(logging, level_name, logging.INFO)
