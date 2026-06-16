@@ -741,13 +741,14 @@ class SettingsApp(MaitApp):
 
     def _run_reindex_suspended(self) -> None:
         """Drop out of the app to re-embed with normal terminal output."""
+        from mait_code.console import print_error
         from mait_code.tools.memory.cli import ReindexError, run_reindex
 
         with self.suspend():
             try:
                 run_reindex()
             except ReindexError as exc:
-                print(f"\nReindex failed: {exc}")
+                print_error(f"reindex failed: {exc}")
             input("\nPress Enter to return to settings… ")
 
     def _after_apply(self, setting: config.Setting, outcome: object) -> None:

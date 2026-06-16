@@ -266,6 +266,18 @@ class TestDoctorCommand:
         # uv-on-path may fail in a sandbox, so accept either clean or failing.
         assert result.exit_code in (0, 1)
 
+    def test_cli_no_color_flag_reaches_stderr_console(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # `--no-color` must flip the stderr (error/warning) console too, not
+        # just the stdout one — otherwise errors stay coloured under --no-color.
+        from mait_code.console import console, err_console
+
+        install(source_dir=fake_source)
+        runner.invoke(app, ["--no-color", "doctor"])
+        assert console.no_color is True
+        assert err_console.no_color is True
+
 
 class TestDoctorMemoryChecks:
     """The memory-health checks: embeddings, vector search, observe pipeline."""

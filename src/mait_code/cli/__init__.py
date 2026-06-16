@@ -108,7 +108,13 @@ from mait_code.config import (
     render_json as _settings_render_json,
     resolve as _resolve_setting,
 )
-from mait_code.console import console
+from mait_code.console import (
+    console,
+    err_console,
+    print_error,
+    print_success,
+    print_warning,
+)
 
 __all__ = [
     # State paths
@@ -183,8 +189,10 @@ def _root(
     """mait-code install-lifecycle CLI."""
     # rich already honours NO_COLOR / non-TTY / TERM=dumb; this is the
     # explicit manual override. Assigning the bool each invocation keeps
-    # the process-wide console's state predictable.
+    # the process-wide consoles' state predictable — both stdout and the
+    # stderr twin, so `--no-color` reaches error/warning output too.
     console.no_color = no_color
+    err_console.no_color = no_color
     if ctx.invoked_subcommand is not None:
         return
     # Bare `mait-code` on a terminal opens the companion's home hub — the front
@@ -253,7 +261,7 @@ def install_cmd(
             claude_dir=claude_dir_override,
         )
     except ValueError as exc:
-        typer.echo(f"error: {exc}", err=True)
+        print_error(str(exc))
         raise typer.Exit(code=1) from None
 
     _render_install_summary(summary)
@@ -264,22 +272,36 @@ def _render_install_summary(summary: InstallSummary) -> None:
     import mait_code
 
     record = summary.record
-    typer.echo(f"Installed mait-code {mait_code.__version__} from {record.source_dir}.")
+    print_success(
+        f"Installed mait-code {mait_code.__version__} from {record.source_dir}."
+    )
     if summary.templates_copied:
-        typer.echo(f"  Templates copied: {', '.join(summary.templates_copied)}")
-    if summary.memory_md_created:
-        typer.echo("  Created MEMORY.md stub")
-    if summary.claude_md.backed_up:
-        typer.echo(
-            f"  Backed up existing CLAUDE.md to {summary.claude_md.backed_up[0]}"
+        console.print(
+            f"  Templates copied: {', '.join(summary.templates_copied)}",
+            markup=False,
+            soft_wrap=True,
         )
-    typer.echo(
+    if summary.memory_md_created:
+        console.print("  Created MEMORY.md stub")
+    if summary.claude_md.backed_up:
+        console.print(
+            f"  Backed up existing CLAUDE.md to {summary.claude_md.backed_up[0]}",
+            markup=False,
+            soft_wrap=True,
+        )
+    console.print(
         f"  Symlinks: {len(summary.skills.created) + len(summary.skills.already_linked)} skills, "
         f"{len(summary.agents.created) + len(summary.agents.already_linked)} agents"
     )
-    typer.echo(f"  Settings merged into {summary.settings_path}")
-    typer.echo("")
-    typer.echo("Next: personalise the soul_document and user_context.")
+    console.print(
+        f"  Settings merged into {summary.settings_path}",
+        markup=False,
+        soft_wrap=True,
+    )
+    console.print("")
+    console.print(
+        "Next: personalise the soul_document and user_context.", style="muted"
+    )
 
 
 @app.command(name="update")
@@ -322,16 +344,15 @@ def update_cmd(
             force=force,
             claude_dir=claude_dir_override,
         )
-    except RecordError as exc:
-        typer.echo(f"error: {exc}", err=True)
-        raise typer.Exit(code=1) from None
-    except ValueError as exc:
-        typer.echo(f"error: {exc}", err=True)
+    except (RecordError, ValueError) as exc:
+        print_error(str(exc))
         raise typer.Exit(code=1) from None
     except subprocess.CalledProcessError as exc:
         # A git/uv subprocess failed (its own stderr has already printed).
-        # Surface a clean error line instead of dumping a Python traceback.
-        typer.echo(f"error: command failed: {exc}", err=True)
+        # Name the command and exit code, and point at that output, instead
+        # of echoing CalledProcessError's `['git', 'fetch', …]` list repr.
+        cmd = exc.cmd[0] if isinstance(exc.cmd, list) and exc.cmd else "command"
+        print_error(f"`{cmd}` failed (exit {exc.returncode}) — see its output above.")
         raise typer.Exit(code=1) from None
 
     _render_update_summary(summary)
@@ -349,13 +370,13 @@ def _render_update_summary(summary: UpdateSummary) -> None:
         pieces.append(f"reinstalled {mait_code.__version__}")
     else:
         pieces.append(f"already current ({mait_code.__version__}), reinstall skipped")
-    typer.echo(f"Updated mait-code: {', '.join(pieces)}.")
-    typer.echo(f"  Source: {record.source_dir}")
-    typer.echo(
+    print_success(f"Updated mait-code: {', '.join(pieces)}.")
+    console.print(f"  Source: {record.source_dir}", markup=False, soft_wrap=True)
+    console.print(
         f"  Symlinks refreshed: {len(summary.skills.created) + len(summary.skills.updated)} new, "
         f"{len(summary.skills.already_linked)} unchanged"
     )
-    typer.echo(f"  Settings: {summary.settings_path}")
+    console.print(f"  Settings: {summary.settings_path}", markup=False, soft_wrap=True)
 
 
 @app.command(name="uninstall")
@@ -400,25 +421,25 @@ def uninstall_cmd(
 
 
 def _render_uninstall_summary(summary: UninstallSummary) -> None:
-    typer.echo("Uninstalled mait-code.")
+    print_success("Uninstalled mait-code.")
     if not summary.had_record:
-        typer.echo("  (No install record was present.)")
+        console.print("  (No install record was present.)", style="muted")
     if summary.claude_md_removed:
-        typer.echo("  Removed CLAUDE.md symlink (restored backup if any)")
+        console.print("  Removed CLAUDE.md symlink (restored backup if any)")
     if summary.skills_removed:
-        typer.echo(f"  Removed {len(summary.skills_removed)} skill symlinks")
+        console.print(f"  Removed {len(summary.skills_removed)} skill symlinks")
     if summary.agents_removed:
-        typer.echo(f"  Removed {len(summary.agents_removed)} agent symlinks")
+        console.print(f"  Removed {len(summary.agents_removed)} agent symlinks")
     if summary.settings_cleaned:
-        typer.echo("  Cleaned mait-code entries from settings.json")
+        console.print("  Cleaned mait-code entries from settings.json")
     if summary.uv_tool_uninstalled:
-        typer.echo("  Uninstalled `mait-code` from uv tool")
+        console.print("  Uninstalled `mait-code` from uv tool", markup=False)
     if summary.data_dir_removed:
-        typer.echo("  Removed data directory")
+        console.print("  Removed data directory")
     elif not summary.warnings:
-        typer.echo("  Data directory preserved (use --purge-data to remove)")
+        console.print("  Data directory preserved (use --purge-data to remove)")
     for warning in summary.warnings:
-        typer.echo(f"  warning: {warning}", err=True)
+        print_warning(warning)
 
 
 def _require_settings_file() -> None:
@@ -431,8 +452,10 @@ def _require_settings_file() -> None:
     sp = settings_path()
     if not sp.exists():
         sp_display = str(sp).replace(str(Path.home()), "~")
-        typer.echo(f"error: settings file not found at {sp_display}", err=True)
-        typer.echo("run `mait-code install` to create it", err=True)
+        print_error(
+            f"settings file not found at {sp_display} — "
+            "run `mait-code install` to create it."
+        )
         raise typer.Exit(code=1)
 
 
@@ -578,14 +601,14 @@ def settings_get(
         name = key.removeprefix("env.")
         env_table = _config.read_env_table()
         if name not in env_table:
-            typer.echo(f"error: {key!r} is not in the [env] table", err=True)
+            print_error(f"{key!r} is not in the [env] table")
             raise typer.Exit(code=1)
         value, source = _config._env_effective(name, env_table[name])
     else:
         by_key = {s.key: s for s in _SETTINGS}
         setting = by_key.get(key)
         if setting is None:
-            typer.echo(f"error: unknown setting {key!r}", err=True)
+            print_error(f"unknown setting {key!r}")
             raise typer.Exit(code=1)
         value, source = _resolve_setting(setting)
     if as_json:
@@ -625,32 +648,39 @@ def settings_set(
         try:
             env_outcome = _set_env_var(key.removeprefix("env."), value)
         except _SettingError as exc:
-            typer.echo(f"error: {exc}", err=True)
+            print_error(str(exc))
             raise typer.Exit(code=1) from None
-        typer.echo(
+        console.print(
             f"env.{env_outcome.name}: "
-            f"{env_outcome.old_value!r} → {env_outcome.new_value!r}"
+            f"{env_outcome.old_value!r} → {env_outcome.new_value!r}",
+            markup=False,
+            soft_wrap=True,
         )
         for warning in env_outcome.warnings:
-            typer.echo(f"warning: {warning}", err=True)
+            print_warning(warning)
         return
     try:
         outcome = apply_setting(key, value, reindex=reindex, move_data=move_data)
     except _SettingError as exc:
-        typer.echo(f"error: {exc}", err=True)
+        print_error(str(exc))
         raise typer.Exit(code=1) from None
 
-    typer.echo(f"{outcome.key}: {outcome.old_value!r} → {outcome.new_value!r}")
+    console.print(
+        f"{outcome.key}: {outcome.old_value!r} → {outcome.new_value!r}",
+        markup=False,
+        soft_wrap=True,
+    )
     for warning in outcome.warnings:
-        typer.echo(f"warning: {warning}", err=True)
+        print_warning(warning)
     if outcome.followup == "reindex":
-        typer.echo(
+        console.print(
             "  re-embedded stored memories."
             if outcome.followup_done
-            else "  deferred re-embed — run `mc-tool-memory reindex` when ready."
+            else "  deferred re-embed — run `mc-tool-memory reindex` when ready.",
+            markup=False,
         )
     elif outcome.followup == "move-data":
-        typer.echo(
+        console.print(
             "  moved existing data to the new location."
             if outcome.followup_done
             else "  left existing data at the old location."
@@ -666,18 +696,21 @@ def settings_unset(key: str) -> None:
     """
     _require_settings_file()
     if not key.startswith("env."):
-        typer.echo(
-            f"error: only env.<NAME> keys can be unset, not {key!r} — "
-            "registry settings fall back to their defaults instead",
-            err=True,
+        print_error(
+            f"only env.<NAME> keys can be unset, not {key!r} — "
+            "registry settings fall back to their defaults instead"
         )
         raise typer.Exit(code=1)
     try:
         outcome = _unset_env_var(key.removeprefix("env."))
     except _SettingError as exc:
-        typer.echo(f"error: {exc}", err=True)
+        print_error(str(exc))
         raise typer.Exit(code=1) from None
-    typer.echo(f"env.{outcome.name} removed (was {outcome.old_value!r})")
+    console.print(
+        f"env.{outcome.name} removed (was {outcome.old_value!r})",
+        markup=False,
+        soft_wrap=True,
+    )
 
 
 @app.command("board")

@@ -82,7 +82,7 @@ class TestUpdateDetachedHead:
         # checkout would abort with "local changes would be overwritten".
         assert git.ran(["git", "fetch", "origin", "--tags"])
         assert (
-            ["git", "checkout", "--force", "v0.15.1"],
+            ["git", "checkout", "--force", "--quiet", "v0.15.1"],
             fake_source.resolve(),
         ) in git.run_calls
         assert summary.landed_on == "v0.15.1"
@@ -134,7 +134,10 @@ class TestUpdateRef:
         summary = update(ref="v0.14.1", runner=git.run, capture=git.capture)
 
         assert git.ran(["git", "fetch", "origin", "--tags"])
-        assert (["git", "checkout", "v0.14.1"], fake_source.resolve()) in git.run_calls
+        assert (
+            ["git", "checkout", "--quiet", "v0.14.1"],
+            fake_source.resolve(),
+        ) in git.run_calls
         assert summary.landed_on == "v0.14.1"
 
     def test_ref_with_no_pull_skips_fetch(
@@ -146,7 +149,10 @@ class TestUpdateRef:
         update(ref="v0.14.1", no_pull=True, runner=git.run, capture=git.capture)
 
         assert not git.ran(["git", "fetch"])
-        assert (["git", "checkout", "v0.14.1"], fake_source.resolve()) in git.run_calls
+        assert (
+            ["git", "checkout", "--quiet", "v0.14.1"],
+            fake_source.resolve(),
+        ) in git.run_calls
 
 
 class TestUpdateReinstall:
@@ -373,5 +379,7 @@ class TestUpdateCommand:
 
         result = runner.invoke(app, ["update", "--no-pull"])
         assert result.exit_code == 1
-        assert "error: command failed" in result.output
+        # Names the failed command and exit code, not the CalledProcessError
+        # list repr, and never a traceback.
+        assert "failed (exit 1)" in result.output
         assert "Traceback" not in result.output
