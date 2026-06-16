@@ -14,3 +14,5 @@
 ::: mait_code.context.get_project
 
 ::: mait_code.context.load_project_aliases
+
+::: mait_code.context.munge_path

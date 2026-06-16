@@ -14,6 +14,7 @@ from mait_code.context import (
     get_context,
     get_project,
     load_project_aliases,
+    munge_path,
 )
 
 
@@ -130,6 +131,15 @@ class TestProjectAliases:
         (tmp_path / "project-aliases.json").write_text(self.ALIASES)
         with _mock_run(returncode=0, stdout="/home/user/projects/h-cc-bridge\n"):
             assert get_project() == "hermes-cc-bridge"
+
+
+class TestMungePath:
+    def test_replaces_every_non_alphanumeric(self):
+        # Slash, dot, underscore and space all collapse to the same dash.
+        assert munge_path("/home/w/my.app_v2 final") == "-home-w-my-app-v2-final"
+
+    def test_preserves_literal_dash(self):
+        assert munge_path("/home/w/mait-code") == "-home-w-mait-code"
 
 
 class TestGitTimeoutSetting:

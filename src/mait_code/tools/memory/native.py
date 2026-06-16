@@ -7,12 +7,16 @@ enumerates those directories across *all* projects so the memory browser can
 surface the native layer beside mait-code's own store. Everything here reads;
 nothing writes — the native layer is Claude Code's to maintain.
 
-The directory name is the project's absolute path with ``/`` replaced by
-``-`` (``/home/w/mait-code`` → ``-home-w-mait-code``). That munging is lossy —
-a ``-`` may be a path separator or a literal dash — so :func:`resolve_slug`
-recovers the original path by walking the filesystem for an existing directory
-chain that consumes the slug, and labels fall back to the raw slug when
-nothing resolves.
+The directory name is the project's absolute path with every non-alphanumeric
+character replaced by ``-`` (Claude Code's own ``replace(/[^a-zA-Z0-9]/g, "-")``;
+``/home/w/mait.code`` → ``-home-w-mait-code``). That munging is lossy — a ``-``
+may be a path separator, a literal dash, a dot, an underscore, a space, or any
+other punctuation — so :func:`resolve_slug` recovers the original path by
+walking the filesystem for an existing directory chain that re-munges to the
+slug, and labels fall back to the raw slug when nothing resolves.
+
+(Claude Code additionally truncates a sanitised path longer than 200 chars and
+appends a hash; that rare case is unrecoverable and falls back to the slug too.)
 """
 
 from __future__ import annotations
@@ -20,6 +24,8 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
+
+from mait_code.context import munge_path
 
 __all__ = [
     "list_native_memories",
@@ -45,11 +51,13 @@ def native_projects_dir() -> Path:
 def resolve_slug(slug: str, root: Path = Path("/")) -> Path | None:
     """Best-effort reverse of Claude Code's path munging, filesystem-guided.
 
-    Walks from ``root``, consuming the slug's ``-``-separated tokens: each
-    path component is the shortest token run naming an existing directory,
-    backtracking to longer runs (literal dashes) when the walk dead-ends —
-    so ``-home-w-mait-code`` resolves to ``/home/w/mait-code`` even though
-    the leaf contains a dash.
+    The munge is lossy — any non-alphanumeric character became ``-`` — so the
+    reverse can't be computed from the string alone. Instead this walks the
+    real filesystem from ``root``: at each level it re-munges every existing
+    subdirectory's name (with :func:`munge_path`) and follows the one whose
+    munged form the remaining slug starts with, backtracking when a branch
+    dead-ends. So ``-home-w-mait-code`` resolves to ``/home/w/mait.code``,
+    ``/home/w/mait_code`` **or** ``/home/w/mait-code`` — whichever exists.
 
     Args:
         slug: A munged directory name from the projects dir.
@@ -58,30 +66,32 @@ def resolve_slug(slug: str, root: Path = Path("/")) -> Path | None:
 
     Returns:
         The resolved original path, or ``None`` when no existing directory
-        chain consumes every token (e.g. the project has since been deleted).
+        chain re-munges to the slug (e.g. the project has since been deleted,
+        or its slug was hash-truncated for length).
     """
-    tokens = slug.split("-")
-    if tokens and tokens[0] == "":
-        tokens = tokens[1:]  # the leading "-" is the root "/"
-    if not tokens or "" in tokens:
-        # Consecutive dashes mean a munged non-slash character (e.g. a dot)
-        # this walk can't reconstruct — let the caller fall back to the slug.
+    if not slug.startswith("-"):
+        return None  # Claude Code slugs encode absolute paths (leading "/" → "-")
+    tail = slug[1:]  # drop the leading "-" standing in for the root "/"
+    if not tail:
         return None
 
-    def walk(base: Path, index: int) -> Path | None:
-        if index == len(tokens):
-            return base
-        component = ""
-        for end in range(index, len(tokens)):
-            component = f"{component}-{tokens[end]}" if component else tokens[end]
-            candidate = base / component
-            if candidate.is_dir():
-                resolved = walk(candidate, end + 1)
+    def walk(base: Path, remaining: str) -> Path | None:
+        try:
+            children = sorted(c for c in base.iterdir() if c.is_dir())
+        except OSError:
+            return None
+        for child in children:
+            munged = munge_path(child.name)
+            if remaining == munged:
+                return child  # last component, fully consumed
+            prefix = f"{munged}-"
+            if remaining.startswith(prefix):
+                resolved = walk(child, remaining[len(prefix) :])
                 if resolved is not None:
                     return resolved
         return None
 
-    return walk(root, 0)
+    return walk(root, tail)
 
 
 def _file_record(memory_dir: Path, path: Path) -> dict:

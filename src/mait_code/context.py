@@ -5,6 +5,7 @@ memory, tasks, and hooks for scope-aware operations.
 """
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -17,10 +18,37 @@ __all__ = [
     "get_context",
     "get_project",
     "load_project_aliases",
+    "munge_path",
 ]
 
 # Branches that are considered "default" — work on these is project-scoped, not branch-scoped.
 DEFAULT_BRANCHES = {"main", "master"}
+
+#: Claude Code munges a path into a project-dir name by replacing every
+#: character that is not an ASCII letter or digit with ``-``. A path separator,
+#: a dot, an underscore and a space all collapse to the same ``-``.
+_NON_ALNUM = re.compile(r"[^a-zA-Z0-9]")
+
+
+def munge_path(path: str) -> str:
+    """Apply Claude Code's path-to-slug sanitiser: every non-alphanumeric → ``-``.
+
+    Mirrors Claude Code's own ``cwd.replace(/[^a-zA-Z0-9]/g, "-")``. An absolute
+    path's leading ``/`` therefore becomes the leading ``-`` of the slug. Used
+    both to find a project's native-memory dir (forward) and to reverse a slug
+    back to a path (see :func:`mait_code.tools.memory.native.resolve_slug`).
+
+    The 200-char truncation-plus-hash that Claude Code applies to very long
+    paths is **not** reproduced here — such projects are unresolvable and fall
+    back to their raw slug.
+
+    Args:
+        path: An absolute filesystem path (or a single path component).
+
+    Returns:
+        The munged slug.
+    """
+    return _NON_ALNUM.sub("-", path)
 
 
 def get_project() -> str | None:
