@@ -10,6 +10,19 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.59.1] — 2026-06-16
+
+### Fixed
+
+- **Native memory browser resolves every project name** — Claude Code names a
+  project's state directory by replacing *every* non-alphanumeric character in
+  the path with `-` (not just `/` and `.`), so projects whose paths contain a
+  dot, underscore, space, or a hidden directory used to surface as their raw
+  munged slug instead of their real name. The reverse-resolution now walks the
+  filesystem, re-munging real directory names to recover any punctuation, and
+  the same munge rule is shared with the observation hook (which had the same
+  partial-munge bug).
+
 ## [0.59.0] — 2026-06-11
 
 ### Added
@@ -1724,7 +1737,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.1...HEAD
+[0.59.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.1
 [0.59.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.0
 [0.58.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.58.0
 [0.57.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.57.0

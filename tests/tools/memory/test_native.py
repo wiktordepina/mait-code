@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from mait_code.context import munge_path
 from mait_code.tools.memory.native import (
     list_native_memories,
     native_projects_dir,
@@ -13,8 +14,9 @@ from mait_code.tools.memory.native import (
 
 
 def _munge(path: Path, root: Path) -> str:
-    """A path's munged slug relative to ``root`` (Claude Code's `/` → `-`)."""
-    return "-" + str(path.relative_to(root)).replace("/", "-")
+    """A path's munged slug relative to ``root`` (Claude Code's munge:
+    every non-alphanumeric char → ``-``)."""
+    return munge_path("/" + str(path.relative_to(root)))
 
 
 class TestNativeProjectsDir:
@@ -43,8 +45,8 @@ class TestResolveSlug:
         assert resolve_slug(slug, root=tmp_path) == project
 
     def test_backtracks_over_literal_dashes(self, tmp_path: Path):
-        # The lossy case: the leaf contains a dash, so the shortest-run walk
-        # dead-ends at .../mait and must retry with the joined token.
+        # The lossy case: the leaf contains a dash, so the walk must follow the
+        # sibling whose re-munged name the slug tail consumes whole.
         project = tmp_path / "home" / "w" / "mait-code"
         project.mkdir(parents=True)
         slug = _munge(project, tmp_path)
@@ -56,6 +58,38 @@ class TestResolveSlug:
         slug = _munge(project, tmp_path)
         assert resolve_slug(slug, root=tmp_path) == project
 
+    def test_resolves_dot_in_component(self, tmp_path: Path):
+        # The dot was munged to a dash; the walk recovers it by re-munging the
+        # real directory name rather than guessing the original character.
+        project = tmp_path / "home" / "w" / "wiktor.depina"
+        project.mkdir(parents=True)
+        slug = _munge(project, tmp_path)  # -home-w-wiktor-depina
+        assert resolve_slug(slug, root=tmp_path) == project
+
+    def test_resolves_hidden_directory(self, tmp_path: Path):
+        # A leading-dot dir produces consecutive dashes in the slug; the walk
+        # still resolves it from the filesystem.
+        project = tmp_path / "home" / "w" / ".config" / "app"
+        project.mkdir(parents=True)
+        slug = _munge(project, tmp_path)  # -home-w--config-app
+        assert "--" in slug
+        assert resolve_slug(slug, root=tmp_path) == project
+
+    def test_resolves_underscore_in_component(self, tmp_path: Path):
+        project = tmp_path / "home" / "w" / "mait_code"
+        project.mkdir(parents=True)
+        slug = _munge(project, tmp_path)  # -home-w-mait-code
+        assert resolve_slug(slug, root=tmp_path) == project
+
+    def test_prefers_the_chain_that_exists(self, tmp_path: Path):
+        # Two readings of "-home-w-mait-code": a single ``mait.code`` dir, or a
+        # ``mait``/``code`` chain. Only the former exists, so that's resolved.
+        project = tmp_path / "home" / "w" / "mait.code"
+        project.mkdir(parents=True)
+        (tmp_path / "home" / "w" / "mait").mkdir()  # decoy with no "code" child
+        slug = _munge(project, tmp_path)
+        assert resolve_slug(slug, root=tmp_path) == project
+
     def test_unresolvable_returns_none(self, tmp_path: Path):
         assert resolve_slug("-no-such-path-here", root=tmp_path) is None
 
@@ -63,10 +97,9 @@ class TestResolveSlug:
         (tmp_path / "home" / "w").mkdir(parents=True)
         assert resolve_slug("-home-w-gone", root=tmp_path) is None
 
-    def test_consecutive_dashes_return_none(self, tmp_path: Path):
-        # A munged non-slash character (e.g. the dot in ".claude") leaves an
-        # empty token the walk can't reconstruct — fall back, don't guess.
-        assert resolve_slug("-home-w--claude", root=tmp_path) is None
+    def test_slug_without_leading_dash_returns_none(self, tmp_path: Path):
+        # Claude Code slugs encode absolute paths, so they always lead with "-".
+        assert resolve_slug("home-w-alpha", root=tmp_path) is None
 
     def test_empty_slug_returns_none(self, tmp_path: Path):
         assert resolve_slug("", root=tmp_path) is None

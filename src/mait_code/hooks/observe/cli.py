@@ -19,6 +19,7 @@ from mait_code.hooks.observe.storage import (
     store_extraction,
     write_raw_extraction,
 )
+from mait_code.context import munge_path
 from mait_code.hooks.observe.transcript import format_for_extraction, read_new_lines
 from mait_code.logging import log_invocation, setup_logging
 
@@ -72,7 +73,7 @@ def _find_transcript(cwd: str | None = None) -> str | None:
 
     # Try cwd-based slug first (fast path)
     cwd = cwd or os.getcwd()
-    slug = cwd.replace("/", "-").replace(".", "-")
+    slug = munge_path(cwd)
     project_dir = projects_root / slug
     if project_dir.is_dir():
         transcripts = list(project_dir.glob("*.jsonl"))
