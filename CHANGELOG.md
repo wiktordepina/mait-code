@@ -10,6 +10,32 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.59.2] — 2026-06-16
+
+### Changed
+
+- **`mait-code update` no longer dumps raw `git` and `uv` output** — the fetch,
+  checkout and reinstall now run quietly behind a spinner, so a routine update
+  prints a four-line summary instead of ~60 lines of fetch progress, detached-
+  HEAD chatter and a per-package install listing. A genuine failure still prints
+  the underlying command's error (quiet suppresses progress, not failures), now
+  surfaced as a clean `git`/`uv` failed line rather than a Python list repr.
+- **Consistent, themed CLI output** — the `install`, `update` and `uninstall`
+  summaries lead with a green `✓` and flow through the shared themed console,
+  and every error/warning across the lifecycle and `settings` commands renders
+  the same way the `doctor` checks do (`✗`/`●` glyphs on stderr, honouring
+  `--no-color` and `NO_COLOR`). Machine-readable JSON and scripting output is
+  untouched.
+- **Quieter first install** — `scripts/install.sh` passes `--quiet` to the
+  bootstrap `uv tool install` and notes that the first run downloads
+  dependencies, matching the update command's restraint.
+
+### Added
+
+- **`err_console` and `print_error`/`print_warning`/`print_success` helpers** in
+  `mait_code.console` — the single funnel the CLI uses for themed, markup-safe
+  status and diagnostic output.
+
 ## [0.59.1] — 2026-06-16
 
 ### Fixed
@@ -1737,7 +1763,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.2...HEAD
+[0.59.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.2
 [0.59.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.1
 [0.59.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.0
 [0.58.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.58.0

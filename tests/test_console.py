@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from rich.console import Console
 
-from mait_code.console import GLYPH, THEME, console
+from mait_code.console import GLYPH, THEME, console, err_console, print_error
 
 
 def _render(c: Console, markup: str) -> str:
@@ -55,3 +55,25 @@ def test_no_color_env_var_is_honoured(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_shared_console_resolves_theme_styles() -> None:
     # Unknown style names raise; this proves the shared console carries THEME.
     _render(console, "[accent]ok[/accent] [muted]dim[/muted]")
+
+
+def test_err_console_writes_to_stderr() -> None:
+    assert err_console.stderr is True
+    # Carries the same theme as the stdout console, so [fail] resolves.
+    _render(err_console, "[fail]boom[/fail]")
+
+
+def test_print_error_prefixes_glyph(capsys: pytest.CaptureFixture[str]) -> None:
+    print_error("something broke")
+    captured = capsys.readouterr()
+    assert captured.out == ""  # errors never pollute stdout
+    assert GLYPH["fail"] in captured.err
+    assert "something broke" in captured.err
+
+
+def test_print_error_escapes_markup(capsys: pytest.CaptureFixture[str]) -> None:
+    # A path or exception string with brackets must render literally, not be
+    # swallowed as (or crash on) rich markup.
+    print_error("cannot read [bold]/etc/foo[/bold] config")
+    captured = capsys.readouterr()
+    assert "[bold]/etc/foo[/bold]" in captured.err

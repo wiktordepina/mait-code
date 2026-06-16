@@ -40,8 +40,13 @@ if [[ "$EMBED" == "bedrock" ]]; then
 fi
 
 # 1. Install the `mait-code` binary from the local source.
+#    `--quiet` drops uv's resolve/install package listing (dozens of lines);
+#    the first run still downloads every dependency, so warn it may take a
+#    moment. Errors are not suppressed by --quiet, so a genuine failure here
+#    still prints.
 echo "Installing mait-code CLI from: $PROJECT_DIR"
-uv tool install "${PROJECT_DIR}${EXTRA}" --force --reinstall --python 3.13
+echo "  (first run resolves and downloads dependencies — this can take a minute)"
+uv tool install "${PROJECT_DIR}${EXTRA}" --force --reinstall --python 3.13 --quiet
 
 # 2. Hand off to the CLI for the rest of the install lifecycle.
 exec mait-code install --from "$PROJECT_DIR" --embedding-provider "$EMBED" "$@"

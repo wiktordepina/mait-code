@@ -992,6 +992,8 @@ class HomeApp(MaitApp):
         """
         from mait_code.tools.memory.cli import ReindexError, run_reindex
 
+        from mait_code.console import print_error
+
         with self.suspend():
             try:
                 note, failed = (
@@ -1000,7 +1002,7 @@ class HomeApp(MaitApp):
                 )
             except ReindexError as exc:
                 note, failed = f"Reindex failed: {exc}", True
-                print(f"\n{note}")
+                print_error(f"reindex failed: {exc}")
             input("\nPress Enter to return home… ")
         return note, failed
 

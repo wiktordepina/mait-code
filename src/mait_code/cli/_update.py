@@ -50,6 +50,7 @@ from typing import Protocol
 
 from mait_code.cli._install import EMBEDDING_PROVIDERS, verify_source
 from mait_code.cli._paths import claude_dir as default_claude_dir
+from mait_code.console import console
 from mait_code.cli._record import InstallRecord, read_record, write_record
 from mait_code.cli._settings import (
     merge_settings,
@@ -222,38 +223,53 @@ def update(
 
     # 1. Advance the source tree to the right ref, tracking whether HEAD
     #    actually moved so we can skip a needless reinstall below.
+    #
+    #    Every git invocation is `--quiet`: the fetch progress, the
+    #    "Previous HEAD position was…/HEAD is now at…" checkout chatter and
+    #    the fast-forward summary are all noise the user can't act on, and
+    #    the `UpdateSummary` reports the meaningful outcome afterwards. A
+    #    `console.status` spinner covers the network round-trip so the now-
+    #    silent stretch doesn't read as a hang. Errors still reach stderr —
+    #    `--quiet` suppresses progress, not failures.
     head_before = _head(capture, source_dir)
     fetched = False
-    if not no_pull:
-        runner(["git", "fetch", "origin", "--tags", "--prune"], cwd=source_dir)
-        fetched = True
+    with console.status("Fetching latest source…"):
+        if not no_pull:
+            runner(
+                ["git", "fetch", "origin", "--tags", "--prune", "--quiet"],
+                cwd=source_dir,
+            )
+            fetched = True
 
-    if ref is not None:
-        runner(["git", "checkout", ref], cwd=source_dir)
-        landed_on = ref
-    else:
-        branch = _current_branch(capture, source_dir)
-        if branch:
-            if not no_pull:
-                runner(["git", "merge", "--ff-only"], cwd=source_dir)
-            landed_on = f"branch {branch}"
+        if ref is not None:
+            runner(["git", "checkout", "--quiet", ref], cwd=source_dir)
+            landed_on = ref
         else:
-            latest = _latest_tag(capture, source_dir)
-            if latest is None:
-                raise ValueError(
-                    f"{source_dir} is in detached HEAD and has no v* tags to "
-                    f"update to. Check out a branch, or pass --ref."
+            branch = _current_branch(capture, source_dir)
+            if branch:
+                if not no_pull:
+                    runner(["git", "merge", "--ff-only", "--quiet"], cwd=source_dir)
+                landed_on = f"branch {branch}"
+            else:
+                latest = _latest_tag(capture, source_dir)
+                if latest is None:
+                    raise ValueError(
+                        f"{source_dir} is in detached HEAD and has no v* tags to "
+                        f"update to. Check out a branch, or pass --ref."
+                    )
+                # `--force` so the checkout succeeds even when the working tree
+                # has locally-modified tracked files. This is the tool-managed
+                # bootstrap clone, and its skills are symlinked into ~/.claude
+                # (e.g. ~/.claude/skills/board -> source/skills/board), so editing
+                # a skill in place writes *through* the symlink into this working
+                # tree. Those write-through edits are not user work — the committed
+                # release is authoritative — so discard them rather than letting
+                # git abort with "local changes would be overwritten by checkout".
+                runner(
+                    ["git", "checkout", "--force", "--quiet", latest],
+                    cwd=source_dir,
                 )
-            # `--force` so the checkout succeeds even when the working tree
-            # has locally-modified tracked files. This is the tool-managed
-            # bootstrap clone, and its skills are symlinked into ~/.claude
-            # (e.g. ~/.claude/skills/board -> source/skills/board), so editing
-            # a skill in place writes *through* the symlink into this working
-            # tree. Those write-through edits are not user work — the committed
-            # release is authoritative — so discard them rather than letting
-            # git abort with "local changes would be overwritten by checkout".
-            runner(["git", "checkout", "--force", latest], cwd=source_dir)
-            landed_on = latest
+                landed_on = latest
 
     head_after = _head(capture, source_dir)
 
@@ -265,19 +281,25 @@ def update(
     reinstalled = force or head_after != head_before
     if reinstalled:
         extra = "[bedrock]" if embedding_provider == "bedrock" else ""
-        runner(
-            [
-                "uv",
-                "tool",
-                "install",
-                f"{source_dir}{extra}",
-                "--force",
-                "--reinstall-package",
-                "mait-code",
-                "--python",
-                "3.13",
-            ],
-        )
+        # `--quiet` drops uv's "Resolved N packages" line and the full
+        # `+ package==version` install listing — dozens of lines the user
+        # didn't ask for. The spinner stands in for the (often multi-second)
+        # rebuild so the wait is legible.
+        with console.status("Reinstalling mait-code…"):
+            runner(
+                [
+                    "uv",
+                    "tool",
+                    "install",
+                    f"{source_dir}{extra}",
+                    "--force",
+                    "--reinstall-package",
+                    "mait-code",
+                    "--python",
+                    "3.13",
+                    "--quiet",
+                ],
+            )
 
     # 3. Refresh symlinks + settings.
     cdir = (claude_dir if claude_dir is not None else default_claude_dir()).resolve()
