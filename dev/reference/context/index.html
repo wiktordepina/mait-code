@@ -1331,6 +1331,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#mait_code.context.munge_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;munge_path
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2072,6 +2083,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#mait_code.context.munge_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;munge_path
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2430,6 +2452,85 @@ lifetime.</p>
             <td class="doc-returns-details">
               <div class="doc-md-description">
                 <p>A mapping of alias slug to canonical slug (possibly empty).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.context.munge_path" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">munge_path</span>
+
+
+<a href="#mait_code.context.munge_path" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">munge_path</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Apply Claude Code's path-to-slug sanitiser: every non-alphanumeric → <code>-</code>.</p>
+<p>Mirrors Claude Code's own <code>cwd.replace(/[^a-zA-Z0-9]/g, "-")</code>. An absolute
+path's leading <code>/</code> therefore becomes the leading <code>-</code> of the slug. Used
+both to find a project's native-memory dir (forward) and to reverse a slug
+back to a path (see :func:<code>mait_code.tools.memory.native.resolve_slug</code>).</p>
+<p>The 200-char truncation-plus-hash that Claude Code applies to very long
+paths is <strong>not</strong> reproduced here — such projects are unresolvable and fall
+back to their raw slug.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>path</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>An absolute filesystem path (or a single path component).</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="str">str</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>The munged slug.</p>
               </div>
             </td>
           </tr>

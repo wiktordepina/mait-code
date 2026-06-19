@@ -10456,11 +10456,13 @@ relocating <code>~/.claude</code>).</p>
     <div class="doc doc-contents first">
 
         <p>Best-effort reverse of Claude Code's path munging, filesystem-guided.</p>
-<p>Walks from <code>root</code>, consuming the slug's <code>-</code>-separated tokens: each
-path component is the shortest token run naming an existing directory,
-backtracking to longer runs (literal dashes) when the walk dead-ends —
-so <code>-home-w-mait-code</code> resolves to <code>/home/w/mait-code</code> even though
-the leaf contains a dash.</p>
+<p>The munge is lossy — any non-alphanumeric character became <code>-</code> — so the
+reverse can't be computed from the string alone. Instead this walks the
+real filesystem from <code>root</code>: at each level it re-munges every existing
+subdirectory's name (with :func:<code>munge_path</code>) and follows the one whose
+munged form the remaining slug starts with, backtracking when a branch
+dead-ends. So <code>-home-w-mait-code</code> resolves to <code>/home/w/mait.code</code>,
+<code>/home/w/mait_code</code> <strong>or</strong> <code>/home/w/mait-code</code> — whichever exists.</p>
 
 
 <table>
@@ -10540,7 +10542,19 @@ temporary tree here).</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>chain consumes every token (e.g. the project has since been deleted).</p>
+                <p>chain re-munges to the slug (e.g. the project has since been deleted,</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="pathlib.Path">Path</span> | None</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>or its slug was hash-truncated for length).</p>
               </div>
             </td>
           </tr>
