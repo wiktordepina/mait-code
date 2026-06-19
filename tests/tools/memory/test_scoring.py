@@ -218,3 +218,50 @@ class TestScopeBoost:
             query_branch="feat/y",
         )
         assert boost == 0.85  # Falls through to project match
+
+
+class TestLoadWeights:
+    """The scoring weights degrade to defaults when they don't sum to 1.0."""
+
+    def test_valid_weights_passed_through(self):
+        """Weights that sum to 1.0 are returned unchanged."""
+        from unittest.mock import patch
+
+        from mait_code.tools.memory.scoring import _load_weights
+
+        with patch(
+            "mait_code.tools.memory.scoring.config.get_float",
+            side_effect=lambda key: {
+                "score-weight-recency": 0.2,
+                "score-weight-importance": 0.3,
+                "score-weight-relevance": 0.5,
+            }[key],
+        ):
+            assert _load_weights() == (0.2, 0.3, 0.5)
+
+    def test_bad_sum_falls_back_to_defaults(self, caplog, monkeypatch):
+        """Weights that don't sum to 1.0 trigger a warning and the defaults."""
+        import logging as _logging
+        from unittest.mock import patch
+
+        from mait_code.tools.memory.scoring import _DEFAULT_WEIGHTS, _load_weights
+
+        # setup_logging() (run by earlier tests) sets propagate=False on the
+        # "mait_code" logger; caplog captures at root, so restore propagation.
+        monkeypatch.setattr(_logging.getLogger("mait_code"), "propagate", True)
+
+        with (
+            patch(
+                "mait_code.tools.memory.scoring.config.get_float",
+                side_effect=lambda key: {
+                    "score-weight-recency": 0.5,
+                    "score-weight-importance": 0.5,
+                    "score-weight-relevance": 0.5,  # sums to 1.5
+                }[key],
+            ),
+            caplog.at_level("WARNING", logger="mait_code.tools.memory.scoring"),
+        ):
+            result = _load_weights()
+
+        assert result == _DEFAULT_WEIGHTS
+        assert any("scoring weights sum" in r.message for r in caplog.records)

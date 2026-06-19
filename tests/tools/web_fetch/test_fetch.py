@@ -149,6 +149,14 @@ class TestFetchUrl:
         with pytest.raises(FetchError, match="connection error"):
             fetch_url("https://example.com")
 
+    @patch("mait_code.tools.web_fetch.fetch.urllib.request.urlopen")
+    @patch("mait_code.tools.web_fetch.fetch._check_ssrf")
+    def test_generic_os_error(self, mock_ssrf, mock_urlopen):
+        """A bare OSError (not an HTTP/URL/timeout subclass) is wrapped too."""
+        mock_urlopen.side_effect = OSError("disk full")
+        with pytest.raises(FetchError, match="network error"):
+            fetch_url("https://example.com")
+
     @patch("mait_code.tools.web_fetch.fetch._check_ssrf")
     def test_allow_private_skips_ssrf(self, mock_ssrf):
         """Verify that _check_ssrf is not called when allow_private=True."""

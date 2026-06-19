@@ -54,6 +54,12 @@ class TestApplyRejects:
         with pytest.raises(SettingError, match="must be an integer"):
             apply_setting("git-timeout", "soon")
 
+    def test_bad_float(self, fake_home: Path) -> None:
+        # A float-kind setting rejects a non-numeric value at the coercion
+        # step, before its own range validator runs.
+        with pytest.raises(SettingError, match="must be a number"):
+            apply_setting("half-life-episodic", "soon")
+
 
 # ---------------------------------------------------------------------------
 # apply_setting — persistence
@@ -197,6 +203,24 @@ class TestMoveDataDir:
         old.mkdir()
         move_data_dir(old, old)  # no error
         assert old.exists()
+
+    def test_refuses_missing_source(self, tmp_path: Path) -> None:
+        old = tmp_path / "absent"
+        new = tmp_path / "new"
+        with pytest.raises(SettingError, match="does not exist"):
+            move_data_dir(old, new)
+
+    def test_moves_into_existing_empty_target(self, tmp_path: Path) -> None:
+        # An existing but *empty* target is acceptable — it is rmdir'd so the
+        # rename/copy lands cleanly rather than nesting under it.
+        old = tmp_path / "old"
+        old.mkdir()
+        (old / "f").write_text("x")
+        new = tmp_path / "new"
+        new.mkdir()  # exists, empty
+        move_data_dir(old, new)
+        assert (new / "f").read_text() == "x"
+        assert not old.exists()
 
 
 # ---------------------------------------------------------------------------

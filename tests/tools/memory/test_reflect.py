@@ -268,6 +268,64 @@ def test_get_unreflected_entries_returns_five_tuple(db_with_entries):
     assert isinstance(created_at, str)
 
 
+def test_get_unreflected_entries_project_scoped(memory_db):
+    """Project scoping includes global plus matching-project entries only."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('global fact', 'fact', 5, 'semantic', ?, 'global', NULL)""",
+        (now,),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('mine fact', 'fact', 5, 'semantic', ?, 'project', 'mine')""",
+        (now,),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('theirs fact', 'fact', 5, 'semantic', ?, 'project', 'theirs')""",
+        (now,),
+    )
+    memory_db.commit()
+
+    entries = get_unreflected_entries(memory_db, batch_size=50, days=7, project="mine")
+    contents = {e[1] for e in entries}
+    assert "global fact" in contents
+    assert "mine fact" in contents
+    assert "theirs fact" not in contents
+
+
+def test_get_unreflected_entries_no_watermark_no_days(memory_db):
+    """With neither watermark nor days, all non-insight entries are eligible.
+
+    Exercises the branch where the watermark/days window is skipped entirely.
+    """
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    memory_db.execute(
+        """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
+           VALUES ('unbounded fact', 'fact', 5, 'semantic', ?)""",
+        (now,),
+    )
+    memory_db.commit()
+
+    entries = get_unreflected_entries(memory_db, batch_size=50, days=None)
+    assert any(e[1] == "unbounded fact" for e in entries)
+
+
+def test_get_unreflected_entries_no_exclude_types(db_with_entries):
+    """An empty exclude_types tuple keeps every entry type in scope.
+
+    Covers the branch where the NOT IN filter is skipped.
+    """
+    entries = get_unreflected_entries(
+        db_with_entries, batch_size=50, days=7, exclude_types=()
+    )
+    assert len(entries) >= 1
+
+
 # ---------------------------------------------------------------------------
 # Deprecated: get_last_reflection_date
 # ---------------------------------------------------------------------------
@@ -290,6 +348,22 @@ def test_get_last_reflection_date_with_insight(memory_db):
     assert result.year == 2026
     assert result.month == 3
     assert result.day == 1
+
+
+def test_get_last_reflection_date_project_scoped(memory_db):
+    """Project scoping reads the latest insight for that project (or global)."""
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('proj insight', 'insight', 6, 'semantic',
+                   '2026-04-02 09:00:00', 'project', 'mine')"""
+    )
+    memory_db.commit()
+
+    result = get_last_reflection_date(memory_db, project="mine")
+    assert result is not None
+    assert result.month == 4
+    assert result.day == 2
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +395,50 @@ def test_count_entries_since_excludes_insights(memory_db):
     since = now - timedelta(hours=1)
     count = count_entries_since(memory_db, since)
     assert count == 1  # Only the fact, not the insight
+
+
+def test_count_entries_since_project_scoped(memory_db):
+    """Project scoping counts global plus matching-project entries only."""
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S")
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('global fact', 'fact', 5, 'semantic', ?, 'global', NULL)""",
+        (ts,),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('mine fact', 'fact', 5, 'semantic', ?, 'project', 'mine')""",
+        (ts,),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('theirs fact', 'fact', 5, 'semantic', ?, 'project', 'theirs')""",
+        (ts,),
+    )
+    memory_db.commit()
+
+    since = now - timedelta(hours=1)
+    # global + mine = 2; theirs excluded.
+    assert count_entries_since(memory_db, since, project="mine") == 2
+
+
+def test_count_entries_since_no_exclude_types(memory_db):
+    """An empty exclude_types tuple counts insights too (no NOT IN filter)."""
+    now = datetime.now()
+    ts = now.strftime("%Y-%m-%d %H:%M:%S")
+    memory_db.execute(
+        """INSERT INTO memory_entries (content, entry_type, importance, memory_class, created_at)
+           VALUES ('an insight', 'insight', 6, 'semantic', ?)""",
+        (ts,),
+    )
+    memory_db.commit()
+
+    since = now - timedelta(hours=1)
+    assert count_entries_since(memory_db, since, exclude_types=()) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -410,6 +528,42 @@ def test_get_recent_entries_excludes_insights(memory_db):
     entries = get_recent_entries(memory_db, days=7)
     assert len(entries) == 1
     assert entries[0][1] == "fact"
+
+
+def test_get_recent_entries_project_scoped(memory_db):
+    """Project scoping returns global plus matching-project entries only."""
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('global fact', 'fact', 5, 'semantic', ?, 'global', NULL)""",
+        (ts,),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('mine fact', 'fact', 5, 'semantic', ?, 'project', 'mine')""",
+        (ts,),
+    )
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, created_at, scope, project)
+           VALUES ('theirs fact', 'fact', 5, 'semantic', ?, 'project', 'theirs')""",
+        (ts,),
+    )
+    memory_db.commit()
+
+    entries = get_recent_entries(memory_db, days=7, project="mine")
+    contents = {e[0] for e in entries}
+    assert "global fact" in contents
+    assert "mine fact" in contents
+    assert "theirs fact" not in contents
+
+
+def test_get_recent_entries_no_exclude_types(db_with_entries):
+    """An empty exclude_types tuple keeps every type (no NOT IN filter)."""
+    entries = get_recent_entries(db_with_entries, days=7, exclude_types=())
+    assert len(entries) == 5
 
 
 # ---------------------------------------------------------------------------
@@ -675,6 +829,40 @@ def test_reflect_with_memory_md_content(db_with_entries, tmp_path):
     assert "Current MEMORY.md content" in captured_prompt["value"]
 
 
+def test_reflect_includes_project_and_branch_context(db_with_entries, tmp_path):
+    """Project (and branch) context is prepended to the reflection prompt."""
+    # Make project-scoped entries so the novelty gate passes for the project.
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for i in range(3):
+        db_with_entries.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at, scope, project)
+               VALUES (?, 'fact', 5, 'semantic', ?, 'project', 'my-proj')""",
+            (f"scoped fact {i}", now),
+        )
+    db_with_entries.commit()
+
+    captured_prompt = {}
+
+    def fake_call_claude(prompt, **kwargs):
+        captured_prompt["value"] = prompt
+        return "INSIGHT: scoped insight"
+
+    with (
+        patch(
+            "mait_code.tools.memory.reflect.call_claude", side_effect=fake_call_claude
+        ),
+        patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path),
+    ):
+        result = reflect(
+            db_with_entries, days=7, min_new=0, project="my-proj", branch="feat/x"
+        )
+
+    assert result["skipped"] is False
+    assert "Project context: my-proj" in captured_prompt["value"]
+    assert "(branch: feat/x)" in captured_prompt["value"]
+
+
 # ---------------------------------------------------------------------------
 # Idempotency and batching integration tests
 # ---------------------------------------------------------------------------
@@ -928,3 +1116,82 @@ def test_read_observation_logs_malformed_json(tmp_path):
         text = read_observation_logs(days=7)
 
     assert "Valid fact" in text
+
+
+def test_read_observation_logs_skips_non_date_filenames(tmp_path):
+    """A .jsonl file whose stem isn't a date is skipped, not crashed on."""
+    obs_dir = tmp_path / "memory" / "observations"
+    obs_dir.mkdir(parents=True)
+
+    # Stem "notes" can't be parsed as %Y-%m-%d → ValueError → skip.
+    (obs_dir / "notes.jsonl").write_text(
+        json.dumps(
+            {"extraction": {"facts": [{"content": "Misnamed fact", "importance": 5}]}}
+        )
+        + "\n"
+    )
+    today = datetime.now().strftime("%Y-%m-%d")
+    (obs_dir / f"{today}.jsonl").write_text(
+        json.dumps(
+            {"extraction": {"facts": [{"content": "Dated fact", "importance": 5}]}}
+        )
+        + "\n"
+    )
+
+    with patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path):
+        text = read_observation_logs(days=7)
+
+    assert "Dated fact" in text
+    assert "Misnamed fact" not in text
+
+
+def test_read_observation_logs_skips_blank_lines(tmp_path):
+    """Blank lines between records are skipped without error."""
+    obs_dir = tmp_path / "memory" / "observations"
+    obs_dir.mkdir(parents=True)
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    log_file = obs_dir / f"{today}.jsonl"
+    content = (
+        "\n"
+        + json.dumps(
+            {"extraction": {"facts": [{"content": "Spaced fact", "importance": 5}]}}
+        )
+        + "\n\n"
+    )
+    log_file.write_text(content)
+
+    with patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path):
+        text = read_observation_logs(days=7)
+
+    assert "Spaced fact" in text
+
+
+def test_read_observation_logs_unreadable_file_skipped(tmp_path, monkeypatch):
+    """An OSError opening a log file is logged and skipped, not propagated."""
+    obs_dir = tmp_path / "memory" / "observations"
+    obs_dir.mkdir(parents=True)
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    (obs_dir / f"{today}.jsonl").write_text(
+        json.dumps(
+            {"extraction": {"facts": [{"content": "Unreadable fact", "importance": 5}]}}
+        )
+        + "\n"
+    )
+
+    real_open = open
+
+    def _boom(file, *args, **kwargs):
+        # Only the log file errors; let everything else open normally.
+        if str(file).endswith(".jsonl"):
+            raise OSError("permission denied")
+        return real_open(file, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", _boom)
+
+    with patch("mait_code.tools.memory.reflect.get_data_dir", return_value=tmp_path):
+        text = read_observation_logs(days=7)
+
+    # The unreadable file contributes nothing; no exception escapes.
+    assert text == ""

@@ -1,7 +1,11 @@
 """Tests for cursor management."""
 
 from pathlib import Path
+from unittest.mock import patch
 
+import pytest
+
+from mait_code.hooks.observe import cursor as cursor_mod
 from mait_code.hooks.observe.cursor import (
     get_cursor,
     load_cursors,
@@ -61,6 +65,32 @@ def test_set_cursor_clears_failure_state(data_dir: Path):
     assert load_cursors()["/tmp/t.jsonl"].get("fail_count") is None
     # The next failure starts fresh.
     assert record_failure("/tmp/t.jsonl", 500) == 1
+
+
+def test_save_cursors_cleans_up_temp_on_failure(data_dir: Path):
+    """A failed atomic replace unlinks the temp file and re-raises the error."""
+    obs_dir = data_dir / "memory" / "observations"
+    before = set(obs_dir.iterdir())
+
+    with (
+        patch.object(cursor_mod.os, "replace", side_effect=OSError("disk full")),
+        pytest.raises(OSError, match="disk full"),
+    ):
+        save_cursors({"/tmp/t.jsonl": {"offset": 1, "updated": "2099-01-01T00:00:00"}})
+
+    # No stray .tmp file should be left behind.
+    assert set(obs_dir.iterdir()) == before
+
+
+def test_save_cursors_swallows_unlink_error_on_cleanup(data_dir: Path):
+    """If the temp file is already gone, cleanup ignores the unlink error but
+    still re-raises the original failure."""
+    with (
+        patch.object(cursor_mod.os, "replace", side_effect=OSError("replace failed")),
+        patch.object(cursor_mod.os, "unlink", side_effect=OSError("already gone")),
+        pytest.raises(OSError, match="replace failed"),
+    ):
+        save_cursors({"/tmp/t.jsonl": {"offset": 1, "updated": "2099-01-01T00:00:00"}})
 
 
 def test_save_cursors_prunes_old_entries(data_dir: Path):

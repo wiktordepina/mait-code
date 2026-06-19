@@ -77,6 +77,30 @@ class TestSearchEntries:
         assert len(results) <= 2
 
 
+class TestSearchEntriesFtsFallback:
+    """When FTS5 is unavailable, search falls back to a LIKE scan."""
+
+    def test_like_fallback_when_fts_missing(self, populated_db: sqlite3.Connection):
+        """Dropping the FTS table forces the OperationalError → LIKE branch."""
+        # Remove the FTS shadow table so the MATCH query raises.
+        populated_db.execute("DROP TABLE IF EXISTS memory_entries_fts")
+        populated_db.commit()
+
+        results = search_entries(populated_db, "dark mode")
+        assert any("dark mode" in r["content"] for r in results)
+
+    def test_like_fallback_respects_type_and_limit(
+        self, populated_db: sqlite3.Connection
+    ):
+        """The fallback path still honours entry_type and limit filters."""
+        populated_db.execute("DROP TABLE IF EXISTS memory_entries_fts")
+        populated_db.commit()
+
+        results = search_entries(populated_db, "User", entry_type="preference", limit=1)
+        assert len(results) <= 1
+        assert all(r["entry_type"] == "preference" for r in results)
+
+
 class TestListEntries:
     def test_list_default(self, populated_db: sqlite3.Connection):
         """Should return recent entries."""
@@ -286,6 +310,90 @@ class TestVectorSearch:
         assert all(r["id"] != target for r in hidden)
         assert any(r["id"] == target for r in shown)
 
+    def _insert_scoped_with_embedding(
+        self, conn, content, vec, *, scope, project=None, branch=None
+    ):
+        """Insert a scoped entry plus its embedding row."""
+        cursor = conn.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, scope, project, branch)
+               VALUES (?, 'fact', 5, 'semantic', ?, ?, ?)""",
+            (content, scope, project, branch),
+        )
+        conn.commit()
+        entry_id = cursor.lastrowid
+        conn.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (entry_id, struct.pack(f"{len(vec)}f", *vec)),
+        )
+        conn.commit()
+        return entry_id
+
+    def test_post_filter_drops_other_project_keeps_global(
+        self, memory_db: sqlite3.Connection
+    ):
+        """Project-scoped vector search keeps global + own project, drops others."""
+        vec = [1.0] + [0.0] * 767
+        self._insert_scoped_with_embedding(
+            memory_db, "global vector fact", vec, scope="global"
+        )
+        self._insert_scoped_with_embedding(
+            memory_db, "mine vector fact", vec, scope="project", project="mine"
+        )
+        self._insert_scoped_with_embedding(
+            memory_db, "theirs vector fact", vec, scope="project", project="theirs"
+        )
+
+        with patch("mait_code.tools.memory.search.embed_text", return_value=vec):
+            results = vector_search_entries(memory_db, "fact", project="mine")
+
+        contents = {r["content"] for r in results}
+        assert "global vector fact" in contents  # global always included
+        assert "mine vector fact" in contents
+        assert "theirs vector fact" not in contents  # other project dropped
+
+    def test_post_filter_drops_other_branch(self, memory_db: sqlite3.Connection):
+        """Branch-scoped entries on a different branch are filtered out."""
+        vec = [1.0] + [0.0] * 767
+        self._insert_scoped_with_embedding(
+            memory_db,
+            "branch x fact",
+            vec,
+            scope="branch",
+            project="mine",
+            branch="feat/x",
+        )
+        self._insert_scoped_with_embedding(
+            memory_db,
+            "branch y fact",
+            vec,
+            scope="branch",
+            project="mine",
+            branch="feat/y",
+        )
+
+        with patch("mait_code.tools.memory.search.embed_text", return_value=vec):
+            results = vector_search_entries(
+                memory_db, "fact", project="mine", branch="feat/x"
+            )
+
+        contents = {r["content"] for r in results}
+        assert "branch x fact" in contents
+        assert "branch y fact" not in contents
+
+    def test_respects_limit_after_post_filter(self, memory_db: sqlite3.Connection):
+        """The result list stops growing once the limit is reached."""
+        vec = [1.0] + [0.0] * 767
+        for i in range(5):
+            self._insert_scoped_with_embedding(
+                memory_db, f"global fact {i}", vec, scope="global"
+            )
+
+        with patch("mait_code.tools.memory.search.embed_text", return_value=vec):
+            results = vector_search_entries(memory_db, "fact", limit=2, project="mine")
+
+        assert len(results) == 2
+
 
 class TestHybridSearch:
     def test_hybrid_falls_back_to_fts(self, populated_db: sqlite3.Connection):
@@ -335,6 +443,34 @@ class TestHybridSearch:
         assert len(match) == 1
         # Should have high relevance (found by both, uses vector similarity)
         assert match[0]["relevance"] > 0.5
+
+    def test_hybrid_includes_vector_only_entries(self, memory_db: sqlite3.Connection):
+        """An entry found only by vector search is merged with its similarity."""
+        # Insert an entry whose content won't match the FTS query keyword.
+        memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class)
+               VALUES (?, ?, 7, 'semantic')""",
+            ("completely orthogonal phrasing here", "fact"),
+        )
+        memory_db.commit()
+        entry_id = memory_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        vec = [1.0] + [0.0] * 767
+        memory_db.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (entry_id, struct.pack("768f", *vec)),
+        )
+        memory_db.commit()
+
+        # FTS query matches nothing; only the vector search returns this entry.
+        with patch("mait_code.tools.memory.search.embed_text", return_value=vec):
+            results = hybrid_search(memory_db, "nonexistent_fts_keyword")
+
+        match = [r for r in results if r["id"] == entry_id]
+        assert len(match) == 1
+        # Vector-only relevance comes from its similarity (high, same vector).
+        assert match[0]["relevance"] > 0.9
 
 
 class TestDeleteEntry:

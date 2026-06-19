@@ -16,6 +16,11 @@ from mait_code.cli import (
     unmerge_settings,
 )
 from mait_code.cli._install import install, verify_source
+from mait_code.cli._settings import (
+    _entry_is_mait_code,
+    read_settings_file as read_claude_settings,
+    write_settings_file as write_claude_settings,
+)
 from mait_code.cli._symlinks import (
     remove_claude_md_symlink,
     remove_skill_symlinks,
@@ -59,6 +64,13 @@ class TestVerifySource:
         (tmp_path / "pyproject.toml").write_text('[project]\nname = "other"\n')
         (tmp_path / "src" / "mait_code").mkdir(parents=True)
         with pytest.raises(ValueError, match="not the mait-code project"):
+            verify_source(tmp_path)
+
+    def test_rejects_missing_package_dir(self, tmp_path: Path) -> None:
+        # Right project name in pyproject, but no src/mait_code package — the
+        # final structural check rejects it as "not a mait-code clone".
+        (tmp_path / "pyproject.toml").write_text('[project]\nname = "mait-code"\n')
+        with pytest.raises(ValueError, match="src/mait_code is missing"):
             verify_source(tmp_path)
 
 
@@ -272,3 +284,75 @@ class TestSettingsHelpers:
         assert "hooks" not in cleaned
         assert "mcpServers" not in cleaned
         assert "env" not in cleaned
+
+    def test_merge_with_no_hooks_or_servers(self) -> None:
+        # Empty source + empty dest: neither a hooks nor mcpServers section
+        # is created (the `if merged_hooks` / `if merged_servers` guards stay
+        # false), but the env table is always written.
+        result = merge_settings({}, {}, user_settings={"embedding-provider": "local"})
+        assert "hooks" not in result
+        assert "mcpServers" not in result
+        assert result["env"]["MAIT_CODE_EMBEDDING_PROVIDER"] == "local"
+
+    def test_merge_carries_source_mcp_servers(self) -> None:
+        # Exercise the mcpServers merge loop body: a source server is copied
+        # in alongside a pre-existing user server.
+        src = {"mcpServers": {"mait-reminders": {"command": "mc"}}}
+        dst = {"mcpServers": {"user-server": {"command": "u"}}}
+        result = merge_settings(src, dst, user_settings={})
+        assert result["mcpServers"]["mait-reminders"] == {"command": "mc"}
+        assert result["mcpServers"]["user-server"] == {"command": "u"}
+
+    def test_unmerge_ignores_non_list_hook_section(self) -> None:
+        # A hook section whose value isn't a list is left untouched (the
+        # `continue` guard) — we only filter list-shaped entry collections.
+        settings = {"hooks": {"Weird": "not-a-list"}}
+        cleaned = unmerge_settings(settings)
+        assert cleaned["hooks"]["Weird"] == "not-a-list"
+
+    def test_entry_is_mait_code_guards(self) -> None:
+        # Defensive shape checks: a non-dict entry, a non-list inner `hooks`,
+        # and a non-dict element inside it all return False (not ours).
+        assert _entry_is_mait_code("not-a-dict") is False
+        assert _entry_is_mait_code({"hooks": "not-a-list"}) is False
+        assert _entry_is_mait_code({"hooks": ["not-a-dict"]}) is False
+        # A real mait-code command is recognised.
+        assert _entry_is_mait_code({"hooks": [{"command": "mc-hook-x"}]}) is True
+
+
+class TestSettingsFileIO:
+    def test_read_missing_returns_empty(self, tmp_path: Path) -> None:
+        assert read_claude_settings(tmp_path / "nope.json") == {}
+
+    def test_read_malformed_json_returns_empty(self, tmp_path: Path) -> None:
+        bad = tmp_path / "settings.json"
+        bad.write_text("{ not valid json", encoding="utf-8")
+        assert read_claude_settings(bad) == {}
+
+    def test_read_non_object_returns_empty(self, tmp_path: Path) -> None:
+        # Valid JSON that isn't a top-level object (a list) is rejected.
+        f = tmp_path / "settings.json"
+        f.write_text("[1, 2, 3]", encoding="utf-8")
+        assert read_claude_settings(f) == {}
+
+    def test_write_round_trips(self, tmp_path: Path) -> None:
+        f = tmp_path / "deep" / "settings.json"
+        write_claude_settings(f, {"theme": "dark"})
+        assert read_claude_settings(f) == {"theme": "dark"}
+
+    def test_write_cleans_up_tempfile_on_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # os.replace failing mid-write must unlink the partial tempfile and
+        # re-raise rather than leaving scratch debris behind.
+        import mait_code.cli._settings as settings_mod
+
+        f = tmp_path / "settings.json"
+
+        def boom(*_args: object, **_kwargs: object) -> None:
+            raise OSError("disk full")
+
+        monkeypatch.setattr(settings_mod.os, "replace", boom)
+        with pytest.raises(OSError, match="disk full"):
+            write_claude_settings(f, {"theme": "dark"})
+        assert not list(tmp_path.glob("settings.json.*.tmp"))

@@ -144,6 +144,86 @@ class TestGracefulDegradation:
             mod._provider = old_provider
             mod._provider_failed = old_failed
 
+    def test_get_provider_returns_local_on_success(self):
+        """A successful local load is cached and returned as the singleton."""
+        import mait_code.tools.memory.embeddings as mod
+
+        old_provider = mod._provider
+        old_failed = mod._provider_failed
+        mod._provider = None
+        mod._provider_failed = False
+
+        fake_fastembed = MagicMock()
+        fake_fastembed.TextEmbedding.return_value = MagicMock()
+        try:
+            with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}):
+                with patch.dict("sys.modules", {"fastembed": fake_fastembed}):
+                    provider = mod.get_provider()
+                    assert provider is not None
+                    # Singleton: a second call returns the same instance.
+                    assert mod.get_provider() is provider
+        finally:
+            mod._provider = old_provider
+            mod._provider_failed = old_failed
+
+    def test_get_provider_generic_failure_returns_none(self):
+        """A non-ImportError during init degrades to None (not propagated)."""
+        import mait_code.tools.memory.embeddings as mod
+
+        old_provider = mod._provider
+        old_failed = mod._provider_failed
+        mod._provider = None
+        mod._provider_failed = False
+
+        # boto3 imports fine but client construction blows up — generic Exception.
+        mock_boto3 = MagicMock()
+        mock_boto3.client.side_effect = RuntimeError("no credentials")
+        try:
+            with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "bedrock"}):
+                with patch.dict("sys.modules", {"boto3": mock_boto3}):
+                    with patch("mait_code.ssl.setup_ssl"):
+                        assert mod.get_provider() is None
+                        assert mod._provider_failed is True
+        finally:
+            mod._provider = old_provider
+            mod._provider_failed = old_failed
+
+    def test_embed_text_returns_none_on_provider_error(self):
+        """A provider that raises mid-embed degrades embed_text to None."""
+        import mait_code.tools.memory.embeddings as mod
+
+        old_provider = mod._provider
+        old_failed = mod._provider_failed
+        mock = MagicMock()
+        mock.embed.side_effect = RuntimeError("boom")
+        mod._provider = mock
+        mod._provider_failed = False
+
+        try:
+            with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}):
+                assert mod.embed_text("anything") is None
+        finally:
+            mod._provider = old_provider
+            mod._provider_failed = old_failed
+
+    def test_embed_texts_returns_none_on_provider_error(self):
+        """A provider that raises mid-embed degrades embed_texts to None."""
+        import mait_code.tools.memory.embeddings as mod
+
+        old_provider = mod._provider
+        old_failed = mod._provider_failed
+        mock = MagicMock()
+        mock.embed.side_effect = RuntimeError("boom")
+        mod._provider = mock
+        mod._provider_failed = False
+
+        try:
+            with patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}):
+                assert mod.embed_texts(["a", "b"]) is None
+        finally:
+            mod._provider = old_provider
+            mod._provider_failed = old_failed
+
 
 class TestEmbedWithMockProvider:
     """Test embed functions with a mocked provider."""
@@ -255,8 +335,91 @@ class TestEmbedWithMockProvider:
             mod._provider_failed = old_failed
 
 
+class TestLocalProviderBehaviour:
+    """Exercise LocalProvider's properties and embed path with mocked fastembed."""
+
+    def _make_provider(self):
+        """Construct a LocalProvider whose embedder is a controllable mock."""
+        fake_fastembed = MagicMock()
+        fake_embedder = MagicMock()
+        fake_fastembed.TextEmbedding.return_value = fake_embedder
+        with patch.dict("sys.modules", {"fastembed": fake_fastembed}):
+            from mait_code.tools.memory.embeddings import LocalProvider
+
+            provider = LocalProvider()
+        return provider, fake_embedder
+
+    def test_dimension_and_model_name(self):
+        """The provider surfaces the configured model name and known dimension."""
+        provider, _ = self._make_provider()
+        assert provider.dimension == 768
+        assert "nomic" in provider.model_name
+
+    def test_embed_converts_arrays_to_lists(self):
+        """embed() turns each numpy-style result into a plain list of floats."""
+        provider, embedder = self._make_provider()
+
+        # fastembed yields objects with .tolist(); mimic two vectors.
+        row_a = MagicMock()
+        row_a.tolist.return_value = [0.1, 0.2]
+        row_b = MagicMock()
+        row_b.tolist.return_value = [0.3, 0.4]
+        embedder.embed.return_value = iter([row_a, row_b])
+
+        result = provider.embed(["a", "b"])
+        assert result == [[0.1, 0.2], [0.3, 0.4]]
+
+
 class TestBedrockProvider:
     """Test BedrockProvider graceful degradation."""
+
+    def test_bedrock_dimension_and_model_name(self):
+        """BedrockProvider exposes the configured model id and known dimension."""
+        from mait_code.tools.memory.embeddings import BedrockProvider
+
+        mock_boto3 = MagicMock()
+        with patch.dict(
+            "os.environ",
+            {"MAIT_CODE_BEDROCK_MODEL_ID": "amazon.titan-embed-text-v2:0"},
+        ):
+            with patch.dict("sys.modules", {"boto3": mock_boto3}):
+                with patch("mait_code.ssl.setup_ssl"):
+                    provider = BedrockProvider()
+
+        assert provider.dimension == 1024
+        assert provider.model_name == "amazon.titan-embed-text-v2:0"
+
+    def test_bedrock_cohere_payload_and_parse(self):
+        """A non-titan (cohere) model uses the texts payload and embeddings key."""
+        import json
+
+        from mait_code.tools.memory.embeddings import BedrockProvider
+
+        mock_boto3 = MagicMock()
+        mock_client = MagicMock()
+        mock_boto3.client.return_value = mock_client
+
+        mock_body = MagicMock()
+        mock_body.read.return_value = json.dumps(
+            {"embeddings": [[0.5] * 1024]}
+        ).encode()
+        mock_client.invoke_model.return_value = {"body": mock_body}
+
+        with patch.dict(
+            "os.environ",
+            {"MAIT_CODE_BEDROCK_MODEL_ID": "cohere.embed-english-v3"},
+        ):
+            with patch.dict("sys.modules", {"boto3": mock_boto3}):
+                with patch("mait_code.ssl.setup_ssl"):
+                    provider = BedrockProvider()
+                    result = provider.embed(["test text"])
+
+        assert len(result) == 1
+        assert len(result[0]) == 1024
+        # Cohere uses the "texts" payload, not Titan's "inputText".
+        body = json.loads(mock_client.invoke_model.call_args.kwargs["body"])
+        assert body["texts"] == ["test text"]
+        assert body["input_type"] == "search_document"
 
     def test_bedrock_missing_boto3(self):
         """BedrockProvider should fail gracefully if boto3 is missing."""
@@ -476,3 +639,41 @@ class TestDimensionCheck:
         matches, table_dim, expected = check_dimension_match(conn)
         assert matches is True
         assert table_dim is None
+
+    @patch.dict("os.environ", {"MAIT_CODE_EMBEDDING_PROVIDER": "local"}, clear=False)
+    def test_empty_table_no_declaration_assumes_match(self):
+        """Empty vec table whose CREATE sql can't be found assumes a match.
+
+        ``_parse_vec_table_dim`` returns ``None`` when sqlite_master yields no
+        row, so ``check_dimension_match`` can't compare and defaults to a match.
+        """
+        from mait_code.tools.memory.embeddings import check_dimension_match
+
+        conn = MagicMock()
+
+        def _execute(sql, *args):
+            result = MagicMock()
+            if "sqlite_master" in sql:
+                result.fetchone.return_value = None  # no CREATE statement found
+            else:
+                result.fetchone.return_value = None  # empty memory_vec
+            return result
+
+        conn.execute = _execute
+
+        matches, table_dim, expected = check_dimension_match(conn)
+        assert matches is True
+        assert table_dim is None
+        assert expected == 768
+
+
+class TestParseVecTableDim:
+    """The declared-dimension parser swallows query errors."""
+
+    def test_parse_returns_none_on_query_error(self):
+        """A connection that raises on the sqlite_master read yields None."""
+        from mait_code.tools.memory.embeddings import _parse_vec_table_dim
+
+        conn = MagicMock()
+        conn.execute.side_effect = Exception("db gone")
+        assert _parse_vec_table_dim(conn) is None

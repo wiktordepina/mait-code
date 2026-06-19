@@ -170,6 +170,23 @@ class TestSettingsFileIO:
         result = config.read_settings_file(path=f)
         assert result == {"embedding-provider": "bedrock", "log-level": "DEBUG"}
 
+    def test_write_cleans_up_tempfile_on_failure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # If os.replace blows up mid-write, the partial tempfile must not be
+        # left behind — the except branch unlinks it and re-raises.
+        f = tmp_path / "settings.toml"
+
+        def boom(*_args: object, **_kwargs: object) -> None:
+            raise OSError("disk full")
+
+        monkeypatch.setattr(config.os, "replace", boom)
+        with pytest.raises(OSError, match="disk full"):
+            config.write_settings_file({"log-level": "DEBUG"}, path=f)
+
+        # No leftover *.tmp scratch file in the target directory.
+        assert not list(tmp_path.glob("settings.toml.*.tmp"))
+
     def test_write_creates_parent_dirs(self, tmp_path: Path) -> None:
         deep = tmp_path / "a" / "b" / "settings.toml"
         config.write_settings_file({"log-level": "DEBUG"}, path=deep)
@@ -341,6 +358,33 @@ class TestValidateSettings:
             config.Setting("log-level", "MAIT_CODE_LOG_LEVEL", "INFO"),
         )
         assert config.validate_settings() == []
+
+
+class TestNumericValidators:
+    """The numeric validators must reject non-numeric input via their
+    ``except`` branch before the range comparison, returning a typed error
+    rather than letting ``int``/``float`` raise."""
+
+    def test_positive_int_rejects_non_integer(self) -> None:
+        assert config._positive_int("soon") == "must be an integer, got 'soon'"
+        assert config._positive_int("3") is None
+        # The range comparison still rejects zero / negatives.
+        assert config._positive_int("0") == "must be a positive integer, got 0"
+
+    def test_non_negative_int_rejects_non_integer(self) -> None:
+        assert config._non_negative_int("nope") == "must be an integer, got 'nope'"
+        assert config._non_negative_int("0") is None
+        assert config._non_negative_int("-1") == "must be zero or greater, got -1"
+
+    def test_unit_interval_rejects_non_number(self) -> None:
+        assert config._unit_interval("x") == "must be a number, got 'x'"
+        assert config._unit_interval("0.5") is None
+        assert config._unit_interval("2") == "must be in [0, 1], got 2.0"
+
+    def test_positive_float_rejects_non_number(self) -> None:
+        assert config._positive_float("y") == "must be a number, got 'y'"
+        assert config._positive_float("0.1") is None
+        assert config._positive_float("0") == "must be greater than zero, got 0.0"
 
 
 class TestChoices:
@@ -613,6 +657,15 @@ class TestCollectSettingsEnvRows:
         assert rows["env.SHADOWED_VAR"].source == "env"
         # Secret-looking names are masked.
         assert rows["env.MY_API_TOKEN"].value == "…1234"
+
+    def test_short_secret_is_fully_masked(self) -> None:
+        # A secret of four chars or fewer reveals nothing — the whole value
+        # collapses to bullets rather than leaking its (short) length's worth
+        # of characters.
+        _write_default_settings_with_env('TINY_TOKEN = "abc"\n')
+        config.reset_cache()
+        rows = {r.key: r for r in config.collect_settings().settings}
+        assert rows["env.TINY_TOKEN"].value == "••••"
 
     def test_no_env_table_adds_no_rows(self) -> None:
         keys = [r.key for r in config.collect_settings().settings]

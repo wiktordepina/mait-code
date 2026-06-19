@@ -46,7 +46,10 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
-      - run: uv run pytest
+      # addopts already prints a term-missing coverage report; the gate is a
+      # backstop against significant regression, set ~2pt below the current
+      # ~95% baseline so routine TUI churn stays green but a real drop fails CI.
+      - run: uv run pytest --cov-fail-under=93
 
   audit:
     name: Dependency audit (pip-audit)

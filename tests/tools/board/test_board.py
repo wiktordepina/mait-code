@@ -76,6 +76,53 @@ def test_migration_blocked_becomes_refined_with_tag(tmp_path):
     assert tags == [BLOCKED_TAG]
 
 
+def test_ensure_schema_supports_callable_migration(monkeypatch, tmp_path):
+    """A callable migration body is invoked with the connection.
+
+    The shipped board migrations are all SQL-list bodies, so this exercises the
+    framework's documented callable branch by injecting a one-off migration.
+    """
+    from mait_code.tools.board import migrate
+
+    called: list[sqlite3.Connection] = []
+
+    def _body(conn: sqlite3.Connection) -> None:
+        called.append(conn)
+        conn.execute("CREATE TABLE callable_marker (id INTEGER)")
+
+    monkeypatch.setattr(
+        migrate, "MIGRATIONS", [*migrate.MIGRATIONS, (999, "callable", _body)]
+    )
+
+    conn = sqlite3.connect(tmp_path / "callable.db")
+    try:
+        migrate.ensure_schema(conn)
+        assert called == [conn]
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE name='callable_marker'"
+        ).fetchone()
+        assert row is not None
+    finally:
+        conn.close()
+
+
+def test_is_valid_status():
+    """Every fixed column (including hidden archived) is valid; others are not."""
+    from mait_code.tools.board.columns import (
+        ALL_STATUSES,
+        is_valid_status,
+        label,
+    )
+
+    for status in ALL_STATUSES:
+        assert is_valid_status(status)
+    assert not is_valid_status("blocked")  # a tag now, not a status
+    assert not is_valid_status("nonsense")
+    # label falls back to the raw value for unknown statuses.
+    assert label(BACKLOG) == "Backlog"
+    assert label("nonsense") == "nonsense"
+
+
 def test_cards_columns(board_db: sqlite3.Connection):
     columns = board_db.execute("PRAGMA table_info(cards)").fetchall()
     col_names = [c[1] for c in columns]
