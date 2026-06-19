@@ -66,6 +66,7 @@ from mait_code.tui import palette as p
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.banner import BrandBanner
 from mait_code.tui.brand import empty_state
+from mait_code.tui.filters import ProjectFilterScreen
 from mait_code.tui.markdown import md_parser
 from mait_code.tui.render import (
     PALETTE_CHIPS,
@@ -83,11 +84,6 @@ _PANES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
 #: The linear flow the ``<``/``>`` keys move a card along — every real status
 #: except the hidden ``archived`` side-state, which is reached only via the CLI.
 _MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
-
-#: Sentinel ``Select`` value for the "show every project" option in the project
-#: filter picker. A distinct object (not ``None``) so the picker can tell "all
-#: projects" apart from the ``None`` that escape/cancel dismisses with.
-_ALL_PROJECTS = object()
 
 #: Companion-voice hint shown (dim, non-selectable) in an empty column, so a
 #: bare pane still sounds like the companion rather than rendering as a void.
@@ -1001,59 +997,6 @@ class SearchScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-class ProjectFilterScreen(ModalScreen[object | None]):
-    """Pick the project to filter the board by, via a ``Select`` dropdown.
-
-    Resolves to one of three outcomes, kept distinct so "all" never collapses
-    into the cancel ``None``:
-
-    * a project name — filter to that project;
-    * :data:`_ALL_PROJECTS` — clear the filter (show every project);
-    * ``None`` — escape/cancel, leave the active filter untouched.
-
-    The dropdown auto-expands and applies on selection (no Apply button): the
-    chosen value dismisses the modal straight away. The one wrinkle is that
-    ``Select`` posts a :class:`Select.Changed` for its *initial* value on mount,
-    which would dismiss instantly — so a change back to the value we opened with
-    (the mount echo, and equally a no-op re-pick) is ignored.
-    """
-
-    BINDINGS = [("escape", "cancel", "Cancel")]
-
-    def __init__(self, projects: list[str], current: str | None = None) -> None:
-        super().__init__()
-        self._projects = projects
-        self._initial: object = _ALL_PROJECTS if current is None else current
-
-    def compose(self) -> ComposeResult:
-        with Vertical(classes="modal-dialog"):
-            yield Label("Filter by project", classes="modal-title")
-            yield Select(
-                [
-                    ("All projects", _ALL_PROJECTS),
-                    *((proj, proj) for proj in self._projects),
-                ],
-                value=self._initial,
-                allow_blank=False,
-                id="project-select",
-            )
-
-    def on_mount(self) -> None:
-        select = self.query_one("#project-select", Select)
-        select.focus()
-        select.expanded = True  # open the dropdown so picking is one gesture
-
-    def on_select_changed(self, event: Select.Changed) -> None:
-        # ``Select`` echoes its initial value as a Changed on mount; ignore that
-        # (and a no-op re-pick of the same value) — only a real change applies.
-        if event.value == self._initial:
-            return
-        self.dismiss(event.value)
-
-    def action_cancel(self) -> None:
-        self.dismiss(None)
-
-
 #: Priority choices, low→high, as offered in the new/edit modals.
 _PRIORITIES: tuple[str, ...] = ("low", "medium", "high")
 
@@ -1486,7 +1429,7 @@ class BoardApp(MaitApp):
         )
         if result is None:
             return  # escape/cancel — leave the active filter as-is
-        # A project name filters to it; the _ALL_PROJECTS sentinel clears it.
+        # A project name filters to it; the ALL_PROJECTS sentinel clears it.
         self._project_filter = result if isinstance(result, str) else None
         self._update_subtitle()
         self._reload()

@@ -518,6 +518,95 @@ class TestStoreMemoryEmbedding:
         assert count == 1
 
 
+class TestFtsCandidates:
+    """Direct coverage for the FTS candidate retrieval paths."""
+
+    def test_short_words_use_no_match_branch(self, memory_db: sqlite3.Connection):
+        """Content with no words longer than two chars skips the MATCH query.
+
+        With no usable keywords the helper falls back to a plain type-scoped
+        scan rather than an empty FTS query.
+        """
+        from mait_code.tools.memory.writer import _fts_candidates
+
+        store_memory(memory_db, "an existing fact", "fact", 5)
+
+        # "a", "an", "is", "ok" are all <= 2 chars, so `words` is empty.
+        hits = _fts_candidates(memory_db, "a an is ok", "fact")
+        assert any("an existing fact" == content for _, content in hits)
+
+    def test_like_fallback_when_fts_missing(self, memory_db: sqlite3.Connection):
+        """A missing FTS table forces the OperationalError → LIKE fallback."""
+        from mait_code.tools.memory.writer import _fts_candidates
+
+        store_memory(memory_db, "deploy pipeline broke today", "event", 5)
+
+        memory_db.execute("DROP TABLE IF EXISTS memory_entries_fts")
+        memory_db.commit()
+
+        hits = _fts_candidates(memory_db, "deploy pipeline broke today", "event")
+        assert any("deploy pipeline broke today" == content for _, content in hits)
+
+
+class TestVectorCandidateProjectFilter:
+    """The project post-filter on vector candidates."""
+
+    def test_global_write_skips_project_scoped_candidate(
+        self, memory_db: sqlite3.Connection
+    ):
+        """A global write (project=None) ignores project-scoped neighbours."""
+        from mait_code.tools.memory.writer import _vector_candidates
+
+        # A project-scoped entry exists with an embedding.
+        cursor = memory_db.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, scope, project)
+               VALUES ('scoped neighbour', 'fact', 5, 'semantic', 'project', 'mine')"""
+        )
+        memory_db.commit()
+        entry_id = cursor.lastrowid
+        memory_db.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (entry_id, np.zeros(768, dtype="float32").tobytes()),
+        )
+        memory_db.commit()
+
+        with patch(
+            "mait_code.tools.memory.writer.embed_text",
+            return_value=[0.0] * 768,
+        ):
+            # project=None — the project-scoped entry must be filtered out.
+            results = _vector_candidates(memory_db, "scoped neighbour", "fact")
+
+        assert results == []
+
+
+class TestAssessCandidatesStringMatchOnVector:
+    """A vector candidate not seen via FTS can still string-match into a dedup."""
+
+    def test_vector_only_string_match_dedups(self, memory_db: sqlite3.Connection):
+        """A near-identical vector candidate (below vector threshold) merges
+        when its SequenceMatcher ratio clears the string threshold."""
+        original = store_memory(memory_db, "The server runs on port 8080", "fact", 5)
+
+        # Vector similarity is *below* the dedup threshold, so the merge can
+        # only happen via the string-match branch on the vector candidate.
+        with patch(
+            "mait_code.tools.memory.writer._fts_candidates",
+            return_value=[],  # nothing from FTS, so this id is unseen
+        ):
+            with patch(
+                "mait_code.tools.memory.writer._vector_candidates",
+                return_value=[(original["id"], "The server runs on port 8080", 0.50)],
+            ):
+                result = store_memory(
+                    memory_db, "The server runs on port 8080.", "fact", 5
+                )
+
+        assert result["action"] == "deduplicated"
+        assert result["id"] == original["id"]
+
+
 class TestFindDuplicate:
     def test_no_duplicate_in_empty_db(self, memory_db: sqlite3.Connection):
         """Empty database should return None."""
@@ -610,4 +699,28 @@ class TestEmbeddingFailureVisibility:
         assert any(
             "dedup" in r.message.lower() and r.levelname == "WARNING"
             for r in caplog.records
+        )
+
+    def test_embedding_storage_failure_warns_with_reindex_hint(
+        self, memory_db: sqlite3.Connection, caplog
+    ):
+        """An error inserting the vector is logged with a reindex hint, not raised."""
+        from mait_code.tools.memory.writer import _store_embedding
+
+        with (
+            patch(
+                "mait_code.tools.memory.writer.embed_text",
+                return_value=[0.1] * 768,
+            ),
+            patch(
+                "mait_code.tools.memory.writer.serialize_f32",
+                side_effect=RuntimeError("pack failed"),
+            ),
+            caplog.at_level("WARNING", logger="mait_code.tools.memory.writer"),
+        ):
+            # Must not raise even though serialisation blows up.
+            _store_embedding(memory_db, 123, "some content")
+
+        assert any(
+            "reindex" in r.message and r.levelname == "WARNING" for r in caplog.records
         )

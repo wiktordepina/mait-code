@@ -18,6 +18,20 @@ def test_build_extraction_prompt():
     assert "facts" in prompt  # Contains the system prompt
 
 
+def test_build_extraction_prompt_with_context():
+    """A project (and branch) adds a context header to the prompt."""
+    prompt = build_extraction_prompt("USER: hi", project="mait-code", branch="feat/x")
+    assert "Project: mait-code" in prompt
+    assert "Branch: feat/x" in prompt
+
+
+def test_build_extraction_prompt_project_without_branch():
+    """A project with no branch falls back to the default-branch placeholder."""
+    prompt = build_extraction_prompt("USER: hi", project="mait-code")
+    assert "Project: mait-code" in prompt
+    assert "(default branch)" in prompt
+
+
 def test_prompt_covers_expected_keys():
     """Every key the parser accepts must be asked for in the prompt."""
     prompt = build_extraction_prompt("x")
@@ -82,6 +96,17 @@ def test_parse_extraction_invalid():
 
 def test_parse_extraction_wrong_structure():
     raw = json.dumps({"unrelated": "data"})
+    assert parse_extraction(raw) is None
+
+
+def test_parse_extraction_braces_with_malformed_json():
+    """A brace-delimited block that still isn't valid JSON falls through to None.
+
+    The direct parse fails, the regex fallback matches the ``{...}`` span, but
+    ``json.loads`` raises again on the malformed contents — exercising the
+    fallback's own decode-error guard rather than the no-match path.
+    """
+    raw = "Here you go: {facts: not valid json, missing quotes}"
     assert parse_extraction(raw) is None
 
 

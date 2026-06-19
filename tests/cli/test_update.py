@@ -327,6 +327,57 @@ class TestUpdateReadsProviderFromSettings:
         # Bailed before reinstalling — no chance to drop the bedrock extra.
         assert not git.ran(["uv", "tool", "install"])
 
+    def test_unknown_provider_value_raises(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # A settings file present but carrying an unrecognised provider (e.g.
+        # hand-edited or from a future build) is rejected before reinstall.
+        from mait_code import config
+
+        _install_first(fake_source, provider="local")
+        config.write_settings_file(
+            {"embedding-provider": "openai"}, path=self._settings_toml(fake_home)
+        )
+        git = _FakeGit(branch="main", tags=[])
+
+        with pytest.raises(ValueError, match="expected one of"):
+            update(no_pull=True, runner=git.run, capture=git.capture)
+        assert not git.ran(["uv", "tool", "install"])
+
+
+class TestUpdateDefaultSubprocessHelpers:
+    """The default runner/capture wrap ``subprocess.run``; exercise them
+    directly with the subprocess call mocked so the real ``update`` path can
+    still inject stubs."""
+
+    def test_default_runner_checks_for_failure(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mait_code.cli import _update
+
+        calls: list[dict[str, object]] = []
+
+        def fake_run(cmd: list[str], **kwargs: object) -> None:
+            calls.append({"cmd": cmd, **kwargs})
+
+        monkeypatch.setattr(_update.subprocess, "run", fake_run)
+        _update.default_runner(["git", "status"], cwd=Path("/tmp"))
+        assert calls[0]["cmd"] == ["git", "status"]
+        assert calls[0]["check"] is True
+        assert calls[0]["cwd"] == Path("/tmp")
+
+    def test_default_capture_returns_stripped_stdout(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mait_code.cli import _update
+
+        class _Result:
+            stdout = "  main \n"
+
+        monkeypatch.setattr(_update.subprocess, "run", lambda *a, **k: _Result())
+        out = _update.default_capture(["git", "branch", "--show-current"])
+        assert out == "main"
+
 
 class TestUpdateCommand:
     def test_cli_invokes_update(

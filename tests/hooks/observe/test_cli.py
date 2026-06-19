@@ -2,15 +2,28 @@
 
 import io
 import json
+import logging
 import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from mait_code.context import munge_path
 from mait_code.hooks.observe import cli as observe_cli
 from mait_code.hooks.observe.cli import _find_transcript, _read_event
 from mait_code.hooks.observe.cursor import get_cursor
+
+
+@pytest.fixture
+def propagate_logs(monkeypatch):
+    """Re-enable propagation so ``caplog`` can capture ``mait_code.*`` records.
+
+    ``setup_logging()`` (run by an earlier test) sets ``propagate=False`` on the
+    ``mait_code`` logger; caplog captures at the root, so restore propagation.
+    """
+    monkeypatch.setattr(logging.getLogger("mait_code"), "propagate", True)
 
 
 class TestReadEvent:
@@ -161,6 +174,23 @@ class TestFindTranscript:
 
         assert result == str(new)
 
+    def test_broad_scan_skips_non_directories(self, tmp_path: Path):
+        """Stray files under projects/ are ignored, not treated as project dirs."""
+        projects_root = tmp_path / ".claude" / "projects"
+        projects_root.mkdir(parents=True)
+        # A loose file sitting alongside project dirs must be skipped.
+        (projects_root / "stray.txt").write_text("not a project dir")
+
+        proj = projects_root / "-project-a"
+        proj.mkdir()
+        transcript = proj / "session.jsonl"
+        transcript.write_text('{"type": "user"}\n')
+
+        with patch.object(Path, "home", return_value=tmp_path):
+            result = _find_transcript(cwd="/wrong/cwd")
+
+        assert result == str(transcript)
+
     def test_defaults_to_getcwd(self, tmp_path: Path, monkeypatch: object):
         monkeypatch.chdir(tmp_path)
         slug = munge_path(str(tmp_path))
@@ -249,6 +279,152 @@ class TestRunCursorAdvance:
         mock_ent.assert_called_once()
 
 
+class TestMain:
+    """Tests for main() — the hook entry point wrapper."""
+
+    def test_nested_invocation_is_skipped(self, monkeypatch):
+        """A nested claude invocation short-circuits before running anything."""
+        monkeypatch.setenv("MAIT_CODE_NESTED", "1")
+        with (
+            patch.object(observe_cli, "setup_logging"),
+            patch("mait_code.ssl.setup_ssl"),
+            patch.object(observe_cli, "_run") as mock_run,
+        ):
+            observe_cli.main()
+        mock_run.assert_not_called()
+
+    def test_runs_when_not_nested(self, monkeypatch):
+        monkeypatch.delenv("MAIT_CODE_NESTED", raising=False)
+        with (
+            patch.object(observe_cli, "setup_logging"),
+            patch("mait_code.ssl.setup_ssl"),
+            patch.object(observe_cli, "_run") as mock_run,
+        ):
+            observe_cli.main()
+        mock_run.assert_called_once()
+
+    def test_broken_pipe_exits_zero(self, monkeypatch):
+        """A BrokenPipeError must exit cleanly (0), never fail the hook."""
+        monkeypatch.delenv("MAIT_CODE_NESTED", raising=False)
+        with (
+            patch.object(observe_cli, "setup_logging"),
+            patch("mait_code.ssl.setup_ssl"),
+            patch.object(observe_cli, "_run", side_effect=BrokenPipeError),
+            pytest.raises(SystemExit) as exc,
+        ):
+            observe_cli.main()
+        assert exc.value.code == 0
+
+    def test_unexpected_error_is_swallowed(self, monkeypatch, caplog, propagate_logs):
+        """Any other exception is logged and the hook exits 0 — never fails."""
+        monkeypatch.delenv("MAIT_CODE_NESTED", raising=False)
+        # The @log_invocation decorator also calls setup_logging() (which would
+        # flip propagate back to False and defeat caplog); patch it at the
+        # module the decorator imported it from, not just on the cli module.
+        with (
+            patch("mait_code.logging.setup_logging"),
+            patch.object(observe_cli, "setup_logging"),
+            patch("mait_code.ssl.setup_ssl"),
+            patch.object(observe_cli, "_run", side_effect=RuntimeError("boom")),
+            caplog.at_level("ERROR", logger="mait_code.hooks.observe.cli"),
+            pytest.raises(SystemExit) as exc,
+        ):
+            observe_cli.main()
+        assert exc.value.code == 0
+        assert "boom" in caplog.text
+
+
+class TestRunNoTranscript:
+    """_run handles a missing transcript_path by falling back, then bailing."""
+
+    def test_falls_back_to_find_transcript(self, data_dir: Path, monkeypatch):
+        """When the event lacks transcript_path, _find_transcript is consulted."""
+        tpath = data_dir / "found.jsonl"
+        tpath.touch()
+        monkeypatch.setattr(sys, "argv", ["mc-hook-observe", "--trigger", "precompact"])
+        with (
+            patch.object(observe_cli, "_read_event", return_value={"cwd": "/some/dir"}),
+            patch.object(
+                observe_cli, "_find_transcript", return_value=str(tpath)
+            ) as mock_find,
+            patch.object(
+                observe_cli,
+                "read_new_lines",
+                return_value=([], 0, {}),
+            ),
+        ):
+            observe_cli._run()
+        # cwd from the event is threaded through to the fallback.
+        mock_find.assert_called_once_with(cwd="/some/dir")
+
+    def test_no_transcript_anywhere_warns_and_returns(
+        self, data_dir: Path, monkeypatch, caplog, propagate_logs
+    ):
+        """Neither stdin nor fallback yields a path — warn and return."""
+        monkeypatch.setattr(
+            sys, "argv", ["mc-hook-observe", "--trigger", "session-end"]
+        )
+        with (
+            patch.object(observe_cli, "_read_event", return_value={}),
+            patch.object(observe_cli, "_find_transcript", return_value=None),
+            patch.object(observe_cli, "read_new_lines") as mock_read,
+            caplog.at_level("WARNING", logger="mait_code.hooks.observe.cli"),
+        ):
+            observe_cli._run()
+        mock_read.assert_not_called()
+        assert "no transcript_path available" in caplog.text
+
+
+class TestRunNoContent:
+    """_run advances the cursor cleanly when there's nothing to extract."""
+
+    NEW_OFFSET = 42
+
+    def _drive(self, data_dir: Path, monkeypatch, *, messages, conversation_text):
+        tpath = data_dir / "transcript.jsonl"
+        tpath.touch()
+        self.tpath = str(tpath)
+        monkeypatch.setattr(
+            sys, "argv", ["mc-hook-observe", "--trigger", "session-end"]
+        )
+        with (
+            patch.object(
+                observe_cli,
+                "_read_event",
+                return_value={"transcript_path": self.tpath},
+            ),
+            patch.object(
+                observe_cli,
+                "read_new_lines",
+                return_value=(messages, self.NEW_OFFSET, {}),
+            ),
+            patch.object(
+                observe_cli, "format_for_extraction", return_value=conversation_text
+            ),
+            patch.object(observe_cli, "extract_observations") as mock_extract,
+        ):
+            observe_cli._run()
+        return mock_extract
+
+    def test_no_messages_advances_without_extracting(self, data_dir: Path, monkeypatch):
+        """An empty window advances the cursor and never calls the extractor."""
+        mock_extract = self._drive(
+            data_dir, monkeypatch, messages=[], conversation_text=""
+        )
+        assert get_cursor(self.tpath) == self.NEW_OFFSET
+        mock_extract.assert_not_called()
+
+    def test_blank_conversation_text_advances_without_extracting(
+        self, data_dir: Path, monkeypatch
+    ):
+        """Messages that format to whitespace-only text are skipped, cursor advances."""
+        mock_extract = self._drive(
+            data_dir, monkeypatch, messages=["m"], conversation_text="   \n  "
+        )
+        assert get_cursor(self.tpath) == self.NEW_OFFSET
+        mock_extract.assert_not_called()
+
+
 class TestRunMissingTranscript:
     """A transcript path that doesn't exist on disk is skipped cleanly.
 
@@ -260,7 +436,7 @@ class TestRunMissingTranscript:
     """
 
     def test_missing_transcript_skips_without_error(
-        self, data_dir: Path, monkeypatch, caplog
+        self, data_dir: Path, monkeypatch, caplog, propagate_logs
     ):
         missing = str(data_dir / "gone.jsonl")  # never created
         monkeypatch.setattr(

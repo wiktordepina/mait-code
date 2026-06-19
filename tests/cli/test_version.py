@@ -110,6 +110,19 @@ class TestInstallRecord:
         else:
             raise AssertionError("Expected RecordError")
 
+    def test_non_object_json_raises(self, fake_home: Path) -> None:
+        # Valid JSON that decodes to a list (not an object) is rejected
+        # before any field access.
+        path = install_record_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("[1, 2, 3]")
+        try:
+            read_record()
+        except RecordError as exc:
+            assert "not a JSON object" in str(exc)
+        else:
+            raise AssertionError("Expected RecordError")
+
     def test_future_schema_version_raises(self, fake_home: Path) -> None:
         path = install_record_path()
         path.parent.mkdir(parents=True, exist_ok=True)

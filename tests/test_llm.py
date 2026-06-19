@@ -192,6 +192,16 @@ class TestRetryBackoff:
         assert result is None
         assert mock_subprocess.call_count == 1
 
+    def test_negative_retries_makes_no_attempt(self, mock_subprocess):
+        """A negative retry count means an empty attempt loop — falls through to None.
+
+        ``range(1 + retries)`` is empty when ``retries < 0``, so the subprocess
+        is never invoked and the post-loop ``return None`` guard is reached.
+        """
+        result = call_claude("prompt", retries=-1)
+        assert result is None
+        mock_subprocess.assert_not_called()
+
     def test_custom_backoff_base(self, mock_subprocess, mock_sleep):
         fail = MagicMock()
         fail.returncode = 1

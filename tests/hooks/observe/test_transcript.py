@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from mait_code.hooks.observe.transcript import (
+    _extract_text,
     format_for_extraction,
     read_new_lines,
 )
@@ -136,6 +137,127 @@ def test_metadata_uses_last_entry(tmp_path: Path):
     _, _, metadata = read_new_lines(str(path), 0)
     assert metadata["project"] == "beta"
     assert metadata["branch"] == "new-branch"
+
+
+def test_read_new_lines_trims_partial_final_line(tmp_path: Path):
+    """A trailing line without a newline is held back until it completes."""
+    path = tmp_path / "partial.jsonl"
+    first = json.dumps({"type": "user", "message": {"content": "complete"}}) + "\n"
+    # Second line has no trailing newline — it's still being written.
+    partial = json.dumps({"type": "user", "message": {"content": "partial"}})
+    path.write_text(first + partial)
+
+    messages, offset, _ = read_new_lines(str(path), 0)
+    # Only the complete line is parsed.
+    assert len(messages) == 1
+    assert messages[0]["message"]["content"] == "complete"
+    # Offset stops at the last newline, so the partial line is re-read later.
+    assert offset == len(first.encode("utf-8"))
+
+
+def test_read_new_lines_skips_blank_lines(tmp_path: Path):
+    """Blank lines between entries are ignored."""
+    path = tmp_path / "blanks.jsonl"
+    entry = json.dumps({"type": "user", "message": {"content": "hi"}})
+    path.write_text(entry + "\n\n\n")
+
+    messages, _, _ = read_new_lines(str(path), 0)
+    assert len(messages) == 1
+
+
+def test_read_new_lines_skips_malformed_json(tmp_path: Path):
+    """A line that isn't valid JSON is skipped, not fatal."""
+    path = tmp_path / "malformed.jsonl"
+    good = json.dumps({"type": "user", "message": {"content": "good"}})
+    path.write_text("{not valid json\n" + good + "\n")
+
+    messages, _, _ = read_new_lines(str(path), 0)
+    assert len(messages) == 1
+    assert messages[0]["message"]["content"] == "good"
+
+
+def test_extract_text_from_text_blocks_mixed_members():
+    """_text_blocks may carry text dicts and bare strings; both are gathered.
+
+    This exercises ``_extract_text`` directly: ``read_new_lines`` only ever
+    populates ``_text_blocks`` with dicts (it filters non-dict blocks out), so
+    the bare-string branch is reached only on a pre-formed ``_text_blocks``.
+    """
+    message = {
+        "type": "assistant",
+        "_text_blocks": [
+            {"type": "text", "text": "first"},
+            "loose string",
+            {"type": "image"},  # non-text dict contributes nothing
+        ],
+    }
+    assert _extract_text(message) == "first loose string"
+
+
+def test_format_handles_string_block_in_content_list():
+    """A content list containing a bare string (no _text_blocks) is handled."""
+    messages = [
+        {
+            "type": "user",
+            "message": {
+                "role": "user",
+                "content": ["raw string block", {"type": "text", "text": "and text"}],
+            },
+        },
+    ]
+    text = format_for_extraction(messages)
+    assert "raw string block" in text
+    assert "and text" in text
+
+
+def test_format_ignores_non_text_dict_blocks_in_content_list():
+    """A non-text dict block in a content list contributes nothing but doesn't
+    abort iteration over the rest of the list."""
+    messages = [
+        {
+            "type": "assistant",
+            "message": {
+                "role": "assistant",
+                "content": [
+                    {"type": "thinking", "thinking": "internal"},
+                    {"type": "text", "text": "visible"},
+                ],
+            },
+        },
+    ]
+    text = format_for_extraction(messages)
+    assert text == "ASSISTANT: visible"
+
+
+def test_extract_text_returns_empty_for_unknown_content():
+    """Content that is neither str nor list yields no text, so the line drops."""
+    messages = [
+        {"type": "user", "message": {"role": "user", "content": {"weird": "dict"}}},
+    ]
+    text = format_for_extraction(messages)
+    assert text == ""
+
+
+def test_format_skips_messages_with_no_text():
+    """Messages that extract to empty text are omitted from the output."""
+    messages = [
+        {"type": "user", "message": {"role": "user", "content": ""}},
+        {"type": "user", "message": {"role": "user", "content": "real content"}},
+    ]
+    text = format_for_extraction(messages)
+    assert text == "USER: real content"
+
+
+def test_format_truncation_without_newline():
+    """When the kept tail has no newline, it is returned as-is after truncation."""
+    # A single very long message: after slicing to max_chars there is no
+    # internal newline to cut at, exercising the first_nl == -1 branch.
+    messages = [
+        {"type": "user", "message": {"role": "user", "content": "y" * 1000}},
+    ]
+    text = format_for_extraction(messages, max_chars=100)
+    assert len(text) == 100
+    assert set(text) == {"y"}
 
 
 def test_format_for_extraction_basic(sample_transcript: Path):

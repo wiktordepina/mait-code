@@ -77,6 +77,22 @@ def test_collect_stats_empty_store(conn) -> None:
     assert stats.last_reflected_at is None
 
 
+def test_collect_stats_missing_vec_table_counts_zero(conn) -> None:
+    """If the vec table is absent, embedded coverage degrades to zero.
+
+    The COUNT against ``memory_vec`` raises ``sqlite3.Error`` on a store
+    without the sqlite-vec table; stats should report zero rather than fail.
+    """
+    _seed_entry(conn, "a", "fact")
+    conn.execute("DROP TABLE IF EXISTS memory_vec")
+    conn.commit()
+
+    stats = collect_stats(conn)
+    assert stats.embedded == 0
+    assert stats.total == 1
+    assert stats.unembedded == 1
+
+
 # --- reflection freshness ---
 
 

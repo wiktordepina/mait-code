@@ -1,14 +1,29 @@
 """Tests for observation storage bridge."""
 
 import json
+import logging
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from mait_code.hooks.observe.storage import (
     store_entities_and_relationships,
     store_extraction,
     write_raw_extraction,
 )
+
+
+@pytest.fixture
+def propagate_logs(monkeypatch):
+    """Re-enable log propagation so ``caplog`` (rooted at the root logger) can see
+    ``mait_code.*`` records.
+
+    ``setup_logging()`` — run by an earlier test in the session — sets
+    ``propagate=False`` on the ``mait_code`` logger, which otherwise swallows
+    records before they reach caplog's root handler.
+    """
+    monkeypatch.setattr(logging.getLogger("mait_code"), "propagate", True)
 
 
 def test_write_raw_extraction(data_dir: Path):
@@ -214,6 +229,191 @@ def test_store_relationship_coerces_unknown_type(data_dir: Path):
         # Edge still written, but the invented label is normalised.
         assert mock_rel.call_count == 1
         assert mock_rel.call_args.args[3] == "related_to"
+
+
+def test_store_extraction_warns_on_store_failure(
+    data_dir: Path, caplog, propagate_logs
+):
+    """A store_memory failure for one item is logged and never propagates."""
+    extraction = {"facts": [{"content": "a fact", "importance": 5}]}
+
+    with (
+        patch(
+            "mait_code.hooks.observe.storage.store_memory",
+            side_effect=RuntimeError("db locked"),
+        ),
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+        caplog.at_level("WARNING", logger="mait_code.hooks.observe.storage"),
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+
+        # Must not raise despite the store failure.
+        store_extraction(extraction)
+
+    assert "failed to store fact" in caplog.text
+
+
+def test_store_entities_skips_unnamed(data_dir: Path):
+    """Entities with blank names are skipped entirely."""
+    extraction = {
+        "entities": [
+            {"name": "   ", "entity_type": "tool"},
+            {"name": "Real", "entity_type": "tool"},
+        ],
+        "relationships": [],
+    }
+
+    with (
+        patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        mock_entity.return_value = 1
+
+        store_entities_and_relationships(extraction)
+
+        # Only the named entity is upserted.
+        assert mock_entity.call_count == 1
+        assert mock_entity.call_args.args[1] == "Real"
+
+
+def test_store_entities_warns_on_entity_failure(data_dir: Path, caplog, propagate_logs):
+    """An upsert_entity failure is logged and does not abort the batch."""
+    extraction = {
+        "entities": [{"name": "Broken", "entity_type": "tool"}],
+        "relationships": [],
+    }
+
+    with (
+        patch(
+            "mait_code.hooks.observe.storage.upsert_entity",
+            side_effect=RuntimeError("constraint"),
+        ),
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+        caplog.at_level("WARNING", logger="mait_code.hooks.observe.storage"),
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+
+        store_entities_and_relationships(extraction)
+
+    assert "failed to upsert entity 'Broken'" in caplog.text
+
+
+def test_store_relationship_skips_when_endpoint_blank(data_dir: Path):
+    """A relationship missing a source or target is skipped."""
+    extraction = {
+        "entities": [],
+        "relationships": [
+            {"source": "", "target": "B", "relationship_type": "uses"},
+            {"source": "A", "target": "  ", "relationship_type": "uses"},
+        ],
+    }
+
+    with (
+        patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
+        patch("mait_code.hooks.observe.storage.upsert_relationship") as mock_rel,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+
+        store_entities_and_relationships(extraction)
+
+        # No endpoints created, no edges written.
+        mock_entity.assert_not_called()
+        mock_rel.assert_not_called()
+
+
+def test_store_relationship_skips_when_source_autocreate_fails(
+    data_dir: Path, caplog, propagate_logs
+):
+    """If auto-creating a relationship's source entity fails, the edge is skipped."""
+    extraction = {
+        "entities": [],
+        "relationships": [
+            {"source": "Ghost", "target": "Real", "relationship_type": "uses"},
+        ],
+    }
+
+    with (
+        patch(
+            "mait_code.hooks.observe.storage.upsert_entity",
+            side_effect=RuntimeError("cannot create"),
+        ),
+        patch("mait_code.hooks.observe.storage.upsert_relationship") as mock_rel,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+        caplog.at_level("WARNING", logger="mait_code.hooks.observe.storage"),
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+
+        store_entities_and_relationships(extraction)
+
+        mock_rel.assert_not_called()
+    assert "failed to create entity 'Ghost'" in caplog.text
+
+
+def test_store_relationship_skips_when_target_autocreate_fails(
+    data_dir: Path, caplog, propagate_logs
+):
+    """If auto-creating a relationship's target entity fails, the edge is skipped."""
+    extraction = {
+        "entities": [],
+        "relationships": [
+            {"source": "Real", "target": "Ghost", "relationship_type": "uses"},
+        ],
+    }
+
+    with (
+        patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
+        patch("mait_code.hooks.observe.storage.upsert_relationship") as mock_rel,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+        caplog.at_level("WARNING", logger="mait_code.hooks.observe.storage"),
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        # First call (source) succeeds, second (target auto-create) fails.
+        mock_entity.side_effect = [1, RuntimeError("cannot create")]
+
+        store_entities_and_relationships(extraction)
+
+        mock_rel.assert_not_called()
+    assert "failed to create entity 'Ghost'" in caplog.text
+
+
+def test_store_relationship_warns_on_upsert_failure(
+    data_dir: Path, caplog, propagate_logs
+):
+    """An upsert_relationship failure is logged and swallowed."""
+    extraction = {
+        "entities": [
+            {"name": "A", "entity_type": "tool"},
+            {"name": "B", "entity_type": "tool"},
+        ],
+        "relationships": [
+            {"source": "A", "target": "B", "relationship_type": "uses"},
+        ],
+    }
+
+    with (
+        patch("mait_code.hooks.observe.storage.upsert_entity") as mock_entity,
+        patch(
+            "mait_code.hooks.observe.storage.upsert_relationship",
+            side_effect=RuntimeError("edge failed"),
+        ),
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+        caplog.at_level("WARNING", logger="mait_code.hooks.observe.storage"),
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        mock_entity.side_effect = [1, 2]
+
+        store_entities_and_relationships(extraction)
+
+    assert "failed to upsert relationship" in caplog.text
 
 
 def test_store_entity_coerces_unknown_type(data_dir: Path):

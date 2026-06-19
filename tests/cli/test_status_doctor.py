@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from unittest.mock import patch
 
@@ -79,6 +80,218 @@ class TestStatus:
         payload = json.loads(render_json(collect_status()))
         assert payload["record_present"] is True
         assert payload["embedding_provider"] == "local"
+
+
+class TestStatusEdgeBranches:
+    """Helper-level edge branches for the status collector and renderer."""
+
+    def test_dir_size_zero_for_missing_path(self, tmp_path: Path) -> None:
+        from mait_code.cli._status import _dir_size_bytes
+
+        assert _dir_size_bytes(tmp_path / "does-not-exist") == 0
+
+    def test_dir_size_skips_unstatable_files(self, tmp_path: Path) -> None:
+        from unittest.mock import MagicMock
+
+        from mait_code.cli._status import _dir_size_bytes
+
+        # A file-like entry whose stat() raises is skipped, not fatal.
+        entry = MagicMock()
+        entry.is_file.return_value = True
+        entry.is_symlink.return_value = False
+        entry.stat.side_effect = OSError("boom")
+
+        root = MagicMock(spec=Path)
+        root.exists.return_value = True
+        root.rglob.return_value = [entry]
+
+        assert _dir_size_bytes(root) == 0
+
+    def test_count_linked_returns_zero_without_source(self, tmp_path: Path) -> None:
+        from mait_code.cli._status import _count_linked
+
+        (tmp_path / "skills").mkdir()
+        assert _count_linked(tmp_path / "skills", None) == 0
+        # Missing symlink dir is also zero.
+        assert _count_linked(tmp_path / "absent", tmp_path) == 0
+
+    def test_count_linked_skips_non_symlinks_and_outsiders(
+        self, tmp_path: Path
+    ) -> None:
+        from mait_code.cli._status import _count_linked
+
+        source = tmp_path / "source"
+        (source / "skills").mkdir(parents=True)
+        (source / "skills" / "real").write_text("x")
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "stray").write_text("y")
+
+        link_dir = tmp_path / "links"
+        link_dir.mkdir()
+        (link_dir / "plain.md").write_text("not a symlink")  # skipped (not symlink)
+        (link_dir / "good").symlink_to(source / "skills" / "real")  # counted
+        (link_dir / "outsider").symlink_to(outside / "stray")  # resolves outside source
+
+        assert _count_linked(link_dir, source) == 1
+
+    def test_count_linked_skips_resolve_oserror(self, tmp_path: Path) -> None:
+        from mait_code.cli._status import _count_linked
+
+        source = tmp_path / "source"
+        source.mkdir()
+        link_dir = tmp_path / "links"
+        link_dir.mkdir()
+        entry = link_dir / "a"
+        entry.symlink_to(source / "x")
+        real_resolve = Path.resolve
+
+        # Raise only when resolving the symlink entry; source_dir.resolve()
+        # earlier in the function must still succeed.
+        def flaky_resolve(self, *args, **kwargs):
+            if self == entry:
+                raise OSError("boom")
+            return real_resolve(self, *args, **kwargs)
+
+        with patch.object(Path, "resolve", flaky_resolve):
+            assert _count_linked(link_dir, source) == 0
+
+    def test_count_total_zero_for_missing_dir(self, tmp_path: Path) -> None:
+        from mait_code.cli._status import _count_total
+
+        assert _count_total(tmp_path / "absent") == 0
+
+    def test_tilde_edge_cases(self) -> None:
+        from mait_code.cli._status import _tilde
+
+        home = str(Path.home())
+        assert _tilde(None) == "—"
+        assert _tilde(home) == "~"
+        assert _tilde(home + "/x") == "~/x"
+        assert _tilde("/somewhere/else") == "/somewhere/else"  # no home prefix
+
+    def test_date_only_handles_none(self) -> None:
+        from mait_code.cli._status import _date_only
+
+        assert _date_only(None) == "—"
+        assert _date_only("2026-01-02T03:04:05Z") == "2026-01-02"
+
+    def test_human_size_units(self) -> None:
+        from mait_code.cli._status import _human_size
+
+        assert _human_size(512) == "512 B"
+        assert _human_size(2048) == "2.0 KB"
+        # > 1 PB worth of bytes falls through to the TB branch.
+        assert _human_size(5 * 1024**4).endswith("TB")
+
+    def test_claude_value_present_not_linked(self) -> None:
+        from mait_code.cli._status import Status, _claude_value
+
+        value = _claude_value(Status(claude_md_path="/x/CLAUDE.md"))
+        assert "present, not linked" in value.plain
+
+    def test_claude_value_missing(self) -> None:
+        from mait_code.cli._status import Status, _claude_value
+
+        assert "missing" in _claude_value(Status()).plain
+
+    def test_collect_status_readlink_oserror_swallowed(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # A symlinked CLAUDE.md whose readlink raises leaves target unset but
+        # still records is_symlink.
+        install(source_dir=fake_source)
+        from mait_code.cli import _status
+
+        with patch.object(_status.Path, "readlink", side_effect=OSError("boom")):
+            status = collect_status()
+        assert status.claude_md_is_symlink is True
+        assert status.claude_md_target is None
+
+    def test_collect_status_settings_unparseable_leaves_hooks_empty(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        (fake_home / ".claude" / "settings.json").write_text("{ broken")
+        status = collect_status()
+        assert status.hooks_registered == []
+
+    def test_render_binary_not_on_path(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        status = collect_status()
+        status.binary_path = None  # simulate mait-code absent from PATH
+        with console.capture() as cap:
+            status_render(status)
+        assert "not on PATH" in cap.get()
+
+    def test_render_no_record_without_error_text(self, fake_home: Path) -> None:
+        from mait_code.cli._status import Status
+
+        # record absent but no error string -> the hint line is skipped.
+        with console.capture() as cap:
+            status_render(Status())
+        out = cap.get()
+        assert "no install record found" in out
+
+    def test_render_not_linked_shows_install_hint(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        status = collect_status()
+        # Pretend CLAUDE.md is present but unlinked despite a real record.
+        status.claude_md_is_symlink = False
+        status.claude_md_path = str(fake_home / ".claude" / "CLAUDE.md")
+        with console.capture() as cap:
+            status_render(status)
+        out = cap.get()
+        assert "run mait-code install to link CLAUDE.md" in out
+
+    def test_health_degraded_when_identity_files_missing(self, fake_home: Path) -> None:
+        from mait_code.cli._status import Status, _health
+
+        # record present + linked CLAUDE.md but missing identity files -> warn.
+        status = Status(record_present=True, claude_md_is_symlink=True)
+        assert _health(status) == "warn"
+
+    def test_collect_status_plain_claude_md_not_symlink(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # A regular (non-symlink) CLAUDE.md records its path but no target.
+        install(source_dir=fake_source)
+        claude_md = fake_home / ".claude" / "CLAUDE.md"
+        claude_md.unlink()  # remove the install symlink
+        claude_md.write_text("# plain file\n")
+        status = collect_status()
+        assert status.claude_md_path is not None
+        assert status.claude_md_is_symlink is False
+        assert status.claude_md_target is None
+
+    def test_collect_status_hooks_section_not_dict(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        sp = fake_home / ".claude" / "settings.json"
+        sp.write_text(json.dumps({"hooks": ["not", "a", "dict"]}))
+        status = collect_status()
+        assert status.hooks_registered == []
+
+    def test_collect_status_binary_not_on_path(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        with patch("mait_code.cli._status.shutil.which", return_value=None):
+            status = collect_status()
+        assert status.binary_path is None
+
+    def test_claude_value_symlink_without_target(self) -> None:
+        from mait_code.cli._status import Status, _claude_value
+
+        # is_symlink True but target unresolved -> "linked" without the arrow.
+        value = _claude_value(Status(claude_md_is_symlink=True))
+        assert "linked" in value.plain
+        assert "→" not in value.plain
 
 
 class TestStatusCommand:
@@ -446,3 +659,331 @@ class TestDoctorMemoryChecks:
         (obs_dir / "not-a-date.jsonl").write_text("{}\n")
         check = self._check("observe-pipeline")
         assert check.level == "warn"  # still counts as never captured
+
+    def test_observe_keeps_latest_of_many_captures(self, fake_home: Path) -> None:
+        # Multiple capture files exist; only the newest day drives the verdict.
+        from datetime import date, timedelta
+
+        self._make_db(fake_home, entries=1, embedded=1)
+        obs_dir = self._data_dir(fake_home) / "memory" / "observations"
+        obs_dir.mkdir(parents=True, exist_ok=True)
+        today = date.today()
+        # Write today *first* so the loop has to keep it when an older day follows.
+        (obs_dir / f"{today.isoformat()}.jsonl").write_text("{}\n")
+        (obs_dir / f"{(today - timedelta(days=3)).isoformat()}.jsonl").write_text(
+            "{}\n"
+        )
+        check = self._check("observe-pipeline")
+        assert check.level == "ok"
+        assert today.isoformat() in check.message
+
+
+class TestDoctorChecksFailurePaths:
+    """The degraded / failure branches of the individual doctor checks."""
+
+    def test_source_dir_fail_when_clone_invalid(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # Install, then gut the source so verify_source rejects it.
+        install(source_dir=fake_source)
+        (fake_source / "pyproject.toml").unlink()
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["source-dir"].level == "fail"
+        assert "re-run mait-code install" in (names["source-dir"].fix_hint or "")
+
+    def test_settings_json_unparseable_marks_fail(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        (fake_home / ".claude" / "settings.json").write_text("{ not json ")
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["settings"].level == "fail"
+        assert "repair the JSON" in (names["settings"].fix_hint or "")
+
+    def test_settings_json_missing_warns(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        (fake_home / ".claude" / "settings.json").unlink()
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["settings"].level == "warn"
+        assert "does not exist" in names["settings"].message
+
+    def test_mait_settings_toml_unparseable_marks_fail(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        (fake_home / ".config" / "mait-code" / "settings.toml").write_text(
+            "this is = not [valid toml"
+        )
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["settings-file"].level == "fail"
+        assert "repair the TOML" in (names["settings-file"].fix_hint or "")
+
+    def test_env_table_custom_vars_ok_with_count(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        sp = fake_home / ".config" / "mait-code" / "settings.toml"
+        sp.write_text(
+            sp.read_text(encoding="utf-8") + '\n[env]\nAWS_PROFILE = "dev"\n',
+            encoding="utf-8",
+        )
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["env-table"].level == "ok"
+        assert "1 custom [env]" in names["env-table"].message
+
+    def test_data_dir_not_writable_marks_fail(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # _is_writable probes by writing a temp file; force it to fail so the
+        # "not writable" branch is exercised without chmod games on CI.
+        install(source_dir=fake_source)
+        with patch("mait_code.cli._doctor._is_writable", return_value=False):
+            report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["data-dir"].level == "fail"
+        assert "not writable" in names["data-dir"].message
+
+    def test_is_writable_returns_false_on_oserror(self) -> None:
+        from mait_code.cli._doctor import _is_writable
+
+        # A path that cannot be written into yields False rather than raising.
+        assert _is_writable(Path("/proc/nonexistent-doctor-dir")) is False
+
+    def test_uv_missing_marks_fail(self, fake_home: Path, fake_source: Path) -> None:
+        install(source_dir=fake_source)
+        # `which` returns None for everything -> uv check fails. Keep the real
+        # shutil.which for the hook-command check by only nulling "uv".
+        real_which = shutil.which
+
+        def fake_which(prog: str, *a, **k):
+            return None if prog == "uv" else real_which(prog, *a, **k)
+
+        with patch("mait_code.cli._doctor.shutil.which", side_effect=fake_which):
+            report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["uv-on-path"].level == "fail"
+        assert "uv" in names["uv-on-path"].message
+
+    def test_memory_embeddings_inspect_error_warns(self, fake_home: Path) -> None:
+        # A corrupt memory.db makes the embeddings query raise -> warn.
+        ddir = fake_home / ".claude" / "mait-code-data"
+        ddir.mkdir(parents=True, exist_ok=True)
+        (ddir / "memory.db").write_text("not a sqlite database at all")
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["memory-embeddings"].level == "warn"
+        assert "could not inspect embeddings" in names["memory-embeddings"].message
+
+    def test_memory_embeddings_db_with_zero_entries_ok(self, fake_home: Path) -> None:
+        # An initialised but empty DB -> "no live entries yet".
+        from mait_code.tools.memory.db import get_connection
+
+        ddir = fake_home / ".claude" / "mait-code-data"
+        ddir.mkdir(parents=True, exist_ok=True)
+        get_connection(ddir / "memory.db").close()
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["memory-embeddings"].level == "ok"
+        assert "no live entries yet" in names["memory-embeddings"].message
+
+    def test_vector_search_memory_vec_unqueryable_warns(self, fake_home: Path) -> None:
+        # A DB without the memory_vec table makes the count query raise.
+        ddir = fake_home / ".claude" / "mait-code-data"
+        ddir.mkdir(parents=True, exist_ok=True)
+        import sqlite3
+
+        sqlite3.connect(str(ddir / "memory.db")).close()  # empty, no memory_vec
+
+        report = run_doctor()
+        names = {c.name: c for c in report.checks}
+        assert names["vector-search"].level == "warn"
+        assert "not queryable" in names["vector-search"].message
+        assert "keyword-only" in names["vector-search"].message
+
+
+class TestDoctorHookCommands:
+    """The hooks-on-path check across its parsing and resolution branches."""
+
+    def _write_settings(self, fake_home: Path, payload: dict) -> None:
+        cdir = fake_home / ".claude"
+        cdir.mkdir(parents=True, exist_ok=True)
+        (cdir / "settings.json").write_text(json.dumps(payload))
+
+    def _check(self, name: str):
+        report = run_doctor()
+        return next(c for c in report.checks if c.name == name)
+
+    def test_skipped_when_no_settings(self, fake_home: Path) -> None:
+        # No settings.json at all -> skipped warn.
+        check = self._check("hooks-on-path")
+        assert check.level == "warn"
+        assert "no settings.json" in check.message
+
+    def test_skipped_when_settings_unparseable(self, fake_home: Path) -> None:
+        cdir = fake_home / ".claude"
+        cdir.mkdir(parents=True, exist_ok=True)
+        (cdir / "settings.json").write_text("{ broken json")
+        check = self._check("hooks-on-path")
+        assert check.level == "warn"
+        assert "unparseable" in check.message
+
+    def test_hooks_section_not_a_dict(self, fake_home: Path) -> None:
+        self._write_settings(fake_home, {"hooks": ["not", "a", "dict"]})
+        check = self._check("hooks-on-path")
+        assert check.level == "ok"
+        assert "no hooks registered" in check.message
+
+    def test_non_list_entries_and_non_dict_hooks_ignored(self, fake_home: Path) -> None:
+        # entries-not-a-list and hook-not-a-dict are skipped silently.
+        self._write_settings(
+            fake_home,
+            {
+                "hooks": {
+                    "Bad": "not-a-list",
+                    "Mixed": [
+                        "not-a-dict-entry",
+                        {"hooks": ["not-a-dict-hook", {"command": 123}]},
+                    ],
+                }
+            },
+        )
+        check = self._check("hooks-on-path")
+        # Nothing with the mait-code prefix resolved -> "no mait-code hooks".
+        assert check.level == "ok"
+        assert "no mait-code hooks registered" in check.message
+
+    def test_non_prefixed_commands_ignored(self, fake_home: Path) -> None:
+        # A command without the mait-code hook prefix is not probed on PATH.
+        self._write_settings(
+            fake_home,
+            {
+                "hooks": {
+                    "SessionStart": [
+                        {"hooks": [{"type": "command", "command": "/usr/bin/true"}]}
+                    ]
+                }
+            },
+        )
+        check = self._check("hooks-on-path")
+        assert check.level == "ok"
+        assert "no mait-code hooks registered" in check.message
+
+    def test_resolvable_prefixed_command_ok(self, fake_home: Path) -> None:
+        from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
+
+        prog = f"{MAIT_CODE_HOOK_PREFIX}-fake-hook"
+        cmd = f"{prog} --flag"
+        # The same program twice exercises the dedupe `seen` branch.
+        self._write_settings(
+            fake_home,
+            {
+                "hooks": {
+                    "SessionStart": [{"hooks": [{"command": cmd}, {"command": cmd}]}]
+                }
+            },
+        )
+        with patch(
+            "mait_code.cli._doctor.shutil.which",
+            side_effect=lambda p, *a, **k: "/bin/" + p,
+        ):
+            check = self._check("hooks-on-path")
+        assert check.level == "ok"
+        assert "1 hook commands resolve" in check.message
+
+    def test_unresolvable_prefixed_command_fails(self, fake_home: Path) -> None:
+        from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
+
+        prog = f"{MAIT_CODE_HOOK_PREFIX}-missing-hook"
+        self._write_settings(
+            fake_home,
+            {"hooks": {"SessionStart": [{"hooks": [{"command": prog}]}]}},
+        )
+        with patch("mait_code.cli._doctor.shutil.which", return_value=None):
+            check = self._check("hooks-on-path")
+        assert check.level == "fail"
+        assert prog in check.message
+        assert check.fix_hint == "refresh hooks: mait-code update"
+
+
+class TestDoctorSymlinkScan:
+    """The dangling-symlink scanner's continue/except branches."""
+
+    def test_non_symlink_entries_skipped(self, fake_home: Path) -> None:
+        from mait_code.cli._doctor import _find_dangling_symlinks
+
+        cdir = fake_home / ".claude"
+        (cdir / "skills").mkdir(parents=True, exist_ok=True)
+        # A plain file (not a symlink) must be ignored.
+        (cdir / "skills" / "regular.md").write_text("x")
+        assert _find_dangling_symlinks(cdir) == []
+
+    def test_dangling_symlink_detected(self, fake_home: Path) -> None:
+        from mait_code.cli._doctor import _find_dangling_symlinks
+
+        cdir = fake_home / ".claude"
+        (cdir / "agents").mkdir(parents=True, exist_ok=True)
+        link = cdir / "agents" / "ghost"
+        link.symlink_to(fake_home / "nowhere" / "missing-target")
+        dangling = _find_dangling_symlinks(cdir)
+        # resolve(strict=True) raises FileNotFoundError -> caught, flagged.
+        assert link in dangling
+
+    def test_symlink_resolving_to_vanished_target_flagged(
+        self, fake_home: Path
+    ) -> None:
+        # Belt-and-braces branch: resolve(strict=True) succeeds but the
+        # resolved target reports it does not exist. Unreachable in practice
+        # (strict resolve implies existence), so we force the .exists() False.
+        from mait_code.cli import _doctor
+
+        cdir = fake_home / ".claude"
+        (cdir / "skills").mkdir(parents=True, exist_ok=True)
+        real_target = cdir / "skills" / "_target"
+        real_target.write_text("x")
+        link = cdir / "skills" / "link"
+        link.symlink_to(real_target)
+        real_exists = Path.exists
+
+        def flaky_exists(self, *args, **kwargs):
+            if self == real_target:
+                return False
+            return real_exists(self, *args, **kwargs)
+
+        with patch.object(_doctor.Path, "exists", flaky_exists):
+            dangling = _doctor._find_dangling_symlinks(cdir)
+        assert link in dangling
+
+
+class TestDoctorRenderFixes:
+    """The render path that lists applied fixes."""
+
+    def test_render_lists_applied_fixes(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _populate_source(fake_source)
+        install(source_dir=fake_source)
+        import shutil as _shutil
+
+        _shutil.rmtree(fake_source / "skills" / "alpha")
+
+        report = run_doctor(fix=True)
+        assert report.fixes_applied  # sanity: a fix was applied
+        with console.capture() as cap:
+            doctor_render(report)
+        out = cap.get()
+        assert "Fixes applied:" in out
+        assert "dangling symlink" in out

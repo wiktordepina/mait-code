@@ -23,7 +23,6 @@ from mait_code.cli._board_tui import (
     ExportScreen,
     NewCardScreen,
     TagScreen,
-    _ALL_PROJECTS,
     _card_box,
 )
 from mait_code.tools.board import service
@@ -37,6 +36,7 @@ from mait_code.tools.board.columns import (
     label,
 )
 from mait_code.tools.board.db import get_connection
+from mait_code.tui.filters import ALL_PROJECTS
 from mait_code.tui.render import PALETTE_CHIPS
 
 
@@ -346,7 +346,7 @@ class TestProjectFilter:
                 await pilot.press("p")  # open the project picker
                 await pilot.pause()
                 # Pick a specific project from the Select (drives Changed → apply).
-                app.screen.query_one("#project-select", Select).value = "alpha"
+                app.screen.query_one("#choice-select", Select).value = "alpha"
                 await pilot.pause()
                 after = app.query_one("#tbl-refined").option_count
                 return before, after, app._project_filter
@@ -372,13 +372,13 @@ class TestProjectFilter:
                 # Filter to a single project first…
                 await pilot.press("p")
                 await pilot.pause()
-                app.screen.query_one("#project-select", Select).value = "alpha"
+                app.screen.query_one("#choice-select", Select).value = "alpha"
                 await pilot.pause()
                 filtered = app.query_one("#tbl-refined").option_count
                 # …then reopen and choose "All projects" to clear it.
                 await pilot.press("p")
                 await pilot.pause()
-                app.screen.query_one("#project-select", Select).value = _ALL_PROJECTS
+                app.screen.query_one("#choice-select", Select).value = ALL_PROJECTS
                 await pilot.pause()
                 cleared = app.query_one("#tbl-refined").option_count
                 return filtered, cleared, app._project_filter

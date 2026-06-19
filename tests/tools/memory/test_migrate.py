@@ -2,6 +2,8 @@
 
 import sqlite3
 
+import pytest
+
 from mait_code.tools.memory.migrate import ensure_schema
 
 
@@ -388,3 +390,57 @@ def test_migration_12_remaps_legacy_types(memory_db: sqlite3.Connection):
     ).fetchone()[0]
     assert leftover_rels == 0
     assert leftover_entities == 0
+
+
+# ---------------------------------------------------------------------------
+# Error handling in ensure_schema's migration loop
+# ---------------------------------------------------------------------------
+
+
+def test_migration_vec0_error_skips_gracefully():
+    """A 'no such module' error skips the migration without raising.
+
+    vec0 migrations need the sqlite-vec extension; when it isn't loaded the
+    loop logs and stops rather than aborting connection setup.
+    """
+    from unittest.mock import patch
+
+    import mait_code.tools.memory.migrate as migrate_mod
+
+    conn = sqlite3.connect(":memory:")
+    try:
+
+        def _vec0_body(c):
+            raise sqlite3.OperationalError("no such module: vec0")
+
+        # A single migration that simulates the missing extension.
+        fake_migrations = [(1, "needs vec0", _vec0_body)]
+        with patch.object(migrate_mod, "MIGRATIONS", fake_migrations):
+            # Must not raise — the error is swallowed and the loop breaks.
+            migrate_mod.ensure_schema(conn)
+
+        # Nothing was recorded since the migration was skipped.
+        count = conn.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
+        assert count == 0
+    finally:
+        conn.close()
+
+
+def test_migration_unrelated_error_propagates():
+    """A non-vec0 error is re-raised rather than silently swallowed."""
+    from unittest.mock import patch
+
+    import mait_code.tools.memory.migrate as migrate_mod
+
+    conn = sqlite3.connect(":memory:")
+    try:
+
+        def _broken_body(c):
+            raise ValueError("genuine migration bug")
+
+        fake_migrations = [(1, "broken", _broken_body)]
+        with patch.object(migrate_mod, "MIGRATIONS", fake_migrations):
+            with pytest.raises(ValueError, match="genuine migration bug"):
+                migrate_mod.ensure_schema(conn)
+    finally:
+        conn.close()

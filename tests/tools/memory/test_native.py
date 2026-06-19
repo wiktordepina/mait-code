@@ -104,6 +104,23 @@ class TestResolveSlug:
     def test_empty_slug_returns_none(self, tmp_path: Path):
         assert resolve_slug("", root=tmp_path) is None
 
+    def test_bare_root_slug_returns_none(self, tmp_path: Path):
+        # "-" encodes the filesystem root "/" with no tail to walk into.
+        assert resolve_slug("-", root=tmp_path) is None
+
+    def test_unreadable_directory_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        # An OSError while listing a directory aborts that branch of the walk
+        # rather than crashing — the slug simply doesn't resolve.
+        (tmp_path / "home").mkdir()
+
+        def _boom(self, *args, **kwargs):
+            raise OSError("permission denied")
+
+        monkeypatch.setattr(Path, "iterdir", _boom)
+        assert resolve_slug("-home-w-alpha", root=tmp_path) is None
+
 
 class TestListNativeMemories:
     def _seed(self, root: Path, rel: str, files: dict[str, str]) -> Path:
@@ -177,3 +194,22 @@ class TestListNativeMemories:
         record = list_native_memories(tmp_path / "projects")[0]["files"][0]
         assert record["path"] == memory_dir / "MEMORY.md"
         assert record["modified"] == "2024-06-01"
+
+    def test_unstattable_file_yields_blank_modified(self, tmp_path: Path):
+        # If stat() fails (e.g. a vanished/inaccessible file), the record still
+        # lists with an empty modified date rather than erroring out.
+        from unittest.mock import patch
+
+        from mait_code.tools.memory.native import _file_record
+
+        memory_dir = tmp_path / "memory"
+        memory_dir.mkdir()
+        target = memory_dir / "MEMORY.md"
+        target.write_text("x")
+
+        with patch.object(Path, "stat", side_effect=OSError("stat failed")):
+            record = _file_record(memory_dir, target)
+
+        assert record["modified"] == ""
+        assert record["name"] == "MEMORY.md"
+        assert record["path"] == target

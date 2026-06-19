@@ -95,3 +95,28 @@ def test_cmd_count(mock_conn: sqlite3.Connection, capsys):
     capsys.readouterr()
     cmd_count(_ns())
     assert capsys.readouterr().out.strip() == "2"
+
+
+# --- main() dispatch ---
+
+
+def test_main_dispatches_subcommand(mock_conn: sqlite3.Connection, capsys, monkeypatch):
+    """``main()`` should parse argv and route to the matching handler."""
+    monkeypatch.setattr("sys.argv", ["mc-tool-inbox", "add", "via", "main"])
+
+    from mait_code.tools.inbox.cli import main
+
+    main()
+    assert "Captured #1: via main" in capsys.readouterr().out
+    rows = mock_conn.execute("SELECT body FROM inbox_items").fetchall()
+    assert rows[0][0] == "via main"
+
+
+def test_main_requires_a_subcommand(monkeypatch):
+    # The subparser is ``required=True`` — a bare invocation is a usage error.
+    monkeypatch.setattr("sys.argv", ["mc-tool-inbox"])
+
+    from mait_code.tools.inbox.cli import main
+
+    with pytest.raises(SystemExit):
+        main()

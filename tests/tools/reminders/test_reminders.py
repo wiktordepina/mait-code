@@ -29,6 +29,36 @@ def test_ensure_schema_idempotent(reminders_db: sqlite3.Connection):
     assert versions[0][0] == 1
 
 
+def test_ensure_schema_supports_callable_migration(monkeypatch, tmp_path):
+    """A callable migration body is invoked with the connection.
+
+    The shipped reminders migrations are all SQL-list bodies, so this exercises
+    the framework's documented callable branch by injecting a one-off migration.
+    """
+    from mait_code.tools.reminders import migrate
+
+    called: list[sqlite3.Connection] = []
+
+    def _body(conn: sqlite3.Connection) -> None:
+        called.append(conn)
+        conn.execute("CREATE TABLE callable_marker (id INTEGER)")
+
+    monkeypatch.setattr(
+        migrate, "MIGRATIONS", [*migrate.MIGRATIONS, (999, "callable", _body)]
+    )
+
+    conn = sqlite3.connect(tmp_path / "callable.db")
+    try:
+        migrate.ensure_schema(conn)
+        assert called == [conn]
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE name='callable_marker'"
+        ).fetchone()
+        assert row is not None
+    finally:
+        conn.close()
+
+
 def test_reminders_columns(reminders_db: sqlite3.Connection):
     columns = reminders_db.execute("PRAGMA table_info(reminders)").fetchall()
     col_names = [c[1] for c in columns]
@@ -147,6 +177,92 @@ def test_cmd_check_no_overdue(mock_conn, capsys):
     cmd_check(None)
     output = capsys.readouterr().out
     assert output == ""
+
+
+def test_cmd_set_empty_content_exits(mock_conn):
+    from mait_code.tools.reminders.cli import cmd_set
+
+    with pytest.raises(SystemExit, match="1"):
+        cmd_set(argparse.Namespace(when="in 2 hours", what=[""]))
+    # The error bails before any insert.
+    assert mock_conn.execute("SELECT COUNT(*) FROM reminders").fetchone()[0] == 0
+
+
+def test_cmd_set_unparseable_time_exits(mock_conn):
+    from mait_code.tools.reminders.cli import cmd_set
+
+    with pytest.raises(SystemExit, match="1"):
+        cmd_set(argparse.Namespace(when="not a real time xyzzy", what=["deploy"]))
+    assert mock_conn.execute("SELECT COUNT(*) FROM reminders").fetchone()[0] == 0
+
+
+def test_cmd_list_empty(mock_conn, capsys):
+    from mait_code.tools.reminders.cli import cmd_list
+
+    cmd_list(argparse.Namespace(all=False))
+    assert "No active reminders." in capsys.readouterr().out
+
+
+def test_cmd_list_dismissed_only_with_all(mock_conn, capsys):
+    # No active reminders, only a dismissed one — the overdue/upcoming blocks are
+    # skipped and just the Dismissed section prints.
+    now = _now()
+    _insert_reminder(
+        mock_conn,
+        "archived task",
+        now + timedelta(hours=1),
+        dismissed=True,
+        dismissed_at=now.isoformat(),
+    )
+
+    from mait_code.tools.reminders.cli import cmd_list
+
+    cmd_list(argparse.Namespace(all=True))
+    output = capsys.readouterr().out
+    assert "Dismissed (1)" in output
+    assert "archived task" in output
+    assert "OVERDUE" not in output
+    assert "Upcoming" not in output
+
+
+def test_cmd_dismiss_already_dismissed(mock_conn, capsys):
+    now = _now()
+    rid = _insert_reminder(
+        mock_conn,
+        "already gone",
+        now + timedelta(hours=1),
+        dismissed=True,
+        dismissed_at=now.isoformat(),
+    )
+
+    from mait_code.tools.reminders.cli import cmd_dismiss
+
+    cmd_dismiss(argparse.Namespace(id=rid))
+    assert f"#{rid} is already dismissed" in capsys.readouterr().out
+
+
+# --- main() dispatch ---
+
+
+def test_main_dispatches_subcommand(mock_conn, capsys, monkeypatch):
+    now = _now()
+    _insert_reminder(mock_conn, "overdue via main", now - timedelta(hours=1))
+    monkeypatch.setattr("sys.argv", ["mc-tool-reminders", "check"])
+
+    from mait_code.tools.reminders.cli import main
+
+    main()
+    assert "overdue via main" in capsys.readouterr().out
+
+
+def test_main_requires_a_subcommand(monkeypatch):
+    # The subparser is ``required=True`` — a bare invocation is a usage error.
+    monkeypatch.setattr("sys.argv", ["mc-tool-reminders"])
+
+    from mait_code.tools.reminders.cli import main
+
+    with pytest.raises(SystemExit):
+        main()
 
 
 # --- Helper tests ---
