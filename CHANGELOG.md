@@ -10,6 +10,28 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.59.3] — 2026-06-26
+
+### Fixed
+
+- **`memory-store` and `remember` now offer all eight memory types** — both
+  skills listed only six, silently dropping `decision` and `procedure`, so
+  stored memories were nudged into `fact`/`insight` instead of their
+  purpose-built types. The type lists are complete and annotated again.
+
+### Changed
+
+- **`recall` surfaces its search levers** — the skill now documents
+  `--mode vector` (semantic search, for when keyword matching misses the
+  intent), `--type`, `--scope all`, and `list --since`/`--include-superseded`,
+  rather than mentioning only cross-project scope.
+- **`reflect` and `reminders` trigger more reliably** — both gained explicit
+  "Use when…" phrasing so the two model-invocable skills auto-fire on the
+  prompts that should reach them.
+- **Documented the remaining skill flags** — `web-fetch --max-size`/
+  `--max-chars`, `reminders list --all`, and `memory-store supersede
+  --importance`.
+
 ## [0.59.2] — 2026-06-16
 
 ### Changed
@@ -1763,7 +1785,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.2...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.3...HEAD
+[0.59.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.3
 [0.59.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.2
 [0.59.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.1
 [0.59.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.0

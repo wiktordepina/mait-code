@@ -23,6 +23,9 @@ Recent memories:
 
 Present the results above clearly. If the search returned no results, suggest broadening the query. If only the recent list has results (no query was given), present those.
 
-Results are scoped to the current project and branch by default. If the user wants cross-project results, run `mc-tool-memory search <query> --scope all` via Bash.
+Results are scoped to the current project and branch by default. To refine, run any of these via Bash:
 
-If the user wants to refine, run `mc-tool-memory search <new query>` via Bash.
+- `mc-tool-memory search <query> --mode vector` — semantic search; reach for this when keyword matching misses the intent (default mode is `hybrid`; `fts` is keyword-only)
+- `mc-tool-memory search <query> --type <type>` — restrict to one entry type (`fact`, `preference`, `decision`, `insight`, `event`, `task`, `relationship`, `procedure`)
+- `mc-tool-memory search <query> --scope all` — search across all projects, not just the current one
+- `mc-tool-memory list --since 7d` (e.g. `24h`, `1w`) or `--include-superseded` — recent or historical entries rather than a query

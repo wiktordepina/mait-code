@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Synthesise recent observations into insights and propose MEMORY.md updates
+description: Synthesise recent observations into insights and propose MEMORY.md updates. Use when the user asks to reflect, distil or consolidate recent learnings, or refresh what's in MEMORY.md.
 allowed-tools: Bash(mc-tool-memory *), Read, Edit
 ---
 

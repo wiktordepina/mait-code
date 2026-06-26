@@ -1,6 +1,6 @@
 ---
 name: reminders
-description: Show active and overdue reminders
+description: Show active and overdue reminders. Use when the user asks about reminders, what's due, what they've been reminded of, or wants to see or dismiss reminders.
 allowed-tools: Bash(mc-tool-reminders *)
 ---
 
@@ -14,4 +14,4 @@ Active reminders:
 
 !`mc-tool-reminders list 2>/dev/null || echo "No reminders found."`
 
-Present the results clearly. If the user wants to dismiss a reminder, run `mc-tool-reminders dismiss <id>` via Bash.
+Present the results clearly. If the user wants to dismiss a reminder, run `mc-tool-reminders dismiss <id>` via Bash. To include already-dismissed reminders in the list, run `mc-tool-reminders list --all`.

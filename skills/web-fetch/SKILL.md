@@ -20,4 +20,6 @@ Present the fetched content to the user. If they asked a question about the page
 Options available via Bash:
 - `mc-tool-web-fetch <url> --raw` — skip HTML-to-markdown conversion
 - `mc-tool-web-fetch <url> --timeout 60` — increase timeout (default 30s)
+- `mc-tool-web-fetch <url> --max-size <bytes>` — cap how much of the response is downloaded
+- `mc-tool-web-fetch <url> --max-chars <N>` — cap the markdown output length; raise it if a long page came back truncated
 - `mc-tool-web-fetch <url> --allow-private` — allow private/loopback IPs
