@@ -21,7 +21,16 @@ When you learn something new about the user or their projects during a session, 
 
 Run: `mc-tool-memory store "<content>" --type <type> --importance <N>`
 
-Types: fact, preference, event, insight, task, relationship
+Types (pick the most specific):
+- `fact` — objective information (default)
+- `preference` — a like/dislike or convention
+- `decision` — a choice made and its rationale (e.g. "chose X over Y because …")
+- `insight` — a conclusion or recurring pattern
+- `event` — something that happened (deployment, incident, milestone)
+- `task` — a to-do or action item
+- `relationship` — a connection between entities
+- `procedure` — a repeatable how-to or workflow step
+
 Importance: 1 (trivial) to 10 (critical), default 5
 
 ## Guidelines
@@ -53,5 +62,6 @@ When that happens, don't silently leave two contradictory facts coexisting:
    the user rather than acting unprompted (the store is manually-driven):
    `mc-tool-memory supersede <old_id> "<new content>"`.
 3. Supersession keeps the old entry for audit but hides it from recall, and
-   carries over the old entry's type and scope. If the entries are simply
-   different facts that happen to be similar, leave both.
+   carries over the old entry's type, scope, and importance (override the
+   importance with `--importance <N>` if the priority has changed). If the
+   entries are simply different facts that happen to be similar, leave both.

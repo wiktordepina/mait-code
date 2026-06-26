@@ -17,10 +17,12 @@ When the user invokes `/remember <content>`:
 1. Determine the best entry type for the content:
    - `fact` — objective information (default)
    - `preference` — user likes/dislikes
+   - `decision` — a choice made and its rationale
    - `event` — something that happened
    - `insight` — a conclusion or pattern
    - `task` — a to-do or action item
    - `relationship` — connection between entities
+   - `procedure` — a repeatable how-to or workflow step
 
 2. Estimate importance (1-10):
    - 1-3: minor, transient
