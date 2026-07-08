@@ -118,7 +118,15 @@ def cmd_dismiss(args):
 
 
 def cmd_check(_args):
-    """Print any overdue reminders (used by the session-start hook)."""
+    """Print any overdue reminders, and publish them outward via the Bridge.
+
+    Publishing is a no-op unless the Bridge is enabled (it short-circuits before
+    any network access), so this stays safe to run from a hook on any machine.
+    """
+    from mait_code.bridge.service import publish_due_reminders
+
+    publish_due_reminders()
+
     with connection() as conn:
         overdue = overdue_reminders(conn)
 

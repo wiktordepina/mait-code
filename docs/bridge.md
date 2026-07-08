@@ -39,7 +39,8 @@ server, mint an access token. Then in the Bridge editor:
 | Field | Value |
 |-------|-------|
 | **Server URL** | Base URL of your ntfy server, e.g. `https://ntfy.example.org` |
-| **Capture topic** | The private topic, e.g. `mait-capture-7f3a9c` |
+| **Capture topic** | The private topic captures are drained from, e.g. `mait-capture-7f3a9c` |
+| **Notify topic** | The topic your phone subscribes to for outbound reminders (leave blank for inbound-only) |
 | **Access token** | A bearer token for a protected topic (leave blank if open) |
 
 Set **Status** to *enabled*, **Test connection** to confirm the server is
@@ -70,6 +71,21 @@ each machine has already seen):
 
 Captured items land in the inbox exactly as if typed there, and `/triage`
 routes them to the board or memory as usual.
+
+## Reminders on your phone
+
+With a **notify topic** set, the Bridge closes the loop the other way too: when
+a reminder falls due, it's published to that topic and lands on your phone's
+lock screen. Each notification carries a **"Done"** button — tapping it posts a
+control message back to the capture topic, and the next drain dismisses the
+reminder for you. No terminal required, from either direction.
+
+Publishing rides the same reactive triggers as draining — the session-start
+hook and `mc-tool-reminders check` — and each reminder is sent **once** (a
+`notified_at` stamp stops a still-overdue reminder from re-notifying every
+session). Subscribe your phone to the notify topic in the ntfy app; on a
+protected server the "Done" button carries the access token so the dismissal
+authenticates.
 
 ## Health
 

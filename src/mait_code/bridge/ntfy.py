@@ -38,9 +38,17 @@ class NtfyChannel(BridgeChannel):
     type_id = "ntfy"
     display_name = "ntfy"
 
-    def __init__(self, *, server: str, capture_topic: str, token: str = "") -> None:
+    def __init__(
+        self,
+        *,
+        server: str,
+        capture_topic: str,
+        notify_topic: str = "",
+        token: str = "",
+    ) -> None:
         self.server = server.rstrip("/")
         self.capture_topic = capture_topic
+        self.notify_topic = notify_topic
         self.token = token
 
     # -- Identity & config -------------------------------------------------
@@ -59,6 +67,14 @@ class NtfyChannel(BridgeChannel):
                 "Capture topic",
                 help="The private topic captures are published to and drained from.",
                 placeholder="mait-capture",
+            ),
+            ConfigField(
+                "notify_topic",
+                "Notify topic",
+                help="Topic your phone subscribes to for outbound reminder "
+                "notifications. Leave blank for inbound-only.",
+                required=False,
+                placeholder="mait-notify",
             ),
             ConfigField(
                 "token",
@@ -81,6 +97,7 @@ class NtfyChannel(BridgeChannel):
         return cls(
             server=server,
             capture_topic=capture_topic,
+            notify_topic=(config.get("notify_topic") or "").strip(),
             token=(config.get("token") or "").strip(),
         )
 
@@ -142,11 +159,43 @@ class NtfyChannel(BridgeChannel):
         return DrainResult(captures=captures, watermark=last_id or since)
 
     def publish(self, message: OutboundMessage) -> None:
-        """POST a notification to the topic. (Reminders half — #78.)"""
-        url = f"{self.server}/{self.capture_topic}"
+        """POST a notification to the notify topic.
+
+        Any control actions become ntfy action buttons that POST the control
+        body back to the *capture* topic, where the next drain acts on it.
+
+        Raises:
+            ValueError: If no notify topic is configured — outbound needs one.
+        """
+        if not self.notify_topic:
+            raise ValueError("ntfy: notify topic is not configured")
+        url = f"{self.server}/{self.notify_topic}"
         req = urllib.request.Request(
             url, data=message.body.encode("utf-8"), method="POST"
         )
         if message.title:
             req.add_header("Title", message.title)
+        header = self._actions_header(message.actions)
+        if header:
+            req.add_header("Actions", header)
         self._request(req)
+
+    def _actions_header(self, actions: tuple) -> str:
+        """Build the ntfy ``Actions`` header from control actions.
+
+        Each action becomes an ``http`` button that POSTs its control body to
+        the capture topic (carrying the bearer token when the topic is
+        protected), so tapping it round-trips through the normal drain.
+        """
+        capture_url = f"{self.server}/{self.capture_topic}"
+        specs: list[str] = []
+        for action in actions:
+            control = action.get("control")
+            if not control:
+                continue
+            label = action.get("label", "Done")
+            spec = f"http, {label}, {capture_url}, method=POST, body={control}"
+            if self.token:
+                spec += f', headers.Authorization="Bearer {self.token}"'
+            specs.append(spec)
+        return "; ".join(specs)

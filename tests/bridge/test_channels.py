@@ -83,9 +83,10 @@ def test_loopback_counts_drain_calls():
 
 def test_ntfy_config_schema_shape():
     keys = {f.key: f for f in NtfyChannel.config_schema()}
-    assert set(keys) == {"server", "capture_topic", "token"}
+    assert set(keys) == {"server", "capture_topic", "notify_topic", "token"}
     assert keys["token"].secret is True
     assert keys["token"].required is False
+    assert keys["notify_topic"].required is False
     assert keys["server"].required is True
 
 
@@ -191,7 +192,7 @@ def test_ntfy_drain_skips_inclusive_since_marker(monkeypatch):
     assert [c.body for c in result.captures] == ["new"]
 
 
-def test_ntfy_publish_posts_with_headers(monkeypatch):
+def test_ntfy_publish_posts_to_notify_topic(monkeypatch):
     captured = {}
 
     def handler(req, timeout=0):
@@ -203,10 +204,41 @@ def test_ntfy_publish_posts_with_headers(monkeypatch):
         return _FakeResponse(b"")
 
     _patch_urlopen(monkeypatch, handler)
-    chan = NtfyChannel(server="https://x", capture_topic="cap", token="tk")
+    chan = NtfyChannel(
+        server="https://x", capture_topic="cap", notify_topic="note", token="tk"
+    )
     chan.publish(OutboundMessage(body="ping", title="Reminder"))
-    assert captured["url"] == "https://x/cap"
+    assert captured["url"] == "https://x/note"  # notify topic, not capture
     assert captured["method"] == "POST"
     assert captured["data"] == b"ping"
     assert captured["title"] == "Reminder"
     assert captured["auth"] == "Bearer tk"
+
+
+def test_ntfy_publish_without_notify_topic_raises():
+    chan = NtfyChannel(server="https://x", capture_topic="cap")
+    with pytest.raises(ValueError, match="notify topic"):
+        chan.publish(OutboundMessage(body="ping"))
+
+
+def test_ntfy_done_action_targets_capture_topic(monkeypatch):
+    captured = {}
+
+    def handler(req, timeout=0):
+        captured["actions"] = req.get_header("Actions")
+        return _FakeResponse(b"")
+
+    _patch_urlopen(monkeypatch, handler)
+    chan = NtfyChannel(
+        server="https://x", capture_topic="cap", notify_topic="note", token="tk"
+    )
+    chan.publish(
+        OutboundMessage(
+            body="ping",
+            actions=({"label": "Done", "control": "mait-ctl:dismiss:5"},),
+        )
+    )
+    header = captured["actions"]
+    assert "http, Done, https://x/cap" in header  # posts back to the capture topic
+    assert "body=mait-ctl:dismiss:5" in header
+    assert 'headers.Authorization="Bearer tk"' in header

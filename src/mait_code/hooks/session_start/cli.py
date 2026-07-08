@@ -11,18 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 def _drain_bridge() -> None:
-    """Drain the Bridge into the inbox before the context counts it.
+    """Drain the Bridge into the inbox, and publish due reminders outward.
 
-    A no-op unless the Bridge gate is on (:func:`run_drain` short-circuits
-    before any network access). Best-effort: a transport hiccup must never
-    break session start.
+    Both are no-ops unless the Bridge gate is on (each short-circuits before any
+    network access). Best-effort: a transport hiccup must never break session
+    start. Drain first so any "Done" dismissals land before we re-notify.
     """
     try:
-        from mait_code.bridge.service import run_drain
+        from mait_code.bridge.service import publish_due_reminders, run_drain
 
         run_drain()
+        publish_due_reminders()
     except Exception:
-        logger.exception("session start: bridge drain failed")
+        logger.exception("session start: bridge sync failed")
 
 
 @log_invocation(name="mc-hook-session-start")

@@ -95,8 +95,13 @@ def cmd_drain(args):
     elif outcome.status == "error":
         print(f"Bridge drain failed: {outcome.detail}", file=sys.stderr)
         sys.exit(1)
-    elif outcome.count:
-        print(f"Drained {outcome.count} item(s) into the inbox.")
+    elif outcome.count or outcome.dismissed:
+        parts = []
+        if outcome.count:
+            parts.append(f"{outcome.count} item(s) into the inbox")
+        if outcome.dismissed:
+            parts.append(f"{outcome.dismissed} reminder(s) dismissed")
+        print(f"Drained {' · '.join(parts)}.")
     else:
         print("Nothing new to drain.")
 

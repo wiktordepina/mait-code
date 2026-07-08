@@ -68,9 +68,9 @@ def test_run_drain_swallows_channel_error(monkeypatch, bridge_on):
 def test_run_drain_skips_blank_bodies(bridge_on):
     LoopbackChannel.seed("real", "   ", "")
     outcome = service.run_drain()
-    # Only the non-blank capture is filed.
-    assert outcome.count == 3  # channel returned three
-    assert _inbox_count() == 1  # but only one had a body
+    # count reports what was filed, not what the channel returned.
+    assert outcome.count == 1
+    assert _inbox_count() == 1
 
 
 # --- CLI: mc-tool-inbox drain ----------------------------------------------

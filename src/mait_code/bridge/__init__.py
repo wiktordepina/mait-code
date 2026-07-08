@@ -38,7 +38,13 @@ from mait_code.bridge.registry import (
     get_channel_class,
     selectable_channels,
 )
-from mait_code.bridge.service import DrainOutcome, drain_channel, run_drain
+from mait_code.bridge.service import (
+    DrainOutcome,
+    PublishOutcome,
+    drain_channel,
+    publish_due_reminders,
+    run_drain,
+)
 
 __all__ = [
     # Interface
@@ -66,8 +72,10 @@ __all__ = [
     "set_watermark",
     "missing_required",
     "config_problems",
-    # Drain service
+    # Drain & publish service
     "run_drain",
     "drain_channel",
     "DrainOutcome",
+    "publish_due_reminders",
+    "PublishOutcome",
 ]

@@ -53,10 +53,14 @@
 
 ::: mait_code.bridge.config_problems
 
-## Drain service
+## Drain & publish service
 
 ::: mait_code.bridge.run_drain
 
 ::: mait_code.bridge.drain_channel
 
 ::: mait_code.bridge.DrainOutcome
+
+::: mait_code.bridge.publish_due_reminders
+
+::: mait_code.bridge.PublishOutcome
