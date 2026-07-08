@@ -17,6 +17,8 @@
 
 ::: mait_code.config.get_float
 
+::: mait_code.config.get_bool
+
 ::: mait_code.config.validate_settings
 
 ## Settings file I/O

@@ -121,6 +121,7 @@ nav:
       - The observations browser: observations.md
       - The graph explorer: graph.md
       - The log viewer: logs.md
+      - The Bridge: bridge.md
       - Multi-machine sync: sync.md
   - Concepts:
       - Philosophy: philosophy.md
@@ -138,6 +139,7 @@ nav:
           - LLM: reference/llm.md
           - Logging: reference/logging.md
           - SSL: reference/ssl.md
+          - Bridge: reference/bridge.md
           - Tools:
               - Memory: reference/tools/memory.md
               - Reminders: reference/tools/reminders.md

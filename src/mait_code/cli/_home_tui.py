@@ -64,6 +64,7 @@ class HomeTarget(enum.Enum):
     GRAPH = "graph"
     SETTINGS = "settings"
     LOGS = "logs"
+    BRIDGE = "bridge"
 
 
 def run_home_tui() -> HomeTarget | None:
@@ -369,6 +370,9 @@ class HomeApp(MaitApp):
             system, "Open settings", NodeSpec("system:settings", HomeTarget.SETTINGS)
         )
         launch_leaf(system, "Open logs", NodeSpec("system:logs", HomeTarget.LOGS))
+        launch_leaf(
+            system, "Configure Bridge", NodeSpec("system:bridge", HomeTarget.BRIDGE)
+        )
         leaf(system, "Doctor", NodeSpec("system:doctor"))
         leaf(system, "Version & paths", NodeSpec("system:version"))
 
@@ -395,6 +399,7 @@ class HomeApp(MaitApp):
             "system:logs": self._detail_logs,
             "system:doctor": self._detail_doctor,
             "system:settings": self._detail_settings,
+            "system:bridge": self._detail_bridge,
             "system:version": self._detail_version,
         }
 
@@ -897,6 +902,29 @@ class HomeApp(MaitApp):
             return widgets + [Label(empty_state(f"Couldn't read settings: {exc}"))]
         widgets += _kv_rows([(s.key, str(s.value)) for s in snapshot.settings])
         return widgets
+
+    def _detail_bridge(self) -> list[Widget]:
+        from mait_code.bridge import config as bridge_config
+
+        widgets: list[Widget] = [
+            Label("Bridge", classes="title"),
+            Label(
+                "Press Enter on “↗ Configure Bridge” to enable and set up a "
+                "capture/notify channel. Off by default — no network access "
+                "until you switch it on.",
+                classes="hint",
+            ),
+        ]
+        try:
+            enabled = bridge_config.bridge_enabled()
+            rows = [("status", "enabled" if enabled else "disabled")]
+            if enabled:
+                rows.append(("channel", bridge_config.active_type()))
+                for problem in bridge_config.config_problems():
+                    rows.append(("⚠", problem))
+        except Exception as exc:  # noqa: BLE001
+            return widgets + [Label(empty_state(f"Couldn't read Bridge config: {exc}"))]
+        return widgets + _kv_rows(rows)
 
     def _detail_version(self) -> list[Widget]:
         from mait_code.cli._paths import settings_path
