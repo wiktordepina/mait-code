@@ -30,6 +30,15 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "CREATE INDEX IF NOT EXISTS idx_reminders_dismissed ON reminders(dismissed)",
         ],
     ),
+    (
+        2,
+        "Add notified_at for Bridge outbound de-duplication",
+        [
+            # NULL until the Bridge has published the reminder outward, so a due
+            # reminder notifies the phone once rather than every session.
+            "ALTER TABLE reminders ADD COLUMN notified_at TEXT",
+        ],
+    ),
 ]
 
 

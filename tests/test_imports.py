@@ -21,6 +21,8 @@ REFERENCE_MODULES = [
     "mait_code.llm",
     "mait_code.logging",
     "mait_code.ssl",
+    # Bridge
+    "mait_code.bridge",
     # Tools
     "mait_code.tools.memory",
     "mait_code.tools.reminders",

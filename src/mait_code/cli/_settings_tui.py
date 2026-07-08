@@ -93,6 +93,7 @@ class _LiveValidator(Validator):
 # in uncategorised.
 _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("General", ("data-dir", "theme")),
+    ("Bridge", ("bridge", "bridge-type")),
     ("Logging", ("log-level", "log-file", "log-backup-count")),
     (
         "Embeddings",
@@ -134,6 +135,7 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "embedding-dim",
             "memory-db-path",
             "reminders-db-path",
+            "bridge-config-path",
             "model-cache-dir",
             "observations-dir",
             "project-aliases-path",

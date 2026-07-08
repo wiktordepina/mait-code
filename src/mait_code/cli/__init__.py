@@ -803,6 +803,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._logs_tui import run_logs_tui
 
             run_logs_tui()
+        elif target is HomeTarget.BRIDGE:
+            from mait_code.cli._bridge_tui import run_bridge_editor
+
+            run_bridge_editor()
 
     target = run_home_tui()
     while target is not None:

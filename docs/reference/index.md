@@ -21,6 +21,10 @@ Contributors: see the
 - [Logging](logging.md) — `mait_code.logging`
 - [SSL](ssl.md) — `mait_code.ssl`
 
+## Bridge
+
+- [Bridge](bridge.md) — `mait_code.bridge`
+
 ## Tools
 
 - [Memory](tools/memory.md) — `mait_code.tools.memory`

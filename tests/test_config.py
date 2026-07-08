@@ -422,6 +422,7 @@ class TestDerivedRegistry:
             "embedding-dim",
             "memory-db-path",
             "reminders-db-path",
+            "bridge-config-path",
             "model-cache-dir",
             "observations-dir",
             "project-aliases-path",

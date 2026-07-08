@@ -24,9 +24,10 @@ def test_ensure_schema_creates_table(reminders_db: sqlite3.Connection):
 def test_ensure_schema_idempotent(reminders_db: sqlite3.Connection):
     ensure_schema(reminders_db)
     ensure_schema(reminders_db)
-    versions = reminders_db.execute("SELECT version FROM schema_version").fetchall()
-    assert len(versions) == 1
-    assert versions[0][0] == 1
+    versions = reminders_db.execute(
+        "SELECT version FROM schema_version ORDER BY version"
+    ).fetchall()
+    assert [v[0] for v in versions] == [1, 2]
 
 
 def test_ensure_schema_supports_callable_migration(monkeypatch, tmp_path):
@@ -62,7 +63,15 @@ def test_ensure_schema_supports_callable_migration(monkeypatch, tmp_path):
 def test_reminders_columns(reminders_db: sqlite3.Connection):
     columns = reminders_db.execute("PRAGMA table_info(reminders)").fetchall()
     col_names = [c[1] for c in columns]
-    assert col_names == ["id", "what", "due", "created_at", "dismissed", "dismissed_at"]
+    assert col_names == [
+        "id",
+        "what",
+        "due",
+        "created_at",
+        "dismissed",
+        "dismissed_at",
+        "notified_at",
+    ]
 
 
 # --- Helpers ---

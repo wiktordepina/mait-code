@@ -1,0 +1,43 @@
+/* Bridge editor layout. The house theme and shared styling come from
+ * tui/app.tcss; only Bridge-form-specific layout lives here. */
+
+#body {
+    height: 1fr;
+    padding: 1 2;
+}
+
+#body .title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+#body .help {
+    color: $text-muted;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+/* Field labels double as help: first line the label, wrapped hint under it. */
+#body .field-label {
+    color: $text-muted;
+    margin-top: 1;
+    width: 100%;
+}
+
+#fields {
+    height: auto;
+}
+
+#msg {
+    margin-top: 1;
+    height: auto;
+}
+
+.button-row {
+    height: auto;
+    margin-top: 1;
+}
+
+.button-row #test {
+    margin-right: 2;
+}

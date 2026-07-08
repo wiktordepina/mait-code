@@ -10,7 +10,10 @@ import pytest
 from mait_code.tools.reminders.db import get_connection
 from mait_code.tools.reminders.service import (
     active_reminders,
+    dismiss_reminder,
     dismissed_reminders,
+    due_unnotified,
+    mark_notified,
     overdue_reminders,
 )
 
@@ -70,3 +73,41 @@ def test_empty_store(conn) -> None:
     assert active_reminders(conn, now=NOW) == ([], [])
     assert overdue_reminders(conn, now=NOW) == []
     assert dismissed_reminders(conn) == []
+
+
+# --- Bridge-outbound helpers (notify de-dup + dismissal) --------------------
+
+
+def _id_of(conn, what: str) -> int:
+    row = conn.execute("SELECT id FROM reminders WHERE what = ?", (what,)).fetchone()
+    return row[0]
+
+
+def test_dismiss_reminder_transitions_once(conn) -> None:
+    _seed(conn, "live", NOW - timedelta(days=1))
+    rid = _id_of(conn, "live")
+    assert dismiss_reminder(conn, rid) is True
+    assert [r["what"] for r in dismissed_reminders(conn)] == ["live"]
+    # A second dismiss (or an unknown id) is a harmless no-op.
+    assert dismiss_reminder(conn, rid) is False
+    assert dismiss_reminder(conn, 9999) is False
+
+
+def test_due_unnotified_filters_by_due_dismissed_and_notified(conn) -> None:
+    _seed(conn, "overdue", NOW - timedelta(hours=1))
+    _seed(conn, "upcoming", NOW + timedelta(hours=1))
+    _seed(conn, "gone", NOW - timedelta(hours=1), dismissed=True)
+    _seed(conn, "already-sent", NOW - timedelta(hours=1))
+    mark_notified(conn, [_id_of(conn, "already-sent")], now=NOW)
+
+    due = due_unnotified(conn, now=NOW)
+    assert [r["what"] for r in due] == ["overdue"]
+
+
+def test_mark_notified_removes_from_due(conn) -> None:
+    _seed(conn, "overdue", NOW - timedelta(hours=1))
+    rid = _id_of(conn, "overdue")
+    assert [r["id"] for r in due_unnotified(conn, now=NOW)] == [rid]
+    mark_notified(conn, [rid], now=NOW)
+    assert due_unnotified(conn, now=NOW) == []
+    mark_notified(conn, [])  # empty is a no-op

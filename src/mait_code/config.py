@@ -34,6 +34,7 @@ __all__ = [
     "get",
     "get_int",
     "get_float",
+    "get_bool",
     "validate_settings",
     # Settings file I/O
     "read_settings_file",
@@ -211,6 +212,33 @@ def _positive_float(value: str) -> str | None:
     return None if f > 0.0 else f"must be greater than zero, got {f}"
 
 
+_BRIDGE_GATE = ("enabled", "disabled")
+
+
+def _bridge_gate(value: str) -> str | None:
+    return (
+        None
+        if value.strip().lower() in _BRIDGE_GATE
+        else f"must be one of {', '.join(_BRIDGE_GATE)}, got {value!r}"
+    )
+
+
+def _bridge_type(value: str) -> str | None:
+    """Validate the channel selector against the registered channels.
+
+    Lazy-imports the registry so ``config`` stays a light, stdlib-only leaf for
+    the hooks that import it only for :func:`data_dir`.
+    """
+    from mait_code.bridge.registry import CHANNELS
+
+    return (
+        None
+        if value.strip() in CHANNELS
+        else f"must be a registered bridge channel ({', '.join(sorted(CHANNELS))}), "
+        f"got {value!r}"
+    )
+
+
 SETTINGS: tuple[Setting, ...] = (
     Setting(
         "data-dir",
@@ -238,6 +266,23 @@ SETTINGS: tuple[Setting, ...] = (
         DEFAULT_THEME,
         help="TUI colour theme; any registered theme, unknown names fall back to mait-dark.",
         validate=_non_empty,
+    ),
+    Setting(
+        "bridge",
+        "MAIT_CODE_BRIDGE",
+        "disabled",
+        kind="bool",
+        help="Bridge capture/notify channel: 'enabled' or 'disabled'. Off by "
+        "default — enable via the hub or here to allow network access.",
+        validate=_bridge_gate,
+        choices=_BRIDGE_GATE,
+    ),
+    Setting(
+        "bridge-type",
+        "MAIT_CODE_BRIDGE_TYPE",
+        "ntfy",
+        help="Which Bridge channel to use (configured in the Bridge screen).",
+        validate=_bridge_type,
     ),
     Setting(
         "embedding-provider",
@@ -459,6 +504,14 @@ SETTINGS: tuple[Setting, ...] = (
         help="SQLite store for reminders (derived from data-dir).",
     ),
     Setting(
+        "bridge-config-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("bridge.json"),
+        help="Bridge channel config — server, topics, token (derived from data-dir).",
+    ),
+    Setting(
         "model-cache-dir",
         "",
         "",
@@ -588,6 +641,37 @@ def get_float(key: str) -> float:
             setting.default,
         )
         return float(setting.default)
+
+
+_BOOL_TRUE = frozenset({"1", "true", "yes", "on", "enabled"})
+_BOOL_FALSE = frozenset({"0", "false", "no", "off", "disabled", ""})
+
+
+def get_bool(key: str) -> bool:
+    """Return a setting coerced to ``bool``.
+
+    Accepts the usual truthy/falsey spellings plus ``enabled``/``disabled``
+    (case-insensitive). Like :func:`get_int`, an unrecognised value falls back
+    to the setting's hardcoded default (logging a warning) so a fat-fingered
+    gate degrades to its default rather than crashing a hook.
+
+    Raises:
+        KeyError: If *key* is not a registered setting.
+    """
+    setting = _by_key()[key]
+    value, _ = resolve(setting)
+    token = value.strip().lower()
+    if token in _BOOL_TRUE:
+        return True
+    if token in _BOOL_FALSE:
+        return False
+    logger.warning(
+        "setting %r is not a boolean (%r); using default %r",
+        key,
+        value,
+        setting.default,
+    )
+    return setting.default.strip().lower() in _BOOL_TRUE
 
 
 def validate_settings() -> list[str]:

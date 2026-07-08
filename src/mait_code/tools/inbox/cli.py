@@ -78,6 +78,34 @@ def cmd_count(args):
         print(service.count_items(conn))
 
 
+def cmd_drain(args):
+    """Pull captures from the Bridge channel into the inbox.
+
+    Off by default: does nothing unless the Bridge gate is enabled (configure
+    it in the Bridge screen of `mait-code`). Reports what happened without
+    leaking a transport error as a stack trace.
+    """
+    from mait_code.bridge.service import run_drain
+
+    outcome = run_drain()
+    if outcome.status == "disabled":
+        print("Bridge is disabled — enable it in `mait-code` settings to drain.")
+    elif outcome.status == "unconfigured":
+        print(f"Bridge is not configured: {outcome.detail}")
+    elif outcome.status == "error":
+        print(f"Bridge drain failed: {outcome.detail}", file=sys.stderr)
+        sys.exit(1)
+    elif outcome.count or outcome.dismissed:
+        parts = []
+        if outcome.count:
+            parts.append(f"{outcome.count} item(s) into the inbox")
+        if outcome.dismissed:
+            parts.append(f"{outcome.dismissed} reminder(s) dismissed")
+        print(f"Drained {' · '.join(parts)}.")
+    else:
+        print("Nothing new to drain.")
+
+
 @log_invocation(name="mc-tool-inbox")
 def main():
     setup_logging()
@@ -100,6 +128,11 @@ def main():
 
     p_count = sub.add_parser("count", help="Print the inbox count (used by hooks)")
     p_count.set_defaults(func=cmd_count)
+
+    p_drain = sub.add_parser(
+        "drain", help="Pull captures from the Bridge into the inbox (if enabled)"
+    )
+    p_drain.set_defaults(func=cmd_drain)
 
     args = parser.parse_args()
     args.func(args)

@@ -463,6 +463,28 @@ def _check_observe_pipeline(ddir: Path) -> Check:
     return Check("observe-pipeline", "ok", f"last observe capture {latest.isoformat()}")
 
 
+def _check_bridge() -> Check:
+    """When the Bridge gate is on, its channel config must be complete.
+
+    A disabled Bridge needs no config (the default, corporate-safe state); an
+    enabled-but-blank one is a warning, never a fail — the drain simply no-ops
+    and logs rather than crashing a session.
+    """
+    from mait_code.bridge import config as bridge_config
+
+    if not bridge_config.bridge_enabled():
+        return Check("bridge", "ok", "disabled (no network access)")
+    problems = bridge_config.config_problems()
+    if problems:
+        return Check(
+            "bridge",
+            "warn",
+            "; ".join(problems),
+            fix_hint="configure the channel in the Bridge screen: mait-code",
+        )
+    return Check("bridge", "ok", f"enabled, channel '{bridge_config.active_type()}'")
+
+
 def _check_uv(_ddir: Path) -> Check:
     """``uv`` must be on PATH for install/update to work."""
     if shutil.which("uv") is None:
@@ -512,6 +534,7 @@ def run_doctor(
         _check_memory_embeddings(ddir, fix, fixes),
         _check_vector_search(ddir),
         _check_observe_pipeline(ddir),
+        _check_bridge(),
         _check_uv(ddir),
     ]
 
