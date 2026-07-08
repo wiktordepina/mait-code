@@ -79,7 +79,8 @@ def test_empty_store(conn) -> None:
 
 
 def _id_of(conn, what: str) -> int:
-    return conn.execute("SELECT id FROM reminders WHERE what = ?", (what,)).fetchone()[0]
+    row = conn.execute("SELECT id FROM reminders WHERE what = ?", (what,)).fetchone()
+    return row[0]
 
 
 def test_dismiss_reminder_transitions_once(conn) -> None:
