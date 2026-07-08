@@ -10,6 +10,37 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.60.0] — 2026-07-09
+
+### Added
+
+- **The Bridge — capture in, notify out, from anywhere.** A new opt-in
+  transport that gives the quick-capture inbox a way in from your phone or
+  another machine, and pushes due reminders out to your lock screen — no
+  daemon, no terminal required. Captures published to a self-hosted
+  [ntfy](https://ntfy.sh) topic are drained into the inbox by the session-start
+  hook (or `mc-tool-inbox drain`) and routed by `/triage` as usual; due
+  reminders are published outward with a **"Done"** button that dismisses them
+  round-trip. The transport is pluggable behind a channel interface, so a
+  future channel (MQTT, a Telegram bot) is a subclass plus a registry line.
+  Configure it from the home hub's **System ▸ Configure Bridge** screen — a
+  form with a **Test connection** button. See [the Bridge guide](https://wiktordepina.github.io/mait-code/bridge/).
+- **`bridge` and `bridge-type` settings**, plus a first boolean setting kind
+  (`get_bool`). The Bridge is **disabled by default**: while off it makes zero
+  network calls, so it stays inert on a machine where outbound access isn't
+  permitted. `doctor` reports the Bridge and warns — never fails — when it's
+  enabled but not fully configured.
+
+### Changed
+
+- **`mc-tool-inbox drain`** is a new subcommand; the session-start hook drains
+  the Bridge (and publishes due reminders) best-effort before assembling the
+  brief, so fresh captures show up straight away.
+- **Reminders can leave the terminal.** `mc-tool-reminders check` and the
+  session-start hook now publish due reminders through the Bridge when it's
+  enabled. A reminder is notified once (a new `notified_at` column, reminders
+  schema migration 2) rather than re-sent every session.
+
 ## [0.59.3] — 2026-06-26
 
 ### Fixed
@@ -1785,7 +1816,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.59.3...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.60.0...HEAD
+[0.60.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.0
 [0.59.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.3
 [0.59.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.2
 [0.59.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.1
