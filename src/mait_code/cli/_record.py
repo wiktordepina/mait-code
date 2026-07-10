@@ -28,7 +28,7 @@ __all__ = [
     "write_record",
 ]
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class RecordError(Exception):
@@ -42,14 +42,17 @@ class InstallRecord:
 
     Attributes:
         source_dir: Absolute path to the cloned source tree.
-        installed_at: ISO 8601 UTC timestamp of the most recent
-            install / update.
+        first_installed_at: ISO 8601 UTC timestamp of the *first* install.
+            Frozen at install time and preserved across every ``update``.
+        updated_at: ISO 8601 UTC timestamp of the most recent
+            install / update. Refreshed on every ``update``.
         schema_version: Format version of this record. See
             :data:`SCHEMA_VERSION`.
     """
 
     source_dir: str
-    installed_at: str
+    first_installed_at: str
+    updated_at: str
     schema_version: int = SCHEMA_VERSION
 
     @classmethod
@@ -57,11 +60,22 @@ class InstallRecord:
         cls,
         *,
         source_dir: Path | str,
+        first_installed_at: str | None = None,
     ) -> InstallRecord:
-        """Construct a fresh record stamped with the current UTC time."""
+        """Construct a record stamped with the current UTC time.
+
+        Args:
+            source_dir: The cloned source tree.
+            first_installed_at: Preserve an earlier first-install
+                timestamp (passed by ``update`` to keep the original
+                date across reinstalls). When ``None`` (a fresh
+                install), it defaults to now, matching ``updated_at``.
+        """
+        now = datetime.now(UTC).isoformat(timespec="seconds")
         return cls(
             source_dir=str(Path(source_dir).resolve()),
-            installed_at=datetime.now(UTC).isoformat(timespec="seconds"),
+            first_installed_at=first_installed_at or now,
+            updated_at=now,
         )
 
 
@@ -121,15 +135,32 @@ def read_record(*, path: Path | None = None) -> InstallRecord:
             f"Upgrade `mait-code` (`mait-code update`)."
         )
 
-    required = {"source_dir", "installed_at"}
-    missing = required - set(raw)
+    if schema_version < 2:
+        # v1 stored a single ``installed_at`` (really "last touched").
+        # The true first-install date is unrecoverable, so seed both
+        # timestamps from it; the next ``update`` writes a proper v2
+        # record. Upgraded in-memory only — reads stay side-effect free.
+        _require(raw, {"source_dir", "installed_at"}, target)
+        return InstallRecord(
+            source_dir=raw["source_dir"],
+            first_installed_at=raw["installed_at"],
+            updated_at=raw["installed_at"],
+            schema_version=SCHEMA_VERSION,
+        )
+
+    _require(raw, {"source_dir", "first_installed_at", "updated_at"}, target)
+    return InstallRecord(
+        source_dir=raw["source_dir"],
+        first_installed_at=raw["first_installed_at"],
+        updated_at=raw["updated_at"],
+        schema_version=schema_version,
+    )
+
+
+def _require(raw: dict[str, Any], fields: set[str], target: Path) -> None:
+    """Raise :class:`RecordError` if any of ``fields`` is absent from ``raw``."""
+    missing = fields - set(raw)
     if missing:
         raise RecordError(
             f"Install record at {target} is missing required fields: {sorted(missing)}"
         )
-
-    return InstallRecord(
-        source_dir=raw["source_dir"],
-        installed_at=raw["installed_at"],
-        schema_version=schema_version,
-    )

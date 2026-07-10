@@ -5,7 +5,7 @@ right ref, and &mdash; **only if the source actually moved** &mdash; runs
 ``uv tool install`` against the source dir with the configured embedding
 extra. It then re-runs the symlink and settings-merge steps in case the
 new source ships changes (new skills, updated settings.json) and bumps
-the install record's ``installed_at``.
+the install record's ``updated_at`` (preserving ``first_installed_at``).
 
 How the source is advanced depends on its current state, because a
 bootstrap install pins to a release **tag** (detached HEAD) while a
@@ -338,8 +338,11 @@ def update(
     )
     write_claude_settings(settings_path, merged)
 
-    # 4. Bump the install record.
-    refreshed = InstallRecord.new(source_dir=source_dir)
+    # 4. Bump the install record, preserving the original first-install date.
+    refreshed = InstallRecord.new(
+        source_dir=source_dir,
+        first_installed_at=record.first_installed_at,
+    )
     write_record(refreshed)
 
     return UpdateSummary(

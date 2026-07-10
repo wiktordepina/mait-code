@@ -202,7 +202,9 @@ class TestUpdateReinstall:
         update(no_pull=True, runner=git.run, capture=git.capture)
 
         after = read_record()
-        assert after.installed_at >= before.installed_at
+        assert after.updated_at >= before.updated_at
+        # The original first-install date must survive the update.
+        assert after.first_installed_at == before.first_installed_at
 
     def test_refreshes_symlinks(self, fake_home: Path, fake_source: Path) -> None:
         _install_first(fake_source)
