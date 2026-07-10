@@ -30,26 +30,32 @@ The CLI persists state at `~/.local/share/mait-code/install.json`
 (XDG-aware — honours `$XDG_DATA_HOME`). It is:
 
 - Created by `install`.
-- Updated by `update` (version + timestamp).
-- Read by `update`, `uninstall`, `status`, `doctor`, `settings` (the
-  recorded embedding provider drives `settings`' drift check).
+- Updated by `update` (refreshes `updated_at`, preserving
+  `first_installed_at`).
+- Read by `update`, `uninstall`, `status`, `doctor`, `settings`.
 - Removed by `uninstall`.
 
-Schema (`schema_version: 1`):
+Schema (`schema_version: 2`):
 
 ```json
 {
   "source_dir": "/home/wiktor/projects/mait-code",
-  "version": "0.14.1",
-  "embedding_provider": "local",
-  "installed_at": "2026-05-27T10:00:00+00:00",
-  "schema_version": 1
+  "first_installed_at": "2026-05-27T10:00:00+00:00",
+  "updated_at": "2026-07-09T14:30:00+00:00",
+  "schema_version": 2
 }
 ```
 
-A binary refuses to read a record whose `schema_version` exceeds what
-it understands — the error message points at `mait-code update` as the
-recovery path.
+`first_installed_at` is frozen at the first install and carried across
+every `update`; `updated_at` is refreshed on each one — so `status`
+shows both an install date and a last-updated date.
+
+A record written by an older binary (`schema_version: 1`) had a single
+`installed_at` field. It still reads: both timestamps are seeded from
+it (the true first-install date isn't recoverable), and the next
+`update` writes a v2 record. A binary refuses to read a record whose
+`schema_version` *exceeds* what it understands — the error message
+points at `mait-code update` as the recovery path.
 
 ---
 

@@ -40,7 +40,8 @@ class Status:
     source_dir: str | None = None
     version: str | None = None
     embedding_provider: str | None = None
-    installed_at: str | None = None
+    first_installed_at: str | None = None
+    updated_at: str | None = None
     record_error: str | None = None
 
     claude_md_path: str | None = None
@@ -123,7 +124,8 @@ def collect_status(
         status.source_dir = record.source_dir
         status.version = mait_code.__version__
         status.embedding_provider = config_get("embedding-provider")
-        status.installed_at = record.installed_at
+        status.first_installed_at = record.first_installed_at
+        status.updated_at = record.updated_at
     except RecordError as exc:
         status.record_error = str(exc)
 
@@ -313,7 +315,12 @@ def render(status: Status) -> None:
             binary = Text("not on PATH", style="warn")
         console.print(_line("", "binary", binary), soft_wrap=True)
         console.print(
-            _line("", "since", Text(_date_only(status.installed_at))), soft_wrap=True
+            _line("", "installed", Text(_date_only(status.first_installed_at))),
+            soft_wrap=True,
+        )
+        console.print(
+            _line("", "updated", Text(_date_only(status.updated_at))),
+            soft_wrap=True,
         )
     else:
         console.print(

@@ -57,13 +57,27 @@ class TestInstallRecord:
         source.mkdir()
         record = InstallRecord.new(source_dir=source)
         assert record.source_dir == str(source.resolve())
-        assert "T" in record.installed_at  # ISO 8601
-        assert record.schema_version == 1
+        assert "T" in record.updated_at  # ISO 8601
+        # A fresh install has no earlier date, so both timestamps agree.
+        assert record.first_installed_at == record.updated_at
+        assert record.schema_version == 2
+
+    def test_new_preserves_first_installed_at(self, tmp_path: Path) -> None:
+        """``update`` passes the original date so it survives reinstalls."""
+        source = tmp_path / "src"
+        source.mkdir()
+        record = InstallRecord.new(
+            source_dir=source,
+            first_installed_at="2026-01-01T00:00:00+00:00",
+        )
+        assert record.first_installed_at == "2026-01-01T00:00:00+00:00"
+        assert record.updated_at != record.first_installed_at
 
     def test_round_trip(self, fake_home: Path) -> None:
         record = InstallRecord(
             source_dir="/some/path",
-            installed_at="2026-05-27T10:00:00+00:00",
+            first_installed_at="2026-05-27T10:00:00+00:00",
+            updated_at="2026-06-01T12:00:00+00:00",
         )
         path = write_record(record)
         assert path.exists()
@@ -89,7 +103,29 @@ class TestInstallRecord:
         )
         loaded = read_record()
         assert loaded.source_dir == "/old/path"
-        assert loaded.installed_at == "2026-05-27T10:00:00+00:00"
+        # v1 backfills both timestamps from the single ``installed_at``.
+        assert loaded.first_installed_at == "2026-05-27T10:00:00+00:00"
+        assert loaded.updated_at == "2026-05-27T10:00:00+00:00"
+        assert loaded.schema_version == 2
+
+    def test_reads_v1_record_without_schema_version(self, fake_home: Path) -> None:
+        """A pre-versioning record (no schema_version) is treated as v1."""
+        import json
+
+        record_path = install_record_path()
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        record_path.write_text(
+            json.dumps(
+                {
+                    "source_dir": "/old/path",
+                    "installed_at": "2026-05-27T10:00:00+00:00",
+                }
+            )
+        )
+        loaded = read_record()
+        assert loaded.first_installed_at == "2026-05-27T10:00:00+00:00"
+        assert loaded.updated_at == "2026-05-27T10:00:00+00:00"
+        assert loaded.schema_version == 2
 
     def test_read_missing_raises(self, fake_home: Path) -> None:
         try:
