@@ -7,6 +7,7 @@ updates to ``MEMORY.md``.
 
 import json
 import logging
+import re
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -30,14 +31,37 @@ evolving preferences, and actionable observations.
 Format your response in two sections:
 
 ## Insights
-One insight per line, starting with "INSIGHT: "
+One insight per line, starting with "INSIGHT: ".
 
-## Memory Updates
-If you identify high-confidence facts that should be added to the companion's
-persistent MEMORY.md file, list them as lines starting with "MEMORY_UPDATE: ".
-These should be stable, verified facts — not speculative observations.
-Only propose updates if there are clear, durable facts worth persisting.
-If none, omit this section.\
+## Memory Operations
+Propose changes to the companion's persistent MEMORY.md file. MEMORY.md is a
+small, curated set of durable facts — not a log. Consolidation matters as much
+as addition: keep it sharp, non-redundant, and current. Use one line per
+operation, choosing from:
+
+MEMORY_ADD: <new durable fact>
+MEMORY_REWRITE: <existing fact, verbatim> -> <corrected/sharper fact> [entries: #12, #34]
+MEMORY_MERGE: <single consolidated fact> [entries: #5, #9, #21]
+MEMORY_RETIRE: <existing fact to drop, verbatim> [entries: #7]
+
+Rules:
+- ADD only stable, verified facts — never speculation.
+- REWRITE replaces an existing MEMORY.md fact with a better version. Copy the
+  existing text verbatim before " -> " so it can be located.
+- MERGE folds two or more overlapping facts into one. Give the single
+  consolidated fact.
+- RETIRE drops a fact that is now stale or contradicted. Copy its existing text
+  verbatim.
+- A REWRITE or RETIRE MUST be justified by a newer entry above that contradicts
+  or supersedes the old fact. If nothing contradicts it, leave it alone.
+- Strongly bias toward leaving stable facts untouched. Do not churn wording for
+  its own sake. Most reflections should propose few or no operations.
+- The optional "[entries: #N, ...]" suffix lists the memory-database entries
+  (shown as #N in the entries above) that back the fact, so the underlying
+  store can be consolidated too. Include ids only when you can point to specific
+  entries above; omit the suffix otherwise.
+
+Omit this section entirely if nothing warrants changing.\
 """
 
 
@@ -478,39 +502,101 @@ def format_entries_text(entries: list[tuple]) -> str:
     lines = []
     for entry in entries:
         if len(entry) == 5:
-            _, content, entry_type, importance, created_at = entry
+            entry_id, content, entry_type, importance, created_at = entry
+            prefix = f"#{entry_id} "
         else:
             content, entry_type, importance, created_at = entry
+            prefix = ""
         lines.append(
-            f"- [{created_at[:10]}] ({entry_type}, imp={importance}) {content[:200]}"
+            f"- {prefix}[{created_at[:10]}] ({entry_type}, imp={importance}) "
+            f"{content[:200]}"
         )
     return "\n".join(lines)
 
 
+# Op markers the reflection model may emit, mapped to their op kind.
+# ``MEMORY_UPDATE`` is kept as a back-compat alias for ``MEMORY_ADD``.
+_OP_MARKERS: dict[str, str] = {
+    "MEMORY_ADD:": "add",
+    "MEMORY_UPDATE:": "add",
+    "MEMORY_REWRITE:": "rewrite",
+    "MEMORY_MERGE:": "merge",
+    "MEMORY_RETIRE:": "retire",
+}
+
+# Trailing "[entries: #1, #2]" suffix carrying the backing db entry ids.
+_ENTRIES_SUFFIX = re.compile(r"\[entries:\s*([^\]]*)\]\s*$", re.IGNORECASE)
+
+
+def _extract_entry_ids(text: str) -> tuple[str, list[int]]:
+    """Split a trailing ``[entries: #1, #2]`` suffix off an op line.
+
+    Returns the text with the suffix removed (stripped) and the parsed ids in
+    order, de-duplicated. A line with no suffix yields an empty id list.
+    """
+    match = _ENTRIES_SUFFIX.search(text)
+    if not match:
+        return text.strip(), []
+    ids = [int(n) for n in re.findall(r"\d+", match.group(1))]
+    return text[: match.start()].strip(), list(dict.fromkeys(ids))
+
+
+def _build_op(kind: str, body: str) -> dict | None:
+    """Build a structured op dict from a marker kind and its line body.
+
+    Returns ``None`` for malformed bodies (e.g. a rewrite missing its ``->``,
+    or an empty payload) so the caller can drop them silently.
+    """
+    body, entry_ids = _extract_entry_ids(body)
+    if kind == "rewrite":
+        old, sep, new = body.partition("->")
+        old, new = old.strip(), new.strip()
+        if not sep or not old or not new:
+            return None
+        return {"op": "rewrite", "old": old, "new": new, "entry_ids": entry_ids}
+    if not body:
+        return None
+    if kind == "retire":
+        return {"op": "retire", "old": body, "new": None, "entry_ids": entry_ids}
+    if kind == "merge":
+        return {"op": "merge", "old": None, "new": body, "entry_ids": entry_ids}
+    return {"op": "add", "old": None, "new": body, "entry_ids": entry_ids}
+
+
 def parse_reflection_response(response: str) -> dict:
-    """Parse the LLM response into insights and memory update proposals.
+    """Parse the LLM response into insights and structured memory operations.
+
+    Recognises ``INSIGHT:`` lines plus the consolidation op markers in
+    :data:`_OP_MARKERS`. Each op is a dict with keys ``op`` (``"add"`` /
+    ``"rewrite"`` / ``"merge"`` / ``"retire"``), ``old`` (existing MEMORY.md
+    text, or ``None``), ``new`` (new text, or ``None`` for retire), and
+    ``entry_ids`` (backing db entries to consolidate, possibly empty).
+    Unrecognised or malformed lines are ignored, not fatal.
 
     Args:
         response: The raw LLM response text.
 
     Returns:
-        A dict ``{"insights": [...], "memory_updates": [...]}``.
+        A dict ``{"insights": [...], "ops": [...]}``.
     """
-    insights = []
-    memory_updates = []
+    insights: list[str] = []
+    ops: list[dict] = []
 
-    for line in response.strip().split("\n"):
-        line = line.strip()
+    for raw in response.strip().split("\n"):
+        line = raw.strip()
         if line.startswith("INSIGHT:"):
-            text = line[8:].strip()
+            text = line[len("INSIGHT:") :].strip()
             if text:
                 insights.append(text)
-        elif line.startswith("MEMORY_UPDATE:"):
-            text = line[14:].strip()
-            if text:
-                memory_updates.append(text)
+            continue
+        for marker, kind in _OP_MARKERS.items():
+            if line.startswith(marker):
+                op = _build_op(kind, line[len(marker) :].strip())
+                if op is not None:
+                    ops.append(op)
+                break
 
-    return {"insights": insights, "memory_updates": memory_updates}
+    return {"insights": insights, "ops": ops}
 
 
 def store_insights(
@@ -553,11 +639,67 @@ def read_memory_md() -> str | None:
     return None
 
 
-def generate_memory_diff(memory_updates: list[str]) -> str:
-    """Format proposed ``MEMORY.md`` additions as a readable diff."""
-    lines = ["Proposed additions to MEMORY.md:", ""]
-    for update in memory_updates:
-        lines.append(f"+ {update}")
+def _entry_previews(
+    conn: sqlite3.Connection, ops: list[dict], *, width: int = 80
+) -> dict[int, str]:
+    """Fetch short content snippets for every db entry an op references."""
+    ids = {i for op in ops for i in op.get("entry_ids", [])}
+    if not ids:
+        return {}
+    placeholders = ",".join("?" * len(ids))
+    rows = conn.execute(
+        f"SELECT id, content FROM memory_entries WHERE id IN ({placeholders})",
+        tuple(ids),
+    ).fetchall()
+    return {row[0]: row[1][:width] for row in rows}
+
+
+def _entry_tag(entry_ids: list[int], verb: str) -> str:
+    """Render the ``[verb #1, #2]`` annotation for an op's db targets."""
+    if not entry_ids:
+        return ""
+    return f"   [{verb} " + ", ".join(f"#{i}" for i in entry_ids) + "]"
+
+
+def generate_memory_diff(
+    ops: list[dict], previews: dict[int, str] | None = None
+) -> str:
+    """Render proposed MEMORY.md operations as a readable before/after diff.
+
+    Additions show as ``+``, retirements as ``-``, rewrites as the old line
+    (``~``) followed by its replacement (``→``), and merges as one ``-`` per
+    folded db entry followed by the single consolidated ``+`` line. Each op that
+    names backing db entries is annotated with the store-level verb applied to
+    them.
+
+    Args:
+        ops: Structured ops from :func:`parse_reflection_response`.
+        previews: Optional ``{entry_id: content snippet}`` used to show the
+            source rows of a merge; falls back to an inline id tag when absent.
+    """
+    previews = previews or {}
+    lines = ["Proposed MEMORY.md changes:", ""]
+    for op in ops:
+        kind = op["op"]
+        entry_ids = op.get("entry_ids", [])
+        if kind == "add":
+            lines.append(f"+ {op['new']}")
+        elif kind == "rewrite":
+            lines.append(f"~ {op['old']}")
+            lines.append(f"    → {op['new']}{_entry_tag(entry_ids, 'supersede')}")
+        elif kind == "retire":
+            lines.append(f"- {op['old']}{_entry_tag(entry_ids, 'retire')}")
+        elif kind == "merge":
+            shown = False
+            for i in entry_ids:
+                snippet = previews.get(i)
+                if snippet:
+                    lines.append(f"- #{i} {snippet}")
+                    shown = True
+            if shown:
+                lines.append(f"+ {op['new']}")
+            else:
+                lines.append(f"+ {op['new']}{_entry_tag(entry_ids, 'merge')}")
     return "\n".join(lines)
 
 
@@ -590,9 +732,11 @@ def reflect(
         branch: Branch name included in the prompt context only.
 
     Returns:
-        A dict with keys ``skipped``, ``reason``, ``insights``, ``stored``,
-        ``memory_diff``, and ``batch_info`` (the last containing
-        ``processed`` and ``watermark`` counts, or ``None`` when skipped).
+        A dict with keys ``skipped``, ``reason``, ``insights``, ``ops`` (the
+        structured MEMORY.md operations proposed — see
+        :func:`parse_reflection_response`), ``stored``, ``memory_diff``, and
+        ``batch_info`` (the last containing ``processed`` and ``watermark``
+        counts, or ``None`` when skipped).
     """
     # Novelty gate (watermark-based)
     if not check_novelty_gate_v2(conn, min_new, project=project):
@@ -600,6 +744,7 @@ def reflect(
             "skipped": True,
             "reason": "not enough new observations since last reflection",
             "insights": [],
+            "ops": [],
             "stored": 0,
             "memory_diff": None,
             "batch_info": None,
@@ -620,6 +765,7 @@ def reflect(
             "skipped": True,
             "reason": "no unreflected entries found",
             "insights": [],
+            "ops": [],
             "stored": 0,
             "memory_diff": None,
             "batch_info": None,
@@ -656,6 +802,7 @@ def reflect(
             "skipped": False,
             "reason": "LLM call failed",
             "insights": [],
+            "ops": [],
             "stored": 0,
             "memory_diff": None,
             "batch_info": None,
@@ -664,7 +811,7 @@ def reflect(
     # Parse response
     parsed = parse_reflection_response(response)
     insights = parsed["insights"]
-    memory_updates = parsed["memory_updates"]
+    ops = parsed["ops"]
 
     # Store insights
     stored = store_insights(conn, insights, project=project) if insights else 0
@@ -673,15 +820,16 @@ def reflect(
     new_watermark = max(e[0] for e in entries)
     update_watermark(conn, new_watermark, project=project)
 
-    # Generate memory diff
+    # Generate memory diff (with snippets of any backing db entries)
     memory_diff = None
-    if memory_updates:
-        memory_diff = generate_memory_diff(memory_updates)
+    if ops:
+        memory_diff = generate_memory_diff(ops, _entry_previews(conn, ops))
 
     return {
         "skipped": False,
         "reason": None,
         "insights": insights,
+        "ops": ops,
         "stored": stored,
         "memory_diff": memory_diff,
         "batch_info": {"processed": len(entries), "watermark": new_watermark},

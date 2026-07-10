@@ -89,6 +89,10 @@
 
 ::: mait_code.tools.memory.find_duplicate
 
+::: mait_code.tools.memory.merge_memories
+
+::: mait_code.tools.memory.retire_memory
+
 ::: mait_code.tools.memory.store_memory
 
 ::: mait_code.tools.memory.supersede_memory

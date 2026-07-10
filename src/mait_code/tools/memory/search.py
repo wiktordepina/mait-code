@@ -6,6 +6,7 @@ Provides search, listing, and deletion operations on memory entries.
 import logging
 import sqlite3
 
+from mait_code.tools.memory.db import LIVE_ENTRY_SQL
 from mait_code.tools.memory.embeddings import embed_text, serialize_f32
 
 logger = logging.getLogger(__name__)
@@ -16,8 +17,9 @@ _BASE_COLS = (
     "m.created_at, m.scope, m.project, m.branch, m.superseded_by, m.superseded_at"
 )
 
-# SQL fragment (leading "AND ") that hides superseded entries unless opted in.
-_LIVE_ONLY = "AND m.superseded_by IS NULL"
+# SQL fragment (leading "AND ") that hides consolidated (superseded or retired)
+# entries unless opted in.
+_LIVE_ONLY = f"AND {LIVE_ENTRY_SQL}"
 
 
 def _scope_filter(project: str | None, branch: str | None) -> tuple[str, list]:
@@ -183,7 +185,7 @@ def list_entries(
     params: list = []
 
     if not include_superseded:
-        conditions.append("m.superseded_by IS NULL")
+        conditions.append(LIVE_ENTRY_SQL)
 
     if entry_type:
         conditions.append("m.entry_type = ?")
@@ -233,9 +235,9 @@ def list_projects(conn: sqlite3.Connection) -> list[str]:
         Sorted distinct project names (possibly empty).
     """
     rows = conn.execute(
-        """SELECT DISTINCT project FROM memory_entries
-           WHERE project IS NOT NULL AND superseded_by IS NULL
-           ORDER BY project COLLATE NOCASE"""
+        f"""SELECT DISTINCT m.project FROM memory_entries m
+           WHERE m.project IS NOT NULL AND {LIVE_ENTRY_SQL}
+           ORDER BY m.project COLLATE NOCASE"""
     ).fetchall()
     return [row[0] for row in rows]
 

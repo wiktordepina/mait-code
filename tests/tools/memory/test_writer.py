@@ -13,6 +13,8 @@ from mait_code.tools.memory.writer import (
     VALID_ENTRY_TYPES,
     VECTOR_SIMILARITY_THRESHOLD,
     find_duplicate,
+    merge_memories,
+    retire_memory,
     store_memory,
     supersede_memory,
 )
@@ -352,6 +354,113 @@ class TestSupersede:
         # Re-stating the OLD (now superseded) content must not dedup into the
         # hidden superseded row — it's excluded as a candidate.
         assert find_duplicate(memory_db, content, "fact") is None
+
+
+class TestRetire:
+    def test_retire_marks_superseded_at_only(self, memory_db: sqlite3.Connection):
+        """Retiring stamps superseded_at while leaving superseded_by NULL."""
+        entry = store_memory(memory_db, "Deploys happen on Fridays", "fact", 5)
+        result = retire_memory(memory_db, entry["id"])
+        assert result == {"action": "retired", "id": entry["id"]}
+
+        row = memory_db.execute(
+            "SELECT superseded_by, superseded_at FROM memory_entries WHERE id = ?",
+            (entry["id"],),
+        ).fetchone()
+        assert row[0] is None
+        assert row[1] is not None
+
+    def test_retired_entry_hidden_from_surfacing(self, memory_db: sqlite3.Connection):
+        """A retired entry drops out of the default live listing."""
+        from mait_code.tools.memory.search import list_entries
+
+        keep = store_memory(memory_db, "Cody is a whippet", "fact", 5)
+        drop = store_memory(memory_db, "Old office is in Zone 1", "fact", 5)
+        retire_memory(memory_db, drop["id"])
+
+        live_ids = {r["id"] for r in list_entries(memory_db)}
+        assert keep["id"] in live_ids
+        assert drop["id"] not in live_ids
+        # Still retrievable when explicitly asked for.
+        all_ids = {r["id"] for r in list_entries(memory_db, include_superseded=True)}
+        assert drop["id"] in all_ids
+
+    def test_retire_missing_id(self, memory_db: sqlite3.Connection):
+        assert retire_memory(memory_db, 9999) == {"action": "not_found", "id": 9999}
+
+    def test_retire_is_idempotent(self, memory_db: sqlite3.Connection):
+        entry = store_memory(memory_db, "A fleeting fact", "fact", 5)
+        assert retire_memory(memory_db, entry["id"])["action"] == "retired"
+        assert retire_memory(memory_db, entry["id"])["action"] == "already_retired"
+
+    def test_retire_rejects_superseded_entry(self, memory_db: sqlite3.Connection):
+        entry = store_memory(memory_db, "Budget is 1000", "fact", 5)
+        supersede_memory(memory_db, entry["id"], "Budget is 2000")
+        assert retire_memory(memory_db, entry["id"])["action"] == "already_superseded"
+
+
+class TestMerge:
+    def test_merge_folds_all_into_one(self, memory_db: sqlite3.Connection):
+        """Every merged row points at the single new entry; only it stays live."""
+        a = store_memory(memory_db, "Likes strong coffee", "preference", 4)
+        b = store_memory(memory_db, "Drinks coffee black", "preference", 6)
+        result = merge_memories(
+            memory_db, [a["id"], b["id"]], "Takes strong black coffee"
+        )
+
+        assert result["action"] == "merged"
+        assert result["merged_ids"] == [a["id"], b["id"]]
+        assert result["not_found"] == []
+
+        for old_id in (a["id"], b["id"]):
+            row = memory_db.execute(
+                "SELECT superseded_by FROM memory_entries WHERE id = ?", (old_id,)
+            ).fetchone()
+            assert row[0] == result["id"]
+
+        live = memory_db.execute(
+            "SELECT id, content FROM memory_entries "
+            "WHERE superseded_by IS NULL AND superseded_at IS NULL"
+        ).fetchall()
+        assert live == [(result["id"], "Takes strong black coffee")]
+
+    def test_merge_importance_promotes_to_max(self, memory_db: sqlite3.Connection):
+        """The merged entry inherits the highest importance among sources."""
+        a = store_memory(memory_db, "Fact A", "fact", 3)
+        b = store_memory(memory_db, "Fact B", "fact", 8)
+        result = merge_memories(memory_db, [a["id"], b["id"]], "Fact A and B")
+        row = memory_db.execute(
+            "SELECT importance FROM memory_entries WHERE id = ?", (result["id"],)
+        ).fetchone()
+        assert row[0] == 8
+
+    def test_merge_inherits_type_and_scope_from_first(
+        self, memory_db: sqlite3.Connection
+    ):
+        a = store_memory(
+            memory_db, "Uses eu-west-1", "fact", 5, scope="project", project="infra"
+        )
+        b = store_memory(
+            memory_db, "Region is Ireland", "fact", 5, scope="project", project="infra"
+        )
+        result = merge_memories(memory_db, [a["id"], b["id"]], "Runs in eu-west-1")
+        row = memory_db.execute(
+            "SELECT entry_type, scope, project FROM memory_entries WHERE id = ?",
+            (result["id"],),
+        ).fetchone()
+        assert row == ("fact", "project", "infra")
+
+    def test_merge_skips_missing_ids(self, memory_db: sqlite3.Connection):
+        a = store_memory(memory_db, "Real fact", "fact", 5)
+        result = merge_memories(memory_db, [a["id"], 9999], "Consolidated fact")
+        assert result["merged_ids"] == [a["id"]]
+        assert result["not_found"] == [9999]
+
+    def test_merge_all_missing_writes_nothing(self, memory_db: sqlite3.Connection):
+        result = merge_memories(memory_db, [8888, 9999], "Nothing to merge")
+        assert result["action"] == "not_found"
+        count = memory_db.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
+        assert count == 0
 
 
 class TestScopedDedup:

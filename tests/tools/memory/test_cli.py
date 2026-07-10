@@ -277,6 +277,87 @@ class TestCmdSupersede:
             cmd_supersede(args)
 
 
+class TestCmdRetire:
+    def test_retire_success(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_retire
+
+        entry_id = populated_mem_db.execute(
+            "SELECT id FROM memory_entries WHERE content = 'User prefers dark mode'"
+        ).fetchone()[0]
+        cmd_retire(_make_args(id=entry_id))
+        out = capsys.readouterr().out
+        assert "retired" in out.lower()
+
+        row = populated_mem_db.execute(
+            "SELECT superseded_by, superseded_at FROM memory_entries WHERE id = ?",
+            (entry_id,),
+        ).fetchone()
+        assert row[0] is None
+        assert row[1] is not None
+
+    def test_retire_not_found(self, mem_db):
+        from mait_code.tools.memory.cli import cmd_retire
+
+        with pytest.raises(SystemExit):
+            cmd_retire(_make_args(id=99999))
+
+    def test_retire_already_retired_is_noop(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_retire
+
+        entry_id = populated_mem_db.execute(
+            "SELECT id FROM memory_entries LIMIT 1"
+        ).fetchone()[0]
+        cmd_retire(_make_args(id=entry_id))
+        capsys.readouterr()
+        cmd_retire(_make_args(id=entry_id))
+        out = capsys.readouterr().out
+        assert "already retired" in out.lower()
+
+
+class TestCmdMerge:
+    def test_merge_success(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_merge
+
+        ids = [
+            r[0]
+            for r in populated_mem_db.execute(
+                "SELECT id FROM memory_entries ORDER BY id LIMIT 2"
+            ).fetchall()
+        ]
+        cmd_merge(
+            _make_args(ids=ids, content=["One", "merged", "fact"], importance=None)
+        )
+        out = capsys.readouterr().out
+        assert "Merged" in out
+        for old_id in ids:
+            row = populated_mem_db.execute(
+                "SELECT superseded_by FROM memory_entries WHERE id = ?", (old_id,)
+            ).fetchone()
+            assert row[0] is not None
+
+    def test_merge_reports_skipped_ids(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_merge
+
+        real = populated_mem_db.execute(
+            "SELECT id FROM memory_entries LIMIT 1"
+        ).fetchone()[0]
+        cmd_merge(_make_args(ids=[real, 99999], content=["Kept"], importance=None))
+        out = capsys.readouterr().out
+        assert "skipped, not found: #99999" in out
+
+    def test_merge_all_missing_exits(self, mem_db):
+        from mait_code.tools.memory.cli import cmd_merge
+
+        with pytest.raises(SystemExit):
+            cmd_merge(_make_args(ids=[8888, 9999], content=["x"], importance=None))
+
+    def test_merge_empty_content_exits(self, populated_mem_db):
+        from mait_code.tools.memory.cli import cmd_merge
+
+        with pytest.raises(SystemExit):
+            cmd_merge(_make_args(ids=[1], content=[""], importance=None))
+
+
 class TestCmdDelete:
     def test_delete_existing(self, populated_mem_db, capsys):
         from mait_code.tools.memory.cli import cmd_delete
@@ -1499,6 +1580,85 @@ class TestCmdReflectDrain:
             cmd_reflect(args)
         out = capsys.readouterr().out
         assert "maximum drain iterations" in out
+
+
+class TestCmdReflectJson:
+    def test_json_emits_ops(self, capsys):
+        """--json returns structured ops for the skill to apply per-op."""
+        import json as _json
+
+        from mait_code.tools.memory.cli import cmd_reflect
+
+        args = _make_args(
+            days=7,
+            min_new=0,
+            batch_size=50,
+            drain=False,
+            project=None,
+            branch=None,
+            json=True,
+        )
+        ops = [
+            {"op": "retire", "old": "Stale fact", "new": None, "entry_ids": [7]},
+        ]
+
+        def fake_reflect(conn, **kwargs):
+            return {
+                "skipped": False,
+                "insights": ["an insight"],
+                "ops": ops,
+                "stored": 1,
+                "memory_diff": "Proposed MEMORY.md changes:\n\n- Stale fact",
+                "batch_info": {"processed": 2},
+            }
+
+        with (
+            patch("mait_code.tools.memory.cli.connection"),
+            patch("mait_code.tools.memory.reflect.reflect", side_effect=fake_reflect),
+        ):
+            cmd_reflect(args)
+
+        payload = _json.loads(capsys.readouterr().out)
+        assert payload["skipped"] is False
+        assert payload["insights"] == ["an insight"]
+        assert payload["ops"] == ops
+
+    def test_json_reports_skip(self, capsys):
+        import json as _json
+
+        from mait_code.tools.memory.cli import cmd_reflect
+
+        args = _make_args(
+            days=7,
+            min_new=3,
+            batch_size=50,
+            drain=False,
+            project=None,
+            branch=None,
+            json=True,
+        )
+
+        def fake_reflect(conn, **kwargs):
+            return {
+                "skipped": True,
+                "reason": "not enough new observations",
+                "insights": [],
+                "ops": [],
+                "stored": 0,
+                "memory_diff": None,
+                "batch_info": None,
+            }
+
+        with (
+            patch("mait_code.tools.memory.cli.connection"),
+            patch("mait_code.tools.memory.reflect.reflect", side_effect=fake_reflect),
+        ):
+            cmd_reflect(args)
+
+        payload = _json.loads(capsys.readouterr().out)
+        assert payload["skipped"] is True
+        assert payload["reason"] == "not enough new observations"
+        assert payload["ops"] == []
 
 
 # --- main() dispatch ---

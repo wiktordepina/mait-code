@@ -91,7 +91,17 @@ This inserts the new content as a fresh entry (inheriting the old one's type and
 mc-tool-memory list --include-superseded
 ```
 
-This is manually-driven: the companion *suggests* superseding a conflicting entry, and you decide — nothing is replaced automatically.
+Supersede is one of three consolidation moves that leave a row in place but drop it from the live set:
+
+```bash
+mc-tool-memory supersede <old_id> "<new content>"        # replace one entry
+mc-tool-memory merge <id1> <id2> … --into "<consolidated>"  # fold several into one
+mc-tool-memory retire <id>                                # drop a stale entry, no replacement
+```
+
+**Merge** is the N→1 counterpart to supersede: it inserts one consolidated entry (inheriting type/scope from the first row, importance promoted to the max of the sources) and points every merged row's `superseded_by` at it. **Retire** drops a fact that has no successor — it stamps `superseded_at` while leaving `superseded_by` null. A row is **live** (surfaced by default) only when *both* are null; superseded and retired rows are hidden from all default search, listing, and dedup but kept for audit.
+
+This is manually-driven: the companion *suggests* these moves — during [reflection](#tier-2-reflections), or when it spots a conflict — and you decide. Nothing is replaced automatically.
 
 ## Storage: The Memory Database
 
@@ -343,12 +353,12 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 ### How it works
 
 1. Checks the novelty gate — counts unreflected non-insight entries (entries with ID > watermark)
-2. Gathers unreflected `memory_entries` (excluding insights to avoid feedback loops), limited by batch size
+2. Gathers unreflected `memory_entries` (excluding insights to avoid feedback loops), limited by batch size — each is shown to the model with its `#id`
 3. Sends entries + MEMORY.md to Claude Haiku with a synthesis prompt
-4. Parses `INSIGHT:` lines and `MEMORY_UPDATE:` proposals from the response
+4. Parses `INSIGHT:` lines and structured MEMORY.md **operations** from the response — `add`, `rewrite`, `merge`, and `retire`, each optionally naming the backing entry `#id`s to consolidate in the store
 5. Stores insights in memory.db
 6. Advances the watermark to the highest entry ID processed
-7. Presents proposed MEMORY.md changes for user approval
+7. Presents the operations as a before/after diff for **per-op** user approval; approved ops are applied to MEMORY.md and — where they name backing entries — carried through to the store via `supersede`/`merge`/`retire`
 
 ## Tier 3: MEMORY.md (Curated)
 
@@ -358,7 +368,7 @@ mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 
 - ~150 lines maximum (context budget)
 - Organised by topic, not chronologically
-- Updated by the reflection system (`/reflect`) which proposes additions for user approval
+- Updated by the reflection system (`/reflect`), which proposes additions, rewrites, merges, and retirements for per-op user approval — it consolidates the file, not just grows it
 
 **Examples of what belongs here:**
 

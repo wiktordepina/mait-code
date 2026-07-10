@@ -29,6 +29,7 @@ class MemoryStats:
     by_scope: list[tuple[str, int]]
     by_project: list[tuple[str, int]]
     superseded: int
+    retired: int
     embedded: int
     provider: str
     model: str
@@ -79,6 +80,10 @@ def collect_stats(conn: sqlite3.Connection) -> MemoryStats:
     superseded = conn.execute(
         "SELECT COUNT(*) FROM memory_entries WHERE superseded_by IS NOT NULL"
     ).fetchone()[0]
+    retired = conn.execute(
+        "SELECT COUNT(*) FROM memory_entries "
+        "WHERE superseded_by IS NULL AND superseded_at IS NOT NULL"
+    ).fetchone()[0]
 
     try:
         embedded = conn.execute("SELECT COUNT(*) FROM memory_vec").fetchone()[0]
@@ -92,6 +97,7 @@ def collect_stats(conn: sqlite3.Connection) -> MemoryStats:
         by_scope=[(s, n) for s, n in by_scope],
         by_project=[(p, n) for p, n in by_project],
         superseded=superseded,
+        retired=retired,
         embedded=embedded,
         provider=_embedding_provider_name(),
         model=EMBEDDING_MODEL,

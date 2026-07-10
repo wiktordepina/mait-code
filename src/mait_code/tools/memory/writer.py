@@ -11,6 +11,7 @@ from difflib import SequenceMatcher
 
 from mait_code import config
 from mait_code.context import canonical_project
+from mait_code.tools.memory.db import LIVE_ENTRY_SQL
 from mait_code.tools.memory.embeddings import embed_text, serialize_f32
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ def _fts_candidates(
                 f"""SELECT m.id, m.content FROM memory_entries m
                    JOIN memory_entries_fts f ON m.id = f.rowid
                    WHERE memory_entries_fts MATCH ? AND m.entry_type = ?
-                   AND m.superseded_by IS NULL
+                   AND {LIVE_ENTRY_SQL}
                    {proj_cond}
                    LIMIT 20""",
                 [fts_query, entry_type, *proj_params],
@@ -78,7 +79,7 @@ def _fts_candidates(
         else:
             cursor = conn.execute(
                 f"""SELECT m.id, m.content FROM memory_entries m
-                    WHERE m.entry_type = ? AND m.superseded_by IS NULL
+                    WHERE m.entry_type = ? AND {LIVE_ENTRY_SQL}
                     {proj_cond} LIMIT 20""",
                 [entry_type, *proj_params],
             )
@@ -89,7 +90,7 @@ def _fts_candidates(
         cursor = conn.execute(
             f"""SELECT m.id, m.content FROM memory_entries m
                WHERE m.entry_type = ? AND m.content LIKE ?
-               AND m.superseded_by IS NULL
+               AND {LIVE_ENTRY_SQL}
                {proj_cond}
                LIMIT 20""",
             [entry_type, f"%{first_words}%", *proj_params],
@@ -118,12 +119,12 @@ def _vector_candidates(
 
     try:
         cursor = conn.execute(
-            """SELECT m.id, m.content, v.distance, m.project
+            f"""SELECT m.id, m.content, v.distance, m.project
                FROM memory_vec v
                JOIN memory_entries m ON m.id = v.rowid
                WHERE v.embedding MATCH ? AND k = 30
                  AND m.entry_type = ?
-                 AND m.superseded_by IS NULL""",
+                 AND {LIVE_ENTRY_SQL}""",
             (serialize_f32(vec), entry_type),
         )
         results = []
@@ -389,6 +390,129 @@ def supersede_memory(
         "project": project,
         "branch": branch,
     }
+
+
+def merge_memories(
+    conn: sqlite3.Connection,
+    old_ids: list[int],
+    content: str,
+    *,
+    importance: int | None = None,
+) -> dict:
+    """Fold several memory entries into one consolidated entry.
+
+    Inserts ``content`` as a single fresh entry, then supersedes every existing
+    row in ``old_ids`` by pointing each ``superseded_by`` at the new id. This is
+    the N→1 counterpart to :func:`supersede_memory`: use it when reflection
+    finds two or more overlapping facts that should read as one.
+
+    The new entry inherits type, class, and scope (project/branch) from the
+    first *existing* row in ``old_ids``. Its importance defaults to the highest
+    importance among the merged rows — a merge promotes, it does not dilute —
+    unless overridden. Ids that don't exist are skipped and reported back in
+    ``not_found``; the merge proceeds on whatever remains.
+
+    Args:
+        conn: Open memory database connection.
+        old_ids: Ids of the entries being merged. Order matters only in that
+            the first existing id donates type/class/scope.
+        content: The consolidated content for the new entry.
+        importance: Optional importance for the new entry (1-10, clamped).
+            Defaults to the maximum importance among the merged rows.
+
+    Returns:
+        On success, a dict with ``action="merged"``, ``merged_ids`` (the ids
+        actually superseded), ``not_found`` (ids that didn't exist), ``id``
+        (the new entry), ``content``, ``scope``, ``project``, ``branch``. If
+        none of ``old_ids`` exist, ``{"action": "not_found", "old_ids": ...}``.
+    """
+    rows: dict[int, tuple] = {}
+    for old_id in dict.fromkeys(old_ids):  # de-dup, preserve caller order
+        row = conn.execute(
+            """SELECT entry_type, importance, memory_class, scope, project, branch
+               FROM memory_entries WHERE id = ?""",
+            (old_id,),
+        ).fetchone()
+        if row is not None:
+            rows[old_id] = row
+
+    merged_ids = list(rows)
+    not_found = [i for i in dict.fromkeys(old_ids) if i not in rows]
+    if not merged_ids:
+        return {"action": "not_found", "old_ids": old_ids}
+
+    entry_type, _, memory_class, scope, project, branch = rows[merged_ids[0]]
+    if importance is None:
+        new_importance = max(rows[i][1] for i in merged_ids)
+    else:
+        new_importance = max(1, min(10, importance))
+
+    cursor = conn.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, scope, project, branch)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (content, entry_type, new_importance, memory_class, scope, project, branch),
+    )
+    new_id = cursor.lastrowid
+    assert new_id is not None  # lastrowid is populated after a successful INSERT
+    conn.executemany(
+        """UPDATE memory_entries
+           SET superseded_by = ?, superseded_at = CURRENT_TIMESTAMP
+           WHERE id = ?""",
+        [(new_id, i) for i in merged_ids],
+    )
+    conn.commit()
+    _store_embedding(conn, new_id, content)
+
+    return {
+        "action": "merged",
+        "merged_ids": merged_ids,
+        "not_found": not_found,
+        "id": new_id,
+        "content": content,
+        "scope": scope,
+        "project": project,
+        "branch": branch,
+    }
+
+
+def retire_memory(conn: sqlite3.Connection, entry_id: int) -> dict:
+    """Retire a memory entry — drop it with no replacement.
+
+    Stamps ``superseded_at`` while leaving ``superseded_by`` NULL. That pair is
+    the *retired* marker: the row is hidden from default surfacing (see
+    :data:`~mait_code.tools.memory.db.LIVE_ENTRY_SQL`) but kept for
+    auditability. Use this when a fact is stale or contradicted and has **no**
+    successor; reach for :func:`supersede_memory` when there is a replacement.
+
+    Args:
+        conn: Open memory database connection.
+        entry_id: Id of the entry to retire.
+
+    Returns:
+        ``{"action": "retired", "id": entry_id}`` on success. If the row does
+        not exist, ``{"action": "not_found", "id": entry_id}``. If it is already
+        superseded or retired, ``{"action": "already_superseded" |
+        "already_retired", "id": entry_id}`` and nothing is written.
+    """
+    row = conn.execute(
+        "SELECT superseded_by, superseded_at FROM memory_entries WHERE id = ?",
+        (entry_id,),
+    ).fetchone()
+    if row is None:
+        return {"action": "not_found", "id": entry_id}
+    superseded_by, superseded_at = row
+    if superseded_by is not None:
+        return {"action": "already_superseded", "id": entry_id}
+    if superseded_at is not None:
+        return {"action": "already_retired", "id": entry_id}
+
+    conn.execute(
+        "UPDATE memory_entries SET superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (entry_id,),
+    )
+    conn.commit()
+    return {"action": "retired", "id": entry_id}
 
 
 def _store_embedding(conn: sqlite3.Connection, entry_id: int, content: str) -> None:

@@ -74,6 +74,8 @@ from mait_code.tools.memory.search import (
 from mait_code.tools.memory.stats import MemoryStats, collect_stats
 from mait_code.tools.memory.writer import (
     find_duplicate,
+    merge_memories,
+    retire_memory,
     store_memory,
     supersede_memory,
 )
@@ -122,6 +124,8 @@ __all__ = [
     "upsert_relationship",
     # Writer
     "find_duplicate",
+    "merge_memories",
+    "retire_memory",
     "store_memory",
     "supersede_memory",
     # Stats

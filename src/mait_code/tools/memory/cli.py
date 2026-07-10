@@ -34,6 +34,8 @@ from mait_code.tools.memory.search import (
     vector_search_entries,
 )
 from mait_code.tools.memory.writer import VALID_ENTRY_TYPES
+from mait_code.tools.memory.writer import merge_memories as _merge_memories
+from mait_code.tools.memory.writer import retire_memory as _retire_memory
 from mait_code.tools.memory.writer import store_memory as _store_memory
 from mait_code.tools.memory.writer import supersede_memory as _supersede_memory
 
@@ -235,6 +237,47 @@ def cmd_supersede(args):
         )
 
 
+def cmd_retire(args):
+    with connection() as conn:
+        result = _retire_memory(conn, args.id)
+        action = result["action"]
+        if action == "not_found":
+            logger.warning("memory #%d not found", args.id)
+            print(f"Error: memory #{args.id} not found.", file=sys.stderr)
+            sys.exit(1)
+        if action in ("already_superseded", "already_retired"):
+            state = "superseded" if action == "already_superseded" else "retired"
+            print(f"Memory #{args.id} is already {state}; nothing to do.")
+            return
+        print(f"Memory #{args.id} retired (kept for audit, hidden from surfacing).")
+
+
+def cmd_merge(args):
+    content = " ".join(args.content)
+    if not content.strip():
+        logger.warning("content cannot be empty")
+        print("Error: content cannot be empty.", file=sys.stderr)
+        sys.exit(1)
+
+    with connection() as conn:
+        result = _merge_memories(
+            conn,
+            args.ids,
+            content.strip(),
+            importance=args.importance,
+        )
+        if result["action"] == "not_found":
+            ids = ", ".join(f"#{i}" for i in result["old_ids"])
+            logger.warning("none of the entries to merge exist: %s", ids)
+            print(f"Error: none of {ids} exist.", file=sys.stderr)
+            sys.exit(1)
+        merged = ", ".join(f"#{i}" for i in result["merged_ids"])
+        print(f"Merged {merged} into #{result['id']}: {content[:80]}")
+        if result["not_found"]:
+            missing = ", ".join(f"#{i}" for i in result["not_found"])
+            print(f"  (skipped, not found: {missing})")
+
+
 def cmd_list(args):
     ctx = _resolve_context(args)
 
@@ -306,6 +349,8 @@ def cmd_stats(_args):
 
     if stats.superseded:
         print(f"\nSuperseded (hidden from default surfacing): {stats.superseded}")
+    if stats.retired:
+        print(f"Retired (hidden from default surfacing): {stats.retired}")
 
     available = "yes" if is_available() else "no"
     print(
@@ -733,12 +778,17 @@ def cmd_restore(args):
 
 def cmd_reflect(args):
     """Synthesise recent observations into insights, update MEMORY.md."""
+    import json
+
     from mait_code.tools.memory.reflect import reflect
 
+    as_json = getattr(args, "json", False)
     ctx = _resolve_context(args)
     total_insights = []
+    total_ops: list[dict] = []
     total_stored = 0
     last_memory_diff = None
+    skip_reason = None
     iterations = 0
     max_iterations = 20
 
@@ -756,11 +806,11 @@ def cmd_reflect(args):
 
             if result["skipped"]:
                 if iterations == 1:
-                    reason = result.get("reason", "not enough new signal")
-                    print(f"Reflection skipped — {reason}.")
+                    skip_reason = result.get("reason", "not enough new signal")
                 break
 
             total_insights.extend(result["insights"])
+            total_ops.extend(result.get("ops", []))
             total_stored += result["stored"]
             if result["memory_diff"]:
                 last_memory_diff = result["memory_diff"]
@@ -773,18 +823,39 @@ def cmd_reflect(args):
             if processed < args.batch_size:
                 break
             if iterations >= max_iterations:
-                print(f"Reached maximum drain iterations ({max_iterations}).")
+                if not as_json:
+                    print(f"Reached maximum drain iterations ({max_iterations}).")
                 break
 
-    if not total_insights:
+    if as_json:
+        print(
+            json.dumps(
+                {
+                    "skipped": skip_reason is not None,
+                    "reason": skip_reason,
+                    "insights": total_insights,
+                    "ops": total_ops,
+                    "stored": total_stored,
+                },
+                indent=2,
+            )
+        )
+        return
+
+    if skip_reason is not None:
+        print(f"Reflection skipped — {skip_reason}.")
+        return
+
+    if not total_insights and not total_ops:
         if iterations > 1:
             print("Drain complete — no more unreflected entries.")
         return
 
-    print(f"Generated {len(total_insights)} insights:\n")
-    for i, insight in enumerate(total_insights, 1):
-        print(f"  {i}. {insight}")
-    print(f"\nStored {total_stored} insights to memory database.")
+    if total_insights:
+        print(f"Generated {len(total_insights)} insights:\n")
+        for i, insight in enumerate(total_insights, 1):
+            print(f"  {i}. {insight}")
+        print(f"\nStored {total_stored} insights to memory database.")
 
     if last_memory_diff:
         print(f"\n{last_memory_diff}")
@@ -911,6 +982,41 @@ def main():
     )
     p_supersede.set_defaults(func=cmd_supersede)
 
+    # retire
+    p_retire = sub.add_parser(
+        "retire",
+        help="Drop a stale entry with no replacement (keeps it for audit)",
+    )
+    p_retire.add_argument("id", type=int, help="ID of the entry to retire")
+    p_retire.set_defaults(func=cmd_retire)
+
+    # merge
+    p_merge = sub.add_parser(
+        "merge",
+        help="Fold several entries into one consolidated entry",
+    )
+    p_merge.add_argument(
+        "ids",
+        type=int,
+        nargs="+",
+        help="IDs of the entries to merge (space-separated)",
+    )
+    p_merge.add_argument(
+        "--into",
+        dest="content",
+        nargs="+",
+        required=True,
+        help="Consolidated content for the new entry",
+    )
+    p_merge.add_argument(
+        "--importance",
+        type=int,
+        default=None,
+        choices=range(1, 11),
+        help="Importance for the new entry (default: max among merged rows)",
+    )
+    p_merge.set_defaults(func=cmd_merge)
+
     # delete
     p_delete = sub.add_parser("delete", help="Delete a memory by ID")
     p_delete.add_argument("id", type=int, help="Memory entry ID")
@@ -978,6 +1084,11 @@ def main():
         "--drain",
         action="store_true",
         help="Loop until all unreflected entries are processed",
+    )
+    p_reflect.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit insights and structured MEMORY.md operations as JSON",
     )
     _add_scope_args(p_reflect)
     p_reflect.set_defaults(func=cmd_reflect)
