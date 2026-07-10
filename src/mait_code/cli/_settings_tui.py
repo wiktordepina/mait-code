@@ -127,6 +127,8 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "dedup-conflict-threshold",
             "scope-boost-global",
             "scope-boost-cross-project",
+            "review-threshold",
+            "review-min-importance",
         ),
     ),
     (

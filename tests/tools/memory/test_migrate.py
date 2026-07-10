@@ -4,7 +4,7 @@ import sqlite3
 
 import pytest
 
-from mait_code.tools.memory.migrate import ensure_schema
+from mait_code.tools.memory.migrate import _migrate_13_reviewed_at, ensure_schema
 
 
 def test_ensure_schema_creates_tables(memory_db: sqlite3.Connection):
@@ -16,6 +16,39 @@ def test_ensure_schema_creates_tables(memory_db: sqlite3.Connection):
 
     assert "memory_entries" in table_names
     assert "schema_version" in table_names
+
+
+def test_reviewed_at_column_present(memory_db: sqlite3.Connection):
+    """Migration 13 adds the reviewed_at anchor column."""
+    cols = {r[1] for r in memory_db.execute("PRAGMA table_info(memory_entries)")}
+    assert "reviewed_at" in cols
+
+
+def test_migration_13_backfills_reviewed_at_to_created_at():
+    """A row that predates the column is backfilled to its created_at."""
+    conn = sqlite3.connect(":memory:")
+    try:
+        # Minimal pre-13 shape: the migration only touches created_at/reviewed_at.
+        conn.execute(
+            "CREATE TABLE memory_entries "
+            "(id INTEGER PRIMARY KEY, content TEXT, created_at DATETIME)"
+        )
+        conn.execute(
+            "INSERT INTO memory_entries (content, created_at) "
+            "VALUES ('old row', '2025-01-01T00:00:00+00:00')"
+        )
+        conn.commit()
+
+        _migrate_13_reviewed_at(conn)
+
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(memory_entries)")}
+        assert "reviewed_at" in cols
+        created_at, reviewed_at = conn.execute(
+            "SELECT created_at, reviewed_at FROM memory_entries WHERE content = 'old row'"
+        ).fetchone()
+        assert reviewed_at == created_at
+    finally:
+        conn.close()
 
 
 def test_ensure_schema_creates_fts(memory_db: sqlite3.Connection):
@@ -40,7 +73,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 12  # Exactly 12 migrations
+    assert versions == 13  # Exactly 13 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -49,9 +82,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 12
+    assert len(rows) == 13
     assert rows[0][0] == 1
-    assert rows[-1][0] == 12
+    assert rows[-1][0] == 13
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -131,6 +164,7 @@ def test_memory_entries_columns(memory_db: sqlite3.Connection):
         "branch",
         "superseded_by",
         "superseded_at",
+        "reviewed_at",
     }
     assert expected == columns
 
@@ -346,7 +380,9 @@ def _rewind_to_version_11_with_legacy_rows(conn: sqlite3.Connection) -> None:
             (ids["box"], ids["widget"], "connected_to", "collides on remap"),
         ],
     )
-    conn.execute("DELETE FROM schema_version WHERE version = 12")
+    # Rewind past 12 so ensure_schema re-applies migration 12. Migration 13 is
+    # idempotent, so re-running it alongside 12 is a no-op on the column.
+    conn.execute("DELETE FROM schema_version WHERE version >= 12")
     conn.commit()
 
 

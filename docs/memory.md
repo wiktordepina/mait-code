@@ -103,6 +103,20 @@ mc-tool-memory retire <id>                                # drop a stale entry, 
 
 This is manually-driven: the companion *suggests* these moves — during [reflection](#tier-2-reflections), or when it spots a conflict — and you decide. Nothing is replaced automatically.
 
+### Review: keeping curated memory fresh
+
+Left alone, an important fact can quietly go stale — still stored, never re-checked. **Review resurfacing** surfaces important-but-ageing memories for a quick "still true? refine? promote? retire?" pass.
+
+It reuses the same per-class exponential decay that ranks retrieval (see [Recency](#recency)), but measured from a memory's `reviewed_at` anchor rather than `created_at`. A memory is **due for review** when its recall probability has fallen below `review-threshold` (default `0.5` — one half-life since it was last reviewed) *and* its `importance` is at least `review-min-importance` (default `5`, so trivia decays without nagging).
+
+```bash
+mc-tool-memory review                 # list memories due for review, most-decayed first
+mc-tool-memory review --json          # same, as structured JSON
+mc-tool-memory reviewed <id>          # mark one reviewed — stamps reviewed_at = now, resetting its curve
+```
+
+Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (`mait-code`) shows a **Due for review** count under Memory. This is a nudge, not an alarm: nothing is changed for you.
+
 ## Storage: The Memory Database
 
 All structured data lives in a single SQLite file (`memory.db`) with three search layers:
@@ -121,6 +135,7 @@ The core table stores every observation with metadata:
 | `project` | Project identifier (null for global scope) |
 | `branch` | Git branch (set only for branch scope) |
 | `created_at` | Timestamp, refreshed on deduplication |
+| `reviewed_at` | When the memory was last reviewed — the anchor for [review resurfacing](#review-keeping-curated-memory-fresh) (null = never, treated as `created_at`) |
 | `superseded_by` | Id of the entry that replaced this one (null = current) |
 | `superseded_at` | When it was superseded (null = current) |
 
@@ -310,6 +325,8 @@ The scoring and deduplication knobs are exposed as **advanced** settings (commen
 | `dedup-conflict-threshold` | `0.60` | 0.0–1.0 | Lower edge of the contradiction band. Too low floods every write with spurious conflicts; too high lets real contradictions slip through as separate facts. |
 | `scope-boost-global` | `0.7` | 0.0–1.0 | Relevance multiplier for global memories. |
 | `scope-boost-cross-project` | `0.3` | 0.0–1.0 | Relevance multiplier across project boundaries. |
+| `review-threshold` | `0.5` | 0.0–1.0 | Recall probability below which a memory is [due for review](#review-keeping-curated-memory-fresh). `0.5` = one half-life since last review; lower surfaces only more-decayed items. |
+| `review-min-importance` | `5` | 1–10 | Importance floor for review resurfacing; memories below it decay without nagging. |
 
 ## Reminders
 

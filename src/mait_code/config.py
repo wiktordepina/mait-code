@@ -438,6 +438,26 @@ SETTINGS: tuple[Setting, ...] = (
         help="String-similarity threshold above which a memory is a duplicate.",
     ),
     Setting(
+        "review-threshold",
+        "MAIT_CODE_REVIEW_THRESHOLD",
+        "0.5",
+        kind="float",
+        advanced=True,
+        validate=_unit_interval,
+        help="Recall probability below which a memory is surfaced for review "
+        "(0.5 = one half-life since last review).",
+    ),
+    Setting(
+        "review-min-importance",
+        "MAIT_CODE_REVIEW_MIN_IMPORTANCE",
+        "5",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Minimum importance (1-10) for a memory to be surfaced for review; "
+        "lower-value memories decay without nagging.",
+    ),
+    Setting(
         "dedup-vector-threshold",
         "MAIT_CODE_DEDUP_VECTOR_THRESHOLD",
         "0.92",

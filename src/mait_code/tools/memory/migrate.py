@@ -232,6 +232,36 @@ def _migrate_12_canonical_graph_types(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migrate_13_reviewed_at(conn: sqlite3.Connection) -> None:
+    """Add the ``reviewed_at`` anchor for memory review / resurfacing.
+
+    ``reviewed_at`` is the timestamp the resurfacing decay curve resets to on
+    review (see :mod:`mait_code.tools.memory.review`). It is distinct from
+    ``created_at``: reviewing a memory stamps ``reviewed_at`` without touching
+    when it was first stored.
+
+    Existing rows are backfilled to ``created_at`` — the best available proxy
+    for "last engaged with". The column is left nullable (SQLite forbids a
+    ``CURRENT_TIMESTAMP`` default on ``ADD COLUMN``); rows inserted afterwards
+    carry NULL until first review, and readers treat NULL as ``created_at`` via
+    ``COALESCE``.
+
+    The ``ADD COLUMN`` is guarded so the body is safe to re-run (SQLite has no
+    ``ADD COLUMN IF NOT EXISTS``); the backfill and index are already
+    idempotent.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(memory_entries)")}
+    if "reviewed_at" not in cols:
+        conn.execute("ALTER TABLE memory_entries ADD COLUMN reviewed_at DATETIME")
+    conn.execute(
+        "UPDATE memory_entries SET reviewed_at = created_at WHERE reviewed_at IS NULL"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_memory_entries_reviewed_at "
+        "ON memory_entries(reviewed_at)"
+    )
+
+
 MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
     (
         1,
@@ -376,6 +406,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
         12,
         "Remap legacy entity and relationship types to canonical vocabularies",
         _migrate_12_canonical_graph_types,
+    ),
+    (
+        13,
+        "Add reviewed_at anchor for memory review / resurfacing",
+        _migrate_13_reviewed_at,
     ),
 ]
 

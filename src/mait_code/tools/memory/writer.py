@@ -515,6 +515,36 @@ def retire_memory(conn: sqlite3.Connection, entry_id: int) -> dict:
     return {"action": "retired", "id": entry_id}
 
 
+def mark_reviewed(conn: sqlite3.Connection, entry_id: int) -> dict:
+    """Stamp ``reviewed_at = now`` to reset a memory's resurfacing decay curve.
+
+    Reviewing an entry (confirming it's still true, or refining/retiring it)
+    marks it engaged-with so it drops out of the due-for-review set until a
+    fresh half-life elapses. See :mod:`mait_code.tools.memory.review`. Content
+    and ``created_at`` are untouched — only the review anchor moves.
+
+    Args:
+        conn: Open memory database connection.
+        entry_id: Id of the entry to mark reviewed.
+
+    Returns:
+        ``{"action": "reviewed", "id": entry_id}`` on success, or
+        ``{"action": "not_found", "id": entry_id}`` if the row does not exist.
+    """
+    row = conn.execute(
+        "SELECT id FROM memory_entries WHERE id = ?", (entry_id,)
+    ).fetchone()
+    if row is None:
+        return {"action": "not_found", "id": entry_id}
+
+    conn.execute(
+        "UPDATE memory_entries SET reviewed_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (entry_id,),
+    )
+    conn.commit()
+    return {"action": "reviewed", "id": entry_id}
+
+
 def _store_embedding(conn: sqlite3.Connection, entry_id: int, content: str) -> None:
     """Compute and store the embedding for a memory entry; never raises."""
     try:

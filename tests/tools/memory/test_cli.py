@@ -1711,3 +1711,79 @@ class TestMain:
         )
         main()
         assert "dark mode" in capsys.readouterr().out
+
+
+def _insert_stale(conn, content="an ageing decision", importance=8):
+    """Insert a long-since-reviewed semantic memory so it is due for review."""
+    conn.execute(
+        """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at, reviewed_at)
+           VALUES (?, 'fact', ?, 'semantic', ?, ?)""",
+        (content, importance, "2024-01-01T00:00:00+00:00", "2024-01-01T00:00:00+00:00"),
+    )
+    conn.commit()
+
+
+class TestCmdReview:
+    def test_empty_when_fresh(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_review
+
+        cmd_review(
+            _make_args(limit=10, json=False, project=None, branch=None, scope="all")
+        )
+        assert "Nothing due for review" in capsys.readouterr().out
+
+    def test_lists_due_items(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_review
+
+        _insert_stale(mem_db)
+        cmd_review(
+            _make_args(limit=10, json=False, project=None, branch=None, scope="all")
+        )
+        out = capsys.readouterr().out
+        assert "due for review" in out
+        assert "an ageing decision" in out
+
+    def test_json_output(self, mem_db, capsys):
+        import json
+
+        from mait_code.tools.memory.cli import cmd_review
+
+        _insert_stale(mem_db)
+        cmd_review(
+            _make_args(limit=10, json=True, project=None, branch=None, scope="all")
+        )
+        payload = json.loads(capsys.readouterr().out)
+        assert len(payload["due"]) == 1
+        item = payload["due"][0]
+        assert item["content"] == "an ageing decision"
+        assert 0.0 <= item["recall"] < 0.5
+
+    def test_low_importance_excluded(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_review
+
+        _insert_stale(mem_db, content="trivial and stale", importance=2)
+        cmd_review(
+            _make_args(limit=10, json=False, project=None, branch=None, scope="all")
+        )
+        assert "Nothing due for review" in capsys.readouterr().out
+
+
+class TestCmdReviewed:
+    def test_marks_reviewed(self, mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_review, cmd_reviewed
+
+        _insert_stale(mem_db)
+        cmd_reviewed(_make_args(id=1))
+        assert "marked reviewed" in capsys.readouterr().out
+        # It drops out of the due set afterwards.
+        cmd_review(
+            _make_args(limit=10, json=False, project=None, branch=None, scope="all")
+        )
+        assert "Nothing due for review" in capsys.readouterr().out
+
+    def test_missing_id_exits(self, mem_db):
+        from mait_code.tools.memory.cli import cmd_reviewed
+
+        with pytest.raises(SystemExit):
+            cmd_reviewed(_make_args(id=9999))
