@@ -13,6 +13,7 @@ from mait_code.tools.memory.writer import (
     VALID_ENTRY_TYPES,
     VECTOR_SIMILARITY_THRESHOLD,
     find_duplicate,
+    mark_reviewed,
     merge_memories,
     retire_memory,
     store_memory,
@@ -833,3 +834,40 @@ class TestEmbeddingFailureVisibility:
         assert any(
             "reindex" in r.message and r.levelname == "WARNING" for r in caplog.records
         )
+
+
+class TestMarkReviewed:
+    def test_stamps_reviewed_at(self, memory_db: sqlite3.Connection):
+        entry = store_memory(memory_db, "A fact to review", "fact", 5)
+        before = memory_db.execute(
+            "SELECT reviewed_at FROM memory_entries WHERE id = ?", (entry["id"],)
+        ).fetchone()[0]
+
+        result = mark_reviewed(memory_db, entry["id"])
+        assert result == {"action": "reviewed", "id": entry["id"]}
+
+        after = memory_db.execute(
+            "SELECT reviewed_at FROM memory_entries WHERE id = ?", (entry["id"],)
+        ).fetchone()[0]
+        assert after is not None
+        # A freshly stored row has no reviewed_at until reviewed.
+        assert before is None
+
+    def test_missing_id(self, memory_db: sqlite3.Connection):
+        assert mark_reviewed(memory_db, 9999) == {"action": "not_found", "id": 9999}
+
+    def test_does_not_touch_content_or_created_at(self, memory_db: sqlite3.Connection):
+        entry = store_memory(memory_db, "Immutable body", "fact", 5)
+        content, created_at = memory_db.execute(
+            "SELECT content, created_at FROM memory_entries WHERE id = ?",
+            (entry["id"],),
+        ).fetchone()
+
+        mark_reviewed(memory_db, entry["id"])
+
+        content_after, created_after = memory_db.execute(
+            "SELECT content, created_at FROM memory_entries WHERE id = ?",
+            (entry["id"],),
+        ).fetchone()
+        assert content_after == content
+        assert created_after == created_at

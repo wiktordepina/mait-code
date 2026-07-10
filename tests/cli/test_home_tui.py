@@ -216,6 +216,61 @@ def test_memory_by_type_detail() -> None:
     assert "fact (2)" in text and "decision (1)" in text
 
 
+def _seed_memory_reviewed_at(
+    content: str, reviewed_at: str, *, importance: int = 8
+) -> None:
+    """Seed a semantic memory with an explicit review anchor.
+
+    ``recency_score`` uses the real wall-clock, so tests pass absolute
+    timestamps (far-past → robustly due, now → robustly fresh) to stay
+    time-independent.
+    """
+    from mait_code.tools.memory.db import get_connection
+
+    conn = get_connection()
+    try:
+        conn.execute(
+            """INSERT INTO memory_entries
+               (content, entry_type, importance, memory_class, created_at, reviewed_at)
+               VALUES (?, 'fact', ?, 'semantic', ?, ?)""",
+            (content, importance, reviewed_at, reviewed_at),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_memory_review_detail_lists_due_items() -> None:
+    _seed_memory_reviewed_at(
+        "an ageing but important decision", "2020-01-01T00:00:00+00:00"
+    )
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "memory:review")
+
+    text = _run(scenario)
+    assert "Due for review" in text
+    assert "ageing but important decision" in text
+
+
+def test_memory_review_detail_empty_when_fresh() -> None:
+    _seed_memory_reviewed_at(
+        "a freshly reviewed fact", datetime.now(timezone.utc).isoformat()
+    )
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "memory:review")
+
+    text = _run(scenario)
+    assert "Nothing due" in text
+
+
 def test_memory_reflection_detail() -> None:
     _seed_memory(("a", "fact"))
 

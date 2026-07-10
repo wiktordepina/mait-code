@@ -33,7 +33,9 @@ from mait_code.tools.memory.search import (
     search_entries,
     vector_search_entries,
 )
+from mait_code.tools.memory.review import due_for_review
 from mait_code.tools.memory.writer import VALID_ENTRY_TYPES
+from mait_code.tools.memory.writer import mark_reviewed as _mark_reviewed
 from mait_code.tools.memory.writer import merge_memories as _merge_memories
 from mait_code.tools.memory.writer import retire_memory as _retire_memory
 from mait_code.tools.memory.writer import store_memory as _store_memory
@@ -313,6 +315,76 @@ def cmd_list(args):
             )
             print(f"  {r['content'][:120]}")
             print()
+
+
+def cmd_review(args):
+    """List memories whose recall has decayed since they were last reviewed."""
+    import json
+
+    as_json = getattr(args, "json", False)
+    ctx = _resolve_context(args)
+
+    with connection() as conn:
+        due = due_for_review(
+            conn,
+            limit=args.limit,
+            project=ctx["project"],
+            branch=ctx["branch"],
+        )
+
+    if as_json:
+        print(
+            json.dumps(
+                {
+                    "due": [
+                        {
+                            "id": r["id"],
+                            "content": r["content"],
+                            "entry_type": r["entry_type"],
+                            "importance": r["importance"],
+                            "memory_class": r["memory_class"],
+                            "scope": _format_scope_label(r),
+                            "reviewed_at": r["reviewed_at"],
+                            "recall": round(r["recall"], 4),
+                        }
+                        for r in due
+                    ],
+                },
+                indent=2,
+            )
+        )
+        return
+
+    if not due:
+        print("Nothing due for review — curated memory is fresh.")
+        return
+
+    print(f"{len(due)} memor{'y' if len(due) == 1 else 'ies'} due for review:\n")
+    for r in due:
+        recall_pct = round(r["recall"] * 100)
+        print(
+            f"[#{r['id']}] ({r['entry_type']}, importance={r['importance']}, "
+            f"class={r['memory_class']}, recall={recall_pct}%) "
+            f"last reviewed {r['reviewed_at'][:10]}"
+        )
+        print(f"  {r['content'][:120]}")
+        print()
+    print(
+        "Reviewed one? `mc-tool-memory reviewed <id>` resets its curve; "
+        "or refine/supersede/retire it."
+    )
+
+
+def cmd_reviewed(args):
+    """Mark a memory reviewed, resetting its resurfacing decay curve."""
+    with connection() as conn:
+        result = _mark_reviewed(conn, args.id)
+
+    if result["action"] == "not_found":
+        logger.warning("memory #%d not found", args.id)
+        print(f"Error: memory #{args.id} not found.", file=sys.stderr)
+        sys.exit(1)
+    print(f"Memory #{args.id} marked reviewed; its decay curve is reset.")
 
 
 def cmd_delete(args):
@@ -965,6 +1037,28 @@ def main():
     )
     _add_scope_args(p_list)
     p_list.set_defaults(func=cmd_list)
+
+    # review
+    p_review = sub.add_parser(
+        "review",
+        help="List memories due for review (recall decayed since last review)",
+    )
+    p_review.add_argument("--limit", type=int, default=10)
+    p_review.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit due items as JSON",
+    )
+    _add_scope_args(p_review)
+    p_review.set_defaults(func=cmd_review)
+
+    # reviewed
+    p_reviewed = sub.add_parser(
+        "reviewed",
+        help="Mark a memory reviewed, resetting its resurfacing decay curve",
+    )
+    p_reviewed.add_argument("id", type=int, help="Memory entry ID")
+    p_reviewed.set_defaults(func=cmd_reviewed)
 
     # supersede
     p_supersede = sub.add_parser(

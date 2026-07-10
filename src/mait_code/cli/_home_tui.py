@@ -164,6 +164,7 @@ class _Badges:
         self.mem_types = 0
         self.mem_pct = 0
         self.mem_unreflected = 0
+        self.mem_due = 0
         self.rem_overdue = 0
         self.rem_upcoming = 0
         self.inbox = 0
@@ -196,11 +197,13 @@ class _Badges:
     def _collect_memory(self) -> None:
         try:
             from mait_code.tools.memory.db import get_connection
+            from mait_code.tools.memory.review import due_for_review
             from mait_code.tools.memory.stats import collect_stats
 
             conn = get_connection()
             try:
                 stats = collect_stats(conn)
+                mem_due = len(due_for_review(conn))
             finally:
                 conn.close()
         except Exception:  # noqa: BLE001
@@ -209,6 +212,7 @@ class _Badges:
         self.mem_types = len(stats.by_type)
         self.mem_pct = stats.embedded_pct
         self.mem_unreflected = stats.unreflected
+        self.mem_due = mem_due
 
     def _collect_reminders(self) -> None:
         try:
@@ -332,6 +336,16 @@ class HomeApp(MaitApp):
             memory, "Open memory browser", NodeSpec("memory", HomeTarget.MEMORY)
         )
         leaf(memory, "By type", NodeSpec("memory:by_type"))
+        # "Due for review" carries a warn-styled count when memories have
+        # decayed past the resurfacing threshold — the nudge to keep curated
+        # memory fresh (see mait_code.tools.memory.review). The trailing gap
+        # rides the name run, since the tree trims a styled run's leading space.
+        if b.mem_due:
+            review_label = Text("Due for review  ")
+            review_label.append(str(b.mem_due), style=warn)
+            memory.add_leaf(review_label, data=NodeSpec("memory:review"))
+        else:
+            leaf(memory, "Due for review", NodeSpec("memory:review"))
         leaf(memory, "Embedding coverage", NodeSpec("memory:embedding"))
         leaf(memory, "Reflection status", NodeSpec("memory:reflection"))
         # Sits under Reflection status on purpose: the observations browser is
@@ -387,6 +401,7 @@ class HomeApp(MaitApp):
             "board:by_project": self._detail_board_by_project,
             "memory": self._detail_memory,
             "memory:by_type": self._detail_memory_by_type,
+            "memory:review": self._detail_memory_review,
             "memory:embedding": self._detail_memory_embedding,
             "memory:reflection": self._detail_memory_reflection,
             "reminders": self._detail_reminders,
@@ -619,6 +634,46 @@ class HomeApp(MaitApp):
                 widgets.append(Label(line))
             if len(group) > 5:
                 widgets.append(Label(Text(f"… and {len(group) - 5} more", style="dim")))
+        return widgets
+
+    def _detail_memory_review(self) -> list[Widget]:
+        from mait_code.tools.memory.db import get_connection
+        from mait_code.tools.memory.review import due_for_review
+
+        conn = get_connection()
+        try:
+            due = due_for_review(conn, limit=12)
+        finally:
+            conn.close()
+
+        if not due:
+            return [
+                Label("Due for review", classes="title"),
+                Label(
+                    empty_state("Nothing due — curated memory is fresh."),
+                    classes="hint",
+                ),
+            ]
+
+        widgets: list[Widget] = [
+            Label("Due for review", classes="title"),
+            Label(
+                f"{len(due)} memor{'y' if len(due) == 1 else 'ies'} decayed past "
+                "the review threshold",
+                classes="help",
+            ),
+            Label(
+                "Confirm, refine, or retire, then `mc-tool-memory reviewed <id>` "
+                "to reset the curve.",
+                classes="hint",
+            ),
+        ]
+        for entry in due:
+            recall_pct = round(entry["recall"] * 100)
+            line = Text(f"#{entry['id']}  ", style="dim")
+            line.append(f"{recall_pct}% ", style="dim")
+            line.append(_clip(entry["content"]))
+            widgets.append(Label(line))
         return widgets
 
     def _detail_memory_embedding(self) -> list[Widget]:
