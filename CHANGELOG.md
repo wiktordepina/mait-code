@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.60.1] — 2026-07-10
+
+### Fixed
+
+- **The Bridge now works with ntfy servers behind Cloudflare.** The ntfy
+  channel sent no `User-Agent`, so Cloudflare's Browser Integrity Check
+  rejected every request with a 403 — the connection test failed even with a
+  valid token. Requests now carry an explicit `User-Agent`, and the 403
+  message no longer insists it's an authentication failure, since a proxy or
+  WAF in front of the server can 403 a perfectly good token.
+
 ## [0.60.0] — 2026-07-09
 
 ### Added
@@ -1816,7 +1827,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.60.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.60.1...HEAD
+[0.60.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.1
 [0.60.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.0
 [0.59.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.3
 [0.59.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.2
