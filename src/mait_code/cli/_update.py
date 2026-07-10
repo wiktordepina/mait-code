@@ -44,6 +44,7 @@ them with stubs without having to patch the heavier orchestrator.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 from typing import Protocol
@@ -124,6 +125,24 @@ def _head(capture: Capture, source_dir: Path) -> str:
     return capture(["git", "rev-parse", "HEAD"], cwd=source_dir).strip()
 
 
+def _source_version(source_dir: Path) -> str | None:
+    """Read ``__version__`` from the checked-out source tree.
+
+    Read from disk, *not* the running process's ``mait_code.__version__``:
+    during an update the live interpreter still holds the old version it
+    imported at startup, so reporting that always names the *pre-update*
+    version. The freshly-checked-out source is the authoritative record of
+    what was just installed. Returns ``None`` if it can't be read.
+    """
+    init_py = source_dir / "src" / "mait_code" / "__init__.py"
+    try:
+        text = init_py.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', text, re.MULTILINE)
+    return match.group(1) if match else None
+
+
 def _latest_tag(capture: Capture, source_dir: Path) -> str | None:
     """Return the highest ``v*`` tag by version sort, or ``None`` if none exist."""
     out = capture(
@@ -144,6 +163,7 @@ class UpdateSummary:
         fetched: bool,
         landed_on: str,
         reinstalled: bool,
+        installed_version: str | None,
         claude_md: SymlinkResult,
         skills: SymlinkResult,
         agents: SymlinkResult,
@@ -153,6 +173,7 @@ class UpdateSummary:
         self.fetched = fetched
         self.landed_on = landed_on
         self.reinstalled = reinstalled
+        self.installed_version = installed_version
         self.claude_md = claude_md
         self.skills = skills
         self.agents = agents
@@ -326,6 +347,7 @@ def update(
         fetched=fetched,
         landed_on=landed_on,
         reinstalled=reinstalled,
+        installed_version=_source_version(source_dir),
         claude_md=claude_md_result,
         skills=skills_result,
         agents=agents_result,

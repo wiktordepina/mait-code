@@ -362,14 +362,19 @@ def _render_update_summary(summary: UpdateSummary) -> None:
     import mait_code
 
     record = summary.record
+    # Read the version from the freshly-installed source, not this running
+    # process — mid-update the live interpreter still reports the *old*
+    # version it imported at startup. Fall back to it only if the source
+    # read failed.
+    version = summary.installed_version or mait_code.__version__
     pieces = []
     if summary.fetched:
         pieces.append("fetched")
     pieces.append(f"now on {summary.landed_on}")
     if summary.reinstalled:
-        pieces.append(f"reinstalled {mait_code.__version__}")
+        pieces.append(f"reinstalled {version}")
     else:
-        pieces.append(f"already current ({mait_code.__version__}), reinstall skipped")
+        pieces.append(f"already current ({version}), reinstall skipped")
     print_success(f"Updated mait-code: {', '.join(pieces)}.")
     console.print(f"  Source: {record.source_dir}", markup=False, soft_wrap=True)
     console.print(
