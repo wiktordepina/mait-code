@@ -10,6 +10,25 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.63.0] — 2026-07-10
+
+### Added
+
+- **Memory review — keep curated memory fresh instead of letting it decay
+  silently.** An important fact can sit in memory for months, never re-checked.
+  `mait-code` now surfaces important-but-ageing memories for a quick "still
+  true? refine? retire?" pass. It reuses the same per-class decay that ranks
+  retrieval (episodic 3d / semantic 90d / procedural 180d half-lives), measured
+  from when a memory was last reviewed rather than when it was stored: a memory
+  is **due** once its recall probability drops below `review-threshold`
+  (default 0.5 — one half-life) and its importance is at least
+  `review-min-importance` (default 5, so trivia decays without nagging).
+- **`mc-tool-memory review [--json]`** lists what's due, most-decayed first;
+  **`mc-tool-memory reviewed <id>`** marks a memory reviewed, resetting its
+  decay curve so it drops out of the due set until a fresh half-life passes.
+- **A "Due for review" surface in the home hub** (`mait-code`), showing the due
+  count under Memory and the batch itself in the detail pane.
+
 ## [0.62.0] — 2026-07-10
 
 ### Changed
@@ -1871,7 +1890,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.62.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.63.0...HEAD
+[0.63.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.63.0
 [0.62.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.62.0
 [0.61.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.61.0
 [0.60.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.2
