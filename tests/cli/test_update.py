@@ -216,6 +216,34 @@ class TestUpdateReinstall:
         link = fake_home / ".claude" / "skills" / "fresh"
         assert link.is_symlink()
 
+    def test_installed_version_read_from_source_not_process(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        # The summary must report the version of the freshly-checked-out
+        # source (0.0.0 in the fixture), not this test process's own
+        # mait_code.__version__ — during a real update the running
+        # interpreter still holds the pre-update version.
+        import mait_code
+
+        _install_first(fake_source)
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert summary.installed_version == "0.0.0"
+        assert summary.installed_version != mait_code.__version__
+
+    def test_installed_version_none_when_source_unreadable(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        (fake_source / "src" / "mait_code" / "__init__.py").unlink()
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(no_pull=True, runner=git.run, capture=git.capture)
+
+        assert summary.installed_version is None
+
 
 class TestUpdateIdempotency:
     """A repeated update with nothing new upstream must be a cheap no-op:

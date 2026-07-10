@@ -10,6 +10,16 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.60.2] — 2026-07-10
+
+### Fixed
+
+- **`mait-code update` now reports the version it actually installed.** It read
+  the version from the running process, which still holds the pre-update
+  version imported at startup — so a successful update to 0.60.1 printed
+  "reinstalled 0.60.0". It now reads the version from the freshly-checked-out
+  source, which is authoritative.
+
 ## [0.60.1] — 2026-07-10
 
 ### Fixed
@@ -1827,7 +1837,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.60.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.60.2...HEAD
+[0.60.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.2
 [0.60.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.1
 [0.60.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.0
 [0.59.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.59.3
