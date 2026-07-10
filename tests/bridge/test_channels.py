@@ -145,6 +145,19 @@ def test_ntfy_test_connection_auth_failure(monkeypatch):
     assert "authentication" in result.message
 
 
+def test_ntfy_test_connection_forbidden_mentions_proxy(monkeypatch):
+    # 403 is ambiguous: bad token or an upstream proxy/WAF (e.g. Cloudflare).
+    # The message should not assert "authentication failed" outright.
+    def boom(req, timeout=0):
+        raise urllib.error.HTTPError("https://x", 403, "Forbidden", {}, None)
+
+    _patch_urlopen(monkeypatch, boom)
+    result = NtfyChannel(server="https://x", capture_topic="cap").test_connection()
+    assert result.ok is False
+    assert "403" in result.message
+    assert "proxy" in result.message.lower()
+
+
 def test_ntfy_test_connection_server_error(monkeypatch):
     def boom(req, timeout=0):
         raise urllib.error.HTTPError("https://x", 500, "Boom", {}, None)
@@ -167,6 +180,21 @@ def test_ntfy_test_connection_unreachable(monkeypatch):
 
 def _ndjson(*events: dict) -> bytes:
     return "\n".join(json.dumps(e) for e in events).encode("utf-8")
+
+
+def test_ntfy_requests_send_a_user_agent(monkeypatch):
+    # ntfy servers often sit behind Cloudflare, which 403s the default
+    # Python-urllib UA (error 1010). Every request must carry a real UA.
+    captured = {}
+
+    def handler(req, timeout=0):
+        captured["ua"] = req.get_header("User-agent")
+        return _FakeResponse(b"")
+
+    _patch_urlopen(monkeypatch, handler)
+    NtfyChannel(server="https://x", capture_topic="cap").test_connection()
+    assert captured["ua"]
+    assert "urllib" not in captured["ua"].lower()
 
 
 def test_ntfy_drain_parses_messages_and_watermark(monkeypatch):

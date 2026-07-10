@@ -31,6 +31,12 @@ __all__ = ["NtfyChannel"]
 
 _TIMEOUT = 15  # seconds; a poll should be quick or not block a session
 
+# A non-default User-Agent. ntfy servers commonly sit behind Cloudflare, whose
+# Browser Integrity Check rejects the literal ``Python-urllib/*`` UA with a 403
+# (Cloudflare error 1010) — which looks exactly like an auth failure. Any real
+# UA sails through, so send one on every request. Mirrors web_fetch.
+_USER_AGENT = "mait-code-bridge (mait-code)"
+
 
 class NtfyChannel(BridgeChannel):
     """Publish/drain a private ntfy topic over HTTP."""
@@ -108,6 +114,7 @@ class NtfyChannel(BridgeChannel):
         from mait_code.ssl import setup_ssl
 
         setup_ssl()
+        req.add_header("User-Agent", _USER_AGENT)
         if self.token:
             req.add_header("Authorization", f"Bearer {self.token}")
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
@@ -121,8 +128,16 @@ class NtfyChannel(BridgeChannel):
         try:
             self._request(urllib.request.Request(url, method="GET"))
         except urllib.error.HTTPError as exc:
-            if exc.code in (401, 403):
-                return TestResult(False, f"authentication failed (HTTP {exc.code})")
+            if exc.code == 401:
+                return TestResult(False, "authentication failed (HTTP 401)")
+            if exc.code == 403:
+                # 403 can be a bad token, but a proxy/WAF (e.g. Cloudflare)
+                # in front of the server also 403s requests it dislikes.
+                return TestResult(
+                    False,
+                    "access denied (HTTP 403) — check the token, or a "
+                    "proxy/WAF in front of the server",
+                )
             return TestResult(False, f"server returned HTTP {exc.code}")
         except (urllib.error.URLError, OSError) as exc:
             reason = getattr(exc, "reason", exc)
