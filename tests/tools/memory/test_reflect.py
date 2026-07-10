@@ -644,28 +644,67 @@ INSIGHT: User consistently prefers minimal tooling
 INSIGHT: Project is moving toward microservices architecture
 INSIGHT: Testing practices emphasize speed over coverage
 
-## Memory Updates
-MEMORY_UPDATE: Primary stack: Python + PostgreSQL + Kubernetes
+## Memory Operations
+MEMORY_ADD: Primary stack: Python + PostgreSQL + Kubernetes
 MEMORY_UPDATE: Prefers pytest with -x flag for fast feedback"""
 
     parsed = parse_reflection_response(response)
     assert len(parsed["insights"]) == 3
     assert "minimal tooling" in parsed["insights"][0]
-    assert len(parsed["memory_updates"]) == 2
-    assert "Primary stack" in parsed["memory_updates"][0]
+    ops = parsed["ops"]
+    assert len(ops) == 2
+    # MEMORY_UPDATE is a back-compat alias for MEMORY_ADD.
+    assert all(op["op"] == "add" for op in ops)
+    assert ops[0]["new"] == "Primary stack: Python + PostgreSQL + Kubernetes"
 
 
 def test_parse_reflection_response_insights_only():
     response = "INSIGHT: One key insight\nINSIGHT: Another insight"
     parsed = parse_reflection_response(response)
     assert len(parsed["insights"]) == 2
-    assert len(parsed["memory_updates"]) == 0
+    assert len(parsed["ops"]) == 0
 
 
 def test_parse_reflection_response_empty():
     parsed = parse_reflection_response("No insights found here")
     assert len(parsed["insights"]) == 0
-    assert len(parsed["memory_updates"]) == 0
+    assert len(parsed["ops"]) == 0
+
+
+def test_parse_reflection_response_all_op_types():
+    response = (
+        "MEMORY_ADD: A brand new fact\n"
+        "MEMORY_REWRITE: Old wording -> Sharper wording [entries: #12, #34]\n"
+        "MEMORY_MERGE: One consolidated fact [entries: #5, #9, #5]\n"
+        "MEMORY_RETIRE: A stale fact [entries: #7]"
+    )
+    ops = parse_reflection_response(response)["ops"]
+    assert [op["op"] for op in ops] == ["add", "rewrite", "merge", "retire"]
+
+    add, rewrite, merge, retire = ops
+    assert add == {"op": "add", "old": None, "new": "A brand new fact", "entry_ids": []}
+    assert rewrite["old"] == "Old wording"
+    assert rewrite["new"] == "Sharper wording"
+    assert rewrite["entry_ids"] == [12, 34]
+    assert merge["new"] == "One consolidated fact"
+    assert merge["entry_ids"] == [5, 9]  # de-duplicated, order preserved
+    assert retire["old"] == "A stale fact"
+    assert retire["new"] is None
+    assert retire["entry_ids"] == [7]
+
+
+def test_parse_reflection_response_malformed_ops_ignored():
+    response = (
+        "MEMORY_REWRITE: no arrow so this is malformed\n"
+        "MEMORY_RETIRE: \n"
+        "MEMORY_ADD:   \n"
+        "MEMORY_MERGE: kept [entries: #1]"
+    )
+    ops = parse_reflection_response(response)["ops"]
+    # Only the well-formed merge survives; the rest are dropped, not fatal.
+    assert len(ops) == 1
+    assert ops[0]["op"] == "merge"
+    assert ops[0]["entry_ids"] == [1]
 
 
 def test_parse_reflection_response_blank_lines():
@@ -706,12 +745,44 @@ def test_store_insights_empty(memory_db):
 # ---------------------------------------------------------------------------
 
 
-def test_generate_memory_diff():
-    updates = ["Fact one", "Fact two"]
-    diff = generate_memory_diff(updates)
+def test_generate_memory_diff_add():
+    ops = [
+        {"op": "add", "old": None, "new": "Fact one", "entry_ids": []},
+        {"op": "add", "old": None, "new": "Fact two", "entry_ids": []},
+    ]
+    diff = generate_memory_diff(ops)
     assert "+ Fact one" in diff
     assert "+ Fact two" in diff
-    assert "Proposed additions" in diff
+    assert "Proposed MEMORY.md changes" in diff
+
+
+def test_generate_memory_diff_rewrite_and_retire():
+    ops = [
+        {"op": "rewrite", "old": "Old", "new": "New", "entry_ids": [3]},
+        {"op": "retire", "old": "Gone", "new": None, "entry_ids": [4]},
+    ]
+    diff = generate_memory_diff(ops)
+    assert "~ Old" in diff
+    assert "→ New" in diff
+    assert "[supersede #3]" in diff
+    assert "- Gone" in diff
+    assert "[retire #4]" in diff
+
+
+def test_generate_memory_diff_merge_with_previews():
+    ops = [{"op": "merge", "old": None, "new": "Consolidated", "entry_ids": [1, 2]}]
+    diff = generate_memory_diff(ops, {1: "first source", 2: "second source"})
+    # Merge renders one '-' per folded source plus the single '+' consolidation.
+    assert "- #1 first source" in diff
+    assert "- #2 second source" in diff
+    assert "+ Consolidated" in diff
+
+
+def test_generate_memory_diff_merge_without_previews_falls_back_to_tag():
+    ops = [{"op": "merge", "old": None, "new": "Consolidated", "entry_ids": [1, 2]}]
+    diff = generate_memory_diff(ops)
+    assert "+ Consolidated" in diff
+    assert "[merge #1, #2]" in diff
 
 
 # ---------------------------------------------------------------------------
@@ -776,6 +847,37 @@ MEMORY_UPDATE: Primary testing approach: pytest with -x flag"""
 
     # Verify watermark was set
     assert get_watermark(db_with_entries) is not None
+
+
+def test_reflect_emits_structured_consolidation_ops(db_with_entries):
+    """A contradicted fact yields a rewrite/retire op; the diff shows previews."""
+    # Entries #1 and #2 exist in the fixture (tabs preference, JWT auth).
+    llm_response = (
+        "INSIGHT: Preferences are firming up\n"
+        "MEMORY_REWRITE: User prefers tabs -> "
+        "User prefers tabs, but spaces in YAML [entries: #1]\n"
+        "MEMORY_RETIRE: Auth is session-based [entries: #2]"
+    )
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
+        result = reflect(db_with_entries, days=7, min_new=0)
+
+    ops = result["ops"]
+    assert [op["op"] for op in ops] == ["rewrite", "retire"]
+    assert ops[0]["entry_ids"] == [1]
+    assert ops[1]["entry_ids"] == [2]
+    # The diff pulls a live snippet of the backing entry the rewrite targets.
+    assert "supersede #1" in result["memory_diff"]
+    assert "retire #2" in result["memory_diff"]
+
+
+def test_reflect_stable_facts_yield_no_ops(db_with_entries):
+    """When the model proposes nothing, reflect surfaces zero ops (no churn)."""
+    llm_response = "INSIGHT: Everything here is already well-captured and stable"
+    with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
+        result = reflect(db_with_entries, days=7, min_new=0)
+
+    assert result["ops"] == []
+    assert result["memory_diff"] is None
 
 
 def test_reflect_llm_failure(db_with_entries):

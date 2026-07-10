@@ -586,6 +586,13 @@ class HomeApp(MaitApp):
                     classes="help",
                 )
             )
+        if stats.retired:
+            widgets.append(
+                Label(
+                    f"{stats.retired} retired (kept for audit, hidden from recall)",
+                    classes="help",
+                )
+            )
         return widgets
 
     def _detail_memory_by_type(self) -> list[Widget]:

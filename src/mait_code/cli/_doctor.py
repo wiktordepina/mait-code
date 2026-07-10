@@ -349,6 +349,8 @@ def _fix_memory_embeddings(
 
 def _check_memory_embeddings(ddir: Path, fix: bool, fixes: list[str]) -> Check:
     """Live memory entries should all carry a vector for semantic search."""
+    from mait_code.tools.memory.db import LIVE_ENTRY_SQL
+
     db = _memory_db_path(ddir)
     if not db.exists():
         return Check("memory-embeddings", "ok", "no memory database yet")
@@ -356,12 +358,12 @@ def _check_memory_embeddings(ddir: Path, fix: bool, fixes: list[str]) -> Check:
         conn = _open_memory_db(db)
         try:
             total, missing = conn.execute(
-                """SELECT COUNT(*),
+                f"""SELECT COUNT(*),
                           COALESCE(SUM(CASE WHEN NOT EXISTS
                               (SELECT 1 FROM memory_vec v WHERE v.rowid = m.id)
                               THEN 1 ELSE 0 END), 0)
                    FROM memory_entries m
-                   WHERE m.superseded_by IS NULL"""
+                   WHERE {LIVE_ENTRY_SQL}"""
             ).fetchone()
         finally:
             conn.close()

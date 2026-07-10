@@ -10,6 +10,26 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.61.0] — 2026-07-10
+
+### Added
+
+- **`/reflect` now consolidates memory, it doesn't just grow it.** Reflection
+  used to only ever *add* facts to `MEMORY.md`. It can now propose the full set
+  of consolidation moves — **add**, **rewrite**, **merge**, and **retire** —
+  shown as a before/after diff you approve one operation at a time. Nothing
+  lands without your say-so; `MEMORY.md` stays human-approved.
+- **Consolidation reaches the store, not just the curated file.** When a
+  proposed rewrite, merge, or retirement names the memory-database entries
+  behind a fact, the approved operation is carried through to the store so it
+  stops resurfacing what you just tidied away. Two new writer verbs back this:
+  `mc-tool-memory merge <ids…> --into "<text>"` (fold several entries into one)
+  and `mc-tool-memory retire <id>` (drop a stale entry with no replacement).
+- **`mc-tool-memory reflect --json`** emits the structured operations, so the
+  skill can drive per-operation approval instead of parsing prose.
+- **Memory stats now count retired entries** separately from superseded ones,
+  in both the `stats` command and the home hub.
+
 ## [0.60.2] — 2026-07-10
 
 ### Fixed
@@ -1837,7 +1857,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.60.2...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.61.0...HEAD
+[0.61.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.61.0
 [0.60.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.2
 [0.60.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.1
 [0.60.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.0

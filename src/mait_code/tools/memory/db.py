@@ -13,6 +13,14 @@ import sqlite_vec
 from mait_code.config import data_dir as _data_dir
 from mait_code.tools.memory.migrate import ensure_schema
 
+# Canonical "live entry" predicate, shared by every surface that hides
+# consolidated rows. An entry leaves the live set two ways, both of which
+# stamp ``superseded_at``: it is *superseded* (replaced by an evolved version,
+# ``superseded_by`` points at the successor) or *retired* (dropped with no
+# replacement, ``superseded_by`` stays NULL). Callers opt back in with an
+# ``include_superseded`` flag. The table must be aliased ``m``.
+LIVE_ENTRY_SQL = "m.superseded_by IS NULL AND m.superseded_at IS NULL"
+
 
 def get_data_dir() -> Path:
     """Return the mait-code data directory, creating it if needed."""

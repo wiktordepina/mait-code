@@ -55,6 +55,24 @@ def test_collect_stats_counts(conn) -> None:
     assert ("demo", 1) in stats.by_project
 
 
+def test_collect_stats_counts_superseded_and_retired_separately(conn) -> None:
+    """Superseded and retired rows are counted independently, not conflated."""
+    from mait_code.tools.memory.writer import retire_memory, supersede_memory
+
+    a = _seed_entry(conn, "old fact", "fact")
+    _seed_entry(conn, "stale fact", "fact")
+    supersede_memory(conn, a, "new fact")  # a → superseded, plus one live successor
+    # Retire the most recent live 'stale fact' row.
+    stale_id = conn.execute(
+        "SELECT id FROM memory_entries WHERE content = 'stale fact'"
+    ).fetchone()[0]
+    retire_memory(conn, stale_id)
+
+    stats = collect_stats(conn)
+    assert stats.superseded == 1
+    assert stats.retired == 1
+
+
 def test_collect_stats_embedding_coverage(conn) -> None:
     _seed_entry(conn, "a", "fact")
     _seed_entry(conn, "b", "fact")
