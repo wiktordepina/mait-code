@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.62.0] — 2026-07-10
+
+### Changed
+
+- **`mait-code status` now shows both an install date and a last-updated
+  date.** The install record used to keep a single timestamp that every
+  `mait-code update` overwrote, so `status` reported the *last update* as
+  though it were the install date. The record now tracks `first_installed_at`
+  (frozen at first install, carried across every update) and `updated_at`
+  (refreshed on each update) as separate fields, and `status` prints an
+  `installed` row and an `updated` row. Older records upgrade transparently on
+  first read — their single timestamp seeds both fields, and the true
+  first-install date simply isn't recoverable for installs that predate this.
+
 ## [0.61.0] — 2026-07-10
 
 ### Added
@@ -1857,7 +1871,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.61.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.62.0...HEAD
+[0.62.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.62.0
 [0.61.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.61.0
 [0.60.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.2
 [0.60.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.60.1
