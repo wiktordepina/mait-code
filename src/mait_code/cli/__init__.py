@@ -902,6 +902,38 @@ def _memory_render() -> None:
         typer.echo("")
 
 
+@app.command("review")
+def review() -> None:
+    """Work the memory review queue (text list when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._review_tui import run_review_tui
+
+        run_review_tui()
+    else:
+        _review_render()
+
+
+def _review_render() -> None:
+    """Print the due-for-review queue as text (the non-TTY fallback)."""
+    from mait_code.tools.memory.db import connection
+    from mait_code.tools.memory.review import due_for_review
+
+    with connection() as conn:
+        due = due_for_review(conn)
+
+    if not due:
+        typer.echo("Nothing due for review — curated memory is fresh.")
+        return
+
+    typer.echo(f"Due for review: {len(due)} (most-decayed first)")
+    for entry in due:
+        recall_pct = round(entry["recall"] * 100)
+        first_line = (
+            entry["content"].strip().splitlines()[0] if entry["content"] else ""
+        )
+        typer.echo(f"  [#{entry['id']}] {recall_pct:>3}%  {first_line}")
+
+
 @app.command("graph")
 def graph() -> None:
     """Explore the entity knowledge graph (text summary when not on a TTY)."""
