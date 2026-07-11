@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.64.0] — 2026-07-11
+
 ### Added
 
 - **`mait-code review` — a dedicated TUI for working the memory review queue.**
@@ -1907,7 +1909,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.63.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.64.0...HEAD
+[0.64.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.64.0
 [0.63.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.63.0
 [0.62.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.62.0
 [0.61.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.61.0
