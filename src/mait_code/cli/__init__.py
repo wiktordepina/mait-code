@@ -792,6 +792,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._memory_tui import run_memory_tui
 
             run_memory_tui()
+        elif target is HomeTarget.REVIEW:
+            from mait_code.cli._review_tui import run_review_tui
+
+            run_review_tui()
         elif target is HomeTarget.OBSERVATIONS:
             from mait_code.cli._observations_tui import run_observations_tui
 
