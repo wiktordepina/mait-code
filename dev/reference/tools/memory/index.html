@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://wiktordepina.github.io/mait-code/dev/reference/tools/memory/">
       
       
-        <link rel="prev" href="../../ssl/">
+        <link rel="prev" href="../../bridge/">
       
       
         <link rel="next" href="../reminders/">
@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -730,6 +732,34 @@
     
   
     The log viewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Bridge
   
 
     
@@ -1142,6 +1172,8 @@
       
         
       
+        
+      
     
     
     
@@ -1371,6 +1403,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1401,10 +1461,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" checked>
         
           
-          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
             
   
   
@@ -1422,8 +1482,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_5_3_8">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2012,6 +2072,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.merge_memories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;merge_memories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.retire_memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;retire_memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.memory.store_memory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2576,10 +2658,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
             
   
   
@@ -2597,8 +2679,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_9">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3368,6 +3450,28 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;find_duplicate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.merge_memories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;merge_memories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.retire_memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;retire_memory
       
     </span>
   </a>
@@ -7505,6 +7609,312 @@ contradiction-band candidates and returns only the merge target.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="mait_code.tools.memory.merge_memories" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">merge_memories</span>
+
+
+<a href="#mait_code.tools.memory.merge_memories" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">merge_memories</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">old_ids</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="int">int</span></span><span class="p">],</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">content</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">importance</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="dict">dict</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Fold several memory entries into one consolidated entry.</p>
+<p>Inserts <code>content</code> as a single fresh entry, then supersedes every existing
+row in <code>old_ids</code> by pointing each <code>superseded_by</code> at the new id. This is
+the N→1 counterpart to :func:<code>supersede_memory</code>: use it when reflection
+finds two or more overlapping facts that should read as one.</p>
+<p>The new entry inherits type, class, and scope (project/branch) from the
+first <em>existing</em> row in <code>old_ids</code>. Its importance defaults to the highest
+importance among the merged rows — a merge promotes, it does not dilute —
+unless overridden. Ids that don't exist are skipped and reported back in
+<code>not_found</code>; the merge proceeds on whatever remains.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>conn</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Open memory database connection.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="sqlite3.Connection">Connection</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>old_ids</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Ids of the entries being merged. Order matters only in that
+the first existing id donates type/class/scope.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="list">list</span>[<span title="int">int</span>]</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>content</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>The consolidated content for the new entry.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>importance</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Optional importance for the new entry (1-10, clamped).
+Defaults to the maximum importance among the merged rows.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="int">int</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>On success, a dict with <code>action="merged"</code>, <code>merged_ids</code> (the ids</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>actually superseded), <code>not_found</code> (ids that didn't exist), <code>id</code></p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>(the new entry), <code>content</code>, <code>scope</code>, <code>project</code>, <code>branch</code>. If</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>none of <code>old_ids</code> exist, <code>{"action": "not_found", "old_ids": ...}</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.memory.retire_memory" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">retire_memory</span>
+
+
+<a href="#mait_code.tools.memory.retire_memory" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">retire_memory</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">entry_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="dict">dict</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Retire a memory entry — drop it with no replacement.</p>
+<p>Stamps <code>superseded_at</code> while leaving <code>superseded_by</code> NULL. That pair is
+the <em>retired</em> marker: the row is hidden from default surfacing (see
+:data:<code>~mait_code.tools.memory.db.LIVE_ENTRY_SQL</code>) but kept for
+auditability. Use this when a fact is stale or contradicted and has <strong>no</strong>
+successor; reach for :func:<code>supersede_memory</code> when there is a replacement.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>conn</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Open memory database connection.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="sqlite3.Connection">Connection</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>entry_id</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Id of the entry to retire.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="int">int</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p><code>{"action": "retired", "id": entry_id}</code> on success. If the row does</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>not exist, <code>{"action": "not_found", "id": entry_id}</code>. If it is already</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>superseded or retired, ``{"action": "already_superseded" |</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>"already_retired", "id": entry_id}`` and nothing is written.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="mait_code.tools.memory.store_memory" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">store_memory</span>
 
@@ -7958,13 +8368,14 @@ Defaults to the superseded entry's importance.</p>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">by_scope</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="tuple">tuple</span></span><span class="p">[</span><span class="n"><span title="str">str</span></span><span class="p">,</span> <span class="n"><span title="int">int</span></span><span class="p">]],</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">by_project</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="tuple">tuple</span></span><span class="p">[</span><span class="n"><span title="str">str</span></span><span class="p">,</span> <span class="n"><span title="int">int</span></span><span class="p">]],</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">superseded</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">embedded</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">provider</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">model</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">dim</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">unreflected</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">last_reflected_at</span><span class="p">:</span> <span class="n"><span title="datetime.datetime">datetime</span></span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">retired</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">embedded</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">provider</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">model</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">dim</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">unreflected</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">last_reflected_at</span><span class="p">:</span> <span class="n"><span title="datetime.datetime">datetime</span></span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -9534,7 +9945,13 @@ reflection prompt.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Parse the LLM response into insights and memory update proposals.</p>
+        <p>Parse the LLM response into insights and structured memory operations.</p>
+<p>Recognises <code>INSIGHT:</code> lines plus the consolidation op markers in
+:data:<code>_OP_MARKERS</code>. Each op is a dict with keys <code>op</code> (<code>"add"</code> /
+<code>"rewrite"</code> / <code>"merge"</code> / <code>"retire"</code>), <code>old</code> (existing MEMORY.md
+text, or <code>None</code>), <code>new</code> (new text, or <code>None</code> for retire), and
+<code>entry_ids</code> (backing db entries to consolidate, possibly empty).
+Unrecognised or malformed lines are ignored, not fatal.</p>
 
 
 <table>
@@ -9581,7 +9998,7 @@ reflection prompt.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>A dict <code>{"insights": [...], "memory_updates": [...]}</code>.</p>
+                <p>A dict <code>{"insights": [...], "ops": [...]}</code>.</p>
               </div>
             </td>
           </tr>
@@ -9735,12 +10152,68 @@ otherwise they are stored globally.</p>
 
 
 <a href="#mait_code.tools.memory.reflect.generate_memory_diff" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">generate_memory_diff</span><span class="p">(</span><span class="n">memory_updates</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="str">str</span></span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">generate_memory_diff</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">ops</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">],</span> <span class="n">previews</span><span class="p">:</span> <span class="n"><span title="dict">dict</span></span><span class="p">[</span><span class="n"><span title="int">int</span></span><span class="p">,</span> <span class="n"><span title="str">str</span></span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Format proposed <code>MEMORY.md</code> additions as a readable diff.</p>
+        <p>Render proposed MEMORY.md operations as a readable before/after diff.</p>
+<p>Additions show as <code>+</code>, retirements as <code>-</code>, rewrites as the old line
+(<code>~</code>) followed by its replacement (<code>→</code>), and merges as one <code>-</code> per
+folded db entry followed by the single consolidated <code>+</code> line. Each op that
+names backing db entries is annotated with the store-level verb applied to
+them.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>ops</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Structured ops from :func:<code>parse_reflection_response</code>.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="list">list</span>[<span title="dict">dict</span>]</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>previews</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Optional <code>{entry_id: content snippet}</code> used to show the
+source rows of a merge; falls back to an inline id tag when absent.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="dict">dict</span>[<span title="int">int</span>, <span title="str">str</span>] | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9918,7 +10391,7 @@ provided, reflects only on global plus project-scoped entries.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>A dict with keys <code>skipped</code>, <code>reason</code>, <code>insights</code>, <code>stored</code>,</p>
+                <p>A dict with keys <code>skipped</code>, <code>reason</code>, <code>insights</code>, <code>ops</code> (the</p>
               </div>
             </td>
           </tr>
@@ -9930,7 +10403,7 @@ provided, reflects only on global plus project-scoped entries.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p><code>memory_diff</code>, and <code>batch_info</code> (the last containing</p>
+                <p>structured MEMORY.md operations proposed — see</p>
               </div>
             </td>
           </tr>
@@ -9942,7 +10415,31 @@ provided, reflects only on global plus project-scoped entries.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p><code>processed</code> and <code>watermark</code> counts, or <code>None</code> when skipped).</p>
+                <p>func:<code>parse_reflection_response</code>), <code>stored</code>, <code>memory_diff</code>, and</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p><code>batch_info</code> (the last containing <code>processed</code> and <code>watermark</code></p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>counts, or <code>None</code> when skipped).</p>
               </div>
             </td>
           </tr>

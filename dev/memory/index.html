@@ -474,6 +474,8 @@
       
         
       
+        
+      
     
     
     
@@ -730,6 +732,34 @@
     
   
     The log viewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Bridge
   
 
     
@@ -1007,6 +1037,17 @@
     <span class="md-ellipsis">
       
         Evolving memory: supersede, don't duplicate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#review-keeping-curated-memory-fresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review: keeping curated memory fresh
       
     </span>
   </a>
@@ -1619,6 +1660,8 @@
       
         
       
+        
+      
     
     
     
@@ -1847,6 +1890,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../reference/bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1873,10 +1944,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
             
   
   
@@ -1894,8 +1965,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_8">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2081,10 +2152,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
             
   
   
@@ -2102,8 +2173,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_9">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2439,6 +2510,17 @@
     <span class="md-ellipsis">
       
         Evolving memory: supersede, don't duplicate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#review-keeping-curated-memory-fresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review: keeping curated memory fresh
       
     </span>
   </a>
@@ -2928,7 +3010,21 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <p>This inserts the new content as a fresh entry (inheriting the old one's type and scope), then marks the old entry <strong>superseded</strong> — recording <code>superseded_by</code> (the new id) and <code>superseded_at</code> (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mc-tool-memory<span class="w"> </span>list<span class="w"> </span>--include-superseded
 </span></code></pre></div>
-<p>This is manually-driven: the companion <em>suggests</em> superseding a conflicting entry, and you decide — nothing is replaced automatically.</p>
+<p>Supersede is one of three consolidation moves that leave a row in place but drop it from the live set:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mc-tool-memory<span class="w"> </span>supersede<span class="w"> </span>&lt;old_id&gt;<span class="w"> </span><span class="s2">&quot;&lt;new content&gt;&quot;</span><span class="w">        </span><span class="c1"># replace one entry</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mc-tool-memory<span class="w"> </span>merge<span class="w"> </span>&lt;id1&gt;<span class="w"> </span>&lt;id2&gt;<span class="w"> </span>…<span class="w"> </span>--into<span class="w"> </span><span class="s2">&quot;&lt;consolidated&gt;&quot;</span><span class="w">  </span><span class="c1"># fold several into one</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>mc-tool-memory<span class="w"> </span>retire<span class="w"> </span>&lt;id&gt;<span class="w">                                </span><span class="c1"># drop a stale entry, no replacement</span>
+</span></code></pre></div>
+<p><strong>Merge</strong> is the N→1 counterpart to supersede: it inserts one consolidated entry (inheriting type/scope from the first row, importance promoted to the max of the sources) and points every merged row's <code>superseded_by</code> at it. <strong>Retire</strong> drops a fact that has no successor — it stamps <code>superseded_at</code> while leaving <code>superseded_by</code> null. A row is <strong>live</strong> (surfaced by default) only when <em>both</em> are null; superseded and retired rows are hidden from all default search, listing, and dedup but kept for audit.</p>
+<p>This is manually-driven: the companion <em>suggests</em> these moves — during <a href="#tier-2-reflections">reflection</a>, or when it spots a conflict — and you decide. Nothing is replaced automatically.</p>
+<h3 id="review-keeping-curated-memory-fresh">Review: keeping curated memory fresh<a class="headerlink" href="#review-keeping-curated-memory-fresh" title="Permanent link">&para;</a></h3>
+<p>Left alone, an important fact can quietly go stale — still stored, never re-checked. <strong>Review resurfacing</strong> surfaces important-but-ageing memories for a quick "still true? refine? promote? retire?" pass.</p>
+<p>It reuses the same per-class exponential decay that ranks retrieval (see <a href="#recency">Recency</a>), but measured from a memory's <code>reviewed_at</code> anchor rather than <code>created_at</code>. A memory is <strong>due for review</strong> when its recall probability has fallen below <code>review-threshold</code> (default <code>0.5</code> — one half-life since it was last reviewed) <em>and</em> its <code>importance</code> is at least <code>review-min-importance</code> (default <code>5</code>, so trivia decays without nagging).</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mc-tool-memory<span class="w"> </span>review<span class="w">                 </span><span class="c1"># list memories due for review, most-decayed first</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mc-tool-memory<span class="w"> </span>review<span class="w"> </span>--json<span class="w">          </span><span class="c1"># same, as structured JSON</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mc-tool-memory<span class="w"> </span>reviewed<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># mark one reviewed — stamps reviewed_at = now, resetting its curve</span>
+</span></code></pre></div>
+<p>Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (<code>mait-code</code>) shows a <strong>Due for review</strong> count under Memory. This is a nudge, not an alarm: nothing is changed for you.</p>
 <h2 id="storage-the-memory-database">Storage: The Memory Database<a class="headerlink" href="#storage-the-memory-database" title="Permanent link">&para;</a></h2>
 <p>All structured data lives in a single SQLite file (<code>memory.db</code>) with three search layers:</p>
 <h3 id="memory-entries">Memory entries<a class="headerlink" href="#memory-entries" title="Permanent link">&para;</a></h3>
@@ -2972,6 +3068,10 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <tr>
 <td><code>created_at</code></td>
 <td>Timestamp, refreshed on deduplication</td>
+</tr>
+<tr>
+<td><code>reviewed_at</code></td>
+<td>When the memory was last reviewed — the anchor for <a href="#review-keeping-curated-memory-fresh">review resurfacing</a> (null = never, treated as <code>created_at</code>)</td>
 </tr>
 <tr>
 <td><code>superseded_by</code></td>
@@ -3171,8 +3271,8 @@ reflection — open the <a href="../observations/">observations browser</a> with
    table of <code>settings.toml</code> so every tool picks it up — inside and outside
    Claude Code sessions:</li>
 </ol>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[env]</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[env]</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
 </span></code></pre></div>
 <p>See <a href="../settings/#custom-environment-variables-the-env-table">Custom environment variables</a>.
 3. If you have existing local embeddings, run <code>mc-tool-memory reindex</code> to migrate</p>
@@ -3212,7 +3312,7 @@ edge), mention counts are summed, the seen window widens to span both, and
 the source entity is deleted.</p>
 <h2 id="scoring-how-results-are-ranked">Scoring: How Results Are Ranked<a class="headerlink" href="#scoring-how-results-are-ranked" title="Permanent link">&para;</a></h2>
 <p>Search results are ranked by a composite score:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
 </span></code></pre></div>
 <h3 id="recency">Recency<a class="headerlink" href="#recency" title="Permanent link">&para;</a></h3>
 <p>Exponential decay based on memory class:</p>
@@ -3334,6 +3434,18 @@ the source entity is deleted.</p>
 <td>0.0–1.0</td>
 <td>Relevance multiplier across project boundaries.</td>
 </tr>
+<tr>
+<td><code>review-threshold</code></td>
+<td><code>0.5</code></td>
+<td>0.0–1.0</td>
+<td>Recall probability below which a memory is <a href="#review-keeping-curated-memory-fresh">due for review</a>. <code>0.5</code> = one half-life since last review; lower surfaces only more-decayed items.</td>
+</tr>
+<tr>
+<td><code>review-min-importance</code></td>
+<td><code>5</code></td>
+<td>1–10</td>
+<td>Importance floor for review resurfacing; memories below it decay without nagging.</td>
+</tr>
 </tbody>
 </table>
 <h2 id="reminders">Reminders<a class="headerlink" href="#reminders" title="Permanent link">&para;</a></h2>
@@ -3383,21 +3495,21 @@ the source entity is deleted.</p>
 <li><strong>Batching:</strong> Processes entries in configurable batches (default 50), oldest first</li>
 </ul>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/reflect                                    # Standard reflection
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/reflect                                    # Standard reflection
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 </span></code></pre></div>
 <h3 id="how-it-works_1">How it works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Checks the novelty gate — counts unreflected non-insight entries (entries with ID &gt; watermark)</li>
-<li>Gathers unreflected <code>memory_entries</code> (excluding insights to avoid feedback loops), limited by batch size</li>
+<li>Gathers unreflected <code>memory_entries</code> (excluding insights to avoid feedback loops), limited by batch size — each is shown to the model with its <code>#id</code></li>
 <li>Sends entries + MEMORY.md to Claude Haiku with a synthesis prompt</li>
-<li>Parses <code>INSIGHT:</code> lines and <code>MEMORY_UPDATE:</code> proposals from the response</li>
+<li>Parses <code>INSIGHT:</code> lines and structured MEMORY.md <strong>operations</strong> from the response — <code>add</code>, <code>rewrite</code>, <code>merge</code>, and <code>retire</code>, each optionally naming the backing entry <code>#id</code>s to consolidate in the store</li>
 <li>Stores insights in memory.db</li>
 <li>Advances the watermark to the highest entry ID processed</li>
-<li>Presents proposed MEMORY.md changes for user approval</li>
+<li>Presents the operations as a before/after diff for <strong>per-op</strong> user approval; approved ops are applied to MEMORY.md and — where they name backing entries — carried through to the store via <code>supersede</code>/<code>merge</code>/<code>retire</code></li>
 </ol>
 <h2 id="tier-3-memorymd-curated">Tier 3: MEMORY.md (Curated)<a class="headerlink" href="#tier-3-memorymd-curated" title="Permanent link">&para;</a></h2>
 <p><code>~/.claude/mait-code-data/memory/MEMORY.md</code> is loaded into every Claude Code session via the <code>@MEMORY.md</code> reference in CLAUDE.md. It contains the highest-confidence, most stable facts — things the companion should always know.</p>
@@ -3405,7 +3517,7 @@ the source entity is deleted.</p>
 <ul>
 <li>~150 lines maximum (context budget)</li>
 <li>Organised by topic, not chronologically</li>
-<li>Updated by the reflection system (<code>/reflect</code>) which proposes additions for user approval</li>
+<li>Updated by the reflection system (<code>/reflect</code>), which proposes additions, rewrites, merges, and retirements for per-op user approval — it consolidates the file, not just grows it</li>
 </ul>
 <p><strong>Examples of what belongs here:</strong></p>
 <ul>
@@ -3500,6 +3612,14 @@ launched.</p>
 <td>Replace an entry with an evolved version; the old one is kept for audit but hidden from recall</td>
 </tr>
 <tr>
+<td><code>merge &lt;ids…&gt; --into &lt;content&gt;</code></td>
+<td>Fold several entries into one consolidated entry (importance promoted to the max among them); the sources are kept for audit but hidden</td>
+</tr>
+<tr>
+<td><code>retire &lt;id&gt;</code></td>
+<td>Drop a stale entry with no replacement (kept for audit, hidden from recall)</td>
+</tr>
+<tr>
 <td><code>list</code></td>
 <td>Recent entries by creation time</td>
 </tr>
@@ -3516,12 +3636,24 @@ launched.</p>
 <td>Include superseded entries (hidden by default)</td>
 </tr>
 <tr>
+<td><code>review</code></td>
+<td>List memories <a href="#review-keeping-curated-memory-fresh">due for review</a> — recall decayed since last review, most-decayed first</td>
+</tr>
+<tr>
+<td><code>review --json</code></td>
+<td>Same, as structured JSON</td>
+</tr>
+<tr>
+<td><code>reviewed &lt;id&gt;</code></td>
+<td>Mark a memory reviewed, resetting its resurfacing decay curve</td>
+</tr>
+<tr>
 <td><code>delete &lt;id&gt;</code></td>
 <td>Delete an entry (embedding cleaned up by trigger)</td>
 </tr>
 <tr>
 <td><code>stats</code></td>
-<td>Entry counts, class/scope/project distribution, superseded count, embedding coverage, provider info, unreflected backlog + last reflection run</td>
+<td>Entry counts, class/scope/project distribution, superseded and retired counts, embedding coverage, provider info, unreflected backlog + last reflection run</td>
 </tr>
 <tr>
 <td><code>entities [query]</code></td>
@@ -3577,7 +3709,7 @@ launched.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Scope flags</strong> apply to <code>search</code>, <code>store</code>, <code>list</code>, and <code>reflect</code>:</p>
+<p><strong>Scope flags</strong> apply to <code>search</code>, <code>store</code>, <code>list</code>, <code>review</code>, and <code>reflect</code>:</p>
 <table>
 <thead>
 <tr>
@@ -3606,7 +3738,7 @@ launched.</p>
 </table>
 <h3 id="memory-browser-mait-code-memory">Memory browser (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-mait-code-memory" title="Permanent link">&para;</a></h3>
 <p>Open the interactive, read-only memory browser with:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mait-code<span class="w"> </span>memory
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mait-code<span class="w"> </span>memory
 </span></code></pre></div>
 <p>This is a full-screen <a href="https://textual.textualize.io/">Textual</a> app over the
 same store: a tree of memories grouped by entry type on the left (newest

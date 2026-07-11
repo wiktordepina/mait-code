@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -913,6 +915,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sync/" class="md-nav__link">
         
   
@@ -1298,6 +1328,8 @@
       
         
       
+        
+      
     
     
     
@@ -1526,6 +1558,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../reference/bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1552,10 +1612,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
             
   
   
@@ -1573,8 +1633,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_8">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1760,10 +1820,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
             
   
   
@@ -1781,8 +1841,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_9">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2264,18 +2324,23 @@ and <code>Enter</code> does the obvious thing on each:</p>
 </table>
 <h3 id="opening-the-other-tuis">Opening the other TUIs<a class="headerlink" href="#opening-the-other-tuis" title="Permanent link">&para;</a></h3>
 <p><a href="../board/">The board</a>, <a href="../memory-browser/">the memory browser</a>, <a href="../observations/">the
-observations browser</a>, <a href="../settings/">the settings editor</a> and
-<a href="../logs/">the log viewer</a> are full applications in their own right. Each has a
-dedicated <strong>launch leaf</strong> in its section, marked with a <code>↗</code> and shown in the
-accent colour so it reads as a hand-off rather than just another row:</p>
+observations browser</a>, <a href="../graph/">the graph explorer</a>, <a href="../settings/">the
+settings editor</a> and <a href="../logs/">the log viewer</a> are full
+applications in their own right. Each has a dedicated <strong>launch leaf</strong> in its
+section, marked with a <code>↗</code> and shown in the accent colour so it reads as a
+hand-off rather than just another row:</p>
 <ul>
 <li><code>↗ Open board</code> — under <strong>Board</strong></li>
 <li><code>↗ Open memory browser</code> — under <strong>Memory</strong></li>
 <li><code>↗ Open observations</code> — under <strong>Memory</strong>, beneath <em>Reflection status</em> (it's
   that count's drill-down)</li>
+<li><code>↗ Open graph explorer</code> — under <strong>Memory</strong> (the knowledge graph over the same
+  memory store)</li>
 <li><code>↗ Open settings</code> — under <strong>System</strong></li>
 <li><code>↗ Open logs</code> — under <strong>System</strong> (highlighting it previews the log file's
   whereabouts and today's tallies)</li>
+<li><code>↗ Configure Bridge</code> — under <strong>System</strong> (opens the <a href="../bridge/">Bridge</a>
+  enable/channel screen)</li>
 </ul>
 <p>Press <code>Enter</code> on one and home steps aside to run that TUI. When you quit it
 (<code>q</code>), home comes back — and its badges reflect anything you just changed, because
@@ -2303,7 +2368,7 @@ alongside <strong>Reload</strong> and <strong>Reindex memory</strong>.</p>
 <tr>
 <td><strong>Memory</strong></td>
 <td>Entry count and a by-type breakdown</td>
-<td><code>↗ Open memory browser</code>, By type, Embedding coverage, Reflection status, <code>↗ Open observations</code></td>
+<td><code>↗ Open memory browser</code>, By type, Due for review, Embedding coverage, Reflection status, <code>↗ Open observations</code>, <code>↗ Open graph explorer</code></td>
 </tr>
 <tr>
 <td><strong>Reminders</strong></td>
@@ -2323,7 +2388,7 @@ alongside <strong>Reload</strong> and <strong>Reindex memory</strong>.</p>
 <tr>
 <td><strong>System</strong></td>
 <td>Health, configuration, and where things live</td>
-<td><code>↗ Open settings</code>, <code>↗ Open logs</code>, Doctor, Version &amp; paths</td>
+<td><code>↗ Open settings</code>, <code>↗ Open logs</code>, <code>↗ Configure Bridge</code>, Doctor, Version &amp; paths</td>
 </tr>
 </tbody>
 </table>
@@ -2402,6 +2467,11 @@ header." src="../assets/home/home-sysprompt.png" /></p>
   it says so and skips the confirm. The same fix runs non-interactively via
   <code>mait-code doctor --fix</code>; a full from-scratch re-embed stays with
   <code>mc-tool-memory reindex</code>.</li>
+<li><strong>Keep curated memory fresh.</strong> <em>Memory → Due for review</em> lists the entries that
+  have <a href="../memory/#review-keeping-curated-memory-fresh">decayed past the resurfacing threshold</a> —
+  the leaf carries a warn-styled count when any are waiting. Confirm, refine or
+  retire them, then <code>mc-tool-memory reviewed &lt;id&gt;</code> resets the decay curve so they
+  drop back out of the due set.</li>
 <li><strong>Mind the budget.</strong> When sessions start to feel like they're carrying too much,
   open <em>Identity → System prompt</em> and see what the identity stack is spending; a
   bloated <code>MEMORY.md</code> shows up here first.</li>

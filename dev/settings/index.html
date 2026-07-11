@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -952,6 +954,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sync/" class="md-nav__link">
         
   
@@ -1337,6 +1367,8 @@
       
         
       
+        
+      
     
     
     
@@ -1565,6 +1597,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../reference/bridge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1591,10 +1651,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_8" id="__nav_5_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
             
   
   
@@ -1612,8 +1672,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_8">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1799,10 +1859,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
             
   
   
@@ -1820,8 +1880,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_9">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2310,6 +2370,10 @@ that below).</p>
 <td><code>data-dir</code> (where everything lives) and <code>theme</code>.</td>
 </tr>
 <tr>
+<td><strong>Bridge</strong></td>
+<td>Whether the <a href="../bridge/">Bridge</a> is <code>enabled</code>, and which channel it uses. (The channel's server/topics/token live in the Bridge screen, not here.)</td>
+</tr>
+<tr>
 <td><strong>Logging</strong></td>
 <td>Log level, log file, and how many rotated backups to keep.</td>
 </tr>
@@ -2323,16 +2387,20 @@ that below).</p>
 </tr>
 <tr>
 <td><strong>Scoring &amp; dedup</strong></td>
-<td>The retrieval scoring weights and decay half-lives, plus the dedup similarity thresholds and scope boosts.</td>
+<td>The retrieval scoring weights and decay half-lives, the dedup similarity thresholds and scope boosts, and the <a href="../memory/#review-keeping-curated-memory-fresh">review-resurfacing</a> threshold and importance floor.</td>
 </tr>
 <tr>
 <td><strong>Paths (derived)</strong></td>
 <td>Read-only paths computed from <code>data-dir</code> — the database files, the model cache, the observations directory.</td>
 </tr>
+<tr>
+<td><strong>Custom env</strong></td>
+<td>Arbitrary environment variables injected at startup — <a href="#custom-environment-variables-the-env-table">covered below</a>.</td>
+</tr>
 </tbody>
 </table>
-<p>General, Logging and Embeddings open on boot; the more advanced groups start
-collapsed to keep the initial list short.</p>
+<p>General, Logging, Embeddings and Custom env open on boot; the more advanced
+groups start collapsed to keep the initial list short.</p>
 <h2 id="editing-a-setting">Editing a setting<a class="headerlink" href="#editing-a-setting" title="Permanent link">&para;</a></h2>
 <p>Move the highlight with the arrow keys; the editor on the right re-renders for
 whatever you land on. The control matches the setting's type:</p>
