@@ -118,6 +118,7 @@ nav:
       - The board: board.md
       - The settings editor: settings.md
       - The memory browser: memory-browser.md
+      - The review queue: review.md
       - The observations browser: observations.md
       - The graph explorer: graph.md
       - The log viewer: logs.md

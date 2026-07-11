@@ -115,7 +115,7 @@ mc-tool-memory review --json          # same, as structured JSON
 mc-tool-memory reviewed <id>          # mark one reviewed — stamps reviewed_at = now, resetting its curve
 ```
 
-Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (`mait-code`) shows a **Due for review** count under Memory. This is a nudge, not an alarm: nothing is changed for you.
+Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (`mait-code`) shows a **Due for review** count under Memory, and [`mait-code review`](review.md) is the interactive way to work the batch — confirm, refine, or retire each in place, without reaching for the CLI. This is a nudge, not an alarm: nothing is changed for you.
 
 ## Storage: The Memory Database
 
