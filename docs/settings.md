@@ -47,14 +47,16 @@ The categories:
 | Category | What's in it |
 |----------|--------------|
 | **General** | `data-dir` (where everything lives) and `theme`. |
+| **Bridge** | Whether the [Bridge](bridge.md) is `enabled`, and which channel it uses. (The channel's server/topics/token live in the Bridge screen, not here.) |
 | **Logging** | Log level, log file, and how many rotated backups to keep. |
 | **Embeddings** | The provider (`local` or `bedrock`), the model, and the Bedrock model id / region. |
 | **Models** | The extraction and reflection models, LLM and git timeouts, and reflection batch/novelty tuning. |
-| **Scoring & dedup** | The retrieval scoring weights and decay half-lives, plus the dedup similarity thresholds and scope boosts. |
+| **Scoring & dedup** | The retrieval scoring weights and decay half-lives, the dedup similarity thresholds and scope boosts, and the [review-resurfacing](memory.md#review-keeping-curated-memory-fresh) threshold and importance floor. |
 | **Paths (derived)** | Read-only paths computed from `data-dir` — the database files, the model cache, the observations directory. |
+| **Custom env** | Arbitrary environment variables injected at startup — [covered below](#custom-environment-variables-the-env-table). |
 
-General, Logging and Embeddings open on boot; the more advanced groups start
-collapsed to keep the initial list short.
+General, Logging, Embeddings and Custom env open on boot; the more advanced
+groups start collapsed to keep the initial list short.
 
 ## Editing a setting
 

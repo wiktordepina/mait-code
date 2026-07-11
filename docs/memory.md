@@ -444,12 +444,17 @@ launched.
 | `search <query> --type fact` | Filter by entry type |
 | `store <content> --type preference --importance 8` | Store a memory manually (prints any contradiction warnings) |
 | `supersede <old_id> <content>` | Replace an entry with an evolved version; the old one is kept for audit but hidden from recall |
+| `merge <ids…> --into <content>` | Fold several entries into one consolidated entry (importance promoted to the max among them); the sources are kept for audit but hidden |
+| `retire <id>` | Drop a stale entry with no replacement (kept for audit, hidden from recall) |
 | `list` | Recent entries by creation time |
 | `list --since 24h` | Filter by time period (`24h`, `7d`, `1w`, etc.) |
 | `list --type event` | Filter by type |
 | `list --include-superseded` | Include superseded entries (hidden by default) |
+| `review` | List memories [due for review](#review-keeping-curated-memory-fresh) — recall decayed since last review, most-decayed first |
+| `review --json` | Same, as structured JSON |
+| `reviewed <id>` | Mark a memory reviewed, resetting its resurfacing decay curve |
 | `delete <id>` | Delete an entry (embedding cleaned up by trigger) |
-| `stats` | Entry counts, class/scope/project distribution, superseded count, embedding coverage, provider info, unreflected backlog + last reflection run |
+| `stats` | Entry counts, class/scope/project distribution, superseded and retired counts, embedding coverage, provider info, unreflected backlog + last reflection run |
 | `entities [query]` | Search or list knowledge graph entities |
 | `entities merge <source> <target>` | Fold one entity into another: repoint relationships, sum mentions, delete the source (quote multi-word names) |
 | `relationships <entity>` | Show relationships for an entity |
@@ -464,7 +469,7 @@ launched.
 | `reflect --batch-size 20` | Limit entries per batch (default 50) |
 | `reflect --drain` | Loop until all unreflected entries are processed |
 
-**Scope flags** apply to `search`, `store`, `list`, and `reflect`:
+**Scope flags** apply to `search`, `store`, `list`, `review`, and `reflect`:
 
 | Flag | Effect |
 |------|--------|
