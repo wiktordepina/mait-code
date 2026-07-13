@@ -792,6 +792,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._memory_tui import run_memory_tui
 
             run_memory_tui()
+        elif target is HomeTarget.REVIEW:
+            from mait_code.cli._review_tui import run_review_tui
+
+            run_review_tui()
         elif target is HomeTarget.OBSERVATIONS:
             from mait_code.cli._observations_tui import run_observations_tui
 
@@ -900,6 +904,38 @@ def _memory_render() -> None:
         if len(group) > 5:
             typer.echo(f"  … and {len(group) - 5} more")
         typer.echo("")
+
+
+@app.command("review")
+def review() -> None:
+    """Work the memory review queue (text list when not on a TTY)."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        from mait_code.cli._review_tui import run_review_tui
+
+        run_review_tui()
+    else:
+        _review_render()
+
+
+def _review_render() -> None:
+    """Print the due-for-review queue as text (the non-TTY fallback)."""
+    from mait_code.tools.memory.db import connection
+    from mait_code.tools.memory.review import due_for_review
+
+    with connection() as conn:
+        due = due_for_review(conn)
+
+    if not due:
+        typer.echo("Nothing due for review — curated memory is fresh.")
+        return
+
+    typer.echo(f"Due for review: {len(due)} (most-decayed first)")
+    for entry in due:
+        recall_pct = round(entry["recall"] * 100)
+        first_line = (
+            entry["content"].strip().splitlines()[0] if entry["content"] else ""
+        )
+        typer.echo(f"  [#{entry['id']}] {recall_pct:>3}%  {first_line}")
 
 
 @app.command("graph")

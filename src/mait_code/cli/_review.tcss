@@ -1,0 +1,67 @@
+/* Memory review TUI layout. The house theme and shared styling come from
+ * tui/app.tcss; only review-specific layout lives here. Mirrors the memory
+ * browser's master–detail split (see _memory.tcss). */
+
+#body {
+    height: 1fr;
+}
+
+#nav {
+    width: 1fr;
+    border-right: solid $panel;
+    padding: 0 1;
+}
+
+#queue {
+    height: 1fr;
+}
+
+/* Guide rails read as quiet structure, matching the memory browser. */
+#queue > .tree--guides,
+#queue > .tree--guides-hover,
+#queue > .tree--guides-selected {
+    color: $panel;
+}
+
+/* The detail pane gets the wider share: it renders whole memory bodies. */
+#detail {
+    width: 2fr;
+    padding: 1 2;
+}
+
+#detail .title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+#detail .help {
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+/* The Markdown widget ships its own background/margins tuned for full-screen
+ * documents; flatten them so the body sits on the pane like the metadata. */
+#detail Markdown {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+/* The refine modal: wider than the shared .modal-dialog (60) to give the
+ * text editor a readable measure, with room for the content it prefills. */
+#refine-dialog {
+    width: 84;
+    height: auto;
+    max-height: 90%;
+}
+
+#refine-dialog .modal-help {
+    width: 100%;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#refine-dialog TextArea {
+    height: 16;
+    margin-bottom: 1;
+}

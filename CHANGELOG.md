@@ -10,6 +10,25 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.64.0] — 2026-07-11
+
+### Added
+
+- **`mait-code review` — a dedicated TUI for working the memory review queue.**
+  Review resurfacing (0.63.0) already surfaced important-but-ageing memories,
+  but acting on them was CLI-only
+  (`mc-tool-memory reviewed`/`supersede`/`retire`, one id at a time). The new
+  full-screen surface lists what's due — most-decayed first, with a recall-%
+  badge — and works the batch in place: **confirm** (`c`) marks a memory
+  reviewed, **refine** (`e`) edits and supersedes it in a modal, **retire**
+  (`x`) drops it from recall behind a confirm, and skipping just moves on.
+  Decided memories leave the queue and the cursor advances; an emptied queue
+  shows an all-caught-up state. Scope is every memory by default, `p` narrows
+  to a project. Off a TTY it prints the due list as text.
+- **The home hub launches it.** A `↗ Open review` leaf under **Memory** (beneath
+  the *Due for review* count) and an **Open review** command-palette entry hand
+  off to the new TUI, the way the hub already launches the board and editors.
+
 ## [0.63.0] — 2026-07-10
 
 ### Added
@@ -1890,7 +1909,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.63.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.64.0...HEAD
+[0.64.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.64.0
 [0.63.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.63.0
 [0.62.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.62.0
 [0.61.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.61.0

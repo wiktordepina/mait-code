@@ -60,6 +60,7 @@ class HomeTarget(enum.Enum):
 
     BOARD = "board"
     MEMORY = "memory"
+    REVIEW = "review"
     OBSERVATIONS = "observations"
     GRAPH = "graph"
     SETTINGS = "settings"
@@ -346,6 +347,10 @@ class HomeApp(MaitApp):
             memory.add_leaf(review_label, data=NodeSpec("memory:review"))
         else:
             leaf(memory, "Due for review", NodeSpec("memory:review"))
+        # Sits under "Due for review" on purpose: the review TUI is where you
+        # *act* on that count. Same detail key, so highlighting the launch leaf
+        # keeps the due batch previewed (mirrors observations under reflection).
+        launch_leaf(memory, "Open review", NodeSpec("memory:review", HomeTarget.REVIEW))
         leaf(memory, "Embedding coverage", NodeSpec("memory:embedding"))
         leaf(memory, "Reflection status", NodeSpec("memory:reflection"))
         # Sits under Reflection status on purpose: the observations browser is
@@ -1125,6 +1130,11 @@ class HomeApp(MaitApp):
             "Open memory",
             "Jump to the memory browser",
             lambda: self.action_launch(HomeTarget.MEMORY),
+        )
+        yield SystemCommand(
+            "Open review",
+            "Work the memory review queue",
+            lambda: self.action_launch(HomeTarget.REVIEW),
         )
         yield SystemCommand(
             "Open observations",
