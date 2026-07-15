@@ -426,6 +426,7 @@ class TestDerivedRegistry:
             "model-cache-dir",
             "observations-dir",
             "project-aliases-path",
+            "dashboard-config-path",
         }
         for s in derived:
             assert s.env == ""  # no env var
@@ -449,6 +450,18 @@ class TestDerivedRegistry:
         for key, helper in pairs.items():
             derived = Path(config.get(key)).expanduser()
             assert derived == helper()
+
+    def test_dashboard_config_path_matches_runtime_helper(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from mait_code.cli._dashboard import dashboard_path
+
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.delenv("MAIT_CODE_DATA_DIR", raising=False)
+        monkeypatch.setattr(config, "_settings_cache", {})
+
+        derived = Path(config.get("dashboard-config-path")).expanduser()
+        assert derived == dashboard_path()
 
     def test_embedding_dim_matches_provider(
         self, monkeypatch: pytest.MonkeyPatch
