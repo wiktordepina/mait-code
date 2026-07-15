@@ -478,6 +478,8 @@
       
         
       
+        
+      
     
     
     
@@ -654,6 +656,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-start-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The start page
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The start page">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setting-it-up-without-writing-toml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting it up without writing TOML
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#navigating" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -811,6 +841,34 @@
     
   
     The memory browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The review queue
   
 
     
@@ -2140,6 +2198,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-start-page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The start page
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The start page">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setting-it-up-without-writing-toml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting it up without writing TOML
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#navigating" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2246,11 +2332,13 @@
 <p>The home hub is the companion's front door — the screen you land on when you run
 <code>mait-code</code> with no arguments. It is a navigable map over everything mait-code
 holds: your board, your memory, your reminders, the quick-capture inbox, the
-identity stack Claude wakes up with, and the health of the install. Not an
-at-a-glance dashboard you read once, but a place you move around in.</p>
+identity stack Claude wakes up with, and the health of the install. The landing
+view is a <a href="#the-start-page">start page</a> you author yourself — a grid of widgets
+and shell-command tiles declared in <code>dashboard.toml</code> — and the tree beside it is
+the map you move around in.</p>
 <p><img alt="The home hub: the brand masthead, a tree of sections down the left with live
-status badges, and the highlighted section rendered in full on the
-right." src="../assets/home/home.png" /></p>
+status badges, and the start-page widget grid rendered beside
+it." src="../assets/home/home.png" /></p>
 <h2 id="why-it-exists">Why it exists<a class="headerlink" href="#why-it-exists" title="Permanent link">&para;</a></h2>
 <p>mait-code grew a handful of separate surfaces — a board TUI, a memory browser, a
 settings editor, a clutch of <code>mc-tool-*</code> CLIs — each reached its own way. The hub
@@ -2258,10 +2346,12 @@ gives them one entrance. Open it and you can see, in one glance, what's in
 progress, what's overdue, how much is waiting to be triaged, and what Claude sees
 when a session starts — then step straight into the dedicated tool for whatever
 you want to act on.</p>
-<p>It is <strong>pure presentation</strong>: the hub never writes and never shells out. Every
-panel reads the same stores the <code>mc-tool-*</code> CLIs and skills use, so what you see
-here is exactly what the rest of mait-code is working from. A broken store
-renders a quiet snag line in its panel rather than taking the hub down.</p>
+<p>It is <strong>pure presentation</strong>: the hub never writes. Every panel reads the same
+stores the <code>mc-tool-*</code> CLIs and skills use, so what you see here is exactly what
+the rest of mait-code is working from. A broken store renders a quiet snag line
+in its panel rather than taking the hub down. The only commands it ever runs are
+the ones you author yourself as <a href="#the-start-page">start-page tiles</a> — the same
+trust level as your shell rc.</p>
 <h2 id="the-front-door">The front door<a class="headerlink" href="#the-front-door" title="Permanent link">&para;</a></h2>
 <p>Attached to a terminal, a bare <code>mait-code</code> opens the hub:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mait-code<span class="w">            </span><span class="c1"># opens the home hub</span>
@@ -2292,6 +2382,130 @@ summary off one — handy in a CI log or an SSH one-liner:</p>
 <li><strong>The health line</strong> — a one-line doctor verdict pinned to the bottom: how many
   checks passed, warned, or failed.</li>
 </ul>
+<h2 id="the-start-page">The start page<a class="headerlink" href="#the-start-page" title="Permanent link">&para;</a></h2>
+<p>The landing view — what the root node shows — is a widget grid in the
+sampler/wtfutil tradition, declared in <code>dashboard.toml</code> under the data dir
+(<code>~/.claude/mait-code-data/dashboard.toml</code> by default; the exact path shows as
+<code>dashboard-config-path</code> in <code>mait-code settings</code>). With no file authored you get
+a sensible default — reminders, board, inbox, memory — plus a hint pointing at
+the file, so the page is never blank.</p>
+<p>A tile is either a <strong>built-in widget</strong> — a glanceable readout over one of the
+stores — or an <strong>arbitrary shell command</strong> whose stdout becomes the tile body.
+The extensibility is the point: your home-server CI status, disk usage, or
+whatever <code>kubectl</code> output matters this month can sit beside the board.</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># ~/.claude/mait-code-data/dashboard.toml</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># How many columns the grid lays out (1–4, default 2).</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Built-in widgets: reminders, board, inbox, memory, health, velocity.</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="k">[[tile]]</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">widget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;reminders&quot;</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">[[tile]]</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">widget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;board&quot;</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;What&#39;s cooking&quot;</span><span class="w">   </span><span class="c1"># optional — defaults to the widget&#39;s name</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">[[tile]]</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">widget</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;velocity&quot;</span><span class="w">        </span><span class="c1"># memories &amp; cards created this week vs last</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1"># A shell-command tile: stdout becomes the body. Runs through your shell,</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="c1"># so pipes and globs behave as authored.</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="k">[[tile]]</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="n">command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;df -h / | tail -1 | awk &#39;{print $5 </span><span class="se">\&quot;</span><span class="s2"> used</span><span class="se">\&quot;</span><span class="s2">}&#39;&quot;</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Root disk&quot;</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="n">span</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">                   </span><span class="c1"># optional — grid columns to occupy</span>
+</span></code></pre></div>
+<p><img alt="An authored start page: built-in tiles beside a full-width shell-command
+tile, laid out by dashboard.toml." src="../assets/home/home-startpage.png" /></p>
+<p>The built-in widgets:</p>
+<table>
+<thead>
+<tr>
+<th>Widget</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reminders</code></td>
+<td>Overdue (raised in alarm) and upcoming, with the next few of each</td>
+</tr>
+<tr>
+<td><code>board</code></td>
+<td>Live/in-progress/next-up counts and the top in-progress cards</td>
+</tr>
+<tr>
+<td><code>inbox</code></td>
+<td>How many captured items wait for triage, with the top few</td>
+</tr>
+<tr>
+<td><code>memory</code></td>
+<td>Entry count, embedding coverage, reflection backlog, review due</td>
+</tr>
+<tr>
+<td><code>health</code></td>
+<td>The doctor verdict — any warn/fail checks, plus the pass count</td>
+</tr>
+<tr>
+<td><code>velocity</code></td>
+<td>Memories and cards created this week against the week before</td>
+</tr>
+</tbody>
+</table>
+<p>Tiles refresh <strong>on open and on <code>r</code></strong> — never on a timer, so the hub stays
+reactive rather than busy. Command tiles run concurrently and fill in as they
+finish; one that fails or exceeds its timeout (the <code>dashboard-tile-timeout</code>
+setting, 5 seconds by default) shows its diagnosis in a warning-bordered tile
+without disturbing the rest of the grid. The same tolerance applies to the file
+itself: a malformed <code>dashboard.toml</code> or an unknown widget falls back gracefully,
+with the problem spelled out above the grid.</p>
+<h3 id="setting-it-up-without-writing-toml">Setting it up without writing TOML<a class="headerlink" href="#setting-it-up-without-writing-toml" title="Permanent link">&para;</a></h3>
+<p>You never have to author the file by hand: the <strong><code>↗ Set up start page</code></strong> leaf
+at the top of the tree (also in the <code>Ctrl+P</code> palette) opens a guided editor.
+The tile list and the grid's column count sit on the left; the selected tile's
+form — widget picker or command input, title, span — on the right, with a
+preview rendered from your real data.</p>
+<p><img alt="The start-page setup editor: the tile list and column count on the left, the
+selected tile's form and its live preview on the
+right." src="../assets/home/home-startpage-setup.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a</code> / <code>d</code></td>
+<td>Add a tile after the selection / remove the selected tile</td>
+</tr>
+<tr>
+<td><code>Shift+↑</code> / <code>Shift+↓</code></td>
+<td>Reorder</td>
+</tr>
+<tr>
+<td><code>Ctrl+R</code></td>
+<td>Run a command tile and preview its output — commands <strong>never</strong> run while you type, only on this key</td>
+</tr>
+<tr>
+<td><code>Ctrl+S</code></td>
+<td>Save</td>
+</tr>
+<tr>
+<td><code>Ctrl+E</code></td>
+<td>Save and open the raw file in <code>$EDITOR</code>, reloading on return</td>
+</tr>
+<tr>
+<td><code>q</code> / <code>Esc</code></td>
+<td>Quit — asks first if there are unsaved changes</td>
+</tr>
+</tbody>
+</table>
+<p>Saving round-trips the file through a style-preserving writer, so comments and
+formatting you added by hand survive the editor's edits (a comment sitting
+<em>above</em> a <code>[[tile]]</code> header keeps its place in the file rather than following
+a reordered tile). Quit the editor and home returns with the new grid live.</p>
 <h2 id="navigating">Navigating<a class="headerlink" href="#navigating" title="Permanent link">&para;</a></h2>
 <p>Move the highlight with the arrow keys (or <code>j</code>/<code>k</code>); the detail pane follows as
 you go, so browsing is just moving up and down. The tree has three kinds of node,
@@ -2323,15 +2537,17 @@ and <code>Enter</code> does the obvious thing on each:</p>
 </tbody>
 </table>
 <h3 id="opening-the-other-tuis">Opening the other TUIs<a class="headerlink" href="#opening-the-other-tuis" title="Permanent link">&para;</a></h3>
-<p><a href="../board/">The board</a>, <a href="../memory-browser/">the memory browser</a>, <a href="../observations/">the
-observations browser</a>, <a href="../graph/">the graph explorer</a>, <a href="../settings/">the
-settings editor</a> and <a href="../logs/">the log viewer</a> are full
-applications in their own right. Each has a dedicated <strong>launch leaf</strong> in its
-section, marked with a <code>↗</code> and shown in the accent colour so it reads as a
-hand-off rather than just another row:</p>
+<p><a href="../board/">The board</a>, <a href="../memory-browser/">the memory browser</a>, <a href="../review/">the review
+queue</a>, <a href="../observations/">the observations browser</a>, <a href="../graph/">the graph
+explorer</a>, <a href="../settings/">the settings editor</a> and <a href="../logs/">the log
+viewer</a> are full applications in their own right. Each has a dedicated
+<strong>launch leaf</strong> in its section, marked with a <code>↗</code> and shown in the accent colour
+so it reads as a hand-off rather than just another row:</p>
 <ul>
 <li><code>↗ Open board</code> — under <strong>Board</strong></li>
 <li><code>↗ Open memory browser</code> — under <strong>Memory</strong></li>
+<li><code>↗ Open review</code> — under <strong>Memory</strong>, beneath <em>Due for review</em> (it's where you
+  act on that count)</li>
 <li><code>↗ Open observations</code> — under <strong>Memory</strong>, beneath <em>Reflection status</em> (it's
   that count's drill-down)</li>
 <li><code>↗ Open graph explorer</code> — under <strong>Memory</strong> (the knowledge graph over the same
@@ -2341,6 +2557,8 @@ hand-off rather than just another row:</p>
   whereabouts and today's tallies)</li>
 <li><code>↗ Configure Bridge</code> — under <strong>System</strong> (opens the <a href="../bridge/">Bridge</a>
   enable/channel screen)</li>
+<li><code>↗ Set up start page</code> — at the top of the tree, above the sections (opens the
+  <a href="#setting-it-up-without-writing-toml">start-page editor</a>)</li>
 </ul>
 <p>Press <code>Enter</code> on one and home steps aside to run that TUI. When you quit it
 (<code>q</code>), home comes back — and its badges reflect anything you just changed, because
@@ -2348,8 +2566,9 @@ each return rebuilds the tree from the stores. The category nodes themselves sta
 ordinary expand/collapse sections, so you never lose the ability to fold a branch
 away.</p>
 <p>The same hand-offs live in the <code>Ctrl+P</code> command palette (<strong>Open board</strong>,
-<strong>Open memory</strong>, <strong>Open observations</strong>, <strong>Open settings</strong>, <strong>Open logs</strong>),
-alongside <strong>Reload</strong> and <strong>Reindex memory</strong>.</p>
+<strong>Open memory</strong>, <strong>Open review</strong>, <strong>Open observations</strong>, <strong>Open settings</strong>,
+<strong>Open logs</strong>, <strong>Set up start page</strong>), alongside <strong>Reload</strong> and
+<strong>Reindex memory</strong>.</p>
 <h2 id="what-each-section-shows">What each section shows<a class="headerlink" href="#what-each-section-shows" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2368,7 +2587,7 @@ alongside <strong>Reload</strong> and <strong>Reindex memory</strong>.</p>
 <tr>
 <td><strong>Memory</strong></td>
 <td>Entry count and a by-type breakdown</td>
-<td><code>↗ Open memory browser</code>, By type, Due for review, Embedding coverage, Reflection status, <code>↗ Open observations</code>, <code>↗ Open graph explorer</code></td>
+<td><code>↗ Open memory browser</code>, By type, Due for review, <code>↗ Open review</code>, Embedding coverage, Reflection status, <code>↗ Open observations</code>, <code>↗ Open graph explorer</code></td>
 </tr>
 <tr>
 <td><strong>Reminders</strong></td>
@@ -2433,7 +2652,7 @@ header." src="../assets/home/home-sysprompt.png" /></p>
 </tr>
 <tr>
 <td><code>r</code></td>
-<td>Reload every store — refreshes the badges and the current detail</td>
+<td>Reload every store — refreshes the badges, the current detail, and re-runs the start-page tiles</td>
 </tr>
 <tr>
 <td><code>e</code></td>
@@ -2460,6 +2679,9 @@ header." src="../assets/home/home-sysprompt.png" /></p>
   loud.</li>
 <li><strong><code>r</code> after a session.</strong> If a session moved cards or wrote memories while the
   hub was open, <code>r</code> re-reads every store so the numbers catch up.</li>
+<li><strong>Iterate on the start page in place.</strong> Edit <code>dashboard.toml</code> in another
+  terminal and press <code>r</code> — the grid rebuilds from the file without leaving the
+  hub.</li>
 <li><strong><code>e</code> when embeddings lag.</strong> If <em>Embedding coverage</em> (or the health line's
   <code>memory-embeddings</code> warning) shows unembedded entries, press <code>e</code> — after a
   confirm naming the missing count, home drops to the terminal to embed just
@@ -2469,9 +2691,9 @@ header." src="../assets/home/home-sysprompt.png" /></p>
   <code>mc-tool-memory reindex</code>.</li>
 <li><strong>Keep curated memory fresh.</strong> <em>Memory → Due for review</em> lists the entries that
   have <a href="../memory/#review-keeping-curated-memory-fresh">decayed past the resurfacing threshold</a> —
-  the leaf carries a warn-styled count when any are waiting. Confirm, refine or
-  retire them, then <code>mc-tool-memory reviewed &lt;id&gt;</code> resets the decay curve so they
-  drop back out of the due set.</li>
+  the leaf carries a warn-styled count when any are waiting. Press <code>↗ Open review</code>
+  (or run <code>mait-code review</code>) to <a href="../review/">work the batch</a>: confirm, refine or
+  retire each, resetting its decay curve so it drops back out of the due set.</li>
 <li><strong>Mind the budget.</strong> When sessions start to feel like they're carrying too much,
   open <em>Identity → System prompt</em> and see what the identity stack is spending; a
   bloated <code>MEMORY.md</code> shows up here first.</li>

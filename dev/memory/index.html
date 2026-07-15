@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -648,6 +650,34 @@
     
   
     The memory browser
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The review queue
   
 
     
@@ -3024,7 +3054,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mc-tool-memory<span class="w"> </span>review<span class="w"> </span>--json<span class="w">          </span><span class="c1"># same, as structured JSON</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mc-tool-memory<span class="w"> </span>reviewed<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># mark one reviewed — stamps reviewed_at = now, resetting its curve</span>
 </span></code></pre></div>
-<p>Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (<code>mait-code</code>) shows a <strong>Due for review</strong> count under Memory. This is a nudge, not an alarm: nothing is changed for you.</p>
+<p>Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (<code>mait-code</code>) shows a <strong>Due for review</strong> count under Memory, and <a href="../review/"><code>mait-code review</code></a> is the interactive way to work the batch — confirm, refine, or retire each in place, without reaching for the CLI. This is a nudge, not an alarm: nothing is changed for you.</p>
 <h2 id="storage-the-memory-database">Storage: The Memory Database<a class="headerlink" href="#storage-the-memory-database" title="Permanent link">&para;</a></h2>
 <p>All structured data lives in a single SQLite file (<code>memory.db</code>) with three search layers:</p>
 <h3 id="memory-entries">Memory entries<a class="headerlink" href="#memory-entries" title="Permanent link">&para;</a></h3>
