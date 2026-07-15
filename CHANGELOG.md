@@ -10,6 +10,40 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.65.0] — 2026-07-15
+
+### Added
+
+- **The home hub's landing view is now a start page you author yourself.** A
+  `dashboard.toml` in the data dir declares a grid of tiles — built-in widgets
+  (`reminders`, `board`, `inbox`, `memory`, `health`, `velocity`) **plus
+  arbitrary shell-command tiles** whose stdout becomes the tile body, so your
+  home-server CI status or disk usage can sit beside the board. Tiles refresh
+  on open and on `r`, never on a timer; command tiles run concurrently with a
+  timeout (the new `dashboard-tile-timeout` setting, 5s default) and a failed
+  one shows its diagnosis in a warning-bordered tile without disturbing the
+  grid. Loading is tolerant: no file means a sensible default layout, and a
+  malformed file or unknown widget falls back with the problem spelled out
+  above the grid. The derived `dashboard-config-path` setting shows where the
+  file lives.
+- **`↗ Set up start page` — a guided editor, so you never have to write
+  TOML.** A new launch leaf at the top of the hub tree (and a command-palette
+  entry) opens a two-pane editor: the tile list and grid column count on the
+  left, the selected tile's form — widget picker or command input, title,
+  span — with a live preview on the right. Add (`a`), remove (`d`) and reorder
+  (`Shift+↑/↓`) tiles; `Ctrl+S` saves; `Ctrl+E` drops into `$EDITOR` on the
+  raw file and reloads on return; quitting with unsaved changes asks first.
+  Two safety choices: **command text is never executed while being typed**
+  (previews run only on `Ctrl+R`; widget tiles preview live because they only
+  read the stores), and saving round-trips the file through tomlkit so
+  hand-written comments and formatting survive the editor's edits.
+
+### Changed
+
+- **The hub's home detail** — previously a static "At a glance" summary — is
+  replaced by the start-page grid; the old headline numbers live on in the
+  default `board`/`reminders`/`inbox`/`memory` tiles.
+
 ## [0.64.0] — 2026-07-11
 
 ### Added
@@ -1909,7 +1943,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.64.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.65.0...HEAD
+[0.65.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.65.0
 [0.64.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.64.0
 [0.63.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.63.0
 [0.62.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.62.0
