@@ -1,17 +1,25 @@
 """Interactive ``mait-code home`` &mdash; the companion's front door.
 
-A navigable hub over everything mait-code, not an at-a-glance readout: a brand
-header, a tree sidebar of sections (Board, Memory, Reminders, Inbox, Identity,
-System), and a detail pane that renders the highlighted section in full. Tree
-nodes carry live status badges; pressing ``Enter`` on a Board, Memory or
-Settings node leaves home and opens that dedicated TUI, returning here when it
-quits (the relaunch loop lives in :func:`mait_code.cli.home`).
+A navigable hub over everything mait-code: a brand header, a tree sidebar of
+sections (Board, Memory, Reminders, Inbox, Identity, System), and a detail
+pane that renders the highlighted section in full. Tree nodes carry live
+status badges; pressing ``Enter`` on a Board, Memory or Settings node leaves
+home and opens that dedicated TUI, returning here when it quits (the relaunch
+loop lives in :func:`mait_code.cli.home`).
+
+The landing view is a **start page** &mdash; a user-authored widget grid
+declared in ``dashboard.toml`` (see :mod:`mait_code.cli._dashboard`): built-in
+store readouts plus arbitrary shell-command tiles. Tiles refresh on open and
+on ``r``, never on a timer; command tiles run concurrently in thread workers
+so the grid fills in as results land.
 
 Pure presentation over the same store layers the ``mc-tool-*`` CLIs use &mdash;
-nothing here writes, and nothing shells out. The one maintenance action is
-``e`` (reindex): after a confirm it drops out via :meth:`App.suspend` so
-``run_reindex`` can embed the entries missing a vector with its normal
-terminal progress, then home reloads with the fresh embedding counts.
+nothing here writes. The only subprocesses are the user's own command tiles
+(authored in their ``dashboard.toml``, the same trust level as a shell rc
+file) and ``e`` (reindex): after a confirm it drops out via
+:meth:`App.suspend` so ``run_reindex`` can embed the entries missing a vector
+with its normal terminal progress, then home reloads with the fresh embedding
+counts.
 
 The brand debuts here too: the
 wordmark (with a plain-text fallback on narrow terminals), the signature glyph,
@@ -33,13 +41,14 @@ from rich.text import Text
 from textual import work
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
-from textual.containers import Horizontal, VerticalScroll
+from textual.containers import Grid, Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widget import Widget
 from textual.widgets import Footer, Label, Markdown, Static, Tree
 from textual.widgets.tree import TreeNode
 
-from mait_code.config import data_dir
+from mait_code.cli import _dashboard as dashboard
+from mait_code.config import data_dir, get_int
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.confirm import ConfirmScreen
 from mait_code.tui.banner import BrandBanner, installed_version
@@ -66,6 +75,7 @@ class HomeTarget(enum.Enum):
     SETTINGS = "settings"
     LOGS = "logs"
     BRIDGE = "bridge"
+    DASHBOARD = "dashboard"
 
 
 def run_home_tui() -> HomeTarget | None:
@@ -318,6 +328,13 @@ class HomeApp(MaitApp):
             # category itself stays a normal expand/collapse node.
             parent.add_leaf(Text(f"↗ {name}", style=accent), data=spec)
 
+        # The start page's own setup sits above the sections: a root-level
+        # launch leaf, keeping the landing grid previewed while highlighted.
+        tree.root.add_leaf(
+            Text("↗ Set up start page", style=accent),
+            data=NodeSpec("home", HomeTarget.DASHBOARD),
+        )
+
         board = section(
             "Board",
             NodeSpec("board"),
@@ -452,42 +469,105 @@ class HomeApp(MaitApp):
             ]
         await detail.mount_all(widgets)
 
-    # -- detail builders: overview ---------------------------------------------
+    # -- detail builders: the start page -----------------------------------------
 
     def _detail_home(self) -> list[Widget]:
-        b = _Badges()
-        widgets: list[Widget] = [
-            Label(
-                empty_state("Welcome home — your central place for mait-code."),
-                classes="help",
-            ),
-            Label(
-                "Pick a section on the left; open a full tool from its "
-                "“↗ Open …” leaf.",
-                classes="help",
-            ),
-        ]
+        """The start page: the user-authored widget grid from ``dashboard.toml``.
 
-        board = (
-            f"{b.board_in_progress} in progress · {b.board_refined} next up"
-            if b.board_live
-            else "all clear"
-        )
-        rem = (
-            f"{b.rem_overdue} overdue · {b.rem_upcoming} upcoming"
-            if (b.rem_overdue or b.rem_upcoming)
-            else "nothing pending"
-        )
-        widgets.append(Label("At a glance", classes="subhead"))
-        widgets += _kv_rows(
-            [
-                ("Board", board),
-                ("Memory", f"{b.mem_total} entries · {b.mem_pct}% embedded"),
-                ("Reminders", rem),
-                ("Inbox", f"{b.inbox} waiting" if b.inbox else "inbox zero"),
-            ]
-        )
+        Built-in tiles collect inline (each best-effort); command tiles mount
+        as a pending state and fill in from thread workers. Stale workers from
+        the previous render are cancelled first, so a reload never lets an old
+        command overwrite a fresh tile.
+        """
+        self.workers.cancel_group(self, "dash-tiles")
+        cfg = dashboard.load_dashboard()
+
+        widgets: list[Widget] = []
+        for warning in cfg.warnings:
+            widgets.append(Label(f"⚠ {warning}", classes="overdue"))
+        if not cfg.authored:
+            home = str(Path.home())
+            path = str(dashboard.dashboard_path()).replace(home, "~")
+            widgets.append(
+                Label(
+                    empty_state(
+                        "Your start page — open “↗ Set up start page” "
+                        f"(or author {path}) to make it yours."
+                    ),
+                    classes="hint",
+                )
+            )
+
+        tiles: list[Static] = []
+        jobs: list[tuple[Static, str]] = []
+        for index, spec in enumerate(cfg.tiles):
+            tile = self._dash_tile(index, spec)
+            tiles.append(tile)
+            if spec.command is not None:
+                jobs.append((tile, spec.command))
+
+        grid = Grid(*tiles, id="dash-grid")
+        grid.styles.grid_size_columns = cfg.columns
+        widgets.append(grid)
+
+        timeout = get_int("dashboard-tile-timeout")
+        for tile, command in jobs:
+            self._run_command_tile(tile, command, timeout)
         return widgets
+
+    def _dash_tile(self, index: int, spec: dashboard.TileSpec) -> Static:
+        """One grid tile: a collected built-in, or a pending command body."""
+        if spec.widget is not None:
+            title = spec.title or dashboard.builtin_title(spec.widget)
+            try:
+                body = self._tile_text(dashboard.builtin_tile_lines(spec.widget))
+                error = False
+            except Exception as exc:  # noqa: BLE001 — one broken store, one tile
+                body = Text(
+                    f"couldn't read: {exc}", style=self._level_colours()["warn"]
+                )
+                error = True
+        else:
+            title = spec.title or _clip(spec.command or "", 40)
+            body = Text("⧗ running…", style="dim")
+            error = False
+        tile = Static(body, id=f"dash-tile-{index}", classes="tile")
+        if error:
+            tile.add_class("tile-error")
+        tile.border_title = title
+        tile.styles.column_span = spec.span
+        return tile
+
+    def _tile_text(self, lines: list[dashboard.TileLine]) -> Text:
+        """Semantic tile lines → one Rich body in the active theme's colours."""
+        styles = {"": "", "dim": "dim", "warn": self._level_colours()["warn"]}
+        text = Text()
+        for i, line in enumerate(lines):
+            if i:
+                text.append("\n")
+            text.append(line.text, style=styles.get(line.style, ""))
+        return text
+
+    @work(thread=True, group="dash-tiles", exclusive=False)
+    def _run_command_tile(self, tile: Static, command: str, timeout: int) -> None:
+        """Run one command tile off the event loop and post its result back."""
+        result = dashboard.run_command_tile(command, timeout)
+        try:
+            self.call_from_thread(self._apply_command_result, tile, result)
+        except RuntimeError:
+            # The app closed while the command ran; nothing left to update.
+            pass
+
+    def _apply_command_result(
+        self, tile: Static, result: dashboard.CommandResult
+    ) -> None:
+        if not tile.is_attached:  # the grid re-rendered while the command ran
+            return
+        if result.ok:
+            tile.update(Text(result.output))
+        else:
+            tile.update(Text(result.output, style=self._level_colours()["warn"]))
+            tile.add_class("tile-error")
 
     # -- detail builders: board ------------------------------------------------
 
@@ -1150,6 +1230,11 @@ class HomeApp(MaitApp):
             "Open logs",
             "Jump to the log viewer",
             lambda: self.action_launch(HomeTarget.LOGS),
+        )
+        yield SystemCommand(
+            "Set up start page",
+            "Edit the landing grid's tiles (dashboard.toml)",
+            lambda: self.action_launch(HomeTarget.DASHBOARD),
         )
 
 

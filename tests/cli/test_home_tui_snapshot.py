@@ -12,8 +12,11 @@ Regenerate the baselines intentionally (and eyeball the diff) with::
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+import mait_code.cli._dashboard as dashboard_mod
 import mait_code.cli._doctor as doctor_mod
 import mait_code.tui.banner as banner_mod
 from mait_code.cli._doctor import Check, DoctorReport
@@ -35,6 +38,14 @@ def _pin_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     # The banner masthead renders the version; pin it so the chrome stays
     # release-stable (it's read through the shared banner module now).
     monkeypatch.setattr(banner_mod, "installed_version", lambda: "0.0.0")
+    # The start page's authoring hint renders dashboard_path(); the real one
+    # sits under the per-test tmp dir, whose name changes every run. Pin it to
+    # the canonical display path (which doesn't exist → the default layout).
+    monkeypatch.setattr(
+        dashboard_mod,
+        "dashboard_path",
+        lambda: Path("~/.claude/mait-code-data/dashboard.toml"),
+    )
 
 
 def _seed_all_stores() -> None:
@@ -166,6 +177,34 @@ def test_home_sysprompt_snapshot(snap_compare) -> None:
         await pilot.pause()
 
     assert snap_compare(HomeApp(), run_before=run_before, terminal_size=(120, 48))
+
+
+def test_home_dashboard_authored_snapshot(
+    snap_compare, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Lock an authored start page: built-in tiles beside a full-width command
+    tile whose output has landed before the frame is captured (the doctor
+    report behind the health widget is pinned by the environment fixture)."""
+    _seed_all_stores()
+    path = tmp_path / "dashboard.toml"
+    path.write_text(
+        "columns = 2\n"
+        '[[tile]]\nwidget = "board"\n'
+        '[[tile]]\nwidget = "health"\n'
+        "[[tile]]\n"
+        'command = "echo deploy green · disk 42%"\n'
+        'title = "Home server"\n'
+        "span = 2\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(dashboard_mod, "dashboard_path", lambda: path)
+
+    async def run_before(pilot) -> None:
+        await pilot.pause()
+        await pilot.app.workers.wait_for_complete()
+        await pilot.pause()
+
+    assert snap_compare(HomeApp(), run_before=run_before, terminal_size=(120, 40))
 
 
 def test_home_reindex_confirm_snapshot(snap_compare) -> None:

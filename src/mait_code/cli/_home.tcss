@@ -68,6 +68,33 @@
     padding: 0;
 }
 
+/* --- Start-page dashboard --------------------------------------------------
+ * The landing view's widget grid. Column count comes from dashboard.toml and
+ * is applied programmatically (grid_size_columns); everything static — the
+ * tile chrome, the gutters, auto-sizing rows — lives here. */
+
+#dash-grid {
+    height: auto;
+    grid-rows: auto;
+    grid-columns: 1fr;
+    grid-gutter: 1 2;
+    margin-top: 1;
+}
+
+#dash-grid .tile {
+    height: auto;
+    width: 100%;
+    border: round $panel;
+    border-title-color: $primary;
+    padding: 0 1;
+}
+
+/* A tile whose store broke or whose command failed — the border carries the
+ * warning so the grid stays scannable. */
+#dash-grid .tile-error {
+    border: round $warning;
+}
+
 /* --- Health line ---------------------------------------------------------- */
 
 #health {

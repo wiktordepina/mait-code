@@ -1,0 +1,75 @@
+/* Start-page setup layout. House theme and shared styling come from
+ * tui/app.tcss; only editor-specific layout lives here. */
+
+#body {
+    height: 1fr;
+    padding: 0 1;
+}
+
+/* Tile list on the left, form on the right — the list is the menu, the form
+ * is where the editing happens (same share as the hub's tree/detail split). */
+#left {
+    width: 1fr;
+    border-right: solid $panel;
+    padding: 0 1;
+}
+
+#form {
+    width: 2fr;
+    padding: 0 2;
+}
+
+#left .title,
+#form .title {
+    text-style: bold;
+    color: $text-primary;
+}
+
+#tile-list {
+    height: auto;
+    max-height: 60%;
+    margin-top: 1;
+    border: none;
+    padding: 0;
+    background: transparent;
+}
+
+#left .field-label,
+#form .field-label {
+    color: $text-muted;
+    margin-top: 1;
+    width: 100%;
+}
+
+#left .hint {
+    color: $text-muted;
+    text-style: italic;
+    margin-top: 1;
+}
+
+#type {
+    height: auto;
+    border: none;
+    padding: 0;
+    background: transparent;
+}
+
+/* The preview replicates the hub's grid-tile chrome so what you see here is
+ * what the start page renders. */
+#preview {
+    height: auto;
+    width: 100%;
+    border: round $panel;
+    border-title-color: $primary;
+    padding: 0 1;
+    margin-top: 1;
+}
+
+#preview.tile-error {
+    border: round $warning;
+}
+
+#msg {
+    margin-top: 1;
+    height: auto;
+}

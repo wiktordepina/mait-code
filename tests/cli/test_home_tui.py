@@ -460,7 +460,8 @@ def test_selecting_a_launch_leaf_sets_the_target() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
-            board = tree.root.children[0]  # Board section (expands, no launch)
+            # Root child 0 is the "↗ Set up start page" leaf; Board follows.
+            board = tree.root.children[1]  # Board section (expands, no launch)
             open_board = board.children[0]  # "↗ Open board" launch leaf
             app.on_tree_node_selected(Tree.NodeSelected(open_board))
             await pilot.pause()
@@ -477,7 +478,7 @@ def test_selecting_a_category_toggles_without_launching() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
-            board = tree.root.children[0]  # Board section
+            board = tree.root.children[1]  # Board section (after the setup leaf)
             was_expanded = board.is_expanded
             app.on_tree_node_selected(Tree.NodeSelected(board))
             await pilot.pause()
@@ -595,3 +596,194 @@ def test_reindex_skips_modal_when_nothing_missing(
     depth = _run(scenario)
     assert depth == 1  # no ConfirmScreen was pushed
     assert calls == []
+
+
+# --- start-page dashboard ---
+
+
+def _write_dashboard(monkeypatch: pytest.MonkeyPatch, tmp_path, body: str) -> None:
+    """Author a dashboard.toml and point the loader at it."""
+    import mait_code.cli._dashboard as dashboard_mod
+
+    path = tmp_path / "dashboard.toml"
+    path.write_text(body, encoding="utf-8")
+    monkeypatch.setattr(dashboard_mod, "dashboard_path", lambda: path)
+
+
+def test_home_dashboard_shows_default_tiles_and_authoring_hint() -> None:
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            titles = [tile.border_title for tile in app.query(".tile")]
+            return titles, _detail_text(app)
+
+    titles, text = _run(scenario)
+    assert titles == ["Reminders", "Board", "Inbox", "Memory"]
+    assert "dashboard.toml" in text  # the make-it-yours hint
+
+
+def test_home_dashboard_command_tile_fills_in(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    _write_dashboard(
+        monkeypatch,
+        tmp_path,
+        '[[tile]]\ncommand = "echo hi there"\ntitle = "Greeting"\n',
+    )
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            tile = app.query_one("#dash-tile-0")
+            return str(tile.render()), tile.border_title, tile.has_class("tile-error")
+
+    body, title, error = _run(scenario)
+    assert body == "hi there"
+    assert title == "Greeting"
+    assert not error
+
+
+def test_home_dashboard_failing_command_marks_the_tile(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    _write_dashboard(
+        monkeypatch, tmp_path, '[[tile]]\ncommand = "echo boom >&2; exit 7"\n'
+    )
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            tile = app.query_one("#dash-tile-0")
+            return str(tile.render()), tile.has_class("tile-error")
+
+    body, error = _run(scenario)
+    assert error
+    assert body == "exited 7: boom"
+
+
+def test_home_dashboard_malformed_config_warns_and_shows_defaults(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    _write_dashboard(monkeypatch, tmp_path, "columns = [broken")
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return len(app.query(".tile")), _detail_text(app)
+
+    n_tiles, text = _run(scenario)
+    assert n_tiles == 4  # the default layout stands in
+    assert "could not be read" in text
+
+
+def test_home_dashboard_broken_store_costs_one_tile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import mait_code.cli._dashboard as dashboard_mod
+
+    real = dashboard_mod.builtin_tile_lines
+
+    def flaky(widget: str):
+        if widget == "board":
+            raise RuntimeError("store went sideways")
+        return real(widget)
+
+    monkeypatch.setattr(dashboard_mod, "builtin_tile_lines", flaky)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return {
+                str(tile.border_title): (
+                    str(tile.render()),
+                    tile.has_class("tile-error"),
+                )
+                for tile in app.query(".tile")
+            }
+
+    tiles = _run(scenario)
+    body, error = tiles["Board"]
+    assert error and "store went sideways" in body
+    assert all(not err for title, (_, err) in tiles.items() if title != "Board")
+
+
+def test_home_dashboard_grid_honours_columns_and_span(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    _write_dashboard(
+        monkeypatch,
+        tmp_path,
+        "columns = 3\n"
+        '[[tile]]\nwidget = "inbox"\n'
+        '[[tile]]\nwidget = "memory"\nspan = 2\n',
+    )
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            grid = app.query_one("#dash-grid")
+            spans = [tile.styles.column_span for tile in app.query(".tile")]
+            return grid.styles.grid_size_columns, spans
+
+    columns, spans = _run(scenario)
+    assert columns == 3
+    assert spans == [1, 2]
+
+
+def test_home_dashboard_reload_rebuilds_the_grid(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """`r` re-reads dashboard.toml — an edit lands without leaving the hub."""
+    import mait_code.cli._dashboard as dashboard_mod
+
+    path = tmp_path / "dashboard.toml"
+    path.write_text('[[tile]]\nwidget = "inbox"\n', encoding="utf-8")
+    monkeypatch.setattr(dashboard_mod, "dashboard_path", lambda: path)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            before = [tile.border_title for tile in app.query(".tile")]
+            path.write_text(
+                '[[tile]]\nwidget = "inbox"\n[[tile]]\nwidget = "memory"\n',
+                encoding="utf-8",
+            )
+            await pilot.press("r")
+            await pilot.pause()
+            await pilot.pause()
+            after = [tile.border_title for tile in app.query(".tile")]
+            return before, after
+
+    before, after = _run(scenario)
+    assert before == ["Inbox"]
+    assert after == ["Inbox", "Memory"]
+
+
+def test_home_tree_offers_start_page_setup_leaf() -> None:
+    """The root carries the '↗ Set up start page' hand-off above the sections,
+    and selecting it exits home with the DASHBOARD target."""
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            labels = _tree_labels(app)
+            await pilot.press("down")  # first child of the root is the leaf
+            await pilot.press("enter")
+            await pilot.pause()
+            return labels, app.target
+
+    labels, target = _run(scenario)
+    assert any("Set up start page" in label for label in labels)
+    assert target is HomeTarget.DASHBOARD

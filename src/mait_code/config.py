@@ -373,6 +373,15 @@ SETTINGS: tuple[Setting, ...] = (
         validate=_positive_int,
         help="Timeout (seconds) for git context probes.",
     ),
+    Setting(
+        "dashboard-tile-timeout",
+        "MAIT_CODE_DASHBOARD_TILE_TIMEOUT",
+        "5",
+        kind="int",
+        advanced=True,
+        validate=_positive_int,
+        help="Timeout (seconds) for home-hub shell-command tiles.",
+    ),
     # --- Tier 4: scoring / dedup tuning (advanced, validated) ---
     Setting(
         "score-weight-recency",
@@ -554,6 +563,14 @@ SETTINGS: tuple[Setting, ...] = (
         settable=False,
         derive=lambda: _display_path("project-aliases.json"),
         help="Project-alias map (derived from data-dir).",
+    ),
+    Setting(
+        "dashboard-config-path",
+        "",
+        "",
+        settable=False,
+        derive=lambda: _display_path("dashboard.toml"),
+        help="Home-hub start-page layout — widgets & command tiles (derived from data-dir).",
     ),
 )
 

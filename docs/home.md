@@ -3,12 +3,14 @@
 The home hub is the companion's front door — the screen you land on when you run
 `mait-code` with no arguments. It is a navigable map over everything mait-code
 holds: your board, your memory, your reminders, the quick-capture inbox, the
-identity stack Claude wakes up with, and the health of the install. Not an
-at-a-glance dashboard you read once, but a place you move around in.
+identity stack Claude wakes up with, and the health of the install. The landing
+view is a [start page](#the-start-page) you author yourself — a grid of widgets
+and shell-command tiles declared in `dashboard.toml` — and the tree beside it is
+the map you move around in.
 
 ![The home hub: the brand masthead, a tree of sections down the left with live
-status badges, and the highlighted section rendered in full on the
-right.](assets/home/home.png)
+status badges, and the start-page widget grid rendered beside
+it.](assets/home/home.png)
 
 ## Why it exists
 
@@ -19,10 +21,12 @@ progress, what's overdue, how much is waiting to be triaged, and what Claude see
 when a session starts — then step straight into the dedicated tool for whatever
 you want to act on.
 
-It is **pure presentation**: the hub never writes and never shells out. Every
-panel reads the same stores the `mc-tool-*` CLIs and skills use, so what you see
-here is exactly what the rest of mait-code is working from. A broken store
-renders a quiet snag line in its panel rather than taking the hub down.
+It is **pure presentation**: the hub never writes. Every panel reads the same
+stores the `mc-tool-*` CLIs and skills use, so what you see here is exactly what
+the rest of mait-code is working from. A broken store renders a quiet snag line
+in its panel rather than taking the hub down. The only commands it ever runs are
+the ones you author yourself as [start-page tiles](#the-start-page) — the same
+trust level as your shell rc.
 
 ## The front door
 
@@ -62,6 +66,92 @@ Three regions, top to bottom:
 - **The health line** — a one-line doctor verdict pinned to the bottom: how many
   checks passed, warned, or failed.
 
+## The start page
+
+The landing view — what the root node shows — is a widget grid in the
+sampler/wtfutil tradition, declared in `dashboard.toml` under the data dir
+(`~/.claude/mait-code-data/dashboard.toml` by default; the exact path shows as
+`dashboard-config-path` in `mait-code settings`). With no file authored you get
+a sensible default — reminders, board, inbox, memory — plus a hint pointing at
+the file, so the page is never blank.
+
+A tile is either a **built-in widget** — a glanceable readout over one of the
+stores — or an **arbitrary shell command** whose stdout becomes the tile body.
+The extensibility is the point: your home-server CI status, disk usage, or
+whatever `kubectl` output matters this month can sit beside the board.
+
+```toml
+# ~/.claude/mait-code-data/dashboard.toml
+# How many columns the grid lays out (1–4, default 2).
+columns = 2
+
+# Built-in widgets: reminders, board, inbox, memory, health, velocity.
+[[tile]]
+widget = "reminders"
+
+[[tile]]
+widget = "board"
+title = "What's cooking"   # optional — defaults to the widget's name
+
+[[tile]]
+widget = "velocity"        # memories & cards created this week vs last
+
+# A shell-command tile: stdout becomes the body. Runs through your shell,
+# so pipes and globs behave as authored.
+[[tile]]
+command = "df -h / | tail -1 | awk '{print $5 \" used\"}'"
+title = "Root disk"
+span = 2                   # optional — grid columns to occupy
+```
+
+![An authored start page: built-in tiles beside a full-width shell-command
+tile, laid out by dashboard.toml.](assets/home/home-startpage.png)
+
+The built-in widgets:
+
+| Widget | Shows |
+|--------|-------|
+| `reminders` | Overdue (raised in alarm) and upcoming, with the next few of each |
+| `board` | Live/in-progress/next-up counts and the top in-progress cards |
+| `inbox` | How many captured items wait for triage, with the top few |
+| `memory` | Entry count, embedding coverage, reflection backlog, review due |
+| `health` | The doctor verdict — any warn/fail checks, plus the pass count |
+| `velocity` | Memories and cards created this week against the week before |
+
+Tiles refresh **on open and on `r`** — never on a timer, so the hub stays
+reactive rather than busy. Command tiles run concurrently and fill in as they
+finish; one that fails or exceeds its timeout (the `dashboard-tile-timeout`
+setting, 5 seconds by default) shows its diagnosis in a warning-bordered tile
+without disturbing the rest of the grid. The same tolerance applies to the file
+itself: a malformed `dashboard.toml` or an unknown widget falls back gracefully,
+with the problem spelled out above the grid.
+
+### Setting it up without writing TOML
+
+You never have to author the file by hand: the **`↗ Set up start page`** leaf
+at the top of the tree (also in the `Ctrl+P` palette) opens a guided editor.
+The tile list and the grid's column count sit on the left; the selected tile's
+form — widget picker or command input, title, span — on the right, with a
+preview rendered from your real data.
+
+![The start-page setup editor: the tile list and column count on the left, the
+selected tile's form and its live preview on the
+right.](assets/home/home-startpage-setup.png)
+
+| Key | Action |
+|-----|--------|
+| `a` / `d` | Add a tile after the selection / remove the selected tile |
+| `Shift+↑` / `Shift+↓` | Reorder |
+| `Ctrl+R` | Run a command tile and preview its output — commands **never** run while you type, only on this key |
+| `Ctrl+S` | Save |
+| `Ctrl+E` | Save and open the raw file in `$EDITOR`, reloading on return |
+| `q` / `Esc` | Quit — asks first if there are unsaved changes |
+
+Saving round-trips the file through a style-preserving writer, so comments and
+formatting you added by hand survive the editor's edits (a comment sitting
+*above* a `[[tile]]` header keeps its place in the file rather than following
+a reordered tile). Quit the editor and home returns with the new grid live.
+
 ## Navigating
 
 Move the highlight with the arrow keys (or `j`/`k`); the detail pane follows as
@@ -96,6 +186,8 @@ so it reads as a hand-off rather than just another row:
   whereabouts and today's tallies)
 - `↗ Configure Bridge` — under **System** (opens the [Bridge](bridge.md)
   enable/channel screen)
+- `↗ Set up start page` — at the top of the tree, above the sections (opens the
+  [start-page editor](#setting-it-up-without-writing-toml))
 
 Press `Enter` on one and home steps aside to run that TUI. When you quit it
 (`q`), home comes back — and its badges reflect anything you just changed, because
@@ -105,7 +197,8 @@ away.
 
 The same hand-offs live in the `Ctrl+P` command palette (**Open board**,
 **Open memory**, **Open review**, **Open observations**, **Open settings**,
-**Open logs**), alongside **Reload** and **Reindex memory**.
+**Open logs**, **Set up start page**), alongside **Reload** and
+**Reindex memory**.
 
 ## What each section shows
 
@@ -151,7 +244,7 @@ header.](assets/home/home-sysprompt.png)
 |-----|--------|
 | `↑` / `↓` (or `k` / `j`) | Move the highlight; the detail pane follows |
 | `Enter` | Toggle a section, open a launch leaf, or re-show a detail leaf |
-| `r` | Reload every store — refreshes the badges and the current detail |
+| `r` | Reload every store — refreshes the badges, the current detail, and re-runs the start-page tiles |
 | `e` | Reindex — embed the memory entries missing a vector, after a confirm |
 | `Ctrl+P` | Command palette (Open board / memory / settings, Reload, Reindex memory, themes) |
 | `?` | Show the key cheat-sheet |
@@ -164,6 +257,9 @@ header.](assets/home/home-sysprompt.png)
   loud.
 - **`r` after a session.** If a session moved cards or wrote memories while the
   hub was open, `r` re-reads every store so the numbers catch up.
+- **Iterate on the start page in place.** Edit `dashboard.toml` in another
+  terminal and press `r` — the grid rebuilds from the file without leaving the
+  hub.
 - **`e` when embeddings lag.** If *Embedding coverage* (or the health line's
   `memory-embeddings` warning) shows unembedded entries, press `e` — after a
   confirm naming the missing count, home drops to the terminal to embed just

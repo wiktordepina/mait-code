@@ -92,7 +92,7 @@ class _LiveValidator(Validator):
 # A test pins this taxonomy against config.SETTINGS so a new setting can't slip
 # in uncategorised.
 _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("General", ("data-dir", "theme")),
+    ("General", ("data-dir", "theme", "dashboard-tile-timeout")),
     ("Bridge", ("bridge", "bridge-type")),
     ("Logging", ("log-level", "log-file", "log-backup-count")),
     (
@@ -141,6 +141,7 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "model-cache-dir",
             "observations-dir",
             "project-aliases-path",
+            "dashboard-config-path",
         ),
     ),
 )
