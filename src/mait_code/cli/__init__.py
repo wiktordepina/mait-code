@@ -816,6 +816,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._bridge_tui import run_bridge_editor
 
             run_bridge_editor()
+        elif target is HomeTarget.DASHBOARD:
+            from mait_code.cli._dashboard_tui import run_dashboard_setup
+
+            run_dashboard_setup()
 
     target = run_home_tui()
     while target is not None:
