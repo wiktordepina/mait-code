@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.66.0] — 2026-07-31
+
 ### Added
 
 - **Safe tool-approval presets in the settings editor.** A new **Tool
@@ -1965,7 +1967,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.65.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.66.0...HEAD
+[0.66.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.66.0
 [0.65.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.65.0
 [0.64.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.64.0
 [0.63.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.63.0
