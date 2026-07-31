@@ -54,6 +54,7 @@ The categories:
 | **Scoring & dedup** | The retrieval scoring weights and decay half-lives, the dedup similarity thresholds and scope boosts, and the [review-resurfacing](memory.md#review-keeping-curated-memory-fresh) threshold and importance floor. |
 | **Paths (derived)** | Read-only paths computed from `data-dir` — the database files, the model cache, the observations directory. |
 | **Custom env** | Arbitrary environment variables injected at startup — [covered below](#custom-environment-variables-the-env-table). |
+| **Tool approvals** | Curated Claude Code permission rules you can opt into, so the safe commands stop prompting — [covered below](#tool-approvals-safe-permission-presets). |
 
 General, Logging, Embeddings and Custom env open on boot; the more advanced
 groups start collapsed to keep the initial list short.
@@ -176,12 +177,74 @@ and Apply and Remove buttons.](assets/settings/settings-env.png)
 Values whose names look secret (`KEY`, `TOKEN`, `SECRET`, `PASSWORD`,
 `CREDENTIAL`) are masked in the list and tree views.
 
+## Tool approvals — safe permission presets
+
+Claude Code asks for approval on every `Bash` call unless a rule in
+`permissions.allow` matches it. For the genuinely safe, high-frequency
+commands — `git status`, `wc`, `mc-tool-board list` — that's a prompt dozens of
+times a session for no benefit, and it quietly trains the habit of approving
+without reading.
+
+The **Tool approvals** group is a curated catalogue of such rules, grouped into
+*Git (read-only)*, *File inspection*, *Project tooling* and *mait-code tools*.
+Nothing is on by default. Highlight a preset to see the exact rules it writes,
+pick a scope, and press **Enable**.
+
+![The Tool approvals group in the settings editor: the git status preset
+selected, showing the rule it writes, a scope picker defaulting to the
+gitignored project file, the resolved target path, and Enable and Disable
+buttons.](assets/settings/settings-tool-approvals.png)
+
+### Scopes
+
+Claude Code reads permissions from three files and takes the union of all of
+them, so each row names the scope it came from:
+
+| Scope | File | When to use it |
+|-------|------|----------------|
+| **Global** | `~/.claude/settings.json` | You want this everywhere. |
+| **Project (shared)** | `<repo>/.claude/settings.json` | Committed — everyone who clones the repo gets it. |
+| **Project (local)** | `<repo>/.claude/settings.local.json` | Gitignored and personal. **The default.** |
+
+Project scopes need a git repository; outside one, only Global is offered. The
+pane prints the resolved target file under the picker, and updates it as you
+move the selection, so you can see exactly what you're about to write to.
+
+**Disable** removes the preset from *every* scope holding it, not just the one
+in the picker — since Claude Code unions the three files, leaving a copy behind
+would keep the rule in force while the row read `off`.
+
+### What's not in the catalogue
+
+Permission patterns are *prefix* matches, so they can't express "this
+subcommand but not that flag". Anything whose safe form is distinguished only
+by an argument is left out rather than shipped with a caveat:
+
+- `mc-tool-board next` — read-only until `--claim`, which claims a card.
+- `mc-tool-memory entities` — searches until `entities merge`, which rewrites
+  the graph.
+- `mc-tool-memory review` — a prefix rule for it also spans `reviewed`, a
+  different, mutating subcommand.
+- `mc-tool-inbox drain` and `mc-tool-reminders check`, which both mutate.
+
+A few presets *are* offered but flagged **not read-only** — `uv run ruff check`
+(prefix matching also permits `--fix`), `uv run ruff format` and `uv run
+pytest`. They can rewrite tracked files or run project code. That's reversible
+with git, but the pane warns you before you opt in.
+
+Writes are surgical: your own hand-written rules keep their place and their
+order, unrelated keys are preserved, and the file is backed up (once per
+session, as `settings.json.bak-<timestamp>`) before the first change. A settings
+file that isn't valid JSON is reported rather than overwritten.
+
 ## Off the terminal
 
 `mait-code settings` only opens the editor when it's attached to a TTY. Piped or
 redirected, it falls back to the read-only `settings list` — a provenance-aware
 table of every knob, its resolved value and its source — so scripts and CI see a
-stable, parseable view instead of a TUI.
+stable, parseable view instead of a TUI. The fallback ends with a tool-approvals
+section listing the presets you have enabled and where, and `settings list
+--json` carries the same under a `tool_approvals` key.
 
 ## Reference
 

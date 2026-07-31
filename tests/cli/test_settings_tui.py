@@ -12,17 +12,20 @@ The shared write path (`apply_setting`) is covered exhaustively in
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from unittest.mock import patch
 
 from textual.widgets import Button, Input, RadioButton, RadioSet, Static, Tree
 
 from mait_code import config
+from mait_code.cli import _permissions as perms
 from mait_code.cli._settings_tui import (
     _ENV_ADD_KEY,
     _ENV_GROUP_LABEL,
     _EXPANDED_GROUPS,
     _GROUPS,
+    _PERM_PREFIX,
     _WEIGHTS_KEY,
     SettingsApp,
     _leaf_label,
@@ -41,6 +44,19 @@ def _select_radio(app: SettingsApp, label: str) -> None:
             rb.value = True
 
 
+def _select_radio_startswith(app: SettingsApp, prefix: str) -> None:
+    """Select the first RadioSet button whose label starts with *prefix*.
+
+    The scope picker's labels carry a trailing explanation, so an exact-label
+    match won't do.
+    """
+    rs = app.query_one("#editor", RadioSet)
+    for rb in rs.query(RadioButton):
+        if str(rb.label).startswith(prefix):
+            rb.value = True
+            return
+
+
 async def _goto(pilot, app: SettingsApp, key: str) -> None:
     """Move the tree cursor to *key*'s leaf and let the detail panel build.
 
@@ -49,8 +65,16 @@ async def _goto(pilot, app: SettingsApp, key: str) -> None:
     """
     tree: Tree[str] = app.query_one("#list", Tree)
     node = app._setting_nodes[key]
-    if node.parent is not None and node.parent is not tree.root:
-        node.parent.expand()
+    # Every ancestor, not just the immediate parent: the Tool approvals group
+    # nests one level deeper (group → catalogue group → preset), and a
+    # collapsed grandparent hides the leaf just as effectively as a parent.
+    expanded = False
+    ancestor = node.parent
+    while ancestor is not None and ancestor is not tree.root:
+        ancestor.expand()
+        expanded = True
+        ancestor = ancestor.parent
+    if expanded:
         # Let the tree rebuild its visible-line map before move_cursor indexes
         # into it, or the cursor won't land on a freshly-revealed leaf.
         await pilot.pause()
@@ -635,3 +659,227 @@ class TestEnvGroup:
                 return str(app.query_one("#source", Static).render())
 
         assert "real environment" in _run(scenario)
+
+
+class TestToolApprovals:
+    """The Tool approvals group: catalogue rows, scope picker, enable/disable.
+
+    ``perms.repo_root`` is patched in every test here. Without it the app
+    resolves the *real* repo the suite is running in, and enabling a preset
+    would write into the developer's own ``.claude/settings.local.json``.
+    """
+
+    @staticmethod
+    def _repo(tmp_path: Path, monkeypatch) -> Path:
+        root = tmp_path / "repo"
+        (root / ".git").mkdir(parents=True)
+        monkeypatch.setattr(perms, "repo_root", lambda start=None: root)
+        perms._BACKED_UP.clear()
+        return root
+
+    def test_group_lists_every_preset(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        self._repo(tmp_path, monkeypatch)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                return [
+                    key for key in app._setting_nodes if key.startswith(_PERM_PREFIX)
+                ]
+
+        keys = _run(scenario)
+        assert keys == [_PERM_PREFIX + p.id for p in perms.ALLOW_PRESETS]
+
+    def test_detail_shows_rules_and_scope_picker(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        self._repo(tmp_path, monkeypatch)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                rules = str(app.query_one("#perm-rules", Static).render())
+                rs = app.query_one("#editor", RadioSet)
+                labels = [str(rb.label) for rb in rs.query(RadioButton)]
+                return rules, labels, rs.pressed_index
+
+        rules, labels, pressed = _run(scenario)
+        assert "Bash(git status:*)" in rules
+        assert len(labels) == 3
+        # Defaults to the gitignored project file, not the committed one.
+        assert labels[pressed].startswith("Project (local)")
+
+    def test_enable_writes_to_the_picked_scope(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        repo = self._repo(tmp_path, monkeypatch)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                app.query_one("#perm-enable", Button).press()
+                await pilot.pause()
+                await pilot.pause()
+                return str(app.query_one("#msg", Static).render())
+
+        msg = _run(scenario)
+        assert "added to" in msg
+        document = json.loads(
+            (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+        )
+        assert document["permissions"]["allow"] == ["Bash(git status:*)"]
+
+    def test_enable_at_global_scope(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        self._repo(tmp_path, monkeypatch)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-log")
+                _select_radio_startswith(app, "Global")
+                await pilot.pause()
+                app.query_one("#perm-enable", Button).press()
+                await pilot.pause()
+                await pilot.pause()
+
+        _run(scenario)
+        document = json.loads(
+            (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
+        )
+        assert document["permissions"]["allow"] == ["Bash(git log:*)"]
+
+    def test_enabled_row_names_its_origin(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        repo = self._repo(tmp_path, monkeypatch)
+        perms.enable_preset("git-status", "project-local", root=repo)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                node = app._setting_nodes[_PERM_PREFIX + "git-status"]
+                return str(node.label)
+
+        label = _run(scenario)
+        assert "on" in label
+        assert "Project (local)" in label
+
+    def test_re_enabling_reports_no_duplicate(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        repo = self._repo(tmp_path, monkeypatch)
+        perms.enable_preset("git-status", "project-local", root=repo)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                app.query_one("#perm-enable", Button).press()
+                await pilot.pause()
+                await pilot.pause()
+                return str(app.query_one("#msg", Static).render())
+
+        assert "already" in _run(scenario)
+        document = json.loads(
+            (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+        )
+        assert document["permissions"]["allow"] == ["Bash(git status:*)"]
+
+    def test_disable_confirms_then_removes(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        repo = self._repo(tmp_path, monkeypatch)
+        perms.enable_preset("git-status", "project-local", root=repo)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                app.query_one("#perm-disable", Button).press()
+                await pilot.pause()
+                # ConfirmScreen is modal — accept it.
+                await pilot.click("#yes")
+                await pilot.pause()
+                await pilot.pause()
+                return str(app.query_one("#msg", Static).render())
+
+        msg = _run(scenario)
+        assert "removed from" in msg
+        document = json.loads(
+            (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+        )
+        assert "permissions" not in document
+
+    def test_disable_is_disabled_when_nothing_to_remove(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        self._repo(tmp_path, monkeypatch)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                return app.query_one("#perm-disable", Button).disabled
+
+        assert _run(scenario) is True
+
+    def test_writes_workspace_preset_is_flagged(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        """A preset that can rewrite sources must say so before you opt in."""
+        self._repo(tmp_path, monkeypatch)
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "ruff-check")
+                return [str(w.render()) for w in app.query(".warn-note")]
+
+        notes = " ".join(_run(scenario))
+        assert "Not read-only" in notes
+
+    def test_outside_a_repo_only_global_is_offered(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.setattr(perms, "repo_root", lambda start=None: None)
+        perms._BACKED_UP.clear()
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                rs = app.query_one("#editor", RadioSet)
+                return [str(rb.label) for rb in rs.query(RadioButton)]
+
+        labels = _run(scenario)
+        assert len(labels) == 1
+        assert labels[0].startswith("Global")
+
+    def test_group_summary_reports_a_broken_scope_file(
+        self, fake_home: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        """A malformed file's rules are still in force — say so, don't imply off."""
+        repo = self._repo(tmp_path, monkeypatch)
+        (repo / ".claude").mkdir()
+        (repo / ".claude" / "settings.json").write_text("{oops", encoding="utf-8")
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                tree: Tree[str] = app.query_one("#list", Tree)
+                tree.move_cursor(app._perm_group)
+                await pilot.pause()
+                await pilot.pause()
+                return [str(w.render()) for w in app.query(".warn-note")]
+
+        notes = " ".join(_run(scenario))
+        assert "not valid JSON" in notes
