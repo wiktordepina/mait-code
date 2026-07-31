@@ -10,6 +10,28 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **Safe tool-approval presets in the settings editor.** A new **Tool
+  approvals** group offers a curated catalogue of Claude Code
+  `permissions.allow` rules — read-only git, file inspection, project tooling
+  and the non-mutating `mc-tool-*` subcommands — so the commands that are
+  always safe stop prompting. Nothing is enabled by default. Each preset shows
+  the exact rules it writes, and a scope picker chooses between
+  `~/.claude/settings.json` (global), the repo's committed
+  `.claude/settings.json`, and the gitignored `.claude/settings.local.json`
+  (the default, since approval preferences are personal). Rows name the scope
+  an enabled rule came from — Claude Code unions all three files — and
+  disabling sweeps every scope rather than leaving a copy in force. Writes
+  preserve hand-written rules and their order, back the file up before the
+  first change, and refuse to overwrite a settings file that isn't valid JSON.
+  Presets that aren't strictly read-only (`ruff check`, whose prefix rule also
+  permits `--fix`, `ruff format`, `pytest`) are labelled as such before you opt
+  in, and anything whose safe form differs only by a flag — `mc-tool-board
+  next` vs `--claim`, `mc-tool-memory entities` vs `entities merge` — is left
+  out of the catalogue entirely. `mait-code settings list` reports the enabled
+  presets and their scopes, including under `--json`.
+
 ## [0.65.0] — 2026-07-15
 
 ### Added

@@ -39,6 +39,7 @@ from textual.widgets import (
 from textual.widgets.tree import TreeNode
 
 from mait_code import config
+from mait_code.cli import _permissions as perms
 from mait_code.cli._settings_edit import (
     SettingError,
     apply_setting,
@@ -63,6 +64,11 @@ _ENV_ADD_KEY = "env:+"
 """Sentinel row key for the 'add variable' leaf ('+' can't start a name)."""
 
 _ENV_GROUP_LABEL = "Custom env"
+
+_PERM_PREFIX = "perm:"
+"""Row-key prefix for tool-approval presets — dynamic rows."""
+
+_PERM_GROUP_LABEL = "Tool approvals"
 
 
 def run_interactive_editor() -> None:
@@ -163,6 +169,13 @@ def _truncate(text: str, width: int = _VALUE_WIDTH) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
+def _short_path(path: Path | None) -> str:
+    """Render a settings-file path with ``$HOME`` collapsed to ``~``."""
+    if path is None:
+        return "unavailable"
+    return str(path).replace(str(Path.home()), "~")
+
+
 def _env_display_value(name: str, table_value: str) -> tuple[str, bool]:
     """Return an [env] row's effective value (masked if secret-looking).
 
@@ -191,6 +204,34 @@ def _env_leaf_label(name: str, table_value: str) -> Text:
     label.append(name)
     label.append(" " * max(2, _KEY_WIDTH - len(name)))
     label.append(_truncate(value), style="dim" if shadowed else "")
+    return label
+
+
+def _scope_label(scope_id: str) -> str:
+    """Short display name for a scope id, for inline row/detail text."""
+    return perms.scope_by_id(scope_id).label
+
+
+def _preset_leaf_label(state: perms.PresetState) -> Text:
+    """One-line tree label for a tool-approval preset: name + on/off + origin.
+
+    Enabled rows name the scope they came from — Claude Code unions the three
+    settings files, so "on" without an origin would leave the user unable to
+    tell which file to look in.
+    """
+    name = state.preset.label
+    label = Text(no_wrap=True)
+    label.append(name)
+    label.append(" " * max(2, _KEY_WIDTH - len(name)))
+    origin = state.origin
+    if origin is not None:
+        label.append("on", style="green")
+        label.append(f"  {_scope_label(origin)}", style="dim")
+    elif state.partial_scopes:
+        label.append("partial", style="yellow")
+        label.append(f"  {_scope_label(state.partial_scopes[0])}", style="dim")
+    else:
+        label.append("off", style="dim")
     return label
 
 
@@ -318,6 +359,11 @@ class SettingsApp(MaitApp):
         self._row_order: list[str] = []
         self._setting_nodes: dict[str, TreeNode[str]] = {}
         self._env_group: TreeNode[str] | None = None
+        self._perm_group: TreeNode[str] | None = None
+        # Resolved once: the repo root decides whether the two project scopes
+        # exist at all, and it can't change while the app is running.
+        self._repo_root = perms.repo_root()
+        self._perm_states: dict[str, perms.PresetState] = {}
 
     def _mount_env_group(self, tree: Tree[str]) -> None:
         """(Re)build the Custom env group from the settings [env] table.
@@ -348,6 +394,48 @@ class SettingsApp(MaitApp):
         self._setting_nodes[_ENV_ADD_KEY] = add_node
         self._row_order.append(_ENV_ADD_KEY)
 
+    def _mount_perm_group(self, tree: Tree[str]) -> None:
+        """(Re)build the Tool approvals group from the catalogue and disk state.
+
+        Dynamic rows like Custom env — the on/off state lives in Claude Code's
+        settings files, not in mait-code's registry, so the labels are resolved
+        from disk on every build. Nested one level deeper than the rest of the
+        tree so the catalogue's own grouping survives.
+        """
+        if self._perm_group is not None:
+            self._perm_group.remove()
+        self._row_order = [k for k in self._row_order if not k.startswith(_PERM_PREFIX)]
+        for key in [k for k in self._setting_nodes if k.startswith(_PERM_PREFIX)]:
+            del self._setting_nodes[key]
+
+        self._perm_states = {
+            state.preset.id: state
+            for state in perms.resolve_states(root=self._repo_root)
+        }
+        group = tree.root.add(
+            _PERM_GROUP_LABEL, expand=_PERM_GROUP_LABEL in _EXPANDED_GROUPS
+        )
+        self._perm_group = group
+        for name, presets in perms.preset_groups():
+            sub = group.add(name, expand=True)
+            for preset in presets:
+                key = _PERM_PREFIX + preset.id
+                node = sub.add_leaf(
+                    _preset_leaf_label(self._perm_states[preset.id]), data=key
+                )
+                self._setting_nodes[key] = node
+                self._row_order.append(key)
+
+    def _refresh_perm_row(self, preset_id: str) -> None:
+        """Re-resolve one preset's state and re-render its leaf in place."""
+        self._perm_states = {
+            state.preset.id: state
+            for state in perms.resolve_states(root=self._repo_root)
+        }
+        node = self._setting_nodes.get(_PERM_PREFIX + preset_id)
+        if node is not None:
+            node.set_label(_preset_leaf_label(self._perm_states[preset_id]))
+
     async def _rebuild_env_group(self, select: str | None = None) -> None:
         """Rebuild the env group after a change and re-land the cursor."""
         tree: Tree[str] = self.query_one("#list", Tree)
@@ -376,6 +464,7 @@ class SettingsApp(MaitApp):
                 self._setting_nodes[key] = node
                 self._row_order.append(key)
         self._mount_env_group(tree)
+        self._mount_perm_group(tree)
         tree.focus()
         # Land on the first real setting rather than a category header, so the
         # detail pane shows an editor on boot. Deferred until after the first
@@ -403,6 +492,9 @@ class SettingsApp(MaitApp):
         self._current_key = None
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
+        if str(node.label) == _PERM_GROUP_LABEL:
+            await self._show_perm_group_detail(detail)
+            return
         await detail.mount(
             Label(str(node.label), classes="title"),
             Label(
@@ -410,6 +502,38 @@ class SettingsApp(MaitApp):
                 classes="help",
             ),
         )
+
+    async def _show_perm_group_detail(self, detail: VerticalScroll) -> None:
+        """Summary for the Tool approvals node: the scope files and their health.
+
+        A malformed settings file is reported here rather than silently reading
+        as "nothing enabled" — the rules in it are still in force.
+        """
+        snapshot = perms.read_scopes(root=self._repo_root)
+        lines = [
+            "Curated permission rules for Claude Code. Enabling one writes it "
+            "to the settings file you pick; Claude Code unions all three.",
+            "",
+        ]
+        for scope in perms.SCOPES:
+            path = perms.scope_path(scope.id, root=self._repo_root)
+            if path is None:
+                lines.append(f"{scope.label}: unavailable (not in a git repository)")
+                continue
+            count = len(snapshot.rules.get(scope.id, ()))
+            suffix = "" if path.exists() else "  (not created yet)"
+            lines.append(f"{scope.label}: {_short_path(path)} — {count} rules{suffix}")
+        widgets: list[Static] = [
+            Label(_PERM_GROUP_LABEL, classes="title"),
+            Static(Text("\n".join(lines)), classes="help"),
+        ]
+        for scope_id, message in snapshot.errors.items():
+            widgets.append(
+                Static(
+                    Text(f"⚠ {_scope_label(scope_id)}: {message}"), classes="warn-note"
+                )
+            )
+        await detail.mount(*widgets)
 
     def _focus_editor(self) -> None:
         # env-name first: on the add-variable pane the name field leads.
@@ -429,6 +553,9 @@ class SettingsApp(MaitApp):
             return
         if key.startswith(_ENV_PREFIX):
             await self._show_env_detail(key.removeprefix(_ENV_PREFIX))
+            return
+        if key.startswith(_PERM_PREFIX):
+            await self._show_perm_detail(key.removeprefix(_PERM_PREFIX))
             return
 
         if key == _WEIGHTS_KEY:
@@ -525,6 +652,91 @@ class SettingsApp(MaitApp):
             ),
         )
 
+    async def _show_perm_detail(self, preset_id: str) -> None:
+        """Detail pane for one tool-approval preset: rules, state, scope picker."""
+        detail = self.query_one("#detail", VerticalScroll)
+        state = self._perm_states[preset_id]
+        preset = state.preset
+
+        widgets: list[Static | RadioSet | Horizontal] = [
+            Label(Text(preset.label), classes="title"),
+            Label(Text(preset.rationale), classes="help"),
+        ]
+        if preset.tier != "read-only":
+            widgets.append(
+                Static(
+                    "⚠ Not read-only — this preset can modify files in the "
+                    "working tree. Reversible with git, but opt in knowingly.",
+                    classes="warn-note",
+                )
+            )
+        widgets.append(
+            Static(Text("\n".join(preset.patterns)), classes="value", id="perm-rules")
+        )
+
+        scopes = perms.available_scopes(root=self._repo_root)
+        default = perms.DEFAULT_SCOPE
+        if all(s.id != default for s in scopes):
+            default = scopes[0].id
+        widgets.append(Label("write to", classes="env-field-label"))
+        widgets.append(
+            RadioSet(
+                *(
+                    RadioButton(f"{s.label} — {s.help}", value=(s.id == default))
+                    for s in scopes
+                ),
+                id="editor",
+            )
+        )
+        # The picker's labels only name the consequence; the file itself is
+        # spelled out here and re-rendered as the selection moves, so nobody
+        # writes to a committed settings file by accident.
+        widgets.append(
+            Static(
+                Text(
+                    f"→ {_short_path(perms.scope_path(default, root=self._repo_root))}"
+                ),
+                id="perm-target",
+                classes="help",
+            )
+        )
+        if len(scopes) < len(perms.SCOPES):
+            widgets.append(
+                Static(
+                    "project scopes need a git repository — none found here",
+                    classes="help",
+                )
+            )
+
+        widgets.append(Static(Text(self._perm_source_text(state)), id="source"))
+        widgets.append(Static("", id="msg"))
+        widgets.append(
+            Horizontal(
+                Button("Enable", id="perm-enable", variant="primary"),
+                Button(
+                    "Disable",
+                    id="perm-disable",
+                    variant="error",
+                    disabled=not (state.enabled_scopes or state.partial_scopes),
+                ),
+                classes="env-buttons",
+            )
+        )
+        await detail.mount(*widgets)
+
+    def _perm_source_text(self, state: perms.PresetState) -> str:
+        """Provenance line for a preset: which files currently carry its rules."""
+        parts: list[str] = []
+        for scope_id in state.enabled_scopes:
+            path = perms.scope_path(scope_id, root=self._repo_root)
+            parts.append(f"{_scope_label(scope_id)} ({_short_path(path)})")
+        for scope_id in state.partial_scopes:
+            path = perms.scope_path(scope_id, root=self._repo_root)
+            parts.append(f"{_scope_label(scope_id)} ({_short_path(path)}, partial)")
+        if not parts:
+            return "source: not enabled in any scope"
+        return "source: " + ", ".join(parts)
+
     async def _show_env_add_detail(self) -> None:
         """Detail pane for adding a new [env] variable — name + value form."""
         detail = self.query_one("#detail", VerticalScroll)
@@ -582,6 +794,8 @@ class SettingsApp(MaitApp):
             return
         if self._current_key.startswith(_ENV_PREFIX):
             return  # env values are free text — nothing to validate live
+        if self._current_key.startswith(_PERM_PREFIX):
+            return  # preset panes have no text input to validate
         editors = self.query("#editor")
         msg_slots = self.query("#msg")
         if not editors or not msg_slots or event.input is not editors.first():
@@ -593,6 +807,17 @@ class SettingsApp(MaitApp):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self.action_apply()
 
+    def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
+        """Keep the preset pane's target-file line in step with the picker."""
+        key = self._current_key
+        if key is None or not key.startswith(_PERM_PREFIX):
+            return
+        targets = self.query("#perm-target")
+        if not targets:
+            return
+        path = perms.scope_path(self._selected_scope(), root=self._repo_root)
+        targets.first(Static).update(Text(f"→ {_short_path(path)}"))
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "apply":
             self.action_apply()
@@ -602,6 +827,14 @@ class SettingsApp(MaitApp):
             key = self._current_key
             if key and key.startswith(_ENV_PREFIX) and key != _ENV_ADD_KEY:
                 self._remove_env(key.removeprefix(_ENV_PREFIX))
+        elif event.button.id == "perm-enable":
+            key = self._current_key
+            if key and key.startswith(_PERM_PREFIX):
+                self._enable_preset(key.removeprefix(_PERM_PREFIX))
+        elif event.button.id == "perm-disable":
+            key = self._current_key
+            if key and key.startswith(_PERM_PREFIX):
+                self._disable_preset(key.removeprefix(_PERM_PREFIX))
 
     def action_apply(self) -> None:
         if self._current_key == _WEIGHTS_KEY:
@@ -657,6 +890,11 @@ class SettingsApp(MaitApp):
             return
         if key.startswith(_ENV_PREFIX):
             await self._apply_env_edit(key.removeprefix(_ENV_PREFIX))
+            return
+        if key.startswith(_PERM_PREFIX):
+            # Ctrl+S on a preset means "enable at the picked scope"; removal is
+            # deliberately button-only, since it needs a confirmation.
+            self._enable_preset(key.removeprefix(_PERM_PREFIX))
             return
         setting = _by_key()[key]
         if not setting.settable:
@@ -728,6 +966,80 @@ class SettingsApp(MaitApp):
             self.query_one("#msg", Static).update(Text(f"✗ {exc}"))
             return
         await self._rebuild_env_group(select=_ENV_PREFIX + name)
+
+    def _selected_scope(self) -> str:
+        """The scope id currently picked in the preset detail's radio set."""
+        scopes = perms.available_scopes(root=self._repo_root)
+        idx = self.query_one("#editor", RadioSet).pressed_index
+        return scopes[idx].id if 0 <= idx < len(scopes) else perms.DEFAULT_SCOPE
+
+    def _enable_preset(self, preset_id: str) -> None:
+        """Write a preset's rules into the scope picked in the detail pane."""
+        scope_id = self._selected_scope()
+        try:
+            outcome = perms.enable_preset(preset_id, scope_id, root=self._repo_root)
+        except perms.PermissionsFileError as exc:
+            self.query_one("#msg", Static).update(Text(f"✗ {exc}"))
+            return
+
+        state = self._perm_states[preset_id]
+        if not outcome.changed:
+            # Already present — say where, rather than a bare "no change" that
+            # reads as a failure.
+            elsewhere = [s for s in state.enabled_scopes if s != scope_id]
+            if elsewhere:
+                note = f"✓ already enabled in {_scope_label(elsewhere[0])}"
+            else:
+                note = f"✓ already in {_short_path(outcome.path)}"
+            self.query_one("#msg", Static).update(Text(note))
+            return
+
+        self._refresh_perm_row(preset_id)
+        note = f"✓ added to {_short_path(outcome.path)}"
+        if outcome.backup is not None:
+            note += f"  (backup: {outcome.backup.name})"
+        other = [s for s in state.enabled_scopes if s != scope_id]
+        if other:
+            note += f"  ⚠ also enabled in {_scope_label(other[0])}"
+        self.query_one("#msg", Static).update(Text(note))
+        self.query_one("#source", Static).update(
+            Text(self._perm_source_text(self._perm_states[preset_id]))
+        )
+        self.query_one("#perm-disable", Button).disabled = False
+
+    @work
+    async def _disable_preset(self, preset_id: str) -> None:
+        """Remove a preset's rules from every scope carrying them, on confirm.
+
+        Every scope, not just the picked one: Claude Code unions the three
+        files, so leaving a copy behind would keep the rule in force while the
+        row read "off".
+        """
+        state = self._perm_states[preset_id]
+        scopes = [*state.enabled_scopes, *state.partial_scopes]
+        files = ", ".join(
+            _short_path(perms.scope_path(s, root=self._repo_root)) for s in scopes
+        )
+        confirmed = await self.push_screen_wait(
+            ConfirmScreen(f"Remove {state.preset.label} rules from {files}?")
+        )
+        if not confirmed:
+            return
+        try:
+            outcomes = perms.disable_preset(preset_id, root=self._repo_root)
+        except perms.PermissionsFileError as exc:
+            self.query_one("#msg", Static).update(Text(f"✗ {exc}"))
+            return
+        self._refresh_perm_row(preset_id)
+        if not outcomes:
+            self.query_one("#msg", Static).update(Text("✓ nothing to remove"))
+            return
+        removed_from = ", ".join(_short_path(o.path) for o in outcomes)
+        self.query_one("#msg", Static).update(Text(f"✓ removed from {removed_from}"))
+        self.query_one("#source", Static).update(
+            Text(self._perm_source_text(self._perm_states[preset_id]))
+        )
+        self.query_one("#perm-disable", Button).disabled = True
 
     @work
     async def _remove_env(self, name: str) -> None:

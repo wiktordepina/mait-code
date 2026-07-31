@@ -542,6 +542,35 @@ def doctor_cmd(
         raise typer.Exit(code=1)
 
 
+def _render_tool_approvals() -> None:
+    """Append the tool-approval section to the read-only settings view.
+
+    Kept out of :func:`mait_code.config.render` on purpose: that function is a
+    stdlib-light leaf imported by every hook and tool process, and the preset
+    machinery lives up here in the CLI layer.
+    """
+    from mait_code.cli import _permissions
+
+    _permissions.render_presets(root=_permissions.repo_root())
+
+
+def _settings_render_json_with_approvals(snapshot) -> str:
+    """Render the settings snapshot as JSON, with tool approvals folded in.
+
+    The registry half is produced by :func:`mait_code.config.render_json` so
+    the two views can't drift; this only grafts the extra key on.
+    """
+    import json as _json
+
+    from mait_code.cli import _permissions
+
+    document = _json.loads(_settings_render_json(snapshot))
+    document["tool_approvals"] = _permissions.presets_json(
+        root=_permissions.repo_root()
+    )
+    return _json.dumps(document, indent=2)
+
+
 settings_app = typer.Typer(
     help="View and edit mait-code configuration.",
     no_args_is_help=False,
@@ -566,6 +595,7 @@ def settings_root(ctx: typer.Context) -> None:
         run_interactive_editor()
     else:
         _settings_render(_collect_settings())
+        _render_tool_approvals()
 
 
 @settings_app.command("list")
@@ -582,9 +612,10 @@ def settings_list(
     _require_settings_file()
     snapshot = _collect_settings()
     if as_json:
-        typer.echo(_settings_render_json(snapshot))
+        typer.echo(_settings_render_json_with_approvals(snapshot))
     else:
         _settings_render(snapshot)
+        _render_tool_approvals()
 
 
 @settings_app.command("get")

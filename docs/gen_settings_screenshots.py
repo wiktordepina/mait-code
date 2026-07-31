@@ -30,6 +30,7 @@ _SCREENSHOTS = {
     "test_settings_snapshot": "settings.png",
     "test_settings_editor_snapshot": "settings-editor.png",
     "test_settings_env_snapshot": "settings-env.png",
+    "test_settings_tool_approvals_snapshot": "settings-tool-approvals.png",
 }
 
 
