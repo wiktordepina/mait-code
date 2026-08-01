@@ -1,7 +1,7 @@
 ---
 name: triage
 description: Triage the quick-capture inbox — route each captured item to the board or memory. Use when the user mentions triage, the inbox, processing/sorting captured items, or asks to clear the inbox.
-allowed-tools: Bash(mc-tool-inbox *), Bash(mc-tool-board *), Bash(mc-tool-memory *)
+allowed-tools: Bash(mc-tool-inbox list:*), Bash(mc-tool-inbox remove:*), Bash(mc-tool-board add:*), Bash(mc-tool-memory store:*)
 ---
 
 # /triage

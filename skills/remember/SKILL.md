@@ -3,7 +3,7 @@ name: remember
 description: Store a new memory observation manually
 argument-hint: "<content>"
 disable-model-invocation: true
-allowed-tools: Bash(mc-tool-memory store *)
+allowed-tools: Bash(mc-tool-memory store:*)
 ---
 
 # /remember

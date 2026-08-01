@@ -1,7 +1,7 @@
 ---
 name: reflect
 description: Synthesise recent observations into insights and propose MEMORY.md rewrites, merges & retirements. Use when the user asks to reflect, distil or consolidate recent learnings, or refresh what's in MEMORY.md.
-allowed-tools: Bash(mc-tool-memory *), Read, Edit
+allowed-tools: Bash(mc-tool-memory reflect:*), Bash(mc-tool-memory merge:*), Bash(mc-tool-memory retire:*), Bash(mc-tool-memory supersede:*), Read, Edit
 ---
 
 # /reflect

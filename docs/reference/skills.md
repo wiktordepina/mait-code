@@ -306,5 +306,9 @@ Key fields:
 
 - `user-invocable: true` — Makes it available as a slash command
 - `disable-model-invocation: true` — Prevents Claude from auto-invoking (for side-effect skills)
-- `allowed-tools` — Tools the skill is allowed to use (e.g. `Bash(mc-tool-memory *)`)
+- `allowed-tools` — Tools the skill is allowed to use, scoped past the bare
+  executable (e.g. `Bash(mc-tool-memory search:*)`). `Bash(mc-tool-memory *)`
+  is a real wildcard granting every subcommand including `delete`; see
+  [Granting `allowed-tools`](../development.md#granting-allowed-tools) for the
+  measured matcher semantics
 - `argument-hint` — Shown in autocomplete to guide usage

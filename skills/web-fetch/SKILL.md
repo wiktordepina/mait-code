@@ -2,7 +2,7 @@
 name: web-fetch
 description: Fetch a web page and return its content as markdown. Use instead of the built-in WebFetch tool which is blocked in this environment.
 argument-hint: "<url>"
-allowed-tools: Bash(mc-tool-web-fetch *)
+allowed-tools: Bash(mc-tool-web-fetch:*)
 ---
 
 # /web-fetch

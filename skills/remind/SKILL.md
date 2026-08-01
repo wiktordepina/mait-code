@@ -3,7 +3,7 @@ name: remind
 description: Set a reminder for a future time
 argument-hint: "<when> <what>"
 disable-model-invocation: true
-allowed-tools: Bash(mc-tool-reminders set *)
+allowed-tools: Bash(mc-tool-reminders set:*)
 ---
 
 # /remind
