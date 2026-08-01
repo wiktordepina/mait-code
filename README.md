@@ -86,7 +86,7 @@ mait-code/
 ├── templates/            # Identity templates
 ├── scripts/              # Install/uninstall scripts
 ├── skills/               # Skill definitions
-├── agents/               # Agent definitions (currently empty)
+├── agents/               # Agent definitions (pre-pr-reviewer)
 └── docs/                 # Documentation
 ```
 

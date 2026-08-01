@@ -15,6 +15,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
 | Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
 | Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
+| Pre-PR Review | `/pre-pr-review` | Independent, zero-context review of the current branch | **Implemented** |
 
 ## Implemented Skills
 
@@ -183,6 +184,66 @@ Fetch web page content directly from the local machine, bypassing the claude.ai 
 - `mc-tool-web-fetch <url> --raw` — skip HTML-to-markdown conversion
 - `mc-tool-web-fetch <url> --timeout 60` — increase timeout (default 30s)
 - `mc-tool-web-fetch <url> --allow-private` — allow private/loopback IPs
+
+### /pre-pr-review
+
+Review the current branch with a reviewer that shares none of the session's context.
+
+**Usage:**
+```
+/pre-pr-review                   # Review main...HEAD before opening a PR
+```
+
+**Why it exists:**
+
+You cannot review your own work in the session that produced it. Knowing why every
+decision was made, you check whether the code matches the intent — not whether the
+intent was right. A reviewer with no context checks the second thing.
+
+**How it works:**
+
+1. Preprocesses the branch name, commits vs `main`, diff stat, and uncommitted files
+2. Warns which files are dirty and therefore *not* under review, then spawns one
+   `pre-pr-reviewer` agent (see [Agents](#agents)) with a deliberately bare prompt —
+   repository path, diff range, and the brief, and nothing about why the change was
+   made
+3. Relays the review in the session, verifies its concrete `file:line` claims, and
+   separates merge-blockers from follow-up material
+
+The reviewer also writes its own description of the change from the diff alone.
+Comparing that against the author's framing is diagnostic: a difference in described
+*scope* usually means the diff does more than intended, and a reviewer who cannot say
+*why* the change is wanted has found a real problem with its legibility.
+
+**Cost:** roughly 100k+ subagent tokens and ten to fifteen minutes for a substantial
+branch. Worth it before a merge that is hard to walk back; not worth it per commit.
+
+**Nothing is posted to GitHub** — no review, no comment, no approval — unless you
+ask for that separately afterwards.
+
+## Agents
+
+Agent definitions live in `agents/` as individual markdown files with YAML
+frontmatter, symlinked into `~/.claude/agents/` at install time. They hold a
+subagent's standing instructions, so a skill that spawns one passes only the task —
+never the persona.
+
+### pre-pr-reviewer
+
+The reviewer behind `/pre-pr-review`. Reads a diff cold and reports defects, design
+objections, and — importantly — the classes of problem it looked for and did *not*
+find, so silence can be told from diligence.
+
+Its brief includes explicit licence to reject the premise: if the change solves the
+wrong problem, saying so is more useful than a tidy review of a bad idea. It is told
+to distrust green CI, on the grounds that the tests were written by whoever wrote the
+bug.
+
+**Read-only, with a caveat.** The definition forbids writes, mutating git commands
+and any `gh` write. But agent frontmatter lists tool *names*, not permission
+patterns, and the reviewer needs a real shell to run tests and typecheckers — so the
+constraint is enforced by instruction plus the usual permission prompts, not
+mechanically. If it asks to run something that writes, that is a bug in the review.
 
 ## Skill Architecture
 

@@ -80,7 +80,7 @@ config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh
 skills/              # Skill definitions (loaded by Claude Code)
-agents/              # Agent definitions (currently empty)
+agents/              # Agent definitions (pre-pr-reviewer)
 docs/                # Documentation
 ```
 
@@ -93,5 +93,6 @@ docs/                # Documentation
 - **New hook:** Add package in `src/mait_code/hooks/<hook_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-hook-*`) in `pyproject.toml`, register in `config/settings.json`. Use `"async": true` for observation/logging hooks that don't need to feed results back into the conversation, to avoid blocking the user. Wire in `setup_logging()` and `@log_invocation()`. If the hook makes outbound HTTPS requests, also call `setup_ssl()`.
 - **New CLI tool:** Add package in `src/mait_code/tools/<tool_name>/` with `cli.py` as the entry point containing `main()`, add entry point (`mc-tool-*`) in `pyproject.toml`. Wire in `setup_logging()` and `@log_invocation()`. If the tool makes outbound HTTPS requests, also call `setup_ssl()`.
 - **New TUI surface:** Subclass `MaitApp` (`src/mait_code/tui/app.py`) for the house theme + shared stylesheet; add a per-app `.tcss` next to the module and list it in `CSS_PATH` alongside `SHARED_TCSS` (it does not merge across the MRO); drive colours off theme `$`-variables; add a `pytest-textual-snapshot` test. See `docs/development.md` → "Adding a New TUI Surface".
-- **New skill:** Create directory in `skills/` with `SKILL.md` — skills can invoke CLI tools via preprocessing or Bash
+- **New skill:** Create directory in `skills/` with `SKILL.md` — skills can invoke CLI tools via preprocessing or Bash. Grant the narrowest `allowed-tools` that covers the commands the skill actually runs: patterns are raw string prefixes, so `Bash(git *)` also permits `git push` and `git reset --hard`. Pin anything with a destructive flag to exact invocations, and verify against `perms.matches_command` / `perms.MUTATING_INVOCATIONS`
+- **New agent:** Add a single markdown file in `agents/` with YAML frontmatter (`name`, `description`, `tools`, `model`); `install` symlinks it into `~/.claude/agents/`. Agents hold a subagent's standing instructions, so the skill that spawns one passes only the task. Note `tools:` lists tool *names*, not permission patterns — an agent needing a shell gets an unrestricted one
 - **New MCP server:** Only if persistent connection/streaming needed; add package in `src/mait_code/mcp/<server_name>/` with `cli.py` as the entry point containing `main()` , entry point (`mc-mcp-*`) in `pyproject.toml`

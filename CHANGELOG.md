@@ -10,6 +10,30 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **`/pre-pr-review` — an independent, zero-context review of the current branch.**
+  Spawns a `pre-pr-reviewer` subagent that reads `main...HEAD` cold: it did not
+  write the code, was not told why, and is given only the repository path, the diff
+  range and a review brief. That isolation is the whole point — you cannot review
+  your own work in the session that produced it, because you check whether the code
+  matches the intent rather than whether the intent was right.
+
+  The reviewer is briefed to reject the premise where it deserves rejecting, to cite
+  `file:line`, to separate defects from taste from things it could not confirm, and
+  to close with the classes of problem it looked for and did *not* find — so a quiet
+  review can be told from a lazy one. It also writes its own description of the
+  change from the diff alone; where that diverges from the author's framing, either
+  the diff does more than advertised or the framing is spin.
+
+  Nothing is posted to GitHub. Findings come back into the session, and the review
+  costs roughly 100k subagent tokens — worth it before a merge that is hard to walk
+  back, not per commit.
+
+- **First occupant of `agents/`.** The directory and its install-time symlinking
+  have existed since the beginning; `pre-pr-reviewer` is the first definition to
+  use them.
+
 ## [0.67.0] — 2026-08-01
 
 ### Changed
