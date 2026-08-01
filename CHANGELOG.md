@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.68.0] — 2026-08-01
+
 ### Added
 
 - **`/pre-pr-review` — an independent, zero-context review of the current branch.**
@@ -26,9 +28,15 @@ don't change the public surface. Everything is still in flux.
   change from the diff alone; where that diverges from the author's framing, either
   the diff does more than advertised or the framing is spin.
 
-  Nothing is posted to GitHub. Findings come back into the session, and the review
-  costs roughly 100k subagent tokens — worth it before a merge that is hard to walk
-  back, not per commit.
+  Nothing is posted to GitHub — findings come back into the session. Cost scales
+  with the diff: two measured runs took ~113k subagent tokens for a ~950-line source
+  change and ~63k for a ~280-line docs change. Worth it before a merge that is hard
+  to walk back, not per commit.
+
+  The skill's own `allowed-tools` grant is pinned to four read-only git patterns,
+  each extending past the subcommand — `Bash(git diff:*)` would otherwise span
+  `git difftool --extcmd=<anything>`, which executes an arbitrary command per
+  changed file.
 
 - **First occupant of `agents/`.** The directory and its install-time symlinking
   have existed since the beginning; `pre-pr-reviewer` is the first definition to
@@ -2026,7 +2034,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.67.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.68.0...HEAD
+[0.68.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.68.0
 [0.67.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.67.0
 [0.66.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.66.0
 [0.65.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.65.0
