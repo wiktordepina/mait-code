@@ -8,7 +8,10 @@ Determinism matters here: the settings list shows each value's *source*
 CI runner doesn't, which would flip the Source column. The root
 ``_isolate_mait_settings`` autouse fixture clears every ``MAIT_CODE_*`` var,
 pinning each row to its ``default`` (or ``derived``) source. ``fake_home`` keeps
-the value column on the literal ``~/…`` defaults rather than expanded tmp paths.
+the value column on the literal ``~/…`` defaults rather than expanded tmp paths,
+and — since Tool approvals reads and writes ``$HOME`` alone — it also pins that
+group's on/off column, which would otherwise mirror whatever the developer had
+enabled in their own settings file.
 
 Regenerate the baseline intentionally (and eyeball the diff) with::
 
@@ -25,7 +28,6 @@ from textual.widgets import Tree
 
 import mait_code.config as config
 import mait_code.tui.banner as banner_mod
-from mait_code.cli import _permissions as perms
 from mait_code.cli._settings_tui import SettingsApp
 
 
@@ -33,24 +35,6 @@ from mait_code.cli._settings_tui import SettingsApp
 def _pin_banner_version(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin the masthead version so the brand banner stays release-stable."""
     monkeypatch.setattr(banner_mod, "installed_version", lambda: "0.0.0")
-
-
-@pytest.fixture(autouse=True)
-def _pin_repo_root(fake_home: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Point the Tool approvals group at an empty throwaway repo.
-
-    Two kinds of non-determinism to kill. Left alone, ``repo_root()`` resolves
-    the checkout the suite is running in, so the group's on/off column would
-    mirror whatever the developer has enabled in their own
-    ``.claude/settings.local.json`` — green locally, red in CI. And the preset
-    pane prints its target file, so the root has to render identically on every
-    run: putting it under ``fake_home`` means ``_short_path`` collapses it to
-    ``~/pinned-repo/…`` instead of baking in a per-run ``/tmp/pytest-N`` path.
-    """
-    root = fake_home / "pinned-repo"
-    (root / ".git").mkdir(parents=True)
-    monkeypatch.setattr(perms, "repo_root", lambda start=None: root)
-    return root
 
 
 def test_settings_snapshot(
@@ -93,9 +77,8 @@ def test_settings_env_snapshot(
 def test_settings_tool_approvals_snapshot(
     snap_compare, fake_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The Tool approvals group with a preset selected: its rules, the scope
-    picker defaulting to the gitignored project file, and the Enable/Disable
-    pair."""
+    """The Tool approvals group with a preset selected: its rules, the single
+    global target file it writes to, and the Enable/Disable pair."""
     monkeypatch.setattr(config, "_settings_cache", None)
 
     async def run_before(pilot) -> None:

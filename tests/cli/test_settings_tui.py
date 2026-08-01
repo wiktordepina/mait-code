@@ -44,19 +44,6 @@ def _select_radio(app: SettingsApp, label: str) -> None:
             rb.value = True
 
 
-def _select_radio_startswith(app: SettingsApp, prefix: str) -> None:
-    """Select the first RadioSet button whose label starts with *prefix*.
-
-    The scope picker's labels carry a trailing explanation, so an exact-label
-    match won't do.
-    """
-    rs = app.query_one("#editor", RadioSet)
-    for rb in rs.query(RadioButton):
-        if str(rb.label).startswith(prefix):
-            rb.value = True
-            return
-
-
 async def _goto(pilot, app: SettingsApp, key: str) -> None:
     """Move the tree cursor to *key*'s leaf and let the detail panel build.
 
@@ -662,25 +649,21 @@ class TestEnvGroup:
 
 
 class TestToolApprovals:
-    """The Tool approvals group: catalogue rows, scope picker, enable/disable.
+    """The Tool approvals group: catalogue rows, target file, enable/disable.
 
-    ``perms.repo_root`` is patched in every test here. Without it the app
-    resolves the *real* repo the suite is running in, and enabling a preset
-    would write into the developer's own ``.claude/settings.local.json``.
+    Every test leans on ``fake_home``. The group reads and writes
+    ``$HOME/.claude/settings.json`` and consults nothing else, so redirecting
+    ``$HOME`` is the whole isolation story — a toggle here cannot reach the
+    developer's real settings, nor the checkout the suite runs in, whatever
+    directory pytest was started from.
     """
 
     @staticmethod
-    def _repo(tmp_path: Path, monkeypatch) -> Path:
-        root = tmp_path / "repo"
-        (root / ".git").mkdir(parents=True)
-        monkeypatch.setattr(perms, "repo_root", lambda start=None: root)
+    def _reset() -> None:
         perms._BACKED_UP.clear()
-        return root
 
-    def test_group_lists_every_preset(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        self._repo(tmp_path, monkeypatch)
+    def test_group_lists_every_preset(self, fake_home: Path) -> None:
+        self._reset()
 
         async def scenario():
             app = SettingsApp()
@@ -693,30 +676,39 @@ class TestToolApprovals:
         keys = _run(scenario)
         assert keys == [_PERM_PREFIX + p.id for p in perms.ALLOW_PRESETS]
 
-    def test_detail_shows_rules_and_scope_picker(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        self._repo(tmp_path, monkeypatch)
+    def test_detail_shows_rules_and_the_target_file(self, fake_home: Path) -> None:
+        self._reset()
 
         async def scenario():
             app = SettingsApp()
             async with app.run_test() as pilot:
                 await _goto(pilot, app, _PERM_PREFIX + "git-status")
                 rules = str(app.query_one("#perm-rules", Static).render())
-                rs = app.query_one("#editor", RadioSet)
-                labels = [str(rb.label) for rb in rs.query(RadioButton)]
-                return rules, labels, rs.pressed_index
+                target = str(app.query_one("#perm-target", Static).render())
+                return rules, target
 
-        rules, labels, pressed = _run(scenario)
+        rules, target = _run(scenario)
         assert "Bash(git status:*)" in rules
-        assert len(labels) == 3
-        # Defaults to the gitignored project file, not the committed one.
-        assert labels[pressed].startswith("Project (local)")
+        assert "~/.claude/settings.json" in target
 
-    def test_enable_writes_to_the_picked_scope(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        repo = self._repo(tmp_path, monkeypatch)
+    def test_detail_offers_no_scope_picker(self, fake_home: Path) -> None:
+        """The picker is gone — there is one target, and it is named outright."""
+        self._reset()
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                return len(app.query("#editor")), " ".join(
+                    str(w.render()) for w in app.query(".help")
+                )
+
+        editors, help_text = _run(scenario)
+        assert editors == 0
+        assert "git repository" not in help_text
+
+    def test_enable_writes_to_the_global_file(self, fake_home: Path) -> None:
+        self._reset()
 
         async def scenario():
             app = SettingsApp()
@@ -730,36 +722,48 @@ class TestToolApprovals:
         msg = _run(scenario)
         assert "added to" in msg
         document = json.loads(
-            (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+            (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
         )
         assert document["permissions"]["allow"] == ["Bash(git status:*)"]
 
-    def test_enable_at_global_scope(
+    def test_enable_ignores_the_working_directory(
         self, fake_home: Path, tmp_path: Path, monkeypatch
     ) -> None:
-        self._repo(tmp_path, monkeypatch)
+        """The regression guard, end to end.
+
+        Driven from inside a repo that has its own ``.claude`` settings — the
+        exact shape that used to capture the write.
+        """
+        self._reset()
+        repo = tmp_path / "repo"
+        (repo / ".claude").mkdir(parents=True)
+        (repo / ".git").mkdir()
+        (repo / ".claude" / "settings.local.json").write_text(
+            '{"permissions": {"allow": ["Bash(mine:*)"]}}', encoding="utf-8"
+        )
+        monkeypatch.chdir(repo)
 
         async def scenario():
             app = SettingsApp()
             async with app.run_test() as pilot:
-                await _goto(pilot, app, _PERM_PREFIX + "git-log")
-                _select_radio_startswith(app, "Global")
-                await pilot.pause()
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
                 app.query_one("#perm-enable", Button).press()
                 await pilot.pause()
                 await pilot.pause()
 
         _run(scenario)
-        document = json.loads(
+        assert json.loads(
             (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
-        )
-        assert document["permissions"]["allow"] == ["Bash(git log:*)"]
+        )["permissions"]["allow"] == ["Bash(git status:*)"]
+        # The repo's own file is untouched, and no committed file was created.
+        assert json.loads(
+            (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+        )["permissions"]["allow"] == ["Bash(mine:*)"]
+        assert not (repo / ".claude" / "settings.json").exists()
 
-    def test_enabled_row_names_its_origin(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        repo = self._repo(tmp_path, monkeypatch)
-        perms.enable_preset("git-status", "project-local", root=repo)
+    def test_enabled_row_reads_on(self, fake_home: Path) -> None:
+        self._reset()
+        perms.enable_preset("git-status")
 
         async def scenario():
             app = SettingsApp()
@@ -768,15 +772,29 @@ class TestToolApprovals:
                 node = app._setting_nodes[_PERM_PREFIX + "git-status"]
                 return str(node.label)
 
-        label = _run(scenario)
-        assert "on" in label
-        assert "Project (local)" in label
+        assert "on" in _run(scenario)
 
-    def test_re_enabling_reports_no_duplicate(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        repo = self._repo(tmp_path, monkeypatch)
-        perms.enable_preset("git-status", "project-local", root=repo)
+    def test_partial_row_reads_partial(self, fake_home: Path) -> None:
+        """Half a preset in the file is not "off" — the rules are in force."""
+        self._reset()
+        path = fake_home / ".claude" / "settings.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            '{"permissions": {"allow": ["Bash(head:*)"]}}', encoding="utf-8"
+        )
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                node = app._setting_nodes[_PERM_PREFIX + "head-tail"]
+                return str(node.label)
+
+        assert "partial" in _run(scenario)
+
+    def test_re_enabling_reports_no_duplicate(self, fake_home: Path) -> None:
+        self._reset()
+        perms.enable_preset("git-status")
 
         async def scenario():
             app = SettingsApp()
@@ -789,15 +807,13 @@ class TestToolApprovals:
 
         assert "already" in _run(scenario)
         document = json.loads(
-            (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+            (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
         )
         assert document["permissions"]["allow"] == ["Bash(git status:*)"]
 
-    def test_disable_confirms_then_removes(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        repo = self._repo(tmp_path, monkeypatch)
-        perms.enable_preset("git-status", "project-local", root=repo)
+    def test_disable_confirms_then_removes(self, fake_home: Path) -> None:
+        self._reset()
+        perms.enable_preset("git-status")
 
         async def scenario():
             app = SettingsApp()
@@ -814,14 +830,12 @@ class TestToolApprovals:
         msg = _run(scenario)
         assert "removed from" in msg
         document = json.loads(
-            (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+            (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
         )
         assert "permissions" not in document
 
-    def test_disable_is_disabled_when_nothing_to_remove(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        self._repo(tmp_path, monkeypatch)
+    def test_disable_is_disabled_when_nothing_to_remove(self, fake_home: Path) -> None:
+        self._reset()
 
         async def scenario():
             app = SettingsApp()
@@ -831,11 +845,9 @@ class TestToolApprovals:
 
         assert _run(scenario) is True
 
-    def test_writes_workspace_preset_is_flagged(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_writes_workspace_preset_is_flagged(self, fake_home: Path) -> None:
         """A preset that can rewrite sources must say so before you opt in."""
-        self._repo(tmp_path, monkeypatch)
+        self._reset()
 
         async def scenario():
             app = SettingsApp()
@@ -846,30 +858,12 @@ class TestToolApprovals:
         notes = " ".join(_run(scenario))
         assert "Not read-only" in notes
 
-    def test_outside_a_repo_only_global_is_offered(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
-        monkeypatch.setattr(perms, "repo_root", lambda start=None: None)
-        perms._BACKED_UP.clear()
-
-        async def scenario():
-            app = SettingsApp()
-            async with app.run_test() as pilot:
-                await _goto(pilot, app, _PERM_PREFIX + "git-status")
-                rs = app.query_one("#editor", RadioSet)
-                return [str(rb.label) for rb in rs.query(RadioButton)]
-
-        labels = _run(scenario)
-        assert len(labels) == 1
-        assert labels[0].startswith("Global")
-
-    def test_group_summary_reports_a_broken_scope_file(
-        self, fake_home: Path, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_group_summary_reports_a_broken_file(self, fake_home: Path) -> None:
         """A malformed file's rules are still in force — say so, don't imply off."""
-        repo = self._repo(tmp_path, monkeypatch)
-        (repo / ".claude").mkdir()
-        (repo / ".claude" / "settings.json").write_text("{oops", encoding="utf-8")
+        self._reset()
+        path = fake_home / ".claude" / "settings.json"
+        path.parent.mkdir(parents=True)
+        path.write_text("{oops", encoding="utf-8")
 
         async def scenario():
             app = SettingsApp()

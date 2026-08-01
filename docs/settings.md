@@ -187,32 +187,35 @@ without reading.
 
 The **Tool approvals** group is a curated catalogue of such rules, grouped into
 *Git (read-only)*, *File inspection*, *Project tooling* and *mait-code tools*.
-Nothing is on by default. Highlight a preset to see the exact rules it writes,
-pick a scope, and press **Enable**.
+Nothing is on by default. Highlight a preset to see the exact rules it writes
+and press **Enable**.
 
 ![The Tool approvals group in the settings editor: the git status preset
-selected, showing the rule it writes, a scope picker defaulting to the
-gitignored project file, the resolved target path, and Enable and Disable
-buttons.](assets/settings/settings-tool-approvals.png)
+selected, showing the rule it writes, the global settings file it writes to,
+and Enable and Disable buttons.](assets/settings/settings-tool-approvals.png)
 
-### Scopes
+### One file, deliberately
 
-Claude Code reads permissions from three files and takes the union of all of
-them, so each row names the scope it came from:
+Everything here reads and writes `~/.claude/settings.json` — your global Claude
+Code settings — so a preset you enable applies in every project. The pane names
+the target file outright, and it is the same file whichever directory you
+launched `mait-code` from.
 
-| Scope | File | When to use it |
-|-------|------|----------------|
-| **Global** | `~/.claude/settings.json` | You want this everywhere. |
-| **Project (shared)** | `<repo>/.claude/settings.json` | Committed — everyone who clones the repo gets it. |
-| **Project (local)** | `<repo>/.claude/settings.local.json` | Gitignored and personal. **The default.** |
+That last part is the point. Claude Code also reads `<repo>/.claude/settings.json`
+and `<repo>/.claude/settings.local.json`, and an earlier version of this editor
+offered all three, picking the repo by looking at the working directory. It made
+the launch directory an invisible input: the same command showed different state
+and pre-selected a different target depending on which terminal you opened it
+from, and from an unrelated repo it would happily target that repo's settings.
+No amount of picker UI fixes an input you can't see, so the scope concept left
+this surface entirely.
 
-Project scopes need a git repository; outside one, only Global is offered. The
-pane prints the resolved target file under the picker, and updates it as you
-move the selection, so you can see exactly what you're about to write to.
+!!! note "If you enabled presets into a project scope under 0.66.0"
 
-**Disable** removes the preset from *every* scope holding it, not just the one
-in the picker — since Claude Code unions the three files, leaving a copy behind
-would keep the rule in force while the row read `off`.
+    Claude Code still unions all three files, so a preset written into a repo's
+    settings then — or by hand since — remains in force while this editor
+    reports it `off`, and **Disable** won't reach it. Remove those rules by
+    editing the repo's `.claude/settings*.json` directly.
 
 ### What's not in the catalogue
 
@@ -243,8 +246,8 @@ file that isn't valid JSON is reported rather than overwritten.
 redirected, it falls back to the read-only `settings list` — a provenance-aware
 table of every knob, its resolved value and its source — so scripts and CI see a
 stable, parseable view instead of a TUI. The fallback ends with a tool-approvals
-section listing the presets you have enabled and where, and `settings list
---json` carries the same under a `tool_approvals` key.
+section naming the settings file and listing the presets you have enabled, and
+`settings list --json` carries the same under a `tool_approvals` key.
 
 ## Reference
 

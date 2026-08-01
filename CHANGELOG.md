@@ -10,6 +10,29 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Changed
+
+- **Tool approvals are global-only.** The **Tool approvals** group in
+  `mait-code settings` now reads and writes `~/.claude/settings.json` and
+  nothing else; the scope picker is gone, and so is the repo detection behind
+  it. Previously the group resolved its scopes by walking up from the process's
+  working directory, which made the launch directory an invisible input — the
+  same command showed different state and pre-selected a different write target
+  depending on which terminal it was opened from, and from an unrelated repo it
+  would target that repo's settings file. The surface now behaves identically
+  whichever directory it runs from.
+
+  If you enabled presets into a repo's `.claude/settings.json` or
+  `.claude/settings.local.json` under 0.66.0, note that Claude Code still
+  unions all three files: those rules remain in force while the editor reports
+  them `off`, and **Disable** will not reach them. Remove them by editing the
+  repo's settings files directly.
+
+- **Breaking (`--json`):** `mait-code settings list --json` no longer emits
+  `tool_approvals[].enabled_scopes` and `tool_approvals[].partial_scopes`
+  arrays. They are replaced by the booleans `enabled` (already present) and
+  `partial`.
+
 ## [0.66.0] — 2026-07-31
 
 ### Added
