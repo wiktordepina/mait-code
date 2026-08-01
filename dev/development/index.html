@@ -2180,6 +2180,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Adding a New Skill">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#granting-allowed-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Granting allowed-tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New Agent
+      
+    </span>
+  </a>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2506,6 +2534,34 @@
     <span class="md-ellipsis">
       
         Adding a New Skill
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adding a New Skill">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#granting-allowed-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Granting allowed-tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New Agent
       
     </span>
   </a>
@@ -2861,19 +2917,117 @@ persistence is free — <code>MaitApp.on_unmount</code> writes the active theme 
 <li>Re-run <code>./scripts/install.sh</code> to symlink into <code>~/.claude/skills/</code></li>
 <li>The skill will be available as <code>/&lt;skill-name&gt;</code> in Claude Code</li>
 </ol>
+<h3 id="granting-allowed-tools">Granting <code>allowed-tools</code><a class="headerlink" href="#granting-allowed-tools" title="Permanent link">&para;</a></h3>
+<p>Grant the narrowest set covering the commands the skill actually runs.</p>
+<p><a id="allowed-tools-semantics"></a></p>
+<p>There are three grant forms. Their behaviour was measured against <strong>Claude Code
+2.1.220</strong> by giving a throwaway project a single <code>permissions.allow</code> entry and
+running <code>claude -p</code> (headless denies instead of prompting):</p>
+<table>
+<thead>
+<tr>
+<th>form</th>
+<th>meaning</th>
+<th>example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Bash(cmd)</code></td>
+<td>exact match only</td>
+<td><code>Bash(git push)</code> refuses <code>git push --dry-run</code></td>
+</tr>
+<tr>
+<td><code>Bash(cmd:*)</code></td>
+<td>prefix match <strong>at a token boundary</strong></td>
+<td><code>Bash(git push:*)</code> permits <code>git push --dry-run</code>, refuses <code>git pushfoo</code></td>
+</tr>
+<tr>
+<td><code>Bash(cmd *)</code></td>
+<td>the older space form — a real wildcard, identical to <code>cmd:*</code> on every case tested</td>
+<td><code>Bash(git *)</code> permits <code>git push</code>, refuses <code>gitfoo</code></td>
+</tr>
+</tbody>
+</table>
+<p>Two consequences worth internalising:</p>
+<ul>
+<li><strong>The space form is not narrow.</strong> <code>Bash(mc-tool-board *)</code> permits
+  <code>mc-tool-board remove</code>, not just the read-only subcommands. It is a wildcard,
+  not a literal.</li>
+<li><strong>A boundary is not a subcommand.</strong> Everything after the boundary is
+  permitted, flags included, so <code>Bash(git branch:*)</code> does span <code>git branch -D</code>.
+  Narrowing has to happen inside the prefix: <code>Bash(git diff --stat:*)</code>, or an
+  exact invocation with no wildcard at all.</li>
+</ul>
+<p>What <code>:*</code> does <strong>not</strong> do is span into a longer token —
+<code>Bash(git diff:*)</code> refuses <code>git difftool --extcmd=&lt;anything&gt;</code>. Earlier revisions
+of this page claimed the opposite; that claim was tested and is false on 2.1.220.</p>
+<p><strong>A grant buys unsandboxed execution, not merely a quiet prompt.</strong> An ungranted
+command is not always refused — if Claude Code can contain it, it runs in a
+filesystem-isolated sandbox with no prompt at all, and its writes are discarded.
+Measured: <code>touch marker.txt</code> under an unrelated rule reported success and
+created nothing; under <code>Bash(touch:*)</code> the file appeared. Commands that cannot
+be contained (<code>git commit</code>, <code>git push</code>) are refused outright when ungranted.</p>
+<p>Two practical consequences:</p>
+<ul>
+<li>Narrowing a grant does not necessarily break a skill. Read-only commands keep
+  working sandboxed; only the ones needing real effects need a rule.</li>
+<li>"It worked without a prompt" is not evidence that a rule matched. When testing
+  a pattern, use a command that is <em>refused</em> when ungranted, or you are measuring
+  the sandbox rather than the matcher.</li>
+</ul>
+<p>Claude Code is also operator-aware: it decomposes compound commands and requires
+each part to be permitted. <code>Bash(git push:*)</code> refuses
+<code>git push --dry-run || git commit --allow-empty -m x</code>.</p>
+<p>All of the above is pinned to 2.1.220 and is undocumented matcher behaviour — a
+future release could change it, so prefer prefixes that would still be safe if
+the boundary were dropped. After a Claude Code upgrade, re-measure:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>./scripts/probe_permissions.py<span class="w">          </span><span class="c1"># exits non-zero if behaviour has drifted</span>
+</span></code></pre></div>
+<p>It re-runs the measurements above against the installed <code>claude</code> and reports any
+case that no longer matches. The test suite cannot catch this — it pins our
+<em>model</em> of the matcher, not the matcher.</p>
+<p>Check your patterns mechanically rather than by eye:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">_permissions</span> <span class="k">as</span> <span class="n">perms</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">bad</span> <span class="o">=</span> <span class="p">[(</span><span class="n">p</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">MY_PATTERNS</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">perms</span><span class="o">.</span><span class="n">MUTATING_INVOCATIONS</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>       <span class="k">if</span> <span class="n">perms</span><span class="o">.</span><span class="n">matches_command</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">c</span><span class="p">)]</span>
+</span></code></pre></div>
+<p><code>MUTATING_INVOCATIONS</code> is a floor, not a proof — a clean result means "no <em>known</em>
+mutating command is permitted", not "safe". Think about siblings the list does not
+cover.</p>
+<p><code>skills/pre-pr-review/SKILL.md</code> is the worked example.</p>
+<h2 id="adding-a-new-agent">Adding a New Agent<a class="headerlink" href="#adding-a-new-agent" title="Permanent link">&para;</a></h2>
+<p>Agents are single markdown files, not directories.</p>
+<ol>
+<li>Create <code>agents/&lt;agent-name&gt;.md</code> with YAML frontmatter — <code>name</code>, <code>description</code>,
+   <code>tools</code> (a comma-separated list of tool <em>names</em>), and optionally <code>model</code></li>
+<li>Write the standing brief in the body. Keep it task-independent: a skill that
+   spawns the agent passes only the job, never the persona, so anything specific to
+   one invocation belongs in the spawn prompt instead</li>
+<li>Re-run <code>./scripts/install.sh</code> to symlink into <code>~/.claude/agents/</code></li>
+<li><strong>Restart Claude Code.</strong> The agent registry is read at session start, so a newly
+   installed agent will not resolve until then — unlike skills, which are picked up
+   live. A skill that spawns an agent should fail loudly if the type is missing
+   rather than falling back to <code>general-purpose</code>, which carries no tool restriction</li>
+</ol>
+<p>Note the ceiling on what <code>tools:</code> can express: it lists tool names, so an agent that
+needs a shell gets an unrestricted one. There is no way to pattern-restrict <code>Bash</code>
+in an agent definition the way <code>allowed-tools</code> does for a skill. If an agent must
+not write, say so in its brief, and treat that as a convention backed by permission
+prompts rather than a mechanical guarantee.</p>
 <h2 id="adding-a-new-hook">Adding a New Hook<a class="headerlink" href="#adding-a-new-hook" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Create package in <code>src/mait_code/hooks/&lt;hook_name&gt;/</code> with <code>cli.py</code> containing a <code>main()</code> function</li>
 <li>Wire in logging:
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-hook-&lt;hook-name&gt;&quot;</span><span class="p">)</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="c1"># ...</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-hook-&lt;hook-name&gt;&quot;</span><span class="p">)</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="c1"># ...</span>
 </span></code></pre></div></li>
 <li>Add entry point in <code>pyproject.toml</code>:
-   <div class="language-toml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">mc-hook-</span><span class="err">&lt;</span><span class="n">hook-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.hooks.&lt;hook_name&gt;.cli:main&quot;</span>
+   <div class="language-toml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">mc-hook-</span><span class="err">&lt;</span><span class="n">hook-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.hooks.&lt;hook_name&gt;.cli:main&quot;</span>
 </span></code></pre></div></li>
 <li>Register in <code>config/settings.json</code> under the appropriate hook event</li>
 <li>Use <code>"async": true</code> for observation/logging hooks that don't feed results back into the conversation. <strong>Note:</strong> Async hooks on macOS may receive empty stdin due to a Claude Code bug (<a href="https://github.com/anthropics/claude-code/issues/38162">#38162</a>) — handle this by falling back to filesystem discovery or other means.</li>
@@ -2883,15 +3037,15 @@ persistence is free — <code>MaitApp.on_unmount</code> writes the active theme 
 <ol>
 <li>Create package in <code>src/mait_code/tools/&lt;tool_name&gt;/</code> with <code>cli.py</code> containing a <code>main()</code> function</li>
 <li>Wire in logging:
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-tool-&lt;tool-name&gt;&quot;</span><span class="p">)</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="c1"># ...</span>
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_invocation</span><span class="p">,</span> <span class="n">setup_logging</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="nd">@log_invocation</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;mc-tool-&lt;tool-name&gt;&quot;</span><span class="p">)</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">setup_logging</span><span class="p">()</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="c1"># ...</span>
 </span></code></pre></div></li>
 <li>Add entry point in <code>pyproject.toml</code>:
-   <div class="language-toml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">mc-tool-</span><span class="err">&lt;</span><span class="n">tool-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.tools.&lt;tool_name&gt;.cli:main&quot;</span>
+   <div class="language-toml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">mc-tool-</span><span class="err">&lt;</span><span class="n">tool-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.tools.&lt;tool_name&gt;.cli:main&quot;</span>
 </span></code></pre></div></li>
 <li>Run <code>uv sync</code></li>
 <li>Skills can invoke the tool via preprocessing (<code>!</code>mc-tool-<name> ...<code>`) or</code>Bash(mc-tool-<name> *)`</li>
@@ -2904,7 +3058,7 @@ persistence is free — <code>MaitApp.on_unmount</code> writes the active theme 
 <ol>
 <li>Create package in <code>src/mait_code/mcp/&lt;server_name&gt;/</code> with <code>cli.py</code> containing a <code>main()</code> function</li>
 <li>Add entry point in <code>pyproject.toml</code>:
-   <div class="language-toml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">mc-mcp-</span><span class="err">&lt;</span><span class="n">server-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.mcp.&lt;server_name&gt;.cli:main&quot;</span>
+   <div class="language-toml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">mc-mcp-</span><span class="err">&lt;</span><span class="n">server-name</span><span class="err">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mait_code.mcp.&lt;server_name&gt;.cli:main&quot;</span>
 </span></code></pre></div></li>
 <li>Register in <code>config/settings.json</code> under <code>mcpServers</code></li>
 <li>Run <code>uv sync</code> and re-run <code>./scripts/install.sh</code></li>

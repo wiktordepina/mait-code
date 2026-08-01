@@ -779,6 +779,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tool-approvals-safe-permission-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool approvals — safe permission presets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool approvals — safe permission presets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-file-deliberately" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One file, deliberately
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whats-not-in-the-catalogue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's not in the catalogue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-every-rule-comes-in-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why every rule comes in pairs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#off-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2276,6 +2326,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tool-approvals-safe-permission-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool approvals — safe permission presets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool approvals — safe permission presets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-file-deliberately" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One file, deliberately
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whats-not-in-the-catalogue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's not in the catalogue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-every-rule-comes-in-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why every rule comes in pairs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#off-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2427,6 +2527,10 @@ that below).</p>
 <td><strong>Custom env</strong></td>
 <td>Arbitrary environment variables injected at startup — <a href="#custom-environment-variables-the-env-table">covered below</a>.</td>
 </tr>
+<tr>
+<td><strong>Tool approvals</strong></td>
+<td>Curated Claude Code permission rules you can opt into, so the safe commands stop prompting — <a href="#tool-approvals-safe-permission-presets">covered below</a>.</td>
+</tr>
 </tbody>
 </table>
 <p>General, Logging, Embeddings and Custom env open on boot; the more advanced
@@ -2531,11 +2635,95 @@ and Apply and Remove buttons." src="../assets/settings/settings-env.png" />
 (<code>settings</code> when the table supplies it, <code>env</code> when your shell shadows it).
 Values whose names look secret (<code>KEY</code>, <code>TOKEN</code>, <code>SECRET</code>, <code>PASSWORD</code>,
 <code>CREDENTIAL</code>) are masked in the list and tree views.</p>
+<h2 id="tool-approvals-safe-permission-presets">Tool approvals — safe permission presets<a class="headerlink" href="#tool-approvals-safe-permission-presets" title="Permanent link">&para;</a></h2>
+<p>Claude Code asks for approval on every <code>Bash</code> call unless a rule in
+<code>permissions.allow</code> matches it. For the genuinely safe, high-frequency
+commands — <code>git status</code>, <code>wc</code>, <code>mc-tool-board list</code> — that's a prompt dozens of
+times a session for no benefit, and it quietly trains the habit of approving
+without reading.</p>
+<p>The <strong>Tool approvals</strong> group is a curated catalogue of such rules, grouped into
+<em>Git (read-only)</em>, <em>File inspection</em>, <em>Project tooling</em> and <em>mait-code tools</em>.
+Nothing is on by default. Highlight a preset to see the exact rules it writes
+and press <strong>Enable</strong>.</p>
+<p><img alt="The Tool approvals group in the settings editor: the git status preset
+selected, showing the rule it writes, the global settings file it writes to,
+and Enable and Disable buttons." src="../assets/settings/settings-tool-approvals.png" /></p>
+<h3 id="one-file-deliberately">One file, deliberately<a class="headerlink" href="#one-file-deliberately" title="Permanent link">&para;</a></h3>
+<p>Everything here reads and writes <code>~/.claude/settings.json</code> — your global Claude
+Code settings — so a preset you enable applies in every project. The pane names
+the target file outright, and it is the same file whichever directory you
+launched <code>mait-code</code> from.</p>
+<p>That last part is the point. Claude Code also reads <code>&lt;repo&gt;/.claude/settings.json</code>
+and <code>&lt;repo&gt;/.claude/settings.local.json</code>, and an earlier version of this editor
+offered all three, picking the repo by looking at the working directory. It made
+the launch directory an invisible input: the same command showed different state
+and pre-selected a different target depending on which terminal you opened it
+from, and from an unrelated repo it would happily target that repo's settings.
+No amount of picker UI fixes an input you can't see, so the scope concept left
+this surface entirely.</p>
+<div class="admonition note">
+<p class="admonition-title">If you enabled presets into a project scope under 0.66.0</p>
+<p>Claude Code still unions all three files, so a preset written into a repo's
+settings then — or by hand since — remains in force while this editor
+reports it <code>off</code>, and <strong>Disable</strong> won't reach it. Remove those rules by
+editing the repo's <code>.claude/settings*.json</code> directly.</p>
+</div>
+<h3 id="whats-not-in-the-catalogue">What's not in the catalogue<a class="headerlink" href="#whats-not-in-the-catalogue" title="Permanent link">&para;</a></h3>
+<p>Permission patterns are <em>prefix</em> matches, so they can't express "this
+subcommand but not that flag". Anything whose safe form is distinguished only
+by an argument is left out rather than shipped with a caveat:</p>
+<ul>
+<li><code>mc-tool-board next</code> — read-only until <code>--claim</code>, which claims a card.</li>
+<li><code>mc-tool-memory entities</code> — searches until <code>entities merge</code>, which rewrites
+  the graph.</li>
+<li><code>mc-tool-memory review</code> — a prefix rule for it also spans <code>reviewed</code>, a
+  different, mutating subcommand.</li>
+<li><code>mc-tool-inbox drain</code> and <code>mc-tool-reminders check</code>, which both mutate.</li>
+</ul>
+<p>A few presets <em>are</em> offered but flagged <strong>not read-only</strong> — <code>uv run ruff check</code>
+(prefix matching also permits <code>--fix</code>), <code>uv run ruff format</code> and <code>uv run
+pytest</code>. They can rewrite tracked files or run project code. That's reversible
+with git, but the pane warns you before you opt in.</p>
+<p>Weigh those against the global scope specifically. Because there is nowhere else
+to put them, enabling one applies in <strong>every project you open</strong> — so <code>uv run
+pytest</code> means any repo you clone from then on can run its own <code>conftest.py</code>
+without prompting you. That is a wider reach than the read-only tier, and a
+wider reach than the same preset had when 0.66.0 defaulted to a per-repo file.
+If that's not a trade you want, leave the not-read-only presets off and approve
+those commands per session.</p>
+<h3 id="why-every-rule-comes-in-pairs">Why every rule comes in pairs<a class="headerlink" href="#why-every-rule-comes-in-pairs" title="Permanent link">&para;</a></h3>
+<p>Enable a preset and you'll see two rules written, not one — <code>Bash(git diff)</code> and
+<code>Bash(git diff :*)</code> — the bare invocation and anything with arguments.</p>
+<p>The original reason was defensive: the rules were shaped on the belief that
+Claude Code matched by raw string prefix with no word boundary, which would have
+let <code>Bash(git diff:*)</code> reach <code>git difftool --extcmd=&lt;anything&gt;</code> — an arbitrary
+command per changed file — and <code>stat</code> reach <code>static-sh</code>, <code>tail</code> reach
+<code>tailscale</code>, <code>file</code> reach <code>file-roller</code>.</p>
+<p>That belief was tested against Claude Code 2.1.220 and turned out to be wrong:
+<code>:*</code> already stops at a token boundary, so <code>Bash(git diff:*)</code> refuses
+<code>git difftool</code>. None of those four escapes exist on this version.</p>
+<p>The pair form stays regardless. It costs nothing, it says the intended boundary
+out loud instead of leaning on an undocumented matcher detail, and it still
+holds if a future release changes the rule. It just isn't the thing keeping a
+shell out of your <code>git diff</code> grant.</p>
+<div class="admonition note">
+<p class="admonition-title">Upgrading from before 0.68.0</p>
+<p>Rules already in your <code>~/.claude/settings.json</code> keep their older form.
+Disable and re-enable a preset to rewrite it. On 2.1.220 this is tidiness
+rather than a fix — the boundary the rewrite adds is one the matcher was
+already applying.</p>
+</div>
+<p>Writes are surgical: your own hand-written rules keep their place and their
+order, unrelated keys are preserved, and the file is backed up (once per
+session, as <code>settings.json.bak-&lt;timestamp&gt;</code>) before the first change. A settings
+file that isn't valid JSON is reported rather than overwritten.</p>
 <h2 id="off-the-terminal">Off the terminal<a class="headerlink" href="#off-the-terminal" title="Permanent link">&para;</a></h2>
 <p><code>mait-code settings</code> only opens the editor when it's attached to a TTY. Piped or
 redirected, it falls back to the read-only <code>settings list</code> — a provenance-aware
 table of every knob, its resolved value and its source — so scripts and CI see a
-stable, parseable view instead of a TUI.</p>
+stable, parseable view instead of a TUI. The fallback ends with a tool-approvals
+section naming the settings file and listing the presets you have enabled, and
+<code>settings list --json</code> carries the same under a <code>tool_approvals</code> key.</p>
 <h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <h3 id="keys">Keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h3>
 <table>
