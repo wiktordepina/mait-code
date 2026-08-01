@@ -594,6 +594,12 @@ def matches_command(pattern: str, command: str) -> bool:
     token (permitted), which over-matches rather than under-matches so the
     catalogue guard errs toward rejecting a pattern.
 
+    Shell operators are not modelled. The real matcher decomposes a compound
+    command and requires every part to be permitted — ``Bash(git push:*)``
+    refuses ``git push --dry-run || git commit -m x`` — so treating the whole
+    string as one command over-matches here, which is the safe direction for a
+    guard.
+
     Non-``Bash(...)`` patterns never match.
     """
     if not (pattern.startswith("Bash(") and pattern.endswith(")")):

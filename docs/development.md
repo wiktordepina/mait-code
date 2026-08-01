@@ -357,9 +357,24 @@ What `:*` does **not** do is span into a longer token —
 `Bash(git diff:*)` refuses `git difftool --extcmd=<anything>`. Earlier revisions
 of this page claimed the opposite; that claim was tested and is false on 2.1.220.
 
-Separately, Claude Code auto-approves some read-only commands (`git status`,
-`git diff --stat`) regardless of `permissions.allow`, so a grant for one of
-those may be doing nothing at all.
+**A grant buys unsandboxed execution, not merely a quiet prompt.** An ungranted
+command is not always refused — if Claude Code can contain it, it runs in a
+filesystem-isolated sandbox with no prompt at all, and its writes are discarded.
+Measured: `touch marker.txt` under an unrelated rule reported success and
+created nothing; under `Bash(touch:*)` the file appeared. Commands that cannot
+be contained (`git commit`, `git push`) are refused outright when ungranted.
+
+Two practical consequences:
+
+- Narrowing a grant does not necessarily break a skill. Read-only commands keep
+  working sandboxed; only the ones needing real effects need a rule.
+- "It worked without a prompt" is not evidence that a rule matched. When testing
+  a pattern, use a command that is *refused* when ungranted, or you are measuring
+  the sandbox rather than the matcher.
+
+Claude Code is also operator-aware: it decomposes compound commands and requires
+each part to be permitted. `Bash(git push:*)` refuses
+`git push --dry-run || git commit --allow-empty -m x`.
 
 All of the above is pinned to 2.1.220 and is undocumented matcher behaviour — a
 future release could change it, so prefer prefixes that would still be safe if
