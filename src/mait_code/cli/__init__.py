@@ -551,7 +551,7 @@ def _render_tool_approvals() -> None:
     """
     from mait_code.cli import _permissions
 
-    _permissions.render_presets(root=_permissions.repo_root())
+    _permissions.render_presets()
 
 
 def _settings_render_json_with_approvals(snapshot) -> str:
@@ -565,9 +565,7 @@ def _settings_render_json_with_approvals(snapshot) -> str:
     from mait_code.cli import _permissions
 
     document = _json.loads(_settings_render_json(snapshot))
-    document["tool_approvals"] = _permissions.presets_json(
-        root=_permissions.repo_root()
-    )
+    document["tool_approvals"] = _permissions.presets_json()
     return _json.dumps(document, indent=2)
 
 

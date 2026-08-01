@@ -3,7 +3,8 @@
 Two halves. The first is a set of *guard* tests over the catalogue itself:
 these don't exercise code so much as pin the curation, so a preset that quietly
 permits a mutating command fails the suite rather than shipping. The second
-drives the read/merge/scope machinery against real files under a fake ``$HOME``.
+drives the read/merge machinery against real files under a fake ``$HOME``,
+including from inside a git repo — the target must not move with the cwd.
 """
 
 from __future__ import annotations
@@ -119,58 +120,83 @@ def test_matches_command(pattern: str, command: str, expected: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Scope resolution
+# Target file — the launch directory must not be an input
 # ---------------------------------------------------------------------------
 
 
-def test_scope_paths_in_a_repo(fake_home: Path, repo: Path) -> None:
-    assert perms.scope_path("global") == fake_home / ".claude" / "settings.json"
-    assert (
-        perms.scope_path("project-shared", root=repo)
-        == repo / ".claude" / "settings.json"
+def test_settings_path_is_the_global_file(fake_home: Path) -> None:
+    assert perms.settings_path() == fake_home / ".claude" / "settings.json"
+
+
+def test_target_file_ignores_the_working_directory(
+    fake_home: Path, repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The regression guard: cwd must not reach the resolved target.
+
+    A repo with its own ``.claude`` settings is the exact shape that used to
+    capture the write; the file resolves to ``$HOME`` from inside it, from a
+    nested subdirectory, and from a directory in no repo at all.
+    """
+    _write(
+        repo / ".claude" / "settings.local.json",
+        {"permissions": {"allow": ["Bash(git status:*)"]}},
     )
-    assert (
-        perms.scope_path("project-local", root=repo)
-        == repo / ".claude" / "settings.local.json"
-    )
-
-
-def test_project_scopes_unavailable_outside_a_repo(fake_home: Path) -> None:
-    assert perms.scope_path("project-shared") is None
-    assert perms.scope_path("project-local") is None
-    assert [s.id for s in perms.available_scopes()] == ["global"]
-
-
-def test_available_scopes_in_a_repo(fake_home: Path, repo: Path) -> None:
-    assert [s.id for s in perms.available_scopes(root=repo)] == [
-        "global",
-        "project-shared",
-        "project-local",
-    ]
-
-
-def test_default_scope_is_the_gitignored_one() -> None:
-    """Personal approvals must not default into a committed file."""
-    assert perms.DEFAULT_SCOPE == "project-local"
-    assert perms.scope_by_id(perms.DEFAULT_SCOPE).project is True
-
-
-def test_repo_root_walks_up(tmp_path: Path) -> None:
-    (tmp_path / ".git").mkdir()
-    nested = tmp_path / "src" / "deep"
+    nested = repo / "src" / "deep"
     nested.mkdir(parents=True)
-    assert perms.repo_root(nested) == tmp_path
+    elsewhere = fake_home / "not-a-repo"
+    elsewhere.mkdir()
+
+    expected = fake_home / ".claude" / "settings.json"
+    for where in (repo, nested, elsewhere):
+        monkeypatch.chdir(where)
+        assert perms.settings_path() == expected
 
 
-def test_repo_root_returns_none_outside_a_repo(tmp_path: Path) -> None:
-    # tmp_path is not under a git tree, and neither is any parent of it.
-    assert perms.repo_root(tmp_path) is None
+def test_state_ignores_a_preset_sitting_in_a_project_file(
+    fake_home: Path, repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The accepted gap, pinned.
+
+    A preset in a repo settings file is still unioned in by Claude Code, but
+    this module reports it off and cannot remove it. Asserted so the trade-off
+    is a decision on the record rather than a surprise.
+    """
+    project_file = repo / ".claude" / "settings.local.json"
+    _write(
+        project_file,
+        {"permissions": {"allow": list(perms.preset_by_id("git-status").patterns)}},
+    )
+    monkeypatch.chdir(repo)
+    states = {s.preset.id: s for s in perms.resolve_states()}
+    assert states["git-status"].enabled is False
+    assert perms.disable_preset("git-status").changed is False
+    # Not merely "reported no change" — the project file is genuinely untouched,
+    # so the rule really is still in force rather than quietly swept.
+    assert json.loads(project_file.read_text(encoding="utf-8")) == {
+        "permissions": {"allow": list(perms.preset_by_id("git-status").patterns)}
+    }
 
 
-def test_repo_root_handles_a_worktree_git_file(tmp_path: Path) -> None:
-    """Worktrees and submodules carry a ``.git`` *file*, not a directory."""
-    (tmp_path / ".git").write_text("gitdir: /elsewhere\n", encoding="utf-8")
-    assert perms.repo_root(tmp_path) == tmp_path
+def test_resolved_state_is_identical_from_any_directory(
+    fake_home: Path, repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    perms.enable_preset("git-log")
+    _write(
+        repo / ".claude" / "settings.json",
+        {"permissions": {"allow": ["Bash(head:*)"]}},
+    )
+    nested = repo / "src"
+    nested.mkdir(parents=True)
+
+    renders = []
+    for where in (repo, nested, fake_home):
+        monkeypatch.chdir(where)
+        renders.append(perms.presets_json())
+    assert renders[0] == renders[1] == renders[2]
+    # And the global rule is what is reflected, not the repo's half-preset.
+    rows = {row["id"]: row for row in renders[0]}
+    assert rows["git-log"]["enabled"] is True
+    assert rows["head-tail"]["partial"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -215,39 +241,36 @@ def test_empty_file_reads_as_empty(tmp_path: Path) -> None:
     assert perms.allow_rules(path) == ()
 
 
-def test_resolve_states_reports_origin_scope(fake_home: Path, repo: Path) -> None:
+def test_resolve_states_reports_an_enabled_preset(fake_home: Path) -> None:
     _write(
-        repo / ".claude" / "settings.local.json",
+        perms.settings_path(),
         {"permissions": {"allow": list(perms.preset_by_id("git-status").patterns)}},
     )
-    states = {s.preset.id: s for s in perms.resolve_states(root=repo)}
-    assert states["git-status"].enabled_scopes == ("project-local",)
-    assert states["git-status"].origin == "project-local"
+    states = {s.preset.id: s for s in perms.resolve_states()}
+    assert states["git-status"].enabled is True
+    assert states["git-status"].partial is False
     assert states["git-diff"].enabled is False
 
 
-def test_resolve_states_flags_a_partial_preset(fake_home: Path, repo: Path) -> None:
+def test_resolve_states_flags_a_partial_preset(fake_home: Path) -> None:
     """A hand-edited file holding half a preset reads as partial, not off."""
-    _write(
-        repo / ".claude" / "settings.json",
-        {"permissions": {"allow": ["Bash(head:*)"]}},
-    )
-    states = {s.preset.id: s for s in perms.resolve_states(root=repo)}
+    _write(perms.settings_path(), {"permissions": {"allow": ["Bash(head:*)"]}})
+    states = {s.preset.id: s for s in perms.resolve_states()}
     assert states["head-tail"].enabled is False
-    assert states["head-tail"].partial_scopes == ("project-shared",)
+    assert states["head-tail"].partial is True
 
 
-def test_read_scopes_isolates_a_broken_file(fake_home: Path, repo: Path) -> None:
-    """One malformed scope must not blank the whole view."""
-    (repo / ".claude").mkdir()
-    (repo / ".claude" / "settings.json").write_text("{oops", encoding="utf-8")
-    _write(
-        repo / ".claude" / "settings.local.json",
-        {"permissions": {"allow": ["Bash(ls:*)"]}},
-    )
-    snapshot = perms.read_scopes(root=repo)
-    assert "project-shared" in snapshot.errors
-    assert snapshot.rules["project-local"] == ("Bash(ls:*)",)
+def test_read_allow_carries_a_parse_error(fake_home: Path) -> None:
+    """A broken file reports itself rather than blanking the view."""
+    path = perms.settings_path()
+    path.parent.mkdir(parents=True)
+    path.write_text("{oops", encoding="utf-8")
+    snapshot = perms.read_allow()
+    assert snapshot.rules == ()
+    assert snapshot.error is not None
+    assert "not valid JSON" in snapshot.error
+    # And every preset reads off rather than raising out of the render.
+    assert all(not s.enabled for s in perms.resolve_states())
 
 
 # ---------------------------------------------------------------------------
@@ -255,18 +278,28 @@ def test_read_scopes_isolates_a_broken_file(fake_home: Path, repo: Path) -> None
 # ---------------------------------------------------------------------------
 
 
-def test_enable_creates_the_file(fake_home: Path, repo: Path) -> None:
-    outcome = perms.enable_preset("git-status", "project-local", root=repo)
+def test_enable_creates_the_file(fake_home: Path) -> None:
+    outcome = perms.enable_preset("git-status")
     assert outcome.changed
+    assert outcome.path == perms.settings_path()
     assert outcome.backup is None  # nothing existed to back up
     document = json.loads(outcome.path.read_text(encoding="utf-8"))
     assert document["permissions"]["allow"] == ["Bash(git status:*)"]
 
 
-def test_enable_preserves_unrelated_keys_and_rule_order(
-    fake_home: Path, repo: Path
+def test_enable_writes_globally_from_inside_a_repo(
+    fake_home: Path, repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    path = repo / ".claude" / "settings.local.json"
+    """No code path may write into a repo's settings files."""
+    monkeypatch.chdir(repo)
+    outcome = perms.enable_preset("git-status")
+    assert outcome.path == fake_home / ".claude" / "settings.json"
+    assert not (repo / ".claude" / "settings.json").exists()
+    assert not (repo / ".claude" / "settings.local.json").exists()
+
+
+def test_enable_preserves_unrelated_keys_and_rule_order(fake_home: Path) -> None:
+    path = perms.settings_path()
     _write(
         path,
         {
@@ -278,7 +311,7 @@ def test_enable_preserves_unrelated_keys_and_rule_order(
             },
         },
     )
-    perms.enable_preset("git-status", "project-local", root=repo)
+    perms.enable_preset("git-status")
     document = json.loads(path.read_text(encoding="utf-8"))
     assert document["model"] == "opus"
     assert document["hooks"]["SessionStart"][0]["hooks"][0]["command"] == "mc-hook-x"
@@ -287,9 +320,9 @@ def test_enable_preserves_unrelated_keys_and_rule_order(
     assert document["permissions"]["allow"] == ["Bash(mine:*)", "Bash(git status:*)"]
 
 
-def test_enable_is_idempotent(fake_home: Path, repo: Path) -> None:
-    first = perms.enable_preset("head-tail", "project-local", root=repo)
-    second = perms.enable_preset("head-tail", "project-local", root=repo)
+def test_enable_is_idempotent(fake_home: Path) -> None:
+    first = perms.enable_preset("head-tail")
+    second = perms.enable_preset("head-tail")
     assert first.changed is True
     assert second.changed is False
     assert second.added == ()
@@ -297,30 +330,21 @@ def test_enable_is_idempotent(fake_home: Path, repo: Path) -> None:
     assert document["permissions"]["allow"] == ["Bash(head:*)", "Bash(tail:*)"]
 
 
-def test_enable_completes_a_partial_preset(fake_home: Path, repo: Path) -> None:
+def test_enable_completes_a_partial_preset(fake_home: Path) -> None:
     """Only the missing half is written; the present half isn't duplicated."""
-    path = repo / ".claude" / "settings.local.json"
+    path = perms.settings_path()
     _write(path, {"permissions": {"allow": ["Bash(head:*)"]}})
-    outcome = perms.enable_preset("head-tail", "project-local", root=repo)
+    outcome = perms.enable_preset("head-tail")
     assert outcome.added == ("Bash(tail:*)",)
     document = json.loads(path.read_text(encoding="utf-8"))
     assert document["permissions"]["allow"] == ["Bash(head:*)", "Bash(tail:*)"]
 
 
-def test_enable_in_a_second_scope_is_visible_as_such(
-    fake_home: Path, repo: Path
-) -> None:
-    perms.enable_preset("git-log", "global", root=repo)
-    perms.enable_preset("git-log", "project-local", root=repo)
-    states = {s.preset.id: s for s in perms.resolve_states(root=repo)}
-    assert states["git-log"].enabled_scopes == ("global", "project-local")
-
-
-def test_enable_backs_up_once_per_file(fake_home: Path, repo: Path) -> None:
-    path = repo / ".claude" / "settings.local.json"
+def test_enable_backs_up_once_per_file(fake_home: Path) -> None:
+    path = perms.settings_path()
     _write(path, {"permissions": {"allow": ["Bash(mine:*)"]}})
-    first = perms.enable_preset("git-status", "project-local", root=repo)
-    second = perms.enable_preset("git-log", "project-local", root=repo)
+    first = perms.enable_preset("git-status")
+    second = perms.enable_preset("git-log")
     assert first.backup is not None
     assert first.backup.exists()
     assert json.loads(first.backup.read_text(encoding="utf-8")) == {
@@ -328,86 +352,72 @@ def test_enable_backs_up_once_per_file(fake_home: Path, repo: Path) -> None:
     }
     # Second write to the same file doesn't spawn another backup.
     assert second.backup is None
-    assert len(list((repo / ".claude").glob("*.bak-*"))) == 1
+    assert len(list(path.parent.glob("*.bak-*"))) == 1
 
 
-def test_enable_refuses_a_malformed_target(fake_home: Path, repo: Path) -> None:
-    path = repo / ".claude" / "settings.local.json"
+def test_enable_refuses_a_malformed_target(fake_home: Path) -> None:
+    path = perms.settings_path()
     path.parent.mkdir(parents=True)
     original = '{"permissions": {"allow": [,]}}'
     path.write_text(original, encoding="utf-8")
     with pytest.raises(perms.PermissionsFileError):
-        perms.enable_preset("git-status", "project-local", root=repo)
+        perms.enable_preset("git-status")
     assert path.read_text(encoding="utf-8") == original
 
 
-def test_enable_outside_a_repo_rejects_project_scopes(fake_home: Path) -> None:
-    with pytest.raises(perms.PermissionsFileError, match="git repository"):
-        perms.enable_preset("git-status", "project-local", root=None)
-
-
-def test_enable_rejects_unknown_ids(fake_home: Path, repo: Path) -> None:
+def test_enable_rejects_an_unknown_id(fake_home: Path) -> None:
     with pytest.raises(KeyError):
-        perms.enable_preset("no-such-preset", "project-local", root=repo)
-    with pytest.raises(KeyError):
-        perms.enable_preset("git-status", "no-such-scope", root=repo)
+        perms.enable_preset("no-such-preset")
 
 
-def test_disable_sweeps_every_scope(fake_home: Path, repo: Path) -> None:
-    """Leaving a copy behind would keep the rule in force while the UI said off."""
-    perms.enable_preset("git-log", "global", root=repo)
-    perms.enable_preset("git-log", "project-local", root=repo)
-    outcomes = perms.disable_preset("git-log", root=repo)
-    assert {o.scope_id for o in outcomes} == {"global", "project-local"}
-    states = {s.preset.id: s for s in perms.resolve_states(root=repo)}
-    assert states["git-log"].enabled_scopes == ()
+def test_disable_removes_the_preset(fake_home: Path) -> None:
+    perms.enable_preset("git-log")
+    outcome = perms.disable_preset("git-log")
+    assert outcome.changed is True
+    assert outcome.removed == perms.preset_by_id("git-log").patterns
+    states = {s.preset.id: s for s in perms.resolve_states()}
+    assert states["git-log"].enabled is False
 
 
-def test_disable_targets_one_scope_when_asked(fake_home: Path, repo: Path) -> None:
-    perms.enable_preset("git-log", "global", root=repo)
-    perms.enable_preset("git-log", "project-local", root=repo)
-    perms.disable_preset("git-log", scope_id="global", root=repo)
-    states = {s.preset.id: s for s in perms.resolve_states(root=repo)}
-    assert states["git-log"].enabled_scopes == ("project-local",)
+def test_disable_clears_a_partial_preset(fake_home: Path) -> None:
+    _write(perms.settings_path(), {"permissions": {"allow": ["Bash(head:*)"]}})
+    outcome = perms.disable_preset("head-tail")
+    assert outcome.removed == ("Bash(head:*)",)
+    states = {s.preset.id: s for s in perms.resolve_states()}
+    assert states["head-tail"].partial is False
 
 
-def test_disable_leaves_neighbouring_rules_alone(fake_home: Path, repo: Path) -> None:
-    path = repo / ".claude" / "settings.local.json"
+def test_disable_leaves_neighbouring_rules_alone(fake_home: Path) -> None:
+    path = perms.settings_path()
     _write(path, {"permissions": {"allow": ["Bash(mine:*)", "Bash(git status)"]}})
-    perms.enable_preset("git-status", "project-local", root=repo)
-    perms.disable_preset("git-status", root=repo)
+    perms.enable_preset("git-status")
+    perms.disable_preset("git-status")
     document = json.loads(path.read_text(encoding="utf-8"))
     # The near-identical hand-written rule (no ``:*``) is untouched.
     assert document["permissions"]["allow"] == ["Bash(mine:*)", "Bash(git status)"]
 
 
-def test_disable_drops_an_emptied_permissions_block(
-    fake_home: Path, repo: Path
-) -> None:
-    outcome = perms.enable_preset("git-status", "project-local", root=repo)
-    perms.disable_preset("git-status", root=repo)
+def test_disable_drops_an_emptied_permissions_block(fake_home: Path) -> None:
+    outcome = perms.enable_preset("git-status")
+    perms.disable_preset("git-status")
     document = json.loads(outcome.path.read_text(encoding="utf-8"))
     assert "permissions" not in document
 
 
-def test_disable_when_absent_writes_nothing(fake_home: Path, repo: Path) -> None:
-    assert perms.disable_preset("git-status", root=repo) == ()
-    assert not (repo / ".claude" / "settings.local.json").exists()
+def test_disable_when_absent_writes_nothing(fake_home: Path) -> None:
+    outcome = perms.disable_preset("git-status")
+    assert outcome.changed is False
+    assert not perms.settings_path().exists()
 
 
-def test_disable_sweep_skips_a_broken_scope(fake_home: Path, repo: Path) -> None:
-    """A broken file elsewhere shouldn't block disabling where it is possible."""
-    perms.enable_preset("git-log", "project-local", root=repo)
-    (repo / ".claude" / "settings.json").write_text("{oops", encoding="utf-8")
-    outcomes = perms.disable_preset("git-log", root=repo)
-    assert [o.scope_id for o in outcomes] == ["project-local"]
-
-
-def test_disable_surfaces_a_broken_explicit_target(fake_home: Path, repo: Path) -> None:
-    (repo / ".claude").mkdir()
-    (repo / ".claude" / "settings.json").write_text("{oops", encoding="utf-8")
+def test_disable_refuses_a_malformed_target(fake_home: Path) -> None:
+    path = perms.settings_path()
+    path.parent.mkdir(parents=True)
+    original = "{oops"
+    path.write_text(original, encoding="utf-8")
     with pytest.raises(perms.PermissionsFileError):
-        perms.disable_preset("git-log", scope_id="project-shared", root=repo)
+        perms.disable_preset("git-log")
+    assert path.read_text(encoding="utf-8") == original
 
 
 # ---------------------------------------------------------------------------
@@ -415,38 +425,50 @@ def test_disable_surfaces_a_broken_explicit_target(fake_home: Path, repo: Path) 
 # ---------------------------------------------------------------------------
 
 
-def test_presets_json_shape(fake_home: Path, repo: Path) -> None:
-    perms.enable_preset("git-status", "project-local", root=repo)
-    rows = {row["id"]: row for row in perms.presets_json(root=repo)}
+def test_presets_json_shape(fake_home: Path) -> None:
+    # One full preset and half of another, so both booleans are exercised.
+    _write(
+        perms.settings_path(),
+        {
+            "permissions": {
+                "allow": [*perms.preset_by_id("git-status").patterns, "Bash(head:*)"]
+            }
+        },
+    )
+    rows = {row["id"]: row for row in perms.presets_json()}
     assert len(rows) == len(perms.ALLOW_PRESETS)
     assert rows["git-status"]["enabled"] is True
-    assert rows["git-status"]["enabled_scopes"] == ["project-local"]
+    assert rows["git-status"]["partial"] is False
+    assert rows["head-tail"]["enabled"] is False
+    assert rows["head-tail"]["partial"] is True
     assert rows["git-status"]["tier"] == "read-only"
     assert rows["ruff-check"]["tier"] == "writes-workspace"
     assert rows["git-diff"]["enabled"] is False
 
 
-def test_render_presets_names_the_scope(
-    fake_home: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+def test_render_presets_names_the_file(
+    fake_home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    perms.enable_preset("git-status", "project-local", root=repo)
-    perms.render_presets(root=repo)
+    perms.enable_preset("git-status")
+    perms.render_presets()
     out = capsys.readouterr().out
     assert "git status" in out
-    assert "Project (local)" in out
+    assert "~/.claude/settings.json" in out
+    assert "enabled" in out
 
 
 def test_render_presets_with_nothing_enabled(
-    fake_home: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+    fake_home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    perms.render_presets(root=repo)
+    perms.render_presets()
     assert "no presets enabled" in capsys.readouterr().out
 
 
 def test_render_presets_reports_a_broken_file(
-    fake_home: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+    fake_home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    (repo / ".claude").mkdir()
-    (repo / ".claude" / "settings.json").write_text("{oops", encoding="utf-8")
-    perms.render_presets(root=repo)
+    path = perms.settings_path()
+    path.parent.mkdir(parents=True)
+    path.write_text("{oops", encoding="utf-8")
+    perms.render_presets()
     assert "unreadable" in capsys.readouterr().out

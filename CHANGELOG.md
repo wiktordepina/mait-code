@@ -10,6 +10,41 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.67.0] — 2026-08-01
+
+### Changed
+
+- **Tool approvals are global-only.** The **Tool approvals** group in
+  `mait-code settings` now reads and writes `~/.claude/settings.json` and
+  nothing else; the scope picker is gone, and so is the repo detection behind
+  it. Previously the group resolved its scopes by walking up from the process's
+  working directory, which made the launch directory an invisible input — the
+  same command showed different state and pre-selected a different write target
+  depending on which terminal it was opened from, and from an unrelated repo it
+  would target that repo's settings file. The surface now behaves identically
+  whichever directory it runs from.
+
+  Note the trade-off this makes: a grant can no longer be confined to one
+  repository. For the read-only presets that costs nothing, but for the
+  not-read-only tier it is a genuine widening — enabling `uv run pytest` now
+  lets every repo you subsequently open run its own `conftest.py` unprompted,
+  where 0.66.0's per-repo default did not. The pane says so at the point of
+  opting in. Restoring per-project grants properly means an explicit
+  `--project <path>` argument rather than one inferred from the cwd.
+
+  If you enabled presets into a repo's `.claude/settings.json` or
+  `.claude/settings.local.json` under 0.66.0, note that Claude Code still
+  unions all three files: those rules remain in force while the editor reports
+  them `off`, and **Disable** will not reach them. A preset present in *both* a
+  repo file and the global one reads `on`, and disabling it clears only the
+  global copy — the row then reads `off` while the repo's rule still applies.
+  Remove them by editing the repo's settings files directly.
+
+- **Breaking (`--json`):** `mait-code settings list --json` no longer emits
+  `tool_approvals[].enabled_scopes` and `tool_approvals[].partial_scopes`
+  arrays. They are replaced by the booleans `enabled` (already present) and
+  `partial`.
+
 ## [0.66.0] — 2026-07-31
 
 ### Added
@@ -1967,7 +2002,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.66.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.67.0...HEAD
+[0.67.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.67.0
 [0.66.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.66.0
 [0.65.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.65.0
 [0.64.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.64.0

@@ -5,22 +5,36 @@ Claude Code prompts for approval on every ``Bash`` call unless a rule in
 (``git status``, ``wc``, ``uv run ruff``, ``mc-tool-board list``) get approved
 dozens of times a session for no benefit, which trains the reflex of approving
 without reading. This module owns a small, hand-curated catalogue of such rules
-plus the read/merge/scope machinery to write them into the right settings file.
+plus the read/merge machinery to write them into the user's settings file.
 
-**Scopes.** Claude Code unions ``permissions.allow`` across three files, so a
-rule's origin has to be visible or the UI misrepresents what is in effect:
+**One file, deliberately.** Claude Code unions ``permissions.allow`` across
+three files — ``~/.claude/settings.json``, ``<repo>/.claude/settings.json`` and
+``<repo>/.claude/settings.local.json``. This module reads and writes the first
+of those and nothing else.
 
-===================  ==========================================  ==============
-Scope                File                                        Notes
-===================  ==========================================  ==============
-``global``           ``~/.claude/settings.json``                  everywhere
-``project-shared``   ``<repo>/.claude/settings.json``             committed
-``project-local``    ``<repo>/.claude/settings.local.json``       gitignored
-===================  ==========================================  ==============
+Earlier versions offered all three, picking the repo by walking up from the
+process's working directory. That made the *launch directory* an invisible
+input: the same ``mait-code settings`` invocation showed different state and
+pre-selected a different write target depending on which terminal it was opened
+from, and from an unrelated repo it would happily target that repo's settings
+file. No amount of picker UI fixes an input the user cannot see, so the scope
+concept left this surface entirely rather than merely changing its default.
 
-``project-local`` is the default target: approval preferences are personal, and
-writing them into a committed file changes behaviour for everyone who clones the
-repo.
+Two consequences, both accepted knowingly.
+
+A catalogue preset written into a project file (by an older version, or by hand)
+is still unioned in by Claude Code while this module reports it off, and cannot
+be removed from here. The awkward case is a preset present in *both*: the row
+reads on, disabling clears only the global copy, and the row then reads off
+while the project file keeps the rule in force.
+
+More importantly, a grant can no longer be confined to one repository. For the
+``read-only`` tier that costs nothing. For ``writes-workspace`` it is a real
+widening — enabling ``uv run pytest`` lets every repo you subsequently open run
+its own ``conftest.py`` unprompted, where the previous per-repo default did not.
+The UI says so at the point of opting in; restoring the capability properly
+means an explicit ``--project <path>`` argument, a named target rather than an
+inherited one.
 
 **The prefix hazard.** A ``Bash(<prefix>:*)`` rule is a *raw string prefix*
 match, so it cannot express "this subcommand but not that flag" — and it does
@@ -41,7 +55,7 @@ might do, not the best case.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -58,21 +72,15 @@ __all__ = [
     "Preset",
     "preset_by_id",
     "preset_groups",
-    # Scopes
-    "DEFAULT_SCOPE",
-    "SCOPES",
-    "Scope",
-    "available_scopes",
-    "repo_root",
-    "scope_by_id",
-    "scope_path",
+    # Target file
+    "settings_path",
     # Reading
+    "AllowSnapshot",
     "PermissionsFileError",
     "PresetState",
-    "ScopeSnapshot",
     "allow_rules",
     "matches_command",
-    "read_scopes",
+    "read_allow",
     "resolve_states",
     # Writing
     "WriteOutcome",
@@ -394,119 +402,18 @@ def preset_groups() -> tuple[tuple[str, tuple[Preset, ...]], ...]:
 
 
 # --------------------------------------------------------------------------
-# Scopes
+# Target file
 # --------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class Scope:
-    """One settings file that Claude Code reads permission rules from.
+def settings_path() -> Path:
+    """Return the one settings file this module reads and writes.
 
-    Attributes:
-        id: Stable identifier (``global``, ``project-shared``, ``project-local``).
-        label: Short display name.
-        help: The consequence of choosing this scope, in a few words. Kept
-            terse on purpose — it rides inside a radio-button label in a
-            half-width pane, and a longer sentence truncates to uselessness
-            exactly where the committed/gitignored distinction matters most.
-        project: ``True`` when the scope lives inside the repo and is therefore
-            unavailable outside a git working tree.
+    Always ``~/.claude/settings.json`` — resolved from ``$HOME``, never from
+    the process's working directory, so every entry point behaves identically
+    whichever directory it was launched from.
     """
-
-    id: str
-    label: str
-    help: str
-    project: bool
-
-
-SCOPES: tuple[Scope, ...] = (
-    Scope(
-        id="global",
-        label="Global",
-        help="every project",
-        project=False,
-    ),
-    Scope(
-        id="project-shared",
-        label="Project (shared)",
-        help="committed — affects teammates",
-        project=True,
-    ),
-    Scope(
-        id="project-local",
-        label="Project (local)",
-        help="gitignored — just you",
-        project=True,
-    ),
-)
-"""Every scope, in the order the picker offers them."""
-
-DEFAULT_SCOPE = "project-local"
-"""Where a toggle writes unless the user picks otherwise.
-
-Approval preferences are personal; defaulting to the committed project file
-would change behaviour for everyone who clones the repo.
-"""
-
-
-def scope_by_id(scope_id: str) -> Scope:
-    """Return the scope with *scope_id*.
-
-    Raises:
-        KeyError: If no such scope exists.
-    """
-    for scope in SCOPES:
-        if scope.id == scope_id:
-            return scope
-    raise KeyError(scope_id)
-
-
-def repo_root(start: Path | None = None) -> Path | None:
-    """Return the git working-tree root containing *start*, or ``None``.
-
-    Walks up looking for a ``.git`` entry rather than shelling out to git —
-    this runs on every settings-tree render, and a subprocess per render is
-    not worth it. Works for worktrees and submodules too, where ``.git`` is a
-    file rather than a directory.
-    """
-    current = (start or Path.cwd()).resolve()
-    for candidate in (current, *current.parents):
-        if (candidate / ".git").exists():
-            return candidate
-    return None
-
-
-def scope_path(scope_id: str, *, root: Path | None = None) -> Path | None:
-    """Return the settings file backing *scope_id*.
-
-    Args:
-        scope_id: One of the :data:`SCOPES` ids.
-        root: The repo root for project scopes. ``None`` means "not in a repo",
-            and project scopes then resolve to ``None`` rather than raising —
-            the caller greys the row out.
-
-    Returns:
-        The path, or ``None`` when a project scope has no repo to live in.
-
-    Raises:
-        KeyError: If *scope_id* is not a known scope.
-    """
-    scope = scope_by_id(scope_id)
-    if not scope.project:
-        return claude_dir() / "settings.json"
-    if root is None:
-        return None
-    if scope.id == "project-shared":
-        return root / ".claude" / "settings.json"
-    return root / ".claude" / "settings.local.json"
-
-
-def available_scopes(*, root: Path | None = None) -> tuple[Scope, ...]:
-    """Return the scopes writable in the current context.
-
-    Outside a git repo this is the global scope alone.
-    """
-    return tuple(s for s in SCOPES if scope_path(s.id, root=root) is not None)
+    return claude_dir() / "settings.json"
 
 
 # --------------------------------------------------------------------------
@@ -599,79 +506,55 @@ def matches_command(pattern: str, command: str) -> bool:
 
 @dataclass(frozen=True)
 class PresetState:
-    """Where a preset currently stands across the three scopes.
+    """Where a preset currently stands in the settings file.
 
     Attributes:
         preset: The catalogue entry.
-        enabled_scopes: Scope ids holding *every* pattern of the preset.
-        partial_scopes: Scope ids holding some but not all of them — usually a
+        enabled: ``True`` when *every* pattern of the preset is present.
+        partial: ``True`` when some but not all of them are — usually a
             hand-edited file, and worth showing rather than rounding to "off".
     """
 
     preset: Preset
-    enabled_scopes: tuple[str, ...] = ()
-    partial_scopes: tuple[str, ...] = ()
-
-    @property
-    def enabled(self) -> bool:
-        """``True`` when the preset is fully present in at least one scope."""
-        return bool(self.enabled_scopes)
-
-    @property
-    def origin(self) -> str | None:
-        """The first scope that fully enables this preset, if any."""
-        return self.enabled_scopes[0] if self.enabled_scopes else None
+    enabled: bool = False
+    partial: bool = False
 
 
-@dataclass
-class ScopeSnapshot:
-    """The allow rules read from each available scope.
+@dataclass(frozen=True)
+class AllowSnapshot:
+    """The allow rules read from the settings file, or why they could not be.
 
     Attributes:
-        rules: Scope id → the rules found there.
-        errors: Scope id → the message for a scope that could not be read.
+        rules: The ``permissions.allow`` entries found, empty when the file is
+            missing or unreadable.
+        error: The message for a file that could not be parsed, else ``None``.
+            Carried rather than raised so one broken file reports itself in
+            place instead of blanking the whole settings tree.
     """
 
-    rules: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    errors: dict[str, str] = field(default_factory=dict)
+    rules: tuple[str, ...] = ()
+    error: str | None = None
 
 
-def read_scopes(*, root: Path | None = None) -> ScopeSnapshot:
-    """Read the allow rules from every available scope.
-
-    A scope whose file is malformed lands in :attr:`ScopeSnapshot.errors`
-    rather than aborting the whole render — one broken file should not blank
-    the settings tree.
-    """
-    snapshot = ScopeSnapshot()
-    for scope in available_scopes(root=root):
-        path = scope_path(scope.id, root=root)
-        assert path is not None  # available_scopes filtered these out
-        try:
-            snapshot.rules[scope.id] = allow_rules(path)
-        except PermissionsFileError as exc:
-            snapshot.errors[scope.id] = str(exc)
-    return snapshot
+def read_allow() -> AllowSnapshot:
+    """Read the allow rules from the settings file, isolating a parse error."""
+    try:
+        return AllowSnapshot(rules=allow_rules(settings_path()))
+    except PermissionsFileError as exc:
+        return AllowSnapshot(error=str(exc))
 
 
-def resolve_states(*, root: Path | None = None) -> tuple[PresetState, ...]:
-    """Resolve every catalogue preset against the on-disk scopes."""
-    snapshot = read_scopes(root=root)
+def resolve_states() -> tuple[PresetState, ...]:
+    """Resolve every catalogue preset against the on-disk settings file."""
+    rules = read_allow().rules
     states: list[PresetState] = []
     for preset in ALLOW_PRESETS:
-        enabled: list[str] = []
-        partial: list[str] = []
-        for scope_id, rules in snapshot.rules.items():
-            present = sum(1 for pattern in preset.patterns if pattern in rules)
-            if present == len(preset.patterns):
-                enabled.append(scope_id)
-            elif present:
-                partial.append(scope_id)
+        present = sum(1 for pattern in preset.patterns if pattern in rules)
         states.append(
             PresetState(
                 preset=preset,
-                enabled_scopes=tuple(enabled),
-                partial_scopes=tuple(partial),
+                enabled=present == len(preset.patterns),
+                partial=0 < present < len(preset.patterns),
             )
         )
     return tuple(states)
@@ -695,7 +578,6 @@ class WriteOutcome:
 
     Attributes:
         preset_id: The preset that was toggled.
-        scope_id: The scope written to.
         path: The settings file written.
         added: Patterns appended to ``permissions.allow``.
         removed: Patterns deleted from it.
@@ -703,7 +585,6 @@ class WriteOutcome:
     """
 
     preset_id: str
-    scope_id: str
     path: Path
     added: tuple[str, ...] = ()
     removed: tuple[str, ...] = ()
@@ -727,17 +608,6 @@ def _backup(path: Path) -> Path | None:
     return destination
 
 
-def _resolve_target(scope_id: str, root: Path | None) -> Path:
-    """Return the writable path for *scope_id*, or explain why there isn't one."""
-    path = scope_path(scope_id, root=root)
-    if path is None:
-        raise PermissionsFileError(
-            f"the {scope_by_id(scope_id).label!r} scope needs a git repository; "
-            "there is none here — use the global scope instead."
-        )
-    return path
-
-
 def _write_allow(path: Path, document: dict[str, Any], allow: list[str]) -> None:
     """Persist *allow* into *document*'s permissions block and write it out.
 
@@ -757,13 +627,8 @@ def _write_allow(path: Path, document: dict[str, Any], allow: list[str]) -> None
     write_settings_file(path, document)
 
 
-def enable_preset(
-    preset_id: str,
-    scope_id: str,
-    *,
-    root: Path | None = None,
-) -> WriteOutcome:
-    """Add a preset's patterns to *scope_id*'s ``permissions.allow``.
+def enable_preset(preset_id: str) -> WriteOutcome:
+    """Add a preset's patterns to the settings file's ``permissions.allow``.
 
     Idempotent: patterns already present are left alone rather than duplicated,
     and a preset that is already fully enabled writes nothing at all. Existing
@@ -771,88 +636,61 @@ def enable_preset(
 
     Args:
         preset_id: A catalogue preset id.
-        scope_id: Which settings file to write.
-        root: Repo root for project scopes (see :func:`repo_root`).
 
     Returns:
         A :class:`WriteOutcome`; ``changed`` is ``False`` for a no-op.
 
     Raises:
-        KeyError: If *preset_id* or *scope_id* is unknown.
-        PermissionsFileError: If the scope is unavailable here, or the target
-            file exists but cannot be parsed.
+        KeyError: If *preset_id* is unknown.
+        PermissionsFileError: If the settings file exists but cannot be parsed.
     """
     preset = preset_by_id(preset_id)
-    path = _resolve_target(scope_id, root)
+    path = settings_path()
     document = _read_document(path)
     existing = allow_rules(path)
     missing = tuple(p for p in preset.patterns if p not in existing)
     if not missing:
-        return WriteOutcome(preset_id=preset_id, scope_id=scope_id, path=path)
+        return WriteOutcome(preset_id=preset_id, path=path)
     backup = _backup(path)
     _write_allow(path, document, [*existing, *missing])
     return WriteOutcome(
         preset_id=preset_id,
-        scope_id=scope_id,
         path=path,
         added=missing,
         backup=backup,
     )
 
 
-def disable_preset(
-    preset_id: str,
-    *,
-    scope_id: str | None = None,
-    root: Path | None = None,
-) -> tuple[WriteOutcome, ...]:
-    """Remove a preset's patterns from one scope, or from every scope holding it.
-
-    Passing *scope_id* targets that file alone. Leaving it ``None`` removes the
-    preset wherever it appears — Claude Code unions the three files, so leaving
-    a copy behind in another scope would keep the rule in force while the UI
-    showed it off.
+def disable_preset(preset_id: str) -> WriteOutcome:
+    """Remove a preset's patterns from the settings file.
 
     Only this preset's own patterns are touched; hand-written rules that merely
-    look similar are left in place, as is their order.
+    look similar are left in place, as is their order. Removing a preset that
+    is only partially present clears whichever of its patterns are there.
 
     Returns:
-        One :class:`WriteOutcome` per scope actually rewritten — empty when the
-        preset was not present anywhere.
+        A :class:`WriteOutcome`; ``changed`` is ``False`` when the preset was
+        not present at all.
 
     Raises:
-        KeyError: If *preset_id* or *scope_id* is unknown.
-        PermissionsFileError: If a targeted scope is unavailable or malformed.
+        KeyError: If *preset_id* is unknown.
+        PermissionsFileError: If the settings file exists but cannot be parsed.
     """
     preset = preset_by_id(preset_id)
-    targets = [scope_id] if scope_id else [s.id for s in available_scopes(root=root)]
-    outcomes: list[WriteOutcome] = []
-    for target in targets:
-        path = _resolve_target(target, root)
-        try:
-            document = _read_document(path)
-            existing = allow_rules(path)
-        except PermissionsFileError:
-            # An explicit target must surface its error; a sweep skips a broken
-            # file rather than refusing to disable anywhere.
-            if scope_id:
-                raise
-            continue
-        doomed = tuple(p for p in preset.patterns if p in existing)
-        if not doomed:
-            continue
-        backup = _backup(path)
-        _write_allow(path, document, [r for r in existing if r not in doomed])
-        outcomes.append(
-            WriteOutcome(
-                preset_id=preset_id,
-                scope_id=target,
-                path=path,
-                removed=doomed,
-                backup=backup,
-            )
-        )
-    return tuple(outcomes)
+    path = settings_path()
+    document = _read_document(path)
+    existing = allow_rules(path)
+    doomed = tuple(p for p in preset.patterns if p in existing)
+    if not doomed:
+        return WriteOutcome(preset_id=preset_id, path=path)
+    backup = _backup(path)
+    _write_allow(path, document, [r for r in existing if r not in doomed])
+    return WriteOutcome(
+        preset_id=preset_id,
+        path=path,
+        removed=doomed,
+        backup=backup,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -860,7 +698,7 @@ def disable_preset(
 # --------------------------------------------------------------------------
 
 
-def presets_json(*, root: Path | None = None) -> list[dict[str, Any]]:
+def presets_json() -> list[dict[str, Any]]:
     """Return every preset's state as plain dicts, for ``--json`` output."""
     return [
         {
@@ -870,48 +708,43 @@ def presets_json(*, root: Path | None = None) -> list[dict[str, Any]]:
             "tier": state.preset.tier,
             "patterns": list(state.preset.patterns),
             "enabled": state.enabled,
-            "enabled_scopes": list(state.enabled_scopes),
-            "partial_scopes": list(state.partial_scopes),
+            "partial": state.partial,
         }
-        for state in resolve_states(root=root)
+        for state in resolve_states()
     ]
 
 
-def render_presets(*, root: Path | None = None) -> None:
+def render_presets() -> None:
     """Print the enabled tool-approval presets to the shared console.
 
     The read-only counterpart of the settings TUI's Tool approvals group: it
-    reports what is switched on and in which file, so the non-TTY view is not
-    silent about rules that are actually in force. Rich is imported lazily to
-    match :func:`mait_code.config.render`.
+    reports what is switched on, so the non-TTY view is not silent about rules
+    that are actually in force. Rich is imported lazily to match
+    :func:`mait_code.config.render`.
     """
     from rich.table import Table
     from rich.text import Text
 
     from mait_code.console import console
 
-    snapshot = read_scopes(root=root)
-    states = resolve_states(root=root)
+    snapshot = read_allow()
+    states = resolve_states()
+    path = settings_path()
 
     console.rule(style="muted")
     header = Text("tool approvals", style="accent")
     header.append("   (read-only)", style="muted")
     console.print(header)
 
-    for scope in SCOPES:
-        path = scope_path(scope.id, root=root)
-        line = Text(f"{scope.label}: ", style="muted")
-        if path is None:
-            line.append("unavailable (not in a git repository)", style="muted")
-        else:
-            line.append(str(path).replace(str(Path.home()), "~"))
-            if scope.id in snapshot.errors:
-                line.append("  (unreadable)", style="warn")
-            elif not path.exists():
-                line.append("  (not created yet)", style="muted")
-        console.print(line)
+    line = Text("file: ", style="muted")
+    line.append(str(path).replace(str(Path.home()), "~"))
+    if snapshot.error is not None:
+        line.append("  (unreadable)", style="warn")
+    elif not path.exists():
+        line.append("  (not created yet)", style="muted")
+    console.print(line)
 
-    enabled = [s for s in states if s.enabled_scopes or s.partial_scopes]
+    enabled = [s for s in states if s.enabled or s.partial]
     if not enabled:
         console.print(
             Text(
@@ -923,18 +756,15 @@ def render_presets(*, root: Path | None = None) -> None:
         table = Table(box=None, pad_edge=False, header_style="muted")
         table.add_column("PRESET", style="bold", no_wrap=True)
         table.add_column("TIER", no_wrap=True)
-        table.add_column("SCOPE", no_wrap=True)
+        table.add_column("STATE", no_wrap=True)
         for state in enabled:
-            scopes = [scope_by_id(s).label for s in state.enabled_scopes] + [
-                f"{scope_by_id(s).label} (partial)" for s in state.partial_scopes
-            ]
             tier_style = "" if state.preset.tier == "read-only" else "warn"
             table.add_row(
                 state.preset.label,
                 Text(state.preset.tier, style=tier_style),
-                ", ".join(scopes),
+                "enabled" if state.enabled else "partial",
             )
         console.print(table)
 
-    for scope_id, message in snapshot.errors.items():
-        console.print(Text(f"⚠ {scope_by_id(scope_id).label}: {message}", style="warn"))
+    if snapshot.error is not None:
+        console.print(Text(f"⚠ {snapshot.error}", style="warn"))
