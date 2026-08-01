@@ -14,12 +14,18 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
-- **`/pre-pr-review` — an independent, zero-context review of the current branch.**
+- **`/pre-pr-review` — an independent review of the current branch, by a reviewer that has seen none of the session's conversation.**
   Spawns a `pre-pr-reviewer` subagent that reads `main...HEAD` cold: it did not
-  write the code, was not told why, and is given only the repository path, the diff
+  write the code, was not told why, and is handed only the repository path, the diff
   range and a review brief. That isolation is the whole point — you cannot review
   your own work in the session that produced it, because you check whether the code
   matches the intent rather than whether the intent was right.
+
+  The isolation is deliberately described as narrow rather than total: the subagent
+  has seen none of the *conversation*, but it does inherit the system prompt —
+  project `CLAUDE.md`, identity documents and `MEMORY.md`, which carry standing
+  conventions and past decisions. The skill and the docs say so, because a reviewer
+  believed to know nothing gets its agreement over-weighted.
 
   The reviewer is briefed to reject the premise where it deserves rejecting, to cite
   `file:line`, to separate defects from taste from things it could not confirm, and

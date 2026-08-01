@@ -15,7 +15,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
 | Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
 | Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
-| Pre-PR Review | `/pre-pr-review` | Independent, zero-context review of the current branch | **Implemented** |
+| Pre-PR Review | `/pre-pr-review` | Independent review of the current branch, by a reviewer that has not seen the conversation | **Implemented** |
 
 ## Implemented Skills
 
@@ -187,7 +187,8 @@ Fetch web page content directly from the local machine, bypassing the claude.ai 
 
 ### /pre-pr-review
 
-Review the current branch with a reviewer that shares none of the session's context.
+Review the current branch with a reviewer that has seen none of the session's
+conversation.
 
 **Usage:**
 ```
@@ -207,6 +208,15 @@ intent was right. A reviewer with no context checks the second thing.
    `pre-pr-reviewer` agent (see [Agents](#agents)) with a deliberately bare prompt —
    repository path, diff range, and the brief, and nothing about why the change was
    made
+
+!!! warning "Isolation is real but not total"
+
+    The reviewer has not seen the session's conversation, and that is the property
+    worth having. It *does* inherit the system prompt: the project `CLAUDE.md`, your
+    identity documents, and `MEMORY.md` — which carries past decisions and feedback,
+    and therefore some of your framing. Discount its agreement on anything those
+    already settle, and do not read a clean review as proof that an unbriefed
+    stranger would agree.
 3. Relays the review in the session, verifies its concrete `file:line` claims, and
    separates merge-blockers from follow-up material
 

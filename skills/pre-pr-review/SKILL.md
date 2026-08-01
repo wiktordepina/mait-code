@@ -1,12 +1,12 @@
 ---
 name: pre-pr-review
-description: Run an independent, zero-context review of the current branch before opening a pull request. Use when you ask for a pre-PR review, a cold second opinion on a branch, or want changes scrutinised before pushing or requesting a merge.
+description: Run an independent review of the current branch by a reviewer that has seen none of this session's conversation, before opening a pull request. Use when you ask for a pre-PR review, a cold second opinion on a branch, or want changes scrutinised before pushing or requesting a merge.
 allowed-tools: Bash(git log --oneline:*), Bash(git diff --stat:*), Bash(git status --porcelain:*), Bash(git branch --show-current)
 ---
 
 # /pre-pr-review
 
-Review the current branch with a reviewer that shares **none** of this session's context.
+Review the current branch with a reviewer that has seen **none of this session's conversation**.
 
 ## Current state
 
@@ -30,10 +30,24 @@ Uncommitted changes (these are *not* reviewed):
 
 You cannot review your own work in the session that produced it. You know why every
 decision was made, so you check whether the code matches the intent rather than
-whether the intent was right. A reviewer with no context checks the second thing —
-and that is where the findings that matter come from.
+whether the intent was right. A reviewer who never saw that reasoning checks the
+second thing — and that is where the findings that matter come from.
 
 Everything below exists to protect that one property.
+
+## What the reviewer *does* inherit
+
+Isolation is not total, and overstating it is worse than not having it — a reader
+who believes the reviewer knows nothing will read its agreement as independent
+corroboration. Verified by probing a live subagent: it holds the project
+`CLAUDE.md`, the user's identity documents, and `MEMORY.md` — which for a
+mait-code project is a curated list of past decisions and feedback, i.e. exactly
+the kind of framing the rule below withholds from the prompt. It does **not** hold
+any of the conversation.
+
+So the guarantee is narrower than "no context": the reviewer has not seen the
+reasoning that produced this change, but it has seen the standing conventions of
+the project. Discount its agreement on anything those conventions already settle.
 
 ## The contamination rule
 
@@ -60,10 +74,17 @@ skill exists to prevent.
    error, or a suppressed one, as "no commits to review": a silent false negative
    here tells the user their branch is empty when it is full of work.
 
+   Check the base is *current*, not merely present. A local `main` several commits
+   behind `origin/main` moves the merge base backwards, so the review covers work
+   someone else already merged — inflating an expensive run and producing findings
+   on code that is not under review. Prefer `origin/main` where it exists, or say
+   that the local base is stale.
+
    Once the range resolves: if there really are no commits ahead of the base, say so
    and stop. If the diff is trivial (a handful of lines, a docs typo, a version
    bump), say plainly what a review costs and ask whether they want it anyway,
-   rather than spending that by default.
+   rather than spending that by default. If the commit list above hit its 30-entry
+   cap, say so rather than letting a truncated list read as complete.
 
 2. **Warn on a dirty tree.** The review covers `main...HEAD` — committed work only.
    If `git status --porcelain` is non-empty, tell the user exactly which files are
@@ -86,8 +107,11 @@ skill exists to prevent.
 
    - the absolute repository path
    - the diff range (`main...HEAD`) and how to read it
-   - the PR number, if one is already open
-   - the review brief and the read-only constraint
+   - a pointer to the standing brief, and the read-only constraint
+
+   Do **not** pass a PR number. A reviewer holding one will fetch the pull request,
+   and the first thing it finds there is the description — the author's framing,
+   arriving by the back door the contamination rule was written to close.
 
    Keep it short. The agent definition holds the reviewer's standing instructions;
    do not restate them, and do not embellish them with specifics about this change.
