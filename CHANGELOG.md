@@ -10,6 +10,74 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.68.0] — 2026-08-01
+
+### Fixed
+
+- **Tool-approval presets no longer reach dangerous look-alike commands.** Every
+  pattern in the catalogue was a raw string prefix, and raw prefixes have no word
+  boundary — so a preset labelled **read-only** could permit a wholly different
+  program that merely shared its opening characters:
+
+  | Preset | Prefix | Also permitted |
+  |---|---|---|
+  | `git diff` | `Bash(git diff:*)` | `git difftool --extcmd=<cmd>` — runs a command per changed file |
+  | `file / stat` | `Bash(stat:*)` | `static-sh -c <cmd>` — a shell |
+  | `head / tail` | `Bash(tail:*)` | `tailscale up`, `tailscale logout` |
+  | `file / stat` | `Bash(file:*)` | `file-roller --extract-to` |
+
+  Which of those exist depends on what is installed, so the fix is structural
+  rather than a list of exclusions: every pattern is now a pair — `Bash(cmd)` for
+  the bare invocation and `Bash(cmd :*)` for anything with arguments — where the
+  trailing space supplies the missing boundary. Two new tests pin the shape, and
+  `MUTATING_INVOCATIONS` gained a concrete example of each hazard so the guard
+  fails if a boundary is ever dropped.
+
+  Enabled presets are rewritten on next toggle; rules already written to
+  `~/.claude/settings.json` by an earlier version keep the old unbounded form
+  until you disable and re-enable them. Worth doing if you enabled `file / stat`
+  or `head / tail`.
+
+  Side effect: `ls` no longer incidentally covers `lsof`/`lsblk`, and `git show`
+  no longer covers `show-ref`/`show-branch`. Both were accidents of prefix
+  matching rather than intent, and the rationales said so.
+
+### Added
+
+- **`/pre-pr-review` — an independent review of the current branch, by a reviewer that has seen none of the session's conversation.**
+  Spawns a `pre-pr-reviewer` subagent that reads `main...HEAD` cold: it did not
+  write the code, was not told why, and is handed only the repository path, the diff
+  range and a review brief. That isolation is the whole point — you cannot review
+  your own work in the session that produced it, because you check whether the code
+  matches the intent rather than whether the intent was right.
+
+  The isolation is deliberately described as narrow rather than total: the subagent
+  has seen none of the *conversation*, but it does inherit the system prompt —
+  project `CLAUDE.md`, identity documents and `MEMORY.md`, which carry standing
+  conventions and past decisions. The skill and the docs say so, because a reviewer
+  believed to know nothing gets its agreement over-weighted.
+
+  The reviewer is briefed to reject the premise where it deserves rejecting, to cite
+  `file:line`, to separate defects from taste from things it could not confirm, and
+  to close with the classes of problem it looked for and did *not* find — so a quiet
+  review can be told from a lazy one. It also writes its own description of the
+  change from the diff alone; where that diverges from the author's framing, either
+  the diff does more than advertised or the framing is spin.
+
+  Nothing is posted to GitHub — findings come back into the session. Cost scales
+  with the diff: two measured runs took ~113k subagent tokens for a ~950-line source
+  change and ~63k for a ~280-line docs change. Worth it before a merge that is hard
+  to walk back, not per commit.
+
+  The skill's own `allowed-tools` grant is pinned to four read-only git patterns,
+  each extending past the subcommand — `Bash(git diff:*)` would otherwise span
+  `git difftool --extcmd=<anything>`, which executes an arbitrary command per
+  changed file.
+
+- **First occupant of `agents/`.** The directory and its install-time symlinking
+  have existed since the beginning; `pre-pr-reviewer` is the first definition to
+  use them.
+
 ## [0.67.0] — 2026-08-01
 
 ### Changed
@@ -2002,7 +2070,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.67.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.68.0...HEAD
+[0.68.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.68.0
 [0.67.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.67.0
 [0.66.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.66.0
 [0.65.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.65.0

@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders<br/>/board, /triage<br/>/commit<br/>/web-fetch"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders<br/>/board, /triage<br/>/commit, /pre-pr-review<br/>/web-fetch"]
     end
 
     subgraph mait_code ["mait-code (Python)"]

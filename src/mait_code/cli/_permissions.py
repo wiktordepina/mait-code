@@ -47,6 +47,27 @@ not respect word boundaries. Two consequences drive what is in the catalogue:
   reviewed``, a *different, mutating* subcommand that merely shares a prefix.
   Excluded for the same reason, despite reading as safe.
 
+**The trailing space is load-bearing.** Every pattern here is written as a pair —
+``Bash(cmd)`` for the bare invocation and ``Bash(cmd :*)`` for anything with
+arguments — because the space at the end of the prefix is the only thing that
+restores the word boundary the matcher lacks. Without it a rule is hostage to
+whatever else happens to be installed on the machine, and the sibling is often
+far more dangerous than the command being approved:
+
+===================  ==========================================================
+Innocent prefix      What it also reached, before the boundary
+===================  ==========================================================
+``git diff``         ``git difftool --extcmd=<cmd>`` — runs a command per file
+``stat``             ``static-sh -c <cmd>`` — a shell
+``tail``             ``tailscale up`` / ``logout`` — reconfigures a VPN
+``file``             ``file-roller --extract-to`` — writes archives to disk
+===================  ==========================================================
+
+Which of those exist varies by machine, which is exactly why the fix is
+structural rather than a list of exclusions. New presets must follow the same
+shape; :data:`MUTATING_INVOCATIONS` carries a concrete example of each so the
+guard test fails if the boundary is ever dropped.
+
 :func:`matches_command` implements the permissive (raw-prefix) reading
 deliberately: the catalogue is guarded against the worst case a real matcher
 might do, not the best case.
@@ -137,71 +158,97 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
         group="Git (read-only)",
         label="git status",
         rationale="Reports the working tree; has no mutating flags.",
-        patterns=("Bash(git status:*)",),
+        patterns=(
+            "Bash(git status)",
+            "Bash(git status :*)",
+        ),
     ),
     Preset(
         id="git-diff",
         group="Git (read-only)",
         label="git diff",
-        rationale="Prints changes; no flag writes to the repository.",
-        patterns=("Bash(git diff:*)",),
+        rationale=(
+            "Prints changes; no flag writes to the repository. Split in two so the "
+            "prefix cannot reach 'git difftool --extcmd', which runs an arbitrary "
+            "command per changed file."
+        ),
+        # The trailing space in the second pattern is load-bearing: it restores the
+        # word boundary that raw-prefix matching lacks, so 'git diff ...' matches
+        # and 'git difftool ...' does not. The first pattern covers bare `git diff`,
+        # which the space-terminated prefix would otherwise miss.
+        patterns=("Bash(git diff)", "Bash(git diff :*)"),
     ),
     Preset(
         id="git-log",
         group="Git (read-only)",
         label="git log",
         rationale="Reads history only.",
-        patterns=("Bash(git log:*)",),
+        patterns=(
+            "Bash(git log)",
+            "Bash(git log :*)",
+        ),
     ),
     Preset(
         id="git-show",
         group="Git (read-only)",
         label="git show",
-        rationale="Reads objects only; also covers show-ref and show-branch.",
-        patterns=("Bash(git show:*)",),
+        rationale="Reads objects only. Bounded to `git show`, not show-ref/show-branch.",
+        patterns=(
+            "Bash(git show)",
+            "Bash(git show :*)",
+        ),
     ),
     Preset(
         id="git-blame",
         group="Git (read-only)",
         label="git blame",
         rationale="Reads line provenance only.",
-        patterns=("Bash(git blame:*)",),
+        patterns=(
+            "Bash(git blame)",
+            "Bash(git blame :*)",
+        ),
     ),
     # -- File inspection ---------------------------------------------------
     Preset(
         id="list-dir",
         group="File inspection",
         label="ls",
-        rationale="Lists directories; also matches lsof/lsblk, both read-only.",
-        patterns=("Bash(ls:*)",),
+        rationale="Lists directories. Bounded to `ls` itself, not lsof/lsblk.",
+        patterns=(
+            "Bash(ls)",
+            "Bash(ls :*)",
+        ),
     ),
     Preset(
         id="count-lines",
         group="File inspection",
         label="wc",
         rationale="Counts lines, words and bytes.",
-        patterns=("Bash(wc:*)",),
+        patterns=(
+            "Bash(wc)",
+            "Bash(wc :*)",
+        ),
     ),
     Preset(
         id="head-tail",
         group="File inspection",
         label="head / tail",
         rationale="Prints the ends of a file. Note that tail -f blocks.",
-        patterns=("Bash(head:*)", "Bash(tail:*)"),
+        patterns=("Bash(head)", "Bash(head :*)", "Bash(tail)", "Bash(tail :*)"),
     ),
     Preset(
         id="file-stat",
         group="File inspection",
         label="file / stat",
         rationale="Reports file type and metadata.",
-        patterns=("Bash(file:*)", "Bash(stat:*)"),
+        patterns=("Bash(file)", "Bash(file :*)", "Bash(stat)", "Bash(stat :*)"),
     ),
     Preset(
         id="disk-usage",
         group="File inspection",
         label="du / tree",
         rationale="Summarises sizes and directory shape.",
-        patterns=("Bash(du:*)", "Bash(tree:*)"),
+        patterns=("Bash(du)", "Bash(du :*)", "Bash(tree)", "Bash(tree :*)"),
     ),
     # -- Project tooling ---------------------------------------------------
     Preset(
@@ -209,14 +256,20 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
         group="Project tooling",
         label="uv tree",
         rationale="Prints the resolved dependency tree; does not touch the lock.",
-        patterns=("Bash(uv tree:*)",),
+        patterns=(
+            "Bash(uv tree)",
+            "Bash(uv tree :*)",
+        ),
     ),
     Preset(
         id="pyright",
         group="Project tooling",
         label="uv run pyright",
         rationale="Type-checks without modifying sources.",
-        patterns=("Bash(uv run pyright:*)",),
+        patterns=(
+            "Bash(uv run pyright)",
+            "Bash(uv run pyright :*)",
+        ),
     ),
     Preset(
         id="ruff-check",
@@ -226,7 +279,10 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
             "Lints the tree. Prefix matching also permits --fix, which rewrites "
             "tracked sources — reversible with git, but not read-only."
         ),
-        patterns=("Bash(uv run ruff check:*)",),
+        patterns=(
+            "Bash(uv run ruff check)",
+            "Bash(uv run ruff check :*)",
+        ),
         tier="writes-workspace",
     ),
     Preset(
@@ -234,7 +290,10 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
         group="Project tooling",
         label="uv run ruff format",
         rationale="Reformats tracked sources in place; reversible with git.",
-        patterns=("Bash(uv run ruff format:*)",),
+        patterns=(
+            "Bash(uv run ruff format)",
+            "Bash(uv run ruff format :*)",
+        ),
         tier="writes-workspace",
     ),
     Preset(
@@ -245,7 +304,10 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
             "Runs the project's own test code and writes .pytest_cache — safe "
             "for this repo, but it does execute arbitrary project code."
         ),
-        patterns=("Bash(uv run pytest:*)",),
+        patterns=(
+            "Bash(uv run pytest)",
+            "Bash(uv run pytest :*)",
+        ),
         tier="writes-workspace",
     ),
     # -- mait-code tools ---------------------------------------------------
@@ -258,10 +320,14 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
             "and prefix matching cannot exclude a flag."
         ),
         patterns=(
-            "Bash(mc-tool-board list:*)",
-            "Bash(mc-tool-board show:*)",
-            "Bash(mc-tool-board export:*)",
-            "Bash(mc-tool-board summary:*)",
+            "Bash(mc-tool-board list)",
+            "Bash(mc-tool-board list :*)",
+            "Bash(mc-tool-board show)",
+            "Bash(mc-tool-board show :*)",
+            "Bash(mc-tool-board export)",
+            "Bash(mc-tool-board export :*)",
+            "Bash(mc-tool-board summary)",
+            "Bash(mc-tool-board summary :*)",
         ),
     ),
     Preset(
@@ -274,10 +340,14 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
             "would also permit the mutating 'reviewed'."
         ),
         patterns=(
-            "Bash(mc-tool-memory search:*)",
-            "Bash(mc-tool-memory list:*)",
-            "Bash(mc-tool-memory stats:*)",
-            "Bash(mc-tool-memory relationships:*)",
+            "Bash(mc-tool-memory search)",
+            "Bash(mc-tool-memory search :*)",
+            "Bash(mc-tool-memory list)",
+            "Bash(mc-tool-memory list :*)",
+            "Bash(mc-tool-memory stats)",
+            "Bash(mc-tool-memory stats :*)",
+            "Bash(mc-tool-memory relationships)",
+            "Bash(mc-tool-memory relationships :*)",
         ),
     ),
     Preset(
@@ -288,7 +358,10 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
             "Lists active reminders. 'check' is excluded pending confirmation "
             "that it does not mark reminders notified."
         ),
-        patterns=("Bash(mc-tool-reminders list:*)",),
+        patterns=(
+            "Bash(mc-tool-reminders list)",
+            "Bash(mc-tool-reminders list :*)",
+        ),
     ),
     Preset(
         id="inbox-read",
@@ -296,8 +369,10 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
         label="mc-tool-inbox (read-only)",
         rationale="list/count only; 'drain' pulls from the Bridge and mutates.",
         patterns=(
-            "Bash(mc-tool-inbox list:*)",
-            "Bash(mc-tool-inbox count:*)",
+            "Bash(mc-tool-inbox list)",
+            "Bash(mc-tool-inbox list :*)",
+            "Bash(mc-tool-inbox count)",
+            "Bash(mc-tool-inbox count :*)",
         ),
     ),
 )
@@ -342,6 +417,21 @@ MUTATING_INVOCATIONS: tuple[str, ...] = (
     "git checkout -- .",
     "git clean -fdx",
     "git rebase -i HEAD~3",
+    # `git difftool -x/--extcmd` runs an arbitrary command once per changed file,
+    # and shares a prefix with the wholly-innocent `git diff`. Listed because a
+    # rule guarding "git diff" is the obvious thing to write and the wrong one.
+    "git difftool --extcmd=rm",
+    "git difftool -x rm",
+    # Real binaries that share a prefix with a genuinely read-only command. Which
+    # of these exist is machine-dependent — that is the point. A prefix rule with
+    # no word boundary is hostage to whatever happens to be installed, so the
+    # catalogue is guarded against the ones we know and shaped so the rest cannot
+    # apply either. `static-sh` is a shell; `tailscale` reconfigures a VPN;
+    # `file-roller` extracts archives to disk.
+    "static-sh -c rm -rf /tmp/x",
+    "tailscale up --advertise-exit-node",
+    "tailscale logout",
+    "file-roller --extract-to=/tmp x.zip",
     "rm -rf /tmp/scratch",
     "uv add requests",
     "uv sync --extra bedrock",

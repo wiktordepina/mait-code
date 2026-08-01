@@ -16,6 +16,9 @@ import pytest
 
 from mait_code.cli import _permissions as perms
 
+_GIT_STATUS = perms.preset_by_id("git-status").patterns
+_HEAD_TAIL = perms.preset_by_id("head-tail").patterns
+
 
 @pytest.fixture(autouse=True)
 def _reset_backup_state() -> None:
@@ -139,7 +142,7 @@ def test_target_file_ignores_the_working_directory(
     """
     _write(
         repo / ".claude" / "settings.local.json",
-        {"permissions": {"allow": ["Bash(git status:*)"]}},
+        {"permissions": {"allow": list(_GIT_STATUS)}},
     )
     nested = repo / "src" / "deep"
     nested.mkdir(parents=True)
@@ -183,7 +186,7 @@ def test_resolved_state_is_identical_from_any_directory(
     perms.enable_preset("git-log")
     _write(
         repo / ".claude" / "settings.json",
-        {"permissions": {"allow": ["Bash(head:*)"]}},
+        {"permissions": {"allow": [_HEAD_TAIL[0]]}},
     )
     nested = repo / "src"
     nested.mkdir(parents=True)
@@ -254,7 +257,7 @@ def test_resolve_states_reports_an_enabled_preset(fake_home: Path) -> None:
 
 def test_resolve_states_flags_a_partial_preset(fake_home: Path) -> None:
     """A hand-edited file holding half a preset reads as partial, not off."""
-    _write(perms.settings_path(), {"permissions": {"allow": ["Bash(head:*)"]}})
+    _write(perms.settings_path(), {"permissions": {"allow": [_HEAD_TAIL[0]]}})
     states = {s.preset.id: s for s in perms.resolve_states()}
     assert states["head-tail"].enabled is False
     assert states["head-tail"].partial is True
@@ -284,7 +287,7 @@ def test_enable_creates_the_file(fake_home: Path) -> None:
     assert outcome.path == perms.settings_path()
     assert outcome.backup is None  # nothing existed to back up
     document = json.loads(outcome.path.read_text(encoding="utf-8"))
-    assert document["permissions"]["allow"] == ["Bash(git status:*)"]
+    assert document["permissions"]["allow"] == list(_GIT_STATUS)
 
 
 def test_enable_writes_globally_from_inside_a_repo(
@@ -317,7 +320,7 @@ def test_enable_preserves_unrelated_keys_and_rule_order(fake_home: Path) -> None
     assert document["hooks"]["SessionStart"][0]["hooks"][0]["command"] == "mc-hook-x"
     assert document["permissions"]["deny"] == ["Bash(curl:*)"]
     # The hand-written rule keeps its position; ours is appended after it.
-    assert document["permissions"]["allow"] == ["Bash(mine:*)", "Bash(git status:*)"]
+    assert document["permissions"]["allow"] == ["Bash(mine:*)", *_GIT_STATUS]
 
 
 def test_enable_is_idempotent(fake_home: Path) -> None:
@@ -327,17 +330,17 @@ def test_enable_is_idempotent(fake_home: Path) -> None:
     assert second.changed is False
     assert second.added == ()
     document = json.loads(second.path.read_text(encoding="utf-8"))
-    assert document["permissions"]["allow"] == ["Bash(head:*)", "Bash(tail:*)"]
+    assert document["permissions"]["allow"] == list(_HEAD_TAIL)
 
 
 def test_enable_completes_a_partial_preset(fake_home: Path) -> None:
     """Only the missing half is written; the present half isn't duplicated."""
     path = perms.settings_path()
-    _write(path, {"permissions": {"allow": ["Bash(head:*)"]}})
+    _write(path, {"permissions": {"allow": [_HEAD_TAIL[0]]}})
     outcome = perms.enable_preset("head-tail")
-    assert outcome.added == ("Bash(tail:*)",)
+    assert outcome.added == _HEAD_TAIL[1:]
     document = json.loads(path.read_text(encoding="utf-8"))
-    assert document["permissions"]["allow"] == ["Bash(head:*)", "Bash(tail:*)"]
+    assert document["permissions"]["allow"] == list(_HEAD_TAIL)
 
 
 def test_enable_backs_up_once_per_file(fake_home: Path) -> None:
@@ -380,21 +383,24 @@ def test_disable_removes_the_preset(fake_home: Path) -> None:
 
 
 def test_disable_clears_a_partial_preset(fake_home: Path) -> None:
-    _write(perms.settings_path(), {"permissions": {"allow": ["Bash(head:*)"]}})
+    _write(perms.settings_path(), {"permissions": {"allow": [_HEAD_TAIL[0]]}})
     outcome = perms.disable_preset("head-tail")
-    assert outcome.removed == ("Bash(head:*)",)
+    assert outcome.removed == (_HEAD_TAIL[0],)
     states = {s.preset.id: s for s in perms.resolve_states()}
     assert states["head-tail"].partial is False
 
 
 def test_disable_leaves_neighbouring_rules_alone(fake_home: Path) -> None:
     path = perms.settings_path()
-    _write(path, {"permissions": {"allow": ["Bash(mine:*)", "Bash(git status)"]}})
+    hand_written = "Bash(git status --short)"
+    assert hand_written not in _GIT_STATUS  # must not be one of ours
+    _write(path, {"permissions": {"allow": ["Bash(mine:*)", hand_written]}})
     perms.enable_preset("git-status")
     perms.disable_preset("git-status")
     document = json.loads(path.read_text(encoding="utf-8"))
-    # The near-identical hand-written rule (no ``:*``) is untouched.
-    assert document["permissions"]["allow"] == ["Bash(mine:*)", "Bash(git status)"]
+    # The near-identical hand-written rule is untouched — only this preset's own
+    # patterns are removed, never anything that merely resembles them.
+    assert document["permissions"]["allow"] == ["Bash(mine:*)", hand_written]
 
 
 def test_disable_drops_an_emptied_permissions_block(fake_home: Path) -> None:
@@ -429,11 +435,7 @@ def test_presets_json_shape(fake_home: Path) -> None:
     # One full preset and half of another, so both booleans are exercised.
     _write(
         perms.settings_path(),
-        {
-            "permissions": {
-                "allow": [*perms.preset_by_id("git-status").patterns, "Bash(head:*)"]
-            }
-        },
+        {"permissions": {"allow": [*_GIT_STATUS, _HEAD_TAIL[0]]}},
     )
     rows = {row["id"]: row for row in perms.presets_json()}
     assert len(rows) == len(perms.ALLOW_PRESETS)
@@ -472,3 +474,39 @@ def test_render_presets_reports_a_broken_file(
     path.write_text("{oops", encoding="utf-8")
     perms.render_presets()
     assert "unreadable" in capsys.readouterr().out
+
+
+def test_every_pattern_is_boundary_terminated() -> None:
+    """The structural guard behind the sibling-prefix class of hole.
+
+    A raw prefix has no word boundary, so ``Bash(stat:*)`` reaches ``static-sh``
+    — a shell — and ``Bash(tail:*)`` reaches ``tailscale``. Which siblings exist
+    is machine-dependent, so the catalogue is shaped to make the question moot:
+    every wildcard prefix ends in a space, which no sibling command name can
+    cross. :data:`MUTATING_INVOCATIONS` names concrete instances, but this test
+    is the one that generalises.
+    """
+    offenders = [
+        (preset.id, pattern)
+        for preset in perms.ALLOW_PRESETS
+        for pattern in preset.patterns
+        if pattern.endswith(":*)") and not pattern[: -len(":*)")].endswith(" ")
+    ]
+    assert offenders == [], (
+        "wildcard patterns must end in a space to enforce a word boundary; "
+        "pair them with an exact 'Bash(cmd)' rule for the bare invocation"
+    )
+
+
+def test_bare_and_argument_forms_are_both_covered() -> None:
+    """The space-terminated prefix cannot match a bare invocation on its own.
+
+    Each preset therefore ships both forms; without the exact pattern, enabling
+    'git diff' would silently stop covering `git diff` with no arguments.
+    """
+    for preset in perms.ALLOW_PRESETS:
+        wildcards = [p for p in preset.patterns if p.endswith(":*)")]
+        exacts = {p for p in preset.patterns if not p.endswith(":*)")}
+        for wildcard in wildcards:
+            bare = wildcard[: -len(" :*)")] + ")"
+            assert bare in exacts, f"{preset.id}: {wildcard} has no bare counterpart"

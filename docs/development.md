@@ -327,6 +327,53 @@ persistence is free — `MaitApp.on_unmount` writes the active theme back to the
 2. Re-run `./scripts/install.sh` to symlink into `~/.claude/skills/`
 3. The skill will be available as `/<skill-name>` in Claude Code
 
+### Granting `allowed-tools`
+
+Grant the narrowest set covering the commands the skill actually runs. `<cmd>:*`
+rules are **raw string prefixes with no word boundary**, which is sharper than it
+looks:
+
+- `Bash(git diff:*)` also matches `git difftool --extcmd=<anything>`, which runs an
+  arbitrary command per changed file.
+- `Bash(git branch:*)` also matches `git branch -D`.
+
+Extend each prefix past the subcommand until no dangerous sibling shares it —
+`Bash(git diff --stat:*)` — or pin to an exact invocation with no `:*` at all.
+Check your patterns mechanically rather than by eye:
+
+```python
+from mait_code.cli import _permissions as perms
+bad = [(p, c) for p in MY_PATTERNS for c in perms.MUTATING_INVOCATIONS
+       if perms.matches_command(p, c)]
+```
+
+`MUTATING_INVOCATIONS` is a floor, not a proof — it has no `git difftool` entry, so
+a clean result means "no *known* mutating command is permitted", not "safe". Think
+about siblings the list does not cover.
+
+`skills/pre-pr-review/SKILL.md` is the worked example.
+
+## Adding a New Agent
+
+Agents are single markdown files, not directories.
+
+1. Create `agents/<agent-name>.md` with YAML frontmatter — `name`, `description`,
+   `tools` (a comma-separated list of tool *names*), and optionally `model`
+2. Write the standing brief in the body. Keep it task-independent: a skill that
+   spawns the agent passes only the job, never the persona, so anything specific to
+   one invocation belongs in the spawn prompt instead
+3. Re-run `./scripts/install.sh` to symlink into `~/.claude/agents/`
+4. **Restart Claude Code.** The agent registry is read at session start, so a newly
+   installed agent will not resolve until then — unlike skills, which are picked up
+   live. A skill that spawns an agent should fail loudly if the type is missing
+   rather than falling back to `general-purpose`, which carries no tool restriction
+
+Note the ceiling on what `tools:` can express: it lists tool names, so an agent that
+needs a shell gets an unrestricted one. There is no way to pattern-restrict `Bash`
+in an agent definition the way `allowed-tools` does for a skill. If an agent must
+not write, say so in its brief, and treat that as a convention backed by permission
+prompts rather than a mechanical guarantee.
+
 ## Adding a New Hook
 
 1. Create package in `src/mait_code/hooks/<hook_name>/` with `cli.py` containing a `main()` function
