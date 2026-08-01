@@ -118,5 +118,5 @@ tallies, then each day's counts with its first few error messages.
 - [Logging (API reference)](reference/logging.md) — the JSON Lines schema, the
   `MAIT_CODE_LOG_LEVEL` / `MAIT_CODE_LOG_FILE` knobs, and where the files
   live.
-- [The home hub](home.md) — the **System ▸ Logs** node that previews today's
+- [The home hub](home.md) — the **System ▸ Open logs** leaf that previews today's
   tallies and launches this viewer.

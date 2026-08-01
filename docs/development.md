@@ -16,14 +16,17 @@ uv run pytest -v       # verbose
 uv run pytest tests/tools/memory/   # narrow to a package
 ```
 
-The suite covers every package under `src/mait_code/` (close to a thousand tests
-and growing). Fixtures live in tool-specific `tests/<area>/conftest.py` files; the
-root `tests/conftest.py` keeps cross-cutting setup. See the "Writing Tests for
-Memory Components" section below for the established patterns.
+The suite covers every package under `src/mait_code/` (close to two thousand
+tests and growing). Fixtures live in tool-specific `tests/<area>/conftest.py`
+files; the root `tests/conftest.py` keeps cross-cutting setup. See the "Writing
+Tests for Memory Components" section below for the established patterns.
 
 `tests/test_imports.py` is the smoke test that asserts every reference-surface
-module declares a non-empty `__all__`. CI's `ci.yml` runs the full suite on
-every PR and push to `main`.
+module declares a non-empty `__all__`. CI's `ci.yml` runs the full suite on every
+PR, plus a weekly scheduled run at 06:00 Monday — there is no push trigger. The
+test job gates on coverage (`pytest --cov-fail-under=93`, a backstop set a couple
+of points below the working baseline), and a separate `audit` job runs
+`pip-audit --strict` over the exported locked requirements.
 
 ### Snapshot tests
 
@@ -44,15 +47,24 @@ neutralise anything environment-dependent (e.g. the settings snapshot clears
 ## Linting, formatting, typechecking
 
 ```bash
-uv run ruff check src/         # Lint
-uv run ruff format src/        # Format
-uv run pyright                 # Typecheck (standard mode, src/ only)
+uv run ruff check src/ tests/          # Lint
+uv run ruff format src/ tests/         # Format
+uv run pyright                         # Typecheck (standard mode, src/ only)
 ```
 
+Both ruff commands cover `src/` and `tests/` — that's what CI runs, so narrowing
+them to `src/` will pass locally and fail on the PR.
+
 Pyright reads the optional `boto3` import in `tools/memory/embeddings.py`,
-so the bedrock extra must be installed for typechecking: run
-`uv sync --extra bedrock` once before invoking `uv run pyright`.
-The CI typecheck job (`ci.yml`) does this automatically.
+so the bedrock extra must be installed for typechecking. Sync the extra and the
+docs group together:
+
+```bash
+uv sync --extra bedrock --group docs
+```
+
+A bare `uv sync`, or `uv sync --group docs` on its own, *uninstalls* `boto3` and
+re-breaks the typecheck. The CI typecheck job (`ci.yml`) handles this itself.
 
 ## Project Conventions
 
@@ -73,9 +85,14 @@ src/mait_code/tools/memory/
 ├── migrate.py     # Schema migrations (ensure_schema)
 ├── scoring.py     # Composite scoring (pure functions, no DB)
 ├── search.py      # FTS5 keyword, vector, and hybrid search + list + delete
-├── writer.py      # Store with deduplication + auto-embedding
+├── writer.py      # Store with deduplication + auto-embedding, supersede/retire/merge
 ├── entities.py    # Entity and relationship CRUD
-└── embeddings.py  # Embedding providers (local fastembed / AWS Bedrock, lazy-loading, graceful degradation)
+├── embeddings.py  # Embedding providers (local fastembed / AWS Bedrock, lazy-loading, graceful degradation)
+├── reflect.py     # Observation synthesis — insights, MEMORY.md proposals
+├── review.py      # Review resurfacing — the decayed-memory due queue
+├── observations.py # Query layer over the raw extraction tier
+├── native.py      # Claude Code's own auto-memory files, read-only
+└── stats.py       # Counts by type, class, scope, and embedding coverage
 ```
 
 **Dependency order:** `migrate.py` ← `db.py` ← everything else. `scoring.py` has no internal dependencies. `embeddings.py` depends only on `db.py` (for data dir).
@@ -93,7 +110,11 @@ src/mait_code/tui/
 ├── theme.py       # The mait-* house Textual Themes, built from palette
 ├── render.py      # Palette-coloured Rich chip helpers (for DataTable/OptionList cells)
 ├── brand.py       # Wordmark, signature glyph, companion-voice helpers (Textual-free)
+├── banner.py      # BrandBanner — the size-responsive masthead every TUI wears
 ├── help.py        # Shared `?` HelpScreen (live key-binding cheat-sheet)
+├── confirm.py     # Shared confirmation modal
+├── filters.py     # Shared pick-one filter modals (generic + project-flavoured)
+├── markdown.py    # Markdown rendering helpers for detail panes
 ├── app.py         # MaitApp base class + SHARED_TCSS path
 └── app.tcss       # Shared stylesheet (modal geometry, conventions)
 ```
@@ -206,7 +227,7 @@ This injects the OS trust store into Python's `ssl` module via the `truststore` 
    - `episodic` — Short-lived, 3-day half-life (events, tasks)
    - `semantic` — Long-lived, 90-day half-life (facts, preferences, insights)
    - `procedural` — Most durable, 180-day half-life (workflows, how-tos)
-4. Add tests once `tests/` exists (see the Tests section above)
+4. Add tests in `tests/tools/memory/` (see the Tests section above)
 
 ## Writing Tests for Memory Components
 
@@ -311,13 +332,18 @@ def mem_db(tmp_path):
    `MaitApp.notify`.
 7. Add a snapshot test (see "Snapshot tests" above).
 
-The six shipped surfaces are worked examples: `cli/_home_tui.py` (the home
+The ten shipped surfaces are worked examples: `cli/_home_tui.py` (the home
 hub, a tree-navigable master–detail that launches the others), `cli/_board_tui.py`
 (the board), `cli/_settings_tui.py` (the settings editor, a master–detail tree),
 `cli/_memory_tui.py` (the memory browser, a read-only master–detail),
 `cli/_observations_tui.py` (the observations browser, the same shape over the
-raw extraction tier), and `cli/_logs_tui.py` (the log viewer, the same shape
-again over the structured JSONL logs). Theme
+raw extraction tier), `cli/_logs_tui.py` (the log viewer, the same shape
+again over the structured JSONL logs), `cli/_review_tui.py` (the review queue,
+the master–detail shape with write verbs), `cli/_graph_tui.py` (the graph
+explorer, a list/canvas/detail three-pane), `cli/_bridge_tui.py` (the Bridge
+configurator, a form with a connection probe), and `cli/_dashboard_tui.py` (the
+guided start-page setup editor). Each has a snapshot directory under
+`tests/cli/__snapshots__/`. Theme
 persistence is free — `MaitApp.on_unmount` writes the active theme back to the
 `theme` setting for every surface, so a user's pick survives across sessions.
 

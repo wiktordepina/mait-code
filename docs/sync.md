@@ -1,6 +1,7 @@
 # Multi-Machine Sync
 
-The companion's data directory (`~/.claude/mait-code-data/`) can be synchronised across machines using git.
+The companion's data directory — `~/.claude/mait-code-data/` by default, wherever
+`data-dir` points otherwise — can be synchronised across machines using git.
 
 ## Setup
 
@@ -11,23 +12,39 @@ git init
 
 ### .gitignore
 
-Not every database should be synced. `memory.db` is **regenerable** — the JSONL
-observation logs under `memory/observations/` are its source of truth, so it is
-gitignored and rebuilt with `mc-tool-memory restore` after a pull. The other
-databases (`board.db`, `reminders.db`, `inbox.db`) have **no such source**, so
-they are committed directly — gitignoring them would silently lose your board,
-reminders, and inbox on every other machine.
+All four databases — `memory.db`, `board.db`, `reminders.db`, `inbox.db` — are
+committed. None of them can be rebuilt from anything else in the directory.
 
-Create `~/.claude/mait-code-data/.gitignore`:
+`memory.db` deserves a word, because it is easy to assume otherwise. The JSONL
+observation logs under `memory/observations/` are the source for entries the
+observe hook extracted, and `mc-tool-memory restore` replays them. But they are
+not a source for anything else the database holds:
+
+- memories you stored by hand, via `/remember` or `mc-tool-memory store`
+- insights written back by `/reflect`
+- review state (`reviewed_at`), which anchors every decay curve
+- supersede, retire, and merge history
+
+Gitignoring `memory.db` and restoring after a pull loses all of it. Restore is
+also *additive* rather than authoritative: replaying an entry that already exists
+resets its `created_at` to now, re-ageing it and skewing both its score and the
+review queue. Treat `restore` as a recovery tool for a lost or corrupted
+database, not as part of the sync loop.
+
+Create a `.gitignore` in the data directory:
 
 ```gitignore
-# Regenerable from the observation logs (mc-tool-memory restore) — don't sync.
-memory.db
-
 # SQLite sidecar files (WAL mode) — never sync these.
 *.db-wal
 *.db-shm
 *.db-journal
+
+# Local database backups
+memory.db.bak-*
+
+# Per-machine state — syncing these corrupts the other machine's bookkeeping.
+bridge-state.json
+memory/observations/cursors.json
 
 # Cached embedding models (large; re-downloaded on demand)
 models/
@@ -36,11 +53,15 @@ models/
 *.tmp
 ```
 
-> `board.db`, `reminders.db`, and `inbox.db` are deliberately **not** ignored.
-> They are small and have no source to rebuild from, so they travel with the
-> repo. As SQLite binaries they don't merge cleanly — for a single user across
-> machines the practical rule is to push from the machine you just worked on and
-> pull before starting on another.
+> The two per-machine files matter. `bridge-state.json` is the Bridge's inbound
+> drain watermark and `memory/observations/cursors.json` holds transcript byte
+> offsets — both describe how far *this* machine has read. Shared, they make the
+> other machine skip work it never did.
+
+Everything else travels with the repo, including `dashboard.toml`, `bridge.json`,
+and `project-aliases.json`. As SQLite binaries the databases don't merge cleanly
+— for a single user across machines the practical rule is to push from the
+machine you just worked on and pull before starting on another.
 
 ### Initial commit
 
@@ -67,25 +88,22 @@ git push
 ```bash
 cd ~/.claude/mait-code-data
 git pull
-# Rebuild memory.db from the synced observation logs
+```
+
+The databases arrive intact — there is no rebuild step.
+
+### Recovering a lost memory database
+
+If `memory.db` is deleted or corrupted and no good copy exists, replay the
+observation logs:
+
+```bash
 mc-tool-memory restore
 ```
 
-### Post-merge hook for auto DB restore
-
-Create `~/.claude/mait-code-data/.git/hooks/post-merge`:
-
-```bash
-#!/usr/bin/env bash
-# Restore memory DB from observation logs after pulling
-if command -v mc-tool-memory &> /dev/null; then
-    mc-tool-memory restore &
-fi
-```
-
-```bash
-chmod +x ~/.claude/mait-code-data/.git/hooks/post-merge
-```
+This recovers observation-derived entries only. Hand-stored memories, `/reflect`
+insights, and review state have no log to replay from, so a restored database
+comes back thinner than the one it replaces.
 
 ## Conflict Resolution
 
@@ -103,8 +121,20 @@ Observations are timestamped files, so conflicts are rare. If they occur, keep b
 
 ## Embedding Provider
 
-Ensure the same embedding provider (`MAIT_CODE_EMBEDDING_PROVIDER`) is configured on all machines. If you switch providers (e.g. from `local` to `bedrock`), run `mc-tool-memory reindex` on each machine after pulling — it will detect the dimension mismatch and recreate the vec table automatically.
+The embedding provider lives in `$XDG_CONFIG_HOME/mait-code/settings.toml`, which
+sits *outside* the data directory and so is not synced — set it on each machine:
+
+```bash
+mait-code settings set embedding-provider bedrock
+```
+
+Ensure every machine agrees. If you switch providers (e.g. from `local` to
+`bedrock`), run `mc-tool-memory reindex` on each machine — it detects the
+dimension mismatch and recreates the vec table automatically. `mait-code settings
+set` offers the reindex as a follow-up.
 
 ## Security Note
 
-Your companion data may contain sensitive information (project details, preferences, work patterns). Use a **private** repository and consider encrypting sensitive fields in the future.
+Your companion data may contain sensitive information (project details,
+preferences, work patterns), and `bridge.json` can hold a channel token. Use a
+**private** repository and consider encrypting sensitive fields in the future.

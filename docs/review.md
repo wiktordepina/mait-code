@@ -52,25 +52,28 @@ Highlight a row and the detail pane renders it in full:
 - and the **body**, rendered as markdown (plain text is just a subset).
 
 *Recall* leads because it's why the memory surfaced: the lower it is, the longer
-since the memory was last engaged with. *Class* sets the decay pace — `semantic`
+since the memory was last reviewed. It's a decay curve, not a hit count — nothing
+tracks how often a memory gets retrieved. *Class* sets the decay pace — `semantic`
 (facts, preferences — slow), `episodic` (events — fast), `procedural` (how-tos —
 slowest) — measured from when the memory was last reviewed rather than created.
 
-## The four decisions
+## The three decisions
 
-Each verb operates on the highlighted memory and, bar *skip*, writes through the
-same store operation the CLI uses — nothing here is bespoke:
+Each verb operates on the highlighted memory and writes through the same store
+operation the CLI uses — nothing here is bespoke:
 
 | Key | Decision | What it does |
 |-----|----------|--------------|
 | `c` | **Confirm** | Still true — stamp it reviewed, resetting the decay curve. Backs `mc-tool-memory reviewed`. |
 | `e` | **Refine** | Still true but needs updating — edit it, and saving supersedes it with the new version. Backs `supersede`. |
 | `x` | **Retire** | No longer true — drop it from recall (kept for audit). Backs `retire`, behind a confirm. |
-| `j` / `k` | **Skip** | Move on without deciding — nothing is written. |
 
 Whichever you choose, the memory leaves the queue and the cursor advances to the
 next, the count ticking down as you go. When the last one's decided the pane
 switches to an all-caught-up state — you're done.
+
+To skip, just move the highlight with `↑`/`↓` — nothing is written and the memory
+stays in the queue for next time.
 
 ### Refining a memory
 
@@ -111,8 +114,10 @@ footer showing only navigation.](assets/review/review-empty.png)
 
 Like the other TUIs, `mait-code review` only opens on a TTY. Piped or redirected,
 it prints the due list as text — id, recall, first line, most-decayed first — so
-it stays useful in a log or an SSH one-liner (the same view as `mc-tool-memory
-review`).
+it stays useful in a log or an SSH one-liner. `mc-tool-memory review` prints a
+fuller record per entry (type, importance, class, recall, last-reviewed date and
+a content excerpt) and caps at `--limit 10`, where the piped TUI lists every due
+item.
 
 ## Reference
 
@@ -120,7 +125,7 @@ review`).
 
 | Key | Action |
 |-----|--------|
-| <kbd>↑</kbd> / <kbd>↓</kbd> (or <kbd>k</kbd> / <kbd>j</kbd>) | Move the highlight; the detail pane follows |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Move the highlight; the detail pane follows |
 | <kbd>c</kbd> | Confirm — mark the memory reviewed |
 | <kbd>e</kbd> | Refine — edit and supersede the memory |
 | <kbd>x</kbd> | Retire — drop the memory from recall (asks first) |

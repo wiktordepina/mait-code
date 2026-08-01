@@ -195,10 +195,11 @@ each return rebuilds the tree from the stores. The category nodes themselves sta
 ordinary expand/collapse sections, so you never lose the ability to fold a branch
 away.
 
-The same hand-offs live in the `Ctrl+P` command palette (**Open board**,
+Most of the hand-offs also live in the `Ctrl+P` command palette (**Open board**,
 **Open memory**, **Open review**, **Open observations**, **Open settings**,
 **Open logs**, **Set up start page**), alongside **Reload** and
-**Reindex memory**.
+**Reindex memory**. The graph explorer and the Bridge configurator are tree
+leaves only — they have no palette entry.
 
 ## What each section shows
 
@@ -246,7 +247,7 @@ header.](assets/home/home-sysprompt.png)
 | `Enter` | Toggle a section, open a launch leaf, or re-show a detail leaf |
 | `r` | Reload every store — refreshes the badges, the current detail, and re-runs the start-page tiles |
 | `e` | Reindex — embed the memory entries missing a vector, after a confirm |
-| `Ctrl+P` | Command palette (Open board / memory / settings, Reload, Reindex memory, themes) |
+| `Ctrl+P` | Command palette (Open board / memory / review / observations / settings / logs, Set up start page, Reload, Reindex memory, themes) |
 | `?` | Show the key cheat-sheet |
 | `q` / `Esc` | Quit |
 

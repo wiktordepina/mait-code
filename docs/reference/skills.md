@@ -7,10 +7,9 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Recall | `/recall <query>` | Search memory for past facts, decisions, patterns | **Implemented** |
 | Remember | `/remember <content>` | Manually store a memory observation | **Implemented** |
 | Memory Store | *(auto)* | Claude auto-stores observations about user/projects | **Implemented** |
-| Reflect | `/reflect` | Synthesise recent observations into insights, update MEMORY.md | **Implemented** |
-| Observe | `/observe` | Manually trigger observation extraction from current session | Planned |
+| Reflect | `/reflect` | Synthesise observations into insights; propose MEMORY.md rewrites, merges & retirements | **Implemented** |
 | Commit | `/commit` | Detect changes, generate conventional commit message, confirm and commit | **Implemented** |
-| Remind | `/remind <when> <what>` | Set a reminder for a future time | **Implemented** |
+| Remind | `/remind <when> <what>` | Set a reminder for a future time (manual only — Claude won't auto-invoke) | **Implemented** |
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
 | Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
@@ -56,11 +55,12 @@ Manually store a memory observation. This is a manual-only skill (`disable-model
 
 ### memory-store (auto-invoked)
 
-Not a slash command — Claude uses this skill proactively when it learns something new about the user. Uses `mc-tool-memory store` via Bash.
+Not a slash command (`user-invocable: false`) — Claude uses this skill proactively when it learns something new about the user. Uses `mc-tool-memory store` via Bash, and `mc-tool-memory supersede` when the new fact replaces one already stored rather than adding to it.
 
 ### /reflect
 
-Synthesise recent observations into high-level insights and propose MEMORY.md updates.
+Synthesise recent observations into high-level insights, and **consolidate**
+MEMORY.md rather than only appending to it.
 
 **Usage:**
 ```
@@ -69,14 +69,28 @@ Synthesise recent observations into high-level insights and propose MEMORY.md up
 
 **How it works:**
 
-1. Preprocesses via `mc-tool-memory reflect` (injected before Claude sees the skill)
+1. Runs `mc-tool-memory reflect --json` via Bash, returning `{skipped, reason, insights, ops, stored}`
 2. Checks the novelty gate — skips if fewer than 3 unreflected entries exist
 3. Gathers unreflected memory entries (tracked by per-project watermark)
 4. Calls Claude Haiku to identify patterns, themes, and recurring issues
 5. Stores insights as `type=insight` (importance=6) in memory.db
 6. Advances the watermark — running `/reflect` again without new entries is a no-op
-7. If MEMORY.md updates are proposed, presents them for user approval
+7. Renders any proposed `ops` as a before/after diff and asks for approval **per operation**
 8. For large backlogs: `mc-tool-memory reflect --drain --batch-size 20`
+
+**The four operations.** Reflection doesn't just add lines — it proposes **add**,
+**rewrite**, **merge** and **retire**. Each approved op is applied in *two*
+places: MEMORY.md via Edit, and the memory database via the matching verb
+(`retire`, `merge --into`, or `supersede`) when the op carries backing
+`entry_ids`. Without the second half, the raw store would keep resurfacing what
+was just consolidated in the curated layer.
+
+**Routing.** The skill keeps mait-code's MEMORY.md and Claude Code's native
+per-project auto memory cleanly separated: cross-project **user** facts
+(preferences, conventions, working style) belong to mait-code; per-project
+**code** facts (architecture, build commands, repo gotchas) belong to the native
+layer. A proposed add about the project is written to the native layer instead,
+so the two don't drift and double-spend context.
 
 ### /remind
 
@@ -108,6 +122,7 @@ Show active and overdue reminders.
 
 1. Preprocesses results via `mc-tool-reminders list` (injected before Claude sees the skill)
 2. Presents active and overdue reminders
+3. `mc-tool-reminders list --all` includes already-dismissed reminders
 3. Supports dismissing reminders via `mc-tool-reminders dismiss <id>`
 
 ### /board
@@ -184,6 +199,8 @@ Fetch web page content directly from the local machine, bypassing the claude.ai 
 - `mc-tool-web-fetch <url> --raw` — skip HTML-to-markdown conversion
 - `mc-tool-web-fetch <url> --timeout 60` — increase timeout (default 30s)
 - `mc-tool-web-fetch <url> --allow-private` — allow private/loopback IPs
+- `mc-tool-web-fetch <url> --max-size <bytes>` — cap how much of the response is downloaded
+- `mc-tool-web-fetch <url> --max-chars <N>` — cap the markdown output length; raise it if a long page came back truncated
 
 ### /pre-pr-review
 
@@ -225,8 +242,10 @@ Comparing that against the author's framing is diagnostic: a difference in descr
 *scope* usually means the diff does more than intended, and a reviewer who cannot say
 *why* the change is wanted has found a real problem with its legibility.
 
-**Cost:** roughly 100k+ subagent tokens and ten to fifteen minutes for a substantial
-branch. Worth it before a merge that is hard to walk back; not worth it per commit.
+**Cost:** scales with the diff. Two measured runs: a substantial code change took
+~113k subagent tokens and ~14 minutes; a ~280-line docs-and-config change took ~63k
+and ~6. Budget accordingly rather than assuming the high end. Worth it before a
+merge that is hard to walk back; not worth it per commit.
 
 **Nothing is posted to GitHub** — no review, no comment, no approval — unless you
 ask for that separately afterwards.
@@ -279,6 +298,8 @@ skills/
 │   └── SKILL.md     # Route the quick-capture inbox to the board or memory
 ├── commit/
 │   └── SKILL.md     # Smart commit with conventional message
+├── pre-pr-review/
+│   └── SKILL.md     # Cold second opinion on a branch before opening a PR
 └── web-fetch/
     └── SKILL.md     # Fetch web page content (bypasses claude.ai proxy)
 ```
@@ -290,11 +311,9 @@ Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Clau
 ```yaml
 ---
 name: skill-name
-description: What the skill does
+description: What the skill does, and when it should be used
 argument-hint: "<args>"
-user-invocable: true
-allowed-tools:
-  - mcp__server-name__tool_name
+allowed-tools: Bash(mc-tool-example show), Bash(mc-tool-example show:*), Read
 ---
 
 # /skill-name
@@ -304,8 +323,12 @@ Instructions for Claude when this skill is invoked.
 
 Key fields:
 
-- `user-invocable: true` — Makes it available as a slash command
-- `disable-model-invocation: true` — Prevents Claude from auto-invoking (for side-effect skills)
+- `name` / `description` — The description is what Claude matches on when deciding
+  whether a skill applies, so it should say *when* to use the skill, not only what
+  it does
+- `user-invocable: false` — Hides it from the slash-command list (what `memory-store`
+  uses; skills are user-invocable by default, so no shipped skill sets this true)
+- `disable-model-invocation: true` — Prevents Claude from auto-invoking (for side-effect skills like `/remind` and `/remember`)
 - `allowed-tools` — Tools the skill is allowed to use, scoped past the bare
   executable (e.g. `Bash(mc-tool-memory search:*)`). `Bash(mc-tool-memory *)`
   is a real wildcard granting every subcommand including `delete`; see

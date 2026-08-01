@@ -166,13 +166,14 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
         label="git diff",
         rationale=(
             "Prints changes; no flag writes to the repository. Split in two so the "
-            "prefix cannot reach 'git difftool --extcmd', which runs an arbitrary "
-            "command per changed file."
+            "boundary between 'git diff' and its siblings is stated in the rule "
+            "rather than left to the matcher."
         ),
-        # The trailing space in the second pattern is load-bearing: it restores the
-        # word boundary that raw-prefix matching lacks, so 'git diff ...' matches
-        # and 'git difftool ...' does not. The first pattern covers bare `git diff`,
-        # which the space-terminated prefix would otherwise miss.
+        # The trailing space states the word boundary explicitly. Measured against
+        # 2.1.220 `:*` already stops at a token boundary, so 'git difftool' is
+        # refused either way — the space makes that independent of an undocumented
+        # matcher detail. The first pattern covers bare `git diff`, which the
+        # space-terminated prefix would otherwise miss.
         patterns=("Bash(git diff)", "Bash(git diff :*)"),
     ),
     Preset(
@@ -333,8 +334,8 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
         label="mc-tool-memory (read-only)",
         rationale=(
             "search/list/stats/relationships only. 'entities' is excluded "
-            "(entities merge mutates) and so is 'review' — as a raw prefix it "
-            "would also permit the mutating 'reviewed'."
+            "because 'entities merge' mutates, and 'review' is left out so the "
+            "read-only preset stays clear of the review write path."
         ),
         patterns=(
             "Bash(mc-tool-memory search)",

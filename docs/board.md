@@ -196,7 +196,7 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 |-----|--------|
 | <kbd>←</kbd> / <kbd>→</kbd> | Focus the previous / next column |
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Highlight the previous / next card |
-| <kbd>1</kbd>–<kbd>5</kbd> | Jump straight to a column |
+| <kbd>1</kbd>–<kbd>5</kbd> | Jump straight to a visible column (<kbd>4</kbd>/<kbd>5</kbd> need Done/Archived shown) |
 | <kbd>Enter</kbd> | Open the highlighted card's detail screen |
 | <kbd>n</kbd> | New card |
 | <kbd>e</kbd> | Edit the highlighted card |
@@ -209,8 +209,10 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 | <kbd>/</kbd> | Search cards by title |
 | <kbd>d</kbd> | Toggle the **Done** column |
 | <kbd>a</kbd> | Toggle the **Archived** pane |
-| <kbd>r</kbd> | Reload the board from disk |
+| <kbd>r</kbd> | Reload the board from disk (it also reloads on its own when the store changes underneath it) |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd> | Command palette (incl. theme switching) |
+| <kbd>?</kbd> | Key cheat-sheet |
+| <kbd>q</kbd> / <kbd>Esc</kbd> | Quit |
 
 ### Card detail screen
 

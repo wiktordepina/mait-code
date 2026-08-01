@@ -109,5 +109,7 @@ pending tally first, then each day's entries with their markers.
   what you're auditing.
 - [The memory browser](memory-browser.md) — the whole store, including what
   reflection has already produced.
+- [The review queue](review.md) — working through the curated memories that have
+  aged out.
 - [`mc-tool-memory`](reference/tools/memory.md) — `reflect` and friends (the
   synthesis this browser deliberately doesn't trigger).

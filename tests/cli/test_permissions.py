@@ -518,12 +518,14 @@ def test_render_presets_reports_a_broken_file(
 def test_every_pattern_is_boundary_terminated() -> None:
     """The structural guard behind the sibling-prefix class of hole.
 
-    A raw prefix has no word boundary, so ``Bash(stat:*)`` reaches ``static-sh``
-    — a shell — and ``Bash(tail:*)`` reaches ``tailscale``. Which siblings exist
+    Measured against Claude Code 2.1.220, ``:*`` already stops at a token
+    boundary, so ``Bash(stat:*)`` does *not* reach ``static-sh``. That is an
+    undocumented matcher detail rather than a promise, and which siblings exist
     is machine-dependent, so the catalogue is shaped to make the question moot:
     every wildcard prefix ends in a space, which no sibling command name can
-    cross. :data:`MUTATING_INVOCATIONS` names concrete instances, but this test
-    is the one that generalises.
+    cross. The guard holds if a future version relaxes the rule.
+    :data:`MUTATING_INVOCATIONS` names concrete instances, but this test is the
+    one that generalises.
     """
     offenders = [
         (preset.id, pattern)

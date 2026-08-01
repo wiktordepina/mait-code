@@ -5,7 +5,7 @@ Run from the repo root before ``mkdocs build``:
     uv run python docs/gen_ref_pages.py
 
 For every entry in :data:`REFERENCE_MODULES` (grouped by section —
-Core, Tools, Hooks — each a list of ``(dotted_name, display)`` pairs):
+Core, Bridge, Tools, Hooks — each a list of ``(dotted_name, display)`` pairs):
 
   1. Locate the source file: package ``__init__.py`` if the entry is a
      package, otherwise the single-file module.
@@ -268,7 +268,7 @@ def _build() -> dict[Path, str]:
 
     Returns:
         A mapping of output path to rendered Markdown content, for the
-        twelve module pages plus the index.
+        fifteen module pages plus the index.
     """
     artefacts: dict[Path, str] = {}
     for modules in REFERENCE_MODULES.values():

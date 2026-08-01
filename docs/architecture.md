@@ -6,7 +6,7 @@
 2. **Standalone project** — Self-contained Python package managed by `uv`. No system-wide installation required.
 3. **Memory-first** — The memory system is the core differentiator. All other features feed into or read from memory.
 4. **Companion identity** — Not a generic assistant. The soul document and user context create a consistent personality.
-5. **uv-managed** — All Python execution goes through `uv run --project`. No manual venv activation.
+5. **uv-managed** — Packaging and environments are `uv`'s job; no manual venv activation. A shipped install is `uv tool install`, so `mait-code` and the `mc-tool-*` entry points are called directly; `uv run` is the development path.
 6. **CLI tools + skills over MCP** — Simpler, no process overhead, preprocessing injects results before Claude sees the prompt.
 
 ## System Architecture
@@ -26,24 +26,33 @@ graph TD
             auto_format["auto_format/ <i>(placeholder, not registered)</i>"]
         end
         subgraph tools_pkg ["tools/"]
-            memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect"]
-            reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate"]
-            board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns, service"]
+            memory_tool["memory/ <i>(CLI)</i><br/>cli, db, migrate, writer<br/>search, scoring, entities<br/>embeddings, reflect, review<br/>native, observations, stats"]
+            reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate, service"]
+            board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns, service, export"]
             inbox_tool["inbox/ <i>(CLI)</i><br/>cli, db, migrate, service"]
             web_fetch_tool["web_fetch/ <i>(CLI)</i><br/>cli, fetch, convert"]
         end
-        shared["llm.py + logging.py + ssl.py <i>(shared)</i>"]
+        subgraph bridge_pkg ["bridge/ <i>(opt-in transport)</i>"]
+            bridge_core["base, registry, service, config<br/>control, ntfy, loopback"]
+        end
+        subgraph ui_pkg ["cli/ + tui/"]
+            cli_layer["cli/ <i>(mait-code)</i><br/>install, update, status, doctor<br/>settings, permissions, dashboard<br/>+ 10 Textual TUIs"]
+            tui_layer["tui/ <i>(shared)</i><br/>app, theme, palette, banner<br/>brand, confirm, filters, markdown"]
+        end
+        shared["config.py + context.py + console.py<br/>llm.py + logging.py + ssl.py <i>(shared)</i>"]
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md<br/>user_context.md"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>memory.db <i>(SQLite)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
         other_dbs["reminders.db<br/>board.db<br/>inbox.db"]
+        cfg["dashboard.toml<br/>bridge.json<br/>project-aliases.json"]
     end
 
     HOOKS --> mait_code
     SKILLS --> mait_code
     mait_code --> data_dir
+    bridge_pkg -.->|"ntfy topic"| phone["Phone / other devices"]
 ```
 
 ## Memory Architecture
@@ -62,7 +71,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 |--------|------|-------------|
 | `id` | INTEGER PK | Auto-incrementing identifier |
 | `content` | TEXT | The memory content |
-| `entry_type` | TEXT | fact, preference, event, decision, insight, task, relationship |
+| `entry_type` | TEXT | fact, preference, event, decision, insight, task, relationship, procedure |
 | `importance` | INTEGER | 1-10 scale (default 5) |
 | `memory_class` | TEXT | episodic, semantic, or procedural (controls decay rate) |
 | `scope` | TEXT | `global`, `project`, or `branch` (default `global`) |
@@ -82,6 +91,7 @@ The memory database (`memory.db`) uses SQLite with two extensions:
 
 - **Episodic** (fast decay, 3-day half-life): `event`, `task`
 - **Semantic** (slow decay, 90-day half-life): `fact`, `preference`, `decision`, `insight`, `relationship`
+- **Procedural** (slowest decay, 180-day half-life): `procedure`
 
 **FTS5 virtual table: `memory_entries_fts`**
 - Full-text search with BM25 ranking
@@ -142,15 +152,20 @@ Tracks the last `memory_entries.id` reflected on per project, so `/reflect` is i
 Memory retrieval results are ranked by a composite score:
 
 ```
-score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+score = (0.3 × recency + 0.3 × importance + 0.4 × relevance) × scope_boost
 ```
+
+The scope boost scales the whole weighted base: `1.0` for a branch match, `0.85`
+for a project match (both fixed), and `scope-boost-global` / `scope-boost-cross-project`
+for the wider scopes.
 
 **Recency** uses exponential decay:
 
 - `recency = exp(-ln(2) × age_days / half_life)`
 - Episodic half-life: 3 days (events decay fast)
 - Semantic half-life: 90 days (facts persist)
-- Default half-life: 7 days (unknown class)
+- Procedural half-life: 180 days (workflows go stale when superseded, not with time)
+- Default half-life: 7 days (unknown or missing class)
 
 **Importance** is normalized from 1-10 to 0.0-1.0:
 
@@ -238,12 +253,21 @@ Sync CLI tool invoked via Bash. Skills use preprocessing (`!`command``) or direc
 | `restore` | --dry-run? | Restore memory database from observation JSONL log files, then reindex |
 | `reflect` | --days?, --min-new?, --batch-size?, --drain?, --project?, --branch?, --scope? | Synthesise observations into insights, propose MEMORY.md updates |
 | `canonicalize-projects` | --dry-run? | Rewrite stored project slugs per the project-alias map |
+| `review` | --limit?, --json?, --project?, --branch?, --scope? | List memories due for review, most-decayed first |
+| `reviewed` | id | Stamp `reviewed_at = now`, resetting the entry's decay curve |
+| `supersede` | old_id, content, --importance? | Replace an entry with a revised version, keeping the old row for audit (importance inherits unless overridden) |
+| `retire` | id | Drop an entry from recall, keeping the row for audit |
+| `merge` | ids…, --into content, --importance? | Fold several entries into one, retiring the originals (importance defaults to the max among them) |
 
 Scope flags apply to every command that touches `memory_entries`: `--project` and `--branch` override the auto-detected context; `--scope` filters or sets the entry scope (`global`, `project`, `branch`, or `all` — the last disables filtering at query time).
 
 ## Memory Browser TUI (`mait-code memory`)
 
 `mait-code memory` opens a full-screen, read-only master–detail browser over the memory store: a tree of memories grouped by entry type on the left (counts per group, newest first), the selected memory's body — rendered as markdown, plain text being a subset — plus its metadata (created, importance, scope, class) on the right. `/` focuses a live substring filter (groups expand to the matches, the subtitle reports the narrowed count), `r` re-reads the store, a `Ctrl+P` command palette exposes the actions, and `?` opens the context help screen. It deliberately browses *everything* — across projects and scopes — and performs no mutations: reading is its whole job, and writes stay with `mc-tool-memory`. It is built on Textual over the same query layer as the CLI tool (`search.list_entries`), following the house TUI conventions: a TTY-gated launch (piped or redirected, it prints a grouped read-only summary instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.
+
+## Review Queue TUI (`mait-code review`)
+
+`mait-code review` is the memory browser's writing counterpart: a queue of curated memories whose recall probability has decayed below `review-threshold` while their importance sits at or above `review-min-importance`, most-decayed first. Where the browser deliberately never writes, this surface exists to write — each entry gets one of three verbs, and each backs the same store operation the CLI exposes: `c` confirm (`mark_reviewed`, resetting the decay curve), `e` refine (an editor that supersedes the entry on save), `x` retire (behind a confirm, since it hides a fact from recall). Moving the highlight without choosing leaves the memory in the queue. `p` narrows to one project using the memory browser's picker, `r` recomputes the queue. The resurfacing query lives in `tools/memory/review.py` and decays from the `reviewed_at` anchor (migration 13) rather than `created_at`, so a memory's clock restarts when it is confirmed, not when it was first stored — the recall figure is a decay function, not a usage count, since nothing tracks retrieval. Same house conventions: TTY-gated (piped, it prints the due list as text), lazily imported, one connection for the app's lifetime.
 
 ## Observations Browser TUI (`mait-code observations`)
 
@@ -315,6 +339,7 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `edit` | id, --title?, --description?, --priority?, --acceptance? | Edit card fields |
 | `remove` | id | Delete a card permanently (cascades comments) |
 | `summary` | --all?, --project?, --json? | Per-column counts (the session-start hook reads the same counts via `service.summary_counts`) |
+| `export` | id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search? | Export one card or the whole board as markdown or JSON (stdout, or a file with `--out`) |
 
 Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
 
@@ -341,7 +366,7 @@ Unlike the board, the inbox is **global, not project-scoped** — `project` is o
 
 ## Inbox CLI Tool (`mc-tool-inbox`)
 
-A thin capture-and-drain CLI over `inbox.db`. `add "<text>"` captures an item (frictionless — no flags required), `list [--json]` shows the inbox oldest-first, `remove <id>` drains an item out, and `count` prints the item total (the session-start hook reads the same count via `service.count_items`). Queries and mutations live in `src/mait_code/tools/inbox/service.py`, the presentation-agnostic layer mirroring the board's `cli`/`service`/`db` split.
+A thin capture-and-drain CLI over `inbox.db`. `add "<text>"` captures an item (frictionless — no flags required), `list [--json]` shows the inbox oldest-first, `remove <id>` drains an item out, `count` prints the item total (the session-start hook reads the same count via `service.count_items`), and `drain` pulls any captures waiting on the [Bridge](bridge.md) into the inbox. Queries and mutations live in `src/mait_code/tools/inbox/service.py`, the presentation-agnostic layer mirroring the board's `cli`/`service`/`db` split.
 
 The intended lifecycle is **capture → triage → empty**: the `/triage` skill walks the captured items, proposes a destination for each (board card or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.
 
@@ -373,9 +398,25 @@ Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed
 
 `mait-code home` — or just `mait-code` with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim **tree sidebar** (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The **detail pane** beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete `doctor` check list. A one-line install-health verdict (reusing the `doctor` checks) sits under the tree, and the installed version shows in the brand header. `r` re-reads every store (refreshing badges and the open detail), `e` embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), `j`/`k` and the arrows move the cursor, and a `Ctrl+P` palette exposes the actions.
 
-Pressing **Enter** on a launch leaf — the board, the memory browser, the observations browser, or the settings editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the `home` command (`_run_home_loop`): home exits its event loop returning a `HomeTarget`, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and the board/memory/observations/settings apps are launched unchanged. The **Identity → System prompt** node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same `build_session_context()` the hook calls, so the text on screen is exactly the text a new session opens with.
+Pressing **Enter** on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the `home` command (`_run_home_loop`): home exits its event loop returning a `HomeTarget`, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The **Identity → System prompt** node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same `build_session_context()` the hook calls, so the text on screen is exactly the text a new session opens with.
 
-This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from `mait_code.tui.brand`. The `BrandBanner` (`mait_code.tui.banner`) wraps them into one size-responsive masthead worn by every TUI — home, board, settings, the memory browser and the observations browser — in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the `mc-tool-*` CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, `mait-code home` prints a compact text summary and bare `mait-code` keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.
+This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from `mait_code.tui.brand`. The `BrandBanner` (`mait_code.tui.banner`) wraps them into one size-responsive masthead worn by every TUI in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the `mc-tool-*` CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, `mait-code home` prints a compact text summary and bare `mait-code` keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.
+
+## The Start Page (`dashboard.toml`)
+
+The home hub's root node renders a **user-authored start page** rather than a fixed readout: a grid of tiles declared in `dashboard.toml` in the data directory, one to four columns wide. A tile is either a **built-in widget** — the six in `_dashboard.py`'s `BUILTIN_WIDGETS`, reading the same store layers as the rest of the hub — or an arbitrary **shell command** whose stdout fills the tile. Shell tiles are what make the page personal (a `git log`, a deploy status, a weather one-liner) and are also the risk surface, so each runs under `dashboard-tile-timeout` seconds (default `5`) and a failure renders a snag line in that tile instead of taking the page down. The guided setup editor (`_dashboard_tui.py`, reachable from the hub or its command palette) writes the TOML so the format stays an implementation detail unless you want it. Loading and validation live in `cli/_dashboard.py`, kept separate from the TUI so the config can be parsed and checked without a terminal.
+
+## The Bridge (`bridge/`)
+
+The Bridge is the companion's optional link to devices that aren't the terminal — capture in, notifications out. It is **disabled by default and makes zero network calls while disabled**: the drain short-circuits before any request. That default is deliberate rather than cautious-by-habit — enabling it means outbound network access, which a work machine under corporate policy may not permit, so it is a per-machine opt-in.
+
+The package is a small pluggable-channel design: `base.py` defines the channel protocol, `registry.py` maps a `bridge-type` setting to an implementation, and `service.py` holds the transport-agnostic drain/publish logic. Two channels ship — `ntfy.py` (a private [ntfy](https://ntfy.sh) topic, the real one) and `loopback.py` (in-process, for tests). Channel credentials live in `bridge.json` in the data directory; the per-machine drain watermark lives beside it in `bridge-state.json`, which is why that file must not be synced between machines.
+
+Both directions ride the existing reactive triggers rather than a daemon: the session-start hook and `mc-tool-inbox drain` pull captures into the inbox, and the session-start hook and `mc-tool-reminders check` publish due reminders outward. A published reminder carries a **Done** action that posts `mait-ctl:dismiss:<id>` back to the capture topic; `control.py` intercepts any `mait-ctl:`-prefixed inbound message as a command rather than filing it as a capture, and the next drain dismisses the reminder. Each reminder publishes once, guarded by a `notified_at` stamp. `doctor` checks the Bridge but only ever warns — an unreachable phone is not a broken install.
+
+## Console and Theming (`console.py`)
+
+Every CLI surface prints through one shared `rich` `Console` in `console.py`, carrying the same palette the TUIs theme from. It is why `status`, `doctor` and `update` look like the TUIs rather than like stock argparse output, and why `--no-color` is a single global switch rather than a per-command concern. The TUI side of the same palette lives in `tui/theme.py`.
 
 ## Hooks
 
@@ -443,11 +484,15 @@ These knobs are defined once in `src/mait_code/config.py`; `mait-code settings l
 - Sensitive parameters (`content`, `query`, `what`, `prompt`, `message`) are automatically truncated to 80 chars
 - `TimedRotatingFileHandler` — rotates at midnight, keeps `log-backup-count` days (default 14)
 
-**Log format:**
-```
-2026-03-08T14:23:01 INFO  mait_code.tools.memory.cli — invoked: mc-tool-memory query="dark mo..." limit=10 mode='hybrid'
-2026-03-08T14:23:01 DEBUG mait_code.tools.memory.search — Vector search: 3 results
-2026-03-08T14:23:01 INFO  mait_code.invocation — completed: mc-tool-memory (0.42s)
+**Log format:** JSON Lines — one object per line, written to `mait-code.jsonl`.
+Core fields are `ts` (epoch seconds), `level`, `logger` (with the `mait_code.`
+prefix stripped), `msg`, `tool` and `pid`; see [the schema
+table](development.md#log-format) for the full list.
+
+```json
+{"ts": 1772029381.412, "level": "info", "logger": "tools.memory.cli", "msg": "invoked: mc-tool-memory", "tool": "mc-tool-memory", "pid": 48120, "event": "invoked", "args": {"query": "dark mo...", "limit": 10, "mode": "hybrid"}}
+{"ts": 1772029381.598, "level": "debug", "logger": "tools.memory.search", "msg": "Vector search: 3 results", "tool": "mc-tool-memory", "pid": 48120}
+{"ts": 1772029381.834, "level": "info", "logger": "invocation", "msg": "completed: mc-tool-memory", "tool": "mc-tool-memory", "pid": 48120, "event": "completed", "duration_ms": 422}
 ```
 
 ## Identity System
@@ -476,6 +521,9 @@ Current migrations:
 8. Add `scope`, `project`, `branch` columns to `memory_entries`; rebuild FTS with new columns; add scope/project indexes
 9. Create `reflection_watermark` table for idempotent reflection
 10. Relabel extraction-sourced `insight` entries as `decision` (one-time; guarded to run only before reflection has ever run, so genuine reflection insights are never touched)
+11. Add the supersession columns (`superseded_by`, `superseded_at`) to `memory_entries`
+12. Remap entity and relationship types onto the canonical vocabularies, folding legacy values
+13. Add the `reviewed_at` anchor that review resurfacing decays from
 
 Adding a new migration:
 
@@ -499,12 +547,22 @@ Adding a new migration:
 ├── models/                   # Cached embedding models (local provider only)
 ├── reminders.db              # Reminder database
 ├── board.db                  # Cross-project kanban board database
-└── inbox.db                  # Quick-capture inbox database
+├── inbox.db                  # Quick-capture inbox database
+├── dashboard.toml            # Start-page tile layout
+├── bridge.json               # Bridge channel config (may hold a token)
+├── bridge-state.json         # Per-machine drain watermark — never sync
+└── project-aliases.json      # Project slug alias map
 ```
 
 > Rotating log files do **not** live in the data directory — they go to the XDG
 > state dir (`~/.local/state/mait-code/mait-code.jsonl` by default, structured
-> JSON Lines), configurable via `MAIT_CODE_LOG_FILE`.
+> JSON Lines), configurable via `MAIT_CODE_LOG_FILE`. Nor does the settings file:
+> `$XDG_CONFIG_HOME/mait-code/settings.toml` is the single source of truth for
+> every `MAIT_CODE_*` knob and sits outside the synced directory by design.
+
+> `bridge-state.json` and `memory/observations/cursors.json` describe how far
+> *this machine* has read. See [Multi-machine sync](sync.md) for what to commit
+> and what to leave behind.
 
 ## Key Technical Decisions
 
@@ -525,7 +583,7 @@ Adding a new migration:
 | nomic-embed-text-v1.5 @ 768 dims | Full-quality representation; 8192 token context; MTEB ~62.4; negligible storage cost at expected scale |
 | Configurable embedding providers | Local (fastembed) for personal use, AWS Bedrock for corporate environments where HuggingFace is blocked; deployment-time decision, reindex to migrate |
 | Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |
-| File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `RotatingFileHandler` keeps log size bounded |
+| File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `TimedRotatingFileHandler` rotates at midnight and keeps `log-backup-count` days |
 | Watermark table for reflection idempotency | Separate table over `reflected_at` column — atomic batch tracking, no feedback loops, clean separation of concerns |
 | urllib.request over httpx/requests for web fetch | Zero new HTTP dependency tree; `truststore.inject_into_ssl()` patches the stdlib SSL context that `urllib.request` uses; system proxy env vars (`HTTP_PROXY`/`HTTPS_PROXY`) respected automatically |
 | markdownify for HTML-to-markdown | Lightweight (~600 lines), single purpose, only brings `beautifulsoup4`; full readability extraction (trafilatura) is overkill — Claude can ignore boilerplate itself |
