@@ -378,7 +378,17 @@ each part to be permitted. `Bash(git push:*)` refuses
 
 All of the above is pinned to 2.1.220 and is undocumented matcher behaviour — a
 future release could change it, so prefer prefixes that would still be safe if
-the boundary were dropped. Check your patterns mechanically rather than by eye:
+the boundary were dropped. After a Claude Code upgrade, re-measure:
+
+```bash
+./scripts/probe_permissions.py          # exits non-zero if behaviour has drifted
+```
+
+It re-runs the measurements above against the installed `claude` and reports any
+case that no longer matches. The test suite cannot catch this — it pins our
+*model* of the matcher, not the matcher.
+
+Check your patterns mechanically rather than by eye:
 
 ```python
 from mait_code.cli import _permissions as perms
