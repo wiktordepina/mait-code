@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.67.0] — 2026-08-01
+
 ### Changed
 
 - **Tool approvals are global-only.** The **Tool approvals** group in
@@ -1990,7 +1992,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.66.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.67.0...HEAD
+[0.67.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.67.0
 [0.66.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.66.0
 [0.65.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.65.0
 [0.64.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.64.0
