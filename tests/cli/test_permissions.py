@@ -3,7 +3,8 @@
 Two halves. The first is a set of *guard* tests over the catalogue itself:
 these don't exercise code so much as pin the curation, so a preset that quietly
 permits a mutating command fails the suite rather than shipping. The second
-drives the read/merge/scope machinery against real files under a fake ``$HOME``.
+drives the read/merge machinery against real files under a fake ``$HOME``,
+including from inside a git repo — the target must not move with the cwd.
 """
 
 from __future__ import annotations
@@ -160,14 +161,20 @@ def test_state_ignores_a_preset_sitting_in_a_project_file(
     this module reports it off and cannot remove it. Asserted so the trade-off
     is a decision on the record rather than a surprise.
     """
+    project_file = repo / ".claude" / "settings.local.json"
     _write(
-        repo / ".claude" / "settings.local.json",
+        project_file,
         {"permissions": {"allow": list(perms.preset_by_id("git-status").patterns)}},
     )
     monkeypatch.chdir(repo)
     states = {s.preset.id: s for s in perms.resolve_states()}
     assert states["git-status"].enabled is False
     assert perms.disable_preset("git-status").changed is False
+    # Not merely "reported no change" — the project file is genuinely untouched,
+    # so the rule really is still in force rather than quietly swept.
+    assert json.loads(project_file.read_text(encoding="utf-8")) == {
+        "permissions": {"allow": list(perms.preset_by_id("git-status").patterns)}
+    }
 
 
 def test_resolved_state_is_identical_from_any_directory(
@@ -419,7 +426,7 @@ def test_disable_refuses_a_malformed_target(fake_home: Path) -> None:
 
 
 def test_presets_json_shape(fake_home: Path) -> None:
-    perms.enable_preset("git-status")
+    # One full preset and half of another, so both booleans are exercised.
     _write(
         perms.settings_path(),
         {

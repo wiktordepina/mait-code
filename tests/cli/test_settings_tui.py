@@ -707,6 +707,43 @@ class TestToolApprovals:
         assert editors == 0
         assert "git repository" not in help_text
 
+    def test_focus_editor_reaches_the_preset_pane(self, fake_home: Path) -> None:
+        """Removing the scope picker took the pane's only ``#editor`` with it.
+
+        ``_focus_editor`` walks a list of selectors, so a preset row silently
+        stopped responding to the ``2`` binding until ``#perm-enable`` joined
+        that list. Nothing else in the app would have caught it.
+        """
+        self._reset()
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "git-status")
+                app.action_focus_list()
+                await pilot.pause()
+                app.action_focus_editor()
+                await pilot.pause()
+                return app.focused.id if app.focused else None
+
+        assert _run(scenario) == "perm-enable"
+
+    def test_not_read_only_warning_names_its_reach(self, fake_home: Path) -> None:
+        """Global-only means the grant is not confined to the current repo.
+
+        The warning predates that change and used to sit behind a per-repo
+        default, so it has to say so explicitly now.
+        """
+        self._reset()
+
+        async def scenario():
+            app = SettingsApp()
+            async with app.run_test() as pilot:
+                await _goto(pilot, app, _PERM_PREFIX + "ruff-check")
+                return " ".join(str(w.render()) for w in app.query(".warn-note"))
+
+        assert "every project" in _run(scenario)
+
     def test_enable_writes_to_the_global_file(self, fake_home: Path) -> None:
         self._reset()
 

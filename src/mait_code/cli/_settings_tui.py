@@ -508,7 +508,15 @@ class SettingsApp(MaitApp):
 
     def _focus_editor(self) -> None:
         # env-name first: on the add-variable pane the name field leads.
-        for selector in ("#env-name", "#editor", "#edit-weights", "#apply"):
+        # perm-enable last: a preset pane has no editor widget at all, so
+        # without it the binding would silently do nothing on those rows.
+        for selector in (
+            "#env-name",
+            "#editor",
+            "#edit-weights",
+            "#apply",
+            "#perm-enable",
+        ):
             found = self.query(selector)
             if found:
                 found.first().focus()
@@ -624,12 +632,12 @@ class SettingsApp(MaitApp):
         )
 
     async def _show_perm_detail(self, preset_id: str) -> None:
-        """Detail pane for one tool-approval preset: rules, state, scope picker."""
+        """Detail pane for one tool-approval preset: rules, target file, state."""
         detail = self.query_one("#detail", VerticalScroll)
         state = self._perm_states[preset_id]
         preset = state.preset
 
-        widgets: list[Static | RadioSet | Horizontal] = [
+        widgets: list[Static | Horizontal] = [
             Label(Text(preset.label), classes="title"),
             Label(Text(preset.rationale), classes="help"),
         ]
@@ -637,7 +645,9 @@ class SettingsApp(MaitApp):
             widgets.append(
                 Static(
                     "⚠ Not read-only — this preset can modify files in the "
-                    "working tree. Reversible with git, but opt in knowingly.",
+                    "working tree, and it applies in every project you open, "
+                    "not just this one. Reversible with git, but opt in "
+                    "knowingly.",
                     classes="warn-note",
                 )
             )
@@ -823,8 +833,8 @@ class SettingsApp(MaitApp):
             await self._apply_env_edit(key.removeprefix(_ENV_PREFIX))
             return
         if key.startswith(_PERM_PREFIX):
-            # Ctrl+S on a preset means "enable at the picked scope"; removal is
-            # deliberately button-only, since it needs a confirmation.
+            # Ctrl+S on a preset means "enable"; removal is deliberately
+            # button-only, since it needs a confirmation.
             self._enable_preset(key.removeprefix(_PERM_PREFIX))
             return
         setting = _by_key()[key]

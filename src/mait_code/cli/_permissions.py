@@ -20,11 +20,21 @@ from, and from an unrelated repo it would happily target that repo's settings
 file. No amount of picker UI fixes an input the user cannot see, so the scope
 concept left this surface entirely rather than merely changing its default.
 
-The consequence, accepted knowingly: a catalogue preset written into a project
-file (by an older version, or by hand) is still unioned in by Claude Code while
-this module reports it off, and cannot be removed from here. Managing project
-scopes, if ever wanted, should arrive as an explicit ``--project <path>``
-argument — a named target rather than an inherited one.
+Two consequences, both accepted knowingly.
+
+A catalogue preset written into a project file (by an older version, or by hand)
+is still unioned in by Claude Code while this module reports it off, and cannot
+be removed from here. The awkward case is a preset present in *both*: the row
+reads on, disabling clears only the global copy, and the row then reads off
+while the project file keeps the rule in force.
+
+More importantly, a grant can no longer be confined to one repository. For the
+``read-only`` tier that costs nothing. For ``writes-workspace`` it is a real
+widening — enabling ``uv run pytest`` lets every repo you subsequently open run
+its own ``conftest.py`` unprompted, where the previous per-repo default did not.
+The UI says so at the point of opting in; restoring the capability properly
+means an explicit ``--project <path>`` argument, a named target rather than an
+inherited one.
 
 **The prefix hazard.** A ``Bash(<prefix>:*)`` rule is a *raw string prefix*
 match, so it cannot express "this subcommand but not that flag" — and it does

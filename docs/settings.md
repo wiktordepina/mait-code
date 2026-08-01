@@ -235,6 +235,14 @@ A few presets *are* offered but flagged **not read-only** — `uv run ruff check
 pytest`. They can rewrite tracked files or run project code. That's reversible
 with git, but the pane warns you before you opt in.
 
+Weigh those against the global scope specifically. Because there is nowhere else
+to put them, enabling one applies in **every project you open** — so `uv run
+pytest` means any repo you clone from then on can run its own `conftest.py`
+without prompting you. That is a wider reach than the read-only tier, and a
+wider reach than the same preset had when 0.66.0 defaulted to a per-repo file.
+If that's not a trade you want, leave the not-read-only presets off and approve
+those commands per session.
+
 Writes are surgical: your own hand-written rules keep their place and their
 order, unrelated keys are preserved, and the file is backed up (once per
 session, as `settings.json.bak-<timestamp>`) before the first change. A settings
