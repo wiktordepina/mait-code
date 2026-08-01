@@ -40,12 +40,16 @@ The point is a strict separation between polished, shipped artefacts (committed,
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
 uv run pyright                 # Typecheck (standard mode, src/ only)
-uv run pytest                  # Test suite (close to a thousand tests)
+uv run pytest                  # Test suite (close to two thousand tests)
 ```
 
+CI runs ruff over `src/ tests/`, so narrowing the lint/format commands to `src/`
+alone passes locally and fails on the PR.
+
 `pyright` reads the optional `boto3` import in `tools/memory/embeddings.py`,
-so the bedrock extra must be installed: `uv sync --extra bedrock` once,
-then `uv run pyright` works.
+so the bedrock extra must be installed. Sync it together with the docs group —
+`uv sync --extra bedrock --group docs` — because a bare sync, or `--group docs`
+on its own, uninstalls `boto3` and re-breaks the typecheck.
 
 Tests live under `tests/` mirroring the `src/mait_code/` layout. Tool-specific
 fixtures in `tests/<area>/conftest.py`; cross-cutting setup in the root
@@ -57,7 +61,7 @@ reference-surface module declares a non-empty `__all__`.
 Docstrings follow **Google style** and modules that surface in the API reference declare `__all__` with `# Section` comments. See [`docs/contributing-docs.md`](docs/contributing-docs.md) for the conventions and the regeneration workflow.
 
 ```bash
-uv sync --group docs                                # install mkdocs deps
+uv sync --extra bedrock --group docs                # install mkdocs deps (keep the extra)
 uv run python docs/gen_ref_pages.py                 # regenerate docs/reference/*
 uv run mkdocs serve                                 # local preview
 uv run mkdocs build --strict                        # CI-equivalent build
@@ -68,12 +72,15 @@ uv run mkdocs build --strict                        # CI-equivalent build
 ```
 src/mait_code/
 ├── config.py        # Settings registry (all MAIT_CODE_* knobs, resolution order)
+├── console.py       # Shared themed rich Console — every CLI surface prints through it
 ├── context.py       # Project/branch detection (get_context, get_project)
 ├── llm.py           # Shared LLM invocation (call_claude)
 ├── logging.py       # Shared logging (setup_logging, @log_invocation)
 ├── ssl.py           # OS trust store injection (setup_ssl, for corporate proxies)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
-├── cli/             # The `mait-code` CLI + Textual TUIs (home, board, settings, memory, observations)
+├── bridge/          # Opt-in capture-in / notify-out transport (ntfy, loopback)
+├── cli/             # The `mait-code` CLI + 10 Textual TUIs (home, board, settings,
+│                    # memory, review, observations, graph, logs, bridge, dashboard)
 ├── tui/             # Shared TUI layer: house theme, palette, base MaitApp
 └── tools/           # CLI tools (memory, reminders, board, inbox, web_fetch)
 config/              # CLAUDE.md and settings.json templates

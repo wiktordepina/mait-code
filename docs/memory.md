@@ -66,7 +66,7 @@ reflection — open the [observations browser](observations.md) with
 Before storing a new memory, the writer checks for near-duplicates:
 
 1. Extracts key words from the new content
-2. Gathers candidates from both FTS5 keyword search and vector similarity search (scoped to the entry's project)
+2. Gathers candidates from both FTS5 keyword search and vector similarity search (scoped to the entry's project **and its entry type** — the same content stored as a different type is never treated as a duplicate)
 3. Compares candidates two ways — `SequenceMatcher` string similarity ≥ 0.85, or vector cosine similarity ≥ 0.92; a hit on either marks it a duplicate
 4. Duplicates update the existing entry's timestamp and keep the highest importance
 
@@ -85,7 +85,7 @@ When a fact has genuinely changed, replace the stale entry rather than letting t
 mc-tool-memory supersede <old_id> "<new, current content>"
 ```
 
-This inserts the new content as a fresh entry (inheriting the old one's type and scope), then marks the old entry **superseded** — recording `superseded_by` (the new id) and `superseded_at` (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:
+This inserts the new content as a fresh entry (inheriting the old one's type, scope, memory class and importance — pass `--importance` to override), then marks the old entry **superseded** — recording `superseded_by` (the new id) and `superseded_at` (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:
 
 ```bash
 mc-tool-memory list --include-superseded
@@ -99,7 +99,7 @@ mc-tool-memory merge <id1> <id2> … --into "<consolidated>"  # fold several int
 mc-tool-memory retire <id>                                # drop a stale entry, no replacement
 ```
 
-**Merge** is the N→1 counterpart to supersede: it inserts one consolidated entry (inheriting type/scope from the first row, importance promoted to the max of the sources) and points every merged row's `superseded_by` at it. **Retire** drops a fact that has no successor — it stamps `superseded_at` while leaving `superseded_by` null. A row is **live** (surfaced by default) only when *both* are null; superseded and retired rows are hidden from all default search, listing, and dedup but kept for audit.
+**Merge** is the N→1 counterpart to supersede: it inserts one consolidated entry (inheriting type/scope from the first row that actually exists — missing ids are skipped and reported — with importance promoted to the max of the sources, or `--importance` if given) and points every merged row's `superseded_by` at it. **Retire** drops a fact that has no successor — it stamps `superseded_at` while leaving `superseded_by` null. A row is **live** (surfaced by default) only when *both* are null; superseded and retired rows are hidden from all default search, listing, and dedup but kept for audit.
 
 This is manually-driven: the companion *suggests* these moves — during [reflection](#tier-2-reflections), or when it spots a conflict — and you decide. Nothing is replaced automatically.
 
@@ -115,7 +115,7 @@ mc-tool-memory review --json          # same, as structured JSON
 mc-tool-memory reviewed <id>          # mark one reviewed — stamps reviewed_at = now, resetting its curve
 ```
 
-Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (`mait-code`) shows a **Due for review** count under Memory, and [`mait-code review`](review.md) is the interactive way to work the batch — confirm, refine, or retire each in place, without reaching for the CLI. This is a nudge, not an alarm: nothing is changed for you.
+Confirming or refining an entry resets its decay curve so it drops out of the due set until a fresh half-life passes; retiring it drops it from the live set altogether, so it never returns. The home hub (`mait-code`) shows a **Due for review** count under Memory, and [`mait-code review`](review.md) is the interactive way to work the batch — confirm, refine, or retire each in place, without reaching for the CLI. This is a nudge, not an alarm: nothing is changed for you.
 
 ## Storage: The Memory Database
 
@@ -190,6 +190,8 @@ Run `mait-code settings list` to see the active configuration and where each val
 | `model-cache-dir` | `data-dir` + `/models` (local model cache, can be ~550MB) |
 | `observations-dir` | `data-dir` + `/memory/observations` |
 | `project-aliases-path` | `data-dir` + `/project-aliases.json` |
+| `bridge-config-path` | `data-dir` + `/bridge.json` |
+| `dashboard-config-path` | `data-dir` + `/dashboard.toml` |
 
 **Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires re-embedding, which detects the dimension mismatch and recreates the vec table. The simplest path is `mait-code settings set embedding-provider bedrock --reindex` (a migration key requires an explicit `--reindex`/`--no-reindex`), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run `mc-tool-memory reindex` yourself. `mait-code settings list` shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
 
@@ -206,6 +208,7 @@ The settings file also carries an **Advanced** section of operational knobs, wri
 | `reflection-batch-size` | `MAIT_CODE_REFLECTION_BATCH_SIZE` | `50` | Default `--batch-size` for reflection |
 | `reflection-novelty-gate` | `MAIT_CODE_REFLECTION_NOVELTY_GATE` | `3` | Default `--min-new` for reflection |
 | `git-timeout` | `MAIT_CODE_GIT_TIMEOUT` | `5` | Timeout (seconds) for git context probes |
+| `dashboard-tile-timeout` | `MAIT_CODE_DASHBOARD_TILE_TIMEOUT` | `5` | Timeout (seconds) for a start-page shell tile |
 
 #### How it works
 
@@ -220,8 +223,16 @@ The settings file also carries an **Advanced** section of operational knobs, wri
 
 If HuggingFace is blocked on your corporate network, use the Bedrock provider:
 
-1. Install with the bedrock flag: `mait-code install --from <source> --embedding-provider bedrock`
-   (or re-install if already installed)
+1. Install with the bedrock extra, so `boto3` is actually present:
+
+   ```bash
+   MAIT_CODE_EMBEDDING_PROVIDER=bedrock ./scripts/install.sh
+   ```
+
+   The shell installer is what resolves the extra (`uv tool install '<source>[bedrock]'`).
+   `mait-code install --embedding-provider bedrock` only records the choice in
+   settings — run on its own against an existing install it leaves `boto3`
+   missing, and memory silently falls back to keyword-only search.
 2. Ensure AWS credentials are available (e.g. via `aws configure` or IAM role).
    If you authenticate via a named profile, declare it once in the `[env]`
    table of `settings.toml` so every tool picks it up — inside and outside
@@ -242,7 +253,8 @@ The install command writes `embedding-provider = "bedrock"` to `~/.config/mait-c
 The default search mode (`hybrid`) runs both FTS5 and vector search, then merges:
 
 - Entries found by **both** methods use vector cosine similarity as the relevance score
-- Entries found by **only one** method get a default relevance of 0.3
+- Entries found by **vector search only** keep their cosine similarity
+- Entries found by **FTS only** get a default relevance of 0.3
 - All results are then ranked by the composite scoring formula (see below)
 
 You can also force a single mode: `mc-tool-memory search "query" --mode fts` or `--mode vector`.
@@ -256,7 +268,7 @@ Entities (people, projects, tools, services, concepts, organisations) and their 
 - Mention count (incremented each time the entity is seen)
 - First and last seen timestamps
 
-Both vocabularies are canonical and enforced at write time: entity types
+Both vocabularies are canonical and enforced on the extraction path: entity types
 (`person`, `project`, `tool`, `service`, `concept`, `org`) coerce to `unknown`
 when the extraction model invents something else, and relationship types
 (`uses`, `owns`, `contributes_to`, `depends_on`, `manages`, `related_to`)
@@ -264,6 +276,10 @@ coerce to `related_to`. The extraction prompt enums are built from the same
 tuples (`ENTITY_TYPES`, `RELATIONSHIP_TYPES` in `tools/memory/entities.py`),
 so prompt and enforcement cannot drift. Every relationship carries a free-text
 context field explaining the connection.
+
+One gap worth knowing: `mc-tool-memory restore` replays historical JSONL verbatim
+and does **not** coerce, so restoring logs written before migration 12 can
+reintroduce the legacy type values that migration cleaned up.
 
 The graph has its own interactive surface — [the graph
 explorer](graph.md) (`mait-code graph`) — which renders any entity's
@@ -281,8 +297,12 @@ the source entity is deleted.
 Search results are ranked by a composite score:
 
 ```
-score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+score = (0.3 × recency + 0.3 × importance + 0.4 × relevance) × scope_boost
 ```
+
+The scope boost multiplies the whole weighted base, not the relevance term alone.
+It is `1.0` for a branch match and `0.85` for a project match — both fixed — and
+`scope-boost-global` / `scope-boost-cross-project` for the wider scopes.
 
 ### Recency
 
@@ -293,6 +313,7 @@ Exponential decay based on memory class:
 | Episodic | `event`, `task` | 3 days | Fades fast — yesterday's deploy matters less next week |
 | Semantic | `fact`, `preference`, `decision`, `insight`, `relationship` | 90 days | Persists — architectural decisions stay relevant for months |
 | Procedural | `procedure` | 180 days | Most durable — workflows go stale when superseded, not with time |
+| *(unknown or missing)* | — | 7 days | Fallback when an entry carries no recognised class |
 
 Formula: `recency = exp(-ln(2) × age_days / half_life)`
 
@@ -323,8 +344,8 @@ The scoring and deduplication knobs are exposed as **advanced** settings (commen
 | `dedup-string-threshold` | `0.85` | 0.0–1.0 | Too low misses near-duplicates; too high admits false positives. |
 | `dedup-vector-threshold` | `0.92` | 0.0–1.0 | Same trade-off, on cosine similarity. Also the upper edge of the conflict band. |
 | `dedup-conflict-threshold` | `0.60` | 0.0–1.0 | Lower edge of the contradiction band. Too low floods every write with spurious conflicts; too high lets real contradictions slip through as separate facts. |
-| `scope-boost-global` | `0.7` | 0.0–1.0 | Relevance multiplier for global memories. |
-| `scope-boost-cross-project` | `0.3` | 0.0–1.0 | Relevance multiplier across project boundaries. |
+| `scope-boost-global` | `0.7` | 0.0–1.0 | Composite-score multiplier for global memories. |
+| `scope-boost-cross-project` | `0.3` | 0.0–1.0 | Composite-score multiplier across project boundaries. |
 | `review-threshold` | `0.5` | 0.0–1.0 | Recall probability below which a memory is [due for review](#review-keeping-curated-memory-fresh). `0.5` = one half-life since last review; lower surfaces only more-decayed items. |
 | `review-min-importance` | `5` | 1–10 | Importance floor for review resurfacing; memories below it decay without nagging. |
 
@@ -467,6 +488,7 @@ launched.
 | `reflect --days 14` | Bootstrap window for first reflection |
 | `reflect --min-new 0` | Force reflection (skip novelty gate) |
 | `reflect --batch-size 20` | Limit entries per batch (default 50) |
+| `reflect --json` | Structured `{skipped, reason, insights, ops, stored}` — what `/reflect` runs |
 | `reflect --drain` | Loop until all unreflected entries are processed |
 
 **Scope flags** apply to `search`, `store`, `list`, `review`, and `reflect`:

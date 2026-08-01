@@ -107,7 +107,7 @@ a log or an SSH one-liner.
 
 | Key | Action |
 |-----|--------|
-| <kbd>↑</kbd> / <kbd>↓</kbd> (or <kbd>k</kbd> / <kbd>j</kbd>) | Move the highlight; the detail pane follows |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Move the highlight; the detail pane follows |
 | <kbd>Enter</kbd> / <kbd>Space</kbd> | Expand or collapse a group |
 | <kbd>/</kbd> | Focus the filter |
 | <kbd>n</kbd> | Flip between the store and the native view |
@@ -122,5 +122,7 @@ a log or an SSH one-liner.
 
 - [How memory works](memory.md) — the three tiers, extraction, scoring and decay
   behind what you're browsing.
+- [The review queue](review.md) — the companion surface that *does* write:
+  confirm, refine or retire the memories that have decayed.
 - [`mc-tool-memory`](reference/tools/memory.md) — the CLI that searches, stores,
   supersedes and reindexes (the writes the browser deliberately doesn't do).

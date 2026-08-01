@@ -18,9 +18,21 @@ under a corporate policy). While disabled it makes *zero* network calls — the
 drain short-circuits before any request. Turn it on only where that access is
 allowed, per machine.
 
-Enable and configure it from the home hub — **System ▸ ↗ Configure Bridge** —
-or launch the editor directly. The form collects the channel's settings and
-offers a **Test connection** button that probes them before you save.
+Enable and configure it from the home hub — **System ▸ ↗ Configure Bridge**.
+That leaf is the only way into the editor; there is no `mait-code bridge`
+command. The form collects the channel's settings and offers a **Test
+connection** button that probes them before you save.
+
+The gate and the channel choice are also plain settings, if you'd rather script
+them or edit `settings.toml` directly:
+
+```bash
+mait-code settings set bridge enabled
+mait-code settings set bridge-type ntfy
+```
+
+The channel's server, topics and token stay in the Bridge screen — they aren't
+registry settings.
 
 ## Setting up ntfy
 
@@ -45,6 +57,11 @@ server, mint an access token. Then in the Bridge editor:
 
 Set **Status** to *enabled*, **Test connection** to confirm the server is
 reachable and the token works, then **Save**.
+
+A **403** here isn't always the token. Cloudflare-fronted servers reject
+requests carrying urllib's default user-agent, so the Bridge sends a real one —
+if you still see a 403, suspect a proxy or WAF in front of ntfy before you go
+regenerating credentials.
 
 ## Capturing
 
@@ -79,6 +96,11 @@ a reminder falls due, it's published to that topic and lands on your phone's
 lock screen. Each notification carries a **"Done"** button — tapping it posts a
 control message back to the capture topic, and the next drain dismisses the
 reminder for you. No terminal required, from either direction.
+
+The control message is a plain string, `mait-ctl:dismiss:<id>`. Any inbound
+message starting `mait-ctl:` is intercepted as a command rather than filed as a
+capture — worth knowing, since captures can arrive from any device that can
+publish to the topic.
 
 Publishing rides the same reactive triggers as draining — the session-start
 hook and `mc-tool-reminders check` — and each reminder is sent **once** (a

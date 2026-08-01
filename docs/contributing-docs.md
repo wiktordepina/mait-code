@@ -9,7 +9,7 @@ the reference surface.
 
 ```bash
 # Install docs dependencies
-uv sync --group docs
+uv sync --extra bedrock --group docs
 
 # Build the site locally and serve at http://127.0.0.1:8000
 uv run mkdocs serve
@@ -31,7 +31,7 @@ The hand-authored pages under `docs/` populate six tabs:
 | Tab | What lives here |
 |-----|-----------------|
 | **Home** | `docs/README.md` — project intro, key features, quick start. |
-| **Guide** | Procedural how-to docs (`setup.md`, `board.md`, `sync.md`). |
+| **Guide** | Procedural how-to docs — `setup.md`, the per-TUI guides (`home.md`, `board.md`, `settings.md`, `memory-browser.md`, `review.md`, `observations.md`, `graph.md`, `logs.md`), `bridge.md`, and `sync.md`. |
 | **Concepts** | Conceptual prose (`philosophy.md`, `memory.md`). |
 | **Architecture** | System design (`architecture.md`). |
 | **Reference** | `docs/reference/skills.md` (hand-authored) plus the Python API pages under `docs/reference/{tools,hooks}/` (auto-generated — see below). |
@@ -66,7 +66,7 @@ To add a new prose page:
 
 ## API reference (`docs/reference/`)
 
-The Python API pages — `docs/reference/{context,cli,config,llm,logging,ssl}.md` plus the nested `docs/reference/tools/*.md` and `docs/reference/hooks/*.md` — are **regenerated from each module's `__all__`** by `docs/gen_ref_pages.py`. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's `--check` invocation will flag the drift.
+The Python API pages — `docs/reference/{context,cli,config,llm,logging,ssl,bridge}.md` plus the nested `docs/reference/tools/*.md` and `docs/reference/hooks/*.md` — are **regenerated from each module's `__all__`** by `docs/gen_ref_pages.py`. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's `--check` invocation will flag the drift.
 
 `docs/reference/skills.md` and `docs/reference/mait-code.md` (the `mait-code` CLI command reference) are the only **hand-authored** files under `docs/reference/`. Edit them directly — `skills.md` when adding or renaming a slash command, `mait-code.md` when changing a CLI command. (Note the deliberate split: `reference/cli.md` is the *generated* `mait_code.cli` Python API, while `reference/mait-code.md` is the hand-authored command reference.)
 
@@ -76,7 +76,7 @@ The nested layout mirrors the dotted module hierarchy: `mait_code.tools.memory` 
 
 For a module to surface in the reference, it must:
 
-1. Be listed under one of the groups in `REFERENCE_MODULES` inside `docs/gen_ref_pages.py` (Core, Tools, or Hooks).
+1. Be listed under one of the groups in `REFERENCE_MODULES` inside `docs/gen_ref_pages.py` (Core, Bridge, Tools, or Hooks).
 2. Declare `__all__` as a list (or tuple) of string literals.
 3. Live at `src/mait_code/<name>.py` or `src/mait_code/<dotted>/<name>/__init__.py` (the generator resolves either layout).
 
@@ -112,7 +112,7 @@ list.
 
 1. Add `__all__` to the module's `__init__.py` (or the single-file module). Re-export the public symbols you want documented; keep internals out.
 2. Optionally group with `# Section` comments.
-3. Append a `(dotted_name, display)` tuple to the relevant group in `REFERENCE_MODULES` (`"Core"`, `"Tools"`, or `"Hooks"`) inside `docs/gen_ref_pages.py`. The display is the leaf name only — `"Memory"`, not `"Tools — Memory"` — since the group is conveyed by the surrounding nav section.
+3. Append a `(dotted_name, display)` tuple to the relevant group in `REFERENCE_MODULES` (`"Core"`, `"Bridge"`, `"Tools"`, or `"Hooks"`) inside `docs/gen_ref_pages.py`. The display is the leaf name only — `"Memory"`, not `"Tools — Memory"` — since the group is conveyed by the surrounding nav section.
 4. Add the page to the corresponding nested sub-section of `Reference → Python API` in `mkdocs.yml`. The file path mirrors the dotted name: `tools.memory` → `reference/tools/memory.md`.
 5. Regenerate: `uv run python docs/gen_ref_pages.py`.
 6. Verify drift-free: `uv run python docs/gen_ref_pages.py --check`.

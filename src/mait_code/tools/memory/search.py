@@ -343,8 +343,8 @@ def hybrid_search(
     score suitable for ``composite_score()``:
 
     * Entries found by both: use vector similarity as relevance.
-    * FTS-only entries: default relevance ``0.3``.
-    * Vector-only entries: default relevance ``0.3``.
+    * Vector-only entries: keep their cosine similarity as relevance.
+    * FTS-only entries: default relevance ``0.3`` (no vector to score with).
 
     Falls back to FTS-only if no embeddings are available.
 

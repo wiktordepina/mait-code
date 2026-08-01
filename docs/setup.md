@@ -81,18 +81,46 @@ mait-code install --from "$PWD" --embedding-provider local
 Once installed, the `mait-code` binary owns the full install lifecycle. Its subcommands cover the common cases:
 
 ```bash
-mait-code status            # read-only summary, with a health badge (use --json)
-mait-code doctor            # surface silent breakage; --fix applies safe fixes
+mait-code status            # read-only summary with a health badge, first-install
+                            # and last-update dates (use --json)
+mait-code doctor            # run 14 health checks; --fix applies safe fixes (--json)
 mait-code settings          # edit config interactively (lists when piped)
 mait-code settings list     # read-only view of the active config (use --json)
+mait-code settings get log-level         # one resolved value and its source (--json)
 mait-code settings set log-level DEBUG   # validate, persist, enforce one knob
-mait-code update            # git pull, reinstall if changed, refresh symlinks/settings
-mait-code uninstall         # remove symlinks, strip settings; preserves data by default
+mait-code settings unset env.FOO         # drop a custom [env] variable
+mait-code update            # fetch, advance, reinstall if HEAD moved
+mait-code uninstall         # remove symlinks, settings file and the uv tool;
+                            # preserves data by default
 mait-code uninstall --purge-data   # also delete the data directory
 mait-code version           # print the installed version
 ```
 
-Most commands accept `--claude-dir` and (where relevant) `--data-dir` overrides for non-default layouts (`settings` and `version` take neither). Coloured output can be disabled with the global `--no-color` flag. See the **[CLI reference](reference/mait-code.md)** for full per-command flag tables, behaviour notes, and exit codes.
+`doctor --fix` currently repairs three findings: dangling symlinks, a missing data
+directory, and missing embeddings. The rest it reports.
+
+`uninstall` also runs `uv tool uninstall mait-code`, which removes the `mait-code`
+binary itself — pass `--keep-uv-tool` to leave it in place.
+
+The TUI surfaces are separate subcommands:
+
+```bash
+mait-code                   # the home hub on a terminal; help when piped
+mait-code home              # the home hub explicitly
+mait-code board             # kanban board
+mait-code memory            # memory browser
+mait-code review            # the memory review queue
+mait-code observations      # observations browser
+mait-code graph             # knowledge-graph explorer
+mait-code logs              # log viewer
+```
+
+The install-lifecycle commands (`install`, `update`, `uninstall`, `status`,
+`doctor`) accept `--claude-dir`, and all but `update` accept `--data-dir`, for
+non-default layouts. The TUI subcommands, `settings` and `version` take neither.
+Coloured output can be disabled with the global `--no-color` flag. See the **[CLI
+reference](reference/mait-code.md)** for full per-command flag tables, behaviour
+notes, and exit codes.
 
 ## Personalisation
 
@@ -150,7 +178,22 @@ claude
 
 ## Updating
 
-Since `CLAUDE.md` is a symlink, updating is simple:
+Use the built-in updater:
+
+```bash
+mait-code update
+```
+
+It fetches, advances the source clone, and reinstalls only if `HEAD` actually
+moved — then refreshes symlinks and merges settings changes. Useful flags:
+`--ref` to advance to a specific branch or tag, `--no-pull` to reinstall from the
+clone as-is, and `--force` to reinstall even when nothing moved.
+
+Do not `git pull` a bootstrap install. The clone at
+`~/.local/share/mait-code/source` is pinned to a release tag in detached HEAD,
+where `git pull` fails outright — resolving that is exactly why `update` exists.
+
+From a development clone you can still update by hand:
 
 ```bash
 cd /path/to/mait-code
@@ -158,14 +201,25 @@ git pull
 ./scripts/install.sh
 ```
 
-The symlink ensures Claude Code always reads the latest config. Re-run `./scripts/install.sh` after pulling to reinstall CLI tools and merge any settings changes.
+Because `CLAUDE.md` is a symlink, Claude Code always reads the latest config
+either way.
 
 ## Troubleshooting
 
-**CLAUDE.md not loading:** Check that `~/.claude/CLAUDE.md` is a valid symlink (`ls -la ~/.claude/CLAUDE.md`). Re-run `./scripts/install.sh` if broken.
+**Start here:** `mait-code doctor --fix`. It runs 14 checks covering symlinks,
+hook registration, hooks-on-PATH, the data directory, memory health, embeddings,
+vector search, the observe pipeline, the Bridge, and settings values — and
+repairs the three it safely can. `mait-code logs` (or
+`$XDG_STATE_HOME/mait-code/mait-code.jsonl`) shows what actually happened.
 
-**Hooks not firing:** Verify `~/.claude/settings.json` contains the hook definitions. Check that `mc-hook-session-start` works from the command line.
+If a specific symptom persists:
 
-**Memory tool not working:** Run `mc-tool-memory stats` to verify. Check that `./scripts/install.sh` has been run.
+**CLAUDE.md not loading:** Check that `~/.claude/CLAUDE.md` is a valid symlink (`ls -la ~/.claude/CLAUDE.md`). `doctor --fix` repairs dangling symlinks.
+
+**Hooks not firing:** Verify `~/.claude/settings.json` contains the hook definitions. Check that `mc-hook-session-start` works from the command line — the `hooks-on-path` check covers this case.
+
+**Memory tool not working:** Run `mc-tool-memory stats` to verify. The `memory-embeddings` and `vector-search` checks cover degraded search.
 
 **Python version mismatch:** Run `uv python install 3.13` to ensure Python 3.13 is available.
+
+**Stale install:** `mait-code update` — see [Updating](#updating).

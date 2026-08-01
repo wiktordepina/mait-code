@@ -99,9 +99,11 @@ together — see [How memory works](memory.md#knowledge-graph).)
 | `/` | Focus the filter |
 | `t` | Swap graph ⇄ table |
 | `a` | Toggle the noise filter (all ⇄ connected) |
-| `+` / `-` | Zoom the graph view |
+| `+` (or `=`) / `-` | Zoom the graph view |
 | `r` | Reload from the database |
 | `1` / `2` / `3` | Focus list / centre / detail |
+| `Ctrl`+`P` | Command palette (incl. theme switching) |
+| `?` | Key cheat-sheet |
 | `Esc` | Back to the list; from the list, quit |
 | `q` | Quit |
 
@@ -111,3 +113,10 @@ Like the other TUIs, `mait-code graph` only opens the explorer on a TTY.
 Piped or in CI it prints the graph's hubs instead — the connected entities
 with their types, mention counts and link counts — so the command always
 answers something.
+
+## See also
+
+- [How memory works](memory.md#knowledge-graph) — how entities and relationships
+  are extracted, and the canonical type vocabularies.
+- [The memory browser](memory-browser.md) — the entries the graph is derived from.
+- [The review queue](review.md) — keeping the curated tier fresh.

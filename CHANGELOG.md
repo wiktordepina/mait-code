@@ -10,6 +10,83 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.69.1] — 2026-08-02
+
+### Fixed
+
+- **The sync guide told you to throw away most of your memory.** It called
+  `memory.db` regenerable, on the grounds that the JSONL observation logs are its
+  source of truth, and had you gitignore it and run `mc-tool-memory restore` after
+  every pull. The logs are a source for the entries the observe hook extracted and
+  nothing else — memories stored by hand, `/reflect` insights, review state, and
+  supersede/retire history have no log to replay from. The documented workflow
+  dropped all of it on every machine but the one it was written on.
+
+  `restore` is additive rather than authoritative besides: replaying an entry that
+  already exists resets its `created_at` to now, re-ageing it and skewing both its
+  score and the review queue. All four databases are now committed, `restore` is
+  documented as the recovery tool it is, and the two genuinely per-machine files —
+  `bridge-state.json` and `memory/observations/cursors.json` — are called out as
+  things that must *not* travel, since sharing them makes the other machine skip
+  work it never did.
+
+- **The retracted prefix claim was still on screen.** 0.69.0 corrected the
+  `allowed-tools` matcher story in the docs, but the falsified premise survived in
+  two preset rationales in `_permissions.py` — which render in the settings pane,
+  so it was being read as current — plus a test docstring and a bullet in the
+  settings guide. The `git diff` preset no longer claims its pair form is what
+  stops `git difftool --extcmd`, and the `mc-tool-memory` read-only preset no
+  longer justifies excluding `review` by a prefix hazard that doesn't exist. The
+  pair form itself stays, for the reasons 0.69.0 gave.
+
+- **The setup guide's update recipe was the bug `mait-code update` exists to fix.**
+  It said to `git pull` in the source clone. A bootstrap install pins that clone to
+  a release tag in detached HEAD, where `git pull` fails outright. `mait-code
+  update` now leads, with the hand-update path kept for development clones.
+
+- **Bedrock setup left `boto3` uninstalled.** The documented first step was
+  `mait-code install --embedding-provider bedrock`, which only records the choice
+  in settings — the extra comes from `scripts/install.sh`. Following it against an
+  existing install left the provider unavailable and search silently degraded to
+  keyword-only.
+
+- **Keys that don't exist, and commands that don't take the flags claimed.** The
+  memory browser and review queue both documented `j`/`k` navigation that only the
+  home hub binds — review.md went further and listed `j`/`k` as a *Skip* verb,
+  which is not one of the queue's verbs at all. Setup claimed most commands accept
+  `--claude-dir`/`--data-dir`; seven TUI subcommands accept neither. `uninstall`
+  was described as removing symlinks when it also removes the `mait-code` binary.
+  Also removed a documented `/observe` skill that was never built, and a direct
+  launch path for the Bridge editor that doesn't exist.
+
+- **Wrong constants throughout the memory documentation.** The composite score
+  formula omitted the scope boost in both the memory and architecture guides, and
+  mislabelled it a *relevance* multiplier when it scales the whole weighted base.
+  `procedure` and its 180-day class were missing from the entry-type and half-life
+  tables, the migration list stopped at 10 of 13, and hybrid search was documented
+  as scoring vector-only hits at a flat 0.3 when they keep their cosine similarity
+  — an error the function's own docstring carried too.
+
+- **Two logging claims contradicted by their own file.** `architecture.md` showed a
+  plain-text log sample abandoned when logging moved to JSON Lines, and credited
+  `RotatingFileHandler` where the code uses `TimedRotatingFileHandler` — both
+  contradicted elsewhere in the same document.
+
+### Changed
+
+- **Three shipped subsystems now have architecture coverage.** The Bridge, the
+  review queue and the start page had no section at all, and the system diagram was
+  missing `bridge/`, `cli/` and `tui/` entirely. The themed console that every CLI
+  surface prints through is documented alongside them.
+
+- **Development docs match what CI actually runs.** Lint and format commands cover
+  `src/ tests/` — narrowing them to `src/` passed locally and failed on the PR. The
+  CI description no longer claims a push trigger on `main` (removed in 0.65.0), and
+  now mentions the coverage gate and the dependency-audit job. The TUI count went
+  from six to ten, and the `uv sync --extra bedrock --group docs` combination is
+  spelled out, since syncing the docs group alone uninstalls `boto3` and re-breaks
+  the typecheck.
+
 ## [0.69.0] — 2026-08-01
 
 ### Fixed
@@ -2125,7 +2202,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.69.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.69.1...HEAD
+[0.69.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.1
 [0.69.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.0
 [0.68.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.68.0
 [0.67.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.67.0

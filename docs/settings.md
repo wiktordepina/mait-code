@@ -46,13 +46,13 @@ The categories:
 
 | Category | What's in it |
 |----------|--------------|
-| **General** | `data-dir` (where everything lives) and `theme`. |
+| **General** | `data-dir` (where everything lives), `theme`, and `dashboard-tile-timeout` — how many seconds a [start-page](home.md#the-start-page) shell tile may run before it's cut off (default `5`). |
 | **Bridge** | Whether the [Bridge](bridge.md) is `enabled`, and which channel it uses. (The channel's server/topics/token live in the Bridge screen, not here.) |
 | **Logging** | Log level, log file, and how many rotated backups to keep. |
 | **Embeddings** | The provider (`local` or `bedrock`), the model, and the Bedrock model id / region. |
 | **Models** | The extraction and reflection models, LLM and git timeouts, and reflection batch/novelty tuning. |
 | **Scoring & dedup** | The retrieval scoring weights and decay half-lives, the dedup similarity thresholds and scope boosts, and the [review-resurfacing](memory.md#review-keeping-curated-memory-fresh) threshold and importance floor. |
-| **Paths (derived)** | Read-only paths computed from `data-dir` — the database files, the model cache, the observations directory. |
+| **Paths (derived)** | Read-only values the editor computes rather than stores — the database files, the model cache, the observations directory, and the Bridge / project-alias / dashboard config paths, all from `data-dir`; plus `embedding-dim`, derived from the provider and model. |
 | **Custom env** | Arbitrary environment variables injected at startup — [covered below](#custom-environment-variables-the-env-table). |
 | **Tool approvals** | Curated Claude Code permission rules you can opt into, so the safe commands stop prompting — [covered below](#tool-approvals-safe-permission-presets). |
 
@@ -74,8 +74,9 @@ set of every installed theme, the current one marked.](assets/settings/settings-
   become an **input with live validation**: a bad value shows its error as you
   type, and *Apply* won't write it.
 - **Derived values** (everything under *Paths*) are **read-only** — they're
-  computed from `data-dir`, so the editor shows the value and says so rather than
-  pretending you can change it.
+  computed from other settings rather than stored, so the editor shows the value
+  and says so rather than pretending you can change it. Most follow `data-dir`;
+  `embedding-dim` follows the provider and model.
 
 Press `Ctrl+S` (or `Enter` in an input) to apply. A line under the editor
 confirms `✓ applied`, along with any warning the change carries.
@@ -226,8 +227,8 @@ by an argument is left out rather than shipped with a caveat:
 - `mc-tool-board next` — read-only until `--claim`, which claims a card.
 - `mc-tool-memory entities` — searches until `entities merge`, which rewrites
   the graph.
-- `mc-tool-memory review` — a prefix rule for it also spans `reviewed`, a
-  different, mutating subcommand.
+- `mc-tool-memory review` — kept out so the read-only tier stays clear of the
+  review write path (`reviewed` stamps a memory).
 - `mc-tool-inbox drain` and `mc-tool-reminders check`, which both mutate.
 
 A few presets *are* offered but flagged **not read-only** — `uv run ruff check`
@@ -262,6 +263,20 @@ The pair form stays regardless. It costs nothing, it says the intended boundary
 out loud instead of leaning on an undocumented matcher detail, and it still
 holds if a future release changes the rule. It just isn't the thing keeping a
 shell out of your `git diff` grant.
+
+Two other measured details are worth knowing before you write rules by hand:
+
+- **`Bash(cmd *)`, the older space form, is a real wildcard.** `Bash(git *)`
+  permits `git push`. It is not a safer spelling of `Bash(git:*)`.
+- **A grant buys unsandboxed execution, not merely a quiet prompt.** An ungranted
+  command Claude Code can contain runs in a filesystem-isolated sandbox with no
+  prompt at all, and its writes are discarded; uncontainable ones are refused
+  outright. So "no prompt appeared" is not evidence that a rule matched, and
+  narrowing a grant needn't break anything that only reads.
+
+Both are undocumented matcher behaviour pinned to 2.1.220 — see
+[Granting allowed-tools](development.md#granting-allowed-tools) for the full
+measurement.
 
 !!! note "Upgrading from before 0.68.0"
 
