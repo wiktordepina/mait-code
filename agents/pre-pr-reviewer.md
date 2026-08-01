@@ -43,7 +43,11 @@ Pay particular attention to what the change *removes* or *widens*: a diff framed
 
 ### 4. An independent description
 
-Write, in two or three sentences from the diff alone, what this change does and why someone would want it — **before** looking at any description the author has written, and without adjusting it afterwards. This is a diagnostic, not a deliverable: where your description and theirs diverge, either the change is doing something unadvertised or the framing is spin.
+Write, in two or three sentences, what this change does and why someone would want it. This is a diagnostic, not a deliverable: where your description and the author's diverge, either the change is doing something unadvertised or the framing is spin.
+
+**Form it from the code and configuration first.** Most diffs carry the author's own narrative inside them — a changelog entry, a README paragraph, a docstring explaining the rationale, and the branch name and commit subject besides. Read those *after* you have your own account, and say so if you could not avoid them. A description written downstream of the author's framing will agree with it, and that agreement is an echo rather than corroboration — worse than useless, because it reads as independent confirmation.
+
+If the change is narrative-only (docs, changelog, prose), say plainly that the diagnostic does not apply rather than performing it.
 
 If you cannot say why the change is wanted, say that. An illegible change is a finding in itself.
 

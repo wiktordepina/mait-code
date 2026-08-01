@@ -1,7 +1,7 @@
 ---
 name: pre-pr-review
 description: Run an independent, zero-context review of the current branch before opening a pull request. Use when you ask for a pre-PR review, a cold second opinion on a branch, or want changes scrutinised before pushing or requesting a merge.
-allowed-tools: Bash(git log:*), Bash(git diff:*), Bash(git status:*), Bash(git branch --show-current)
+allowed-tools: Bash(git log --oneline:*), Bash(git diff --stat:*), Bash(git status --porcelain:*), Bash(git branch --show-current)
 ---
 
 # /pre-pr-review
@@ -14,17 +14,17 @@ Branch:
 
 !`git branch --show-current`
 
-Commits vs main (empty means nothing to review):
+Commits vs main — an error here means this repo's trunk is not `main` (see step 1):
 
-!`git log --oneline -30 main..HEAD 2>/dev/null`
+!`git log --oneline -30 main..HEAD`
 
 Diff stat:
 
-!`git diff --stat main...HEAD 2>/dev/null`
+!`git diff --stat main...HEAD`
 
 Uncommitted changes (these are *not* reviewed):
 
-!`git status --porcelain 2>/dev/null`
+!`git status --porcelain`
 
 ## Why this exists
 
@@ -53,11 +53,17 @@ skill exists to prevent.
 
 ## Instructions
 
-1. **Check the range is worth reviewing.** Read the state above. If there are no
-   commits ahead of `main`, say so and stop. If the diff is trivial (a handful of
-   lines, a docs typo, a version bump), say plainly that a full review costs roughly
-   100k tokens and ten-plus minutes, and ask whether they want it anyway rather than
-   spending that by default.
+1. **Establish the base ref, then check the range is worth reviewing.** The blocks
+   above assume the trunk is `main`. If they show a `fatal: ambiguous argument
+   'main'`, this repo's trunk is something else (`master`, `develop`, a fork's
+   upstream) — find it and re-run the range against that instead. Never read an
+   error, or a suppressed one, as "no commits to review": a silent false negative
+   here tells the user their branch is empty when it is full of work.
+
+   Once the range resolves: if there really are no commits ahead of the base, say so
+   and stop. If the diff is trivial (a handful of lines, a docs typo, a version
+   bump), say plainly what a review costs and ask whether they want it anyway,
+   rather than spending that by default.
 
 2. **Warn on a dirty tree.** The review covers `main...HEAD` — committed work only.
    If `git status --porcelain` is non-empty, tell the user exactly which files are
@@ -67,7 +73,16 @@ skill exists to prevent.
 3. **Spawn one `pre-pr-reviewer` agent** via the Agent tool
    (`subagent_type: "pre-pr-reviewer"`, `run_in_background: false`). A fresh Agent
    call inherits no context — do not use `SendMessage` to an existing agent, which
-   would defeat the purpose. The prompt should carry only:
+   would defeat the purpose.
+
+   **If that agent type does not resolve, stop and say so.** The registry is read at
+   session start, so a freshly installed agent is not available until Claude Code
+   restarts. Do not quietly fall back to `general-purpose` with the brief pasted in:
+   that agent holds no tool restriction, so the reviewer would run with write access
+   while the user believes it is read-only. Offer the restart, or ask explicitly
+   before running the degraded version.
+
+   The prompt should carry only:
 
    - the absolute repository path
    - the diff range (`main...HEAD`) and how to read it
@@ -92,19 +107,30 @@ skill exists to prevent.
    and a reviewer who cannot say *why* the change is wanted has found a real problem
    with its legibility.
 
+   Discount agreement in proportion to how much of your own narrative the diff
+   carries. A branch that adds a changelog entry, a README section or an explanatory
+   docstring has handed the reviewer your framing inside the very thing it is
+   reviewing; matching descriptions then prove nothing. Say so when reporting, rather
+   than counting it as confirmation.
+
 7. **Propose what to act on.** Separate merge-blockers from follow-up material,
    recommend which is which, and let the user decide. Offer to fix the blockers;
    offer to add the rest to the board.
 
 ## Notes
 
-- **The `allowed-tools` patterns are deliberately narrow.** `log`, `diff` and
-  `status` take a `:*` wildcard because none of them has a mutating flag — the same
-  reasoning that put them in the tool-approval catalogue. `git branch` does **not**
-  get a wildcard: `Bash(git branch:*)` would also permit `git branch -D`, which
-  deletes branches. It is pinned to the single exact invocation this skill runs.
-  Prefix rules cannot express "this subcommand but not that flag", so anything with
-  a destructive flag has to be spelled out in full or left out.
+- **The `allowed-tools` patterns are deliberately narrow**, and each wildcard
+  includes a flag rather than stopping at the subcommand. That is not fussiness:
+  prefix rules have no word boundary, so `Bash(git diff:*)` also spans
+  `git difftool --extcmd=<anything>`, which executes an arbitrary command per
+  changed file. `Bash(git diff --stat:*)` does not. Likewise `Bash(git branch:*)`
+  would permit `git branch -D`, so `git branch` is pinned to the one exact
+  invocation this skill runs.
+
+  The rule of thumb: extend the prefix far enough that no dangerous sibling command
+  shares it. Verify with `perms.matches_command` against `perms.MUTATING_INVOCATIONS`
+  rather than by eye — `git difftool` is not in that list, so the guard test alone
+  will not save you.
 
   This skill needs to *read* the repository, never to change it. If a future edit
   seems to need `Bash(git *)`, that is a sign the skill has grown a job it should
@@ -121,8 +147,10 @@ skill exists to prevent.
 - **Session-only by default.** Nothing goes to GitHub — no review, no comment, no
   approval — unless the user explicitly asks for that afterwards. A cold review is
   for the author's benefit first.
-- **Cost is real.** Roughly 100k+ subagent tokens and ten to fifteen minutes for a
-  substantial branch. That is worth it before a merge you cannot easily walk back;
-  it is not worth it on every commit.
+- **Cost is real, and scales with the diff.** Two measured runs: a ~950-line source
+  change took ~113k subagent tokens and ~14 minutes; a ~280-line docs-and-config
+  change took ~63k and ~6. Budget accordingly rather than assuming the high end —
+  the mid-sized branches are the cheapest and often the most worthwhile. It is worth
+  it before a merge you cannot easily walk back; it is not worth it per commit.
 - **A clean review is a result, not a failure.** If the reviewer finds nothing, say
   so plainly rather than manufacturing concerns to justify the run.

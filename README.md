@@ -17,7 +17,7 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 - **CLI Tools** — Memory, reminders, a cross-project kanban board, a quick-capture inbox, and web fetch (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-board`, `mc-tool-inbox`, `mc-tool-web-fetch`)
 - **TUIs** — Full-screen Textual apps sharing one house theme: the home hub (`mait-code home`, or just `mait-code` on a terminal) with a user-authored start page of widget and shell-command tiles, the kanban board (`mait-code board`), the settings editor (`mait-code settings`), and the read-only memory browser (`mait-code memory`), observations browser (`mait-code observations`), knowledge-graph explorer (`mait-code graph`) and log viewer (`mait-code logs`)
 - **Home Hub** — A tree-navigable front door to the board, memory, reminders, inbox, identity and system health, with live status badges; press Enter to jump into the board, memory browser, observations browser, settings editor or log viewer, plus a system prompt view showing exactly what the companion is presented with at session start
-- **Skills** — Slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), web fetch (`/web-fetch`), and workflow (`/commit`)
+- **Skills** — Slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), web fetch (`/web-fetch`), and workflow (`/commit`, `/pre-pr-review`)
 
 ## Quick Start
 
@@ -86,7 +86,7 @@ mait-code/
 ├── templates/            # Identity templates
 ├── scripts/              # Install/uninstall scripts
 ├── skills/               # Skill definitions
-├── agents/               # Agent definitions (pre-pr-reviewer)
+├── agents/               # Agent definitions
 └── docs/                 # Documentation
 ```
 
