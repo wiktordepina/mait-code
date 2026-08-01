@@ -329,17 +329,41 @@ persistence is free — `MaitApp.on_unmount` writes the active theme back to the
 
 ### Granting `allowed-tools`
 
-Grant the narrowest set covering the commands the skill actually runs. `<cmd>:*`
-rules are **raw string prefixes with no word boundary**, which is sharper than it
-looks:
+Grant the narrowest set covering the commands the skill actually runs.
 
-- `Bash(git diff:*)` also matches `git difftool --extcmd=<anything>`, which runs an
-  arbitrary command per changed file.
-- `Bash(git branch:*)` also matches `git branch -D`.
+<a id="allowed-tools-semantics"></a>
 
-Extend each prefix past the subcommand until no dangerous sibling shares it —
-`Bash(git diff --stat:*)` — or pin to an exact invocation with no `:*` at all.
-Check your patterns mechanically rather than by eye:
+There are three grant forms. Their behaviour was measured against **Claude Code
+2.1.220** by giving a throwaway project a single `permissions.allow` entry and
+running `claude -p` (headless denies instead of prompting):
+
+| form | meaning | example |
+| --- | --- | --- |
+| `Bash(cmd)` | exact match only | `Bash(git push)` refuses `git push --dry-run` |
+| `Bash(cmd:*)` | prefix match **at a token boundary** | `Bash(git push:*)` permits `git push --dry-run`, refuses `git pushfoo` |
+| `Bash(cmd *)` | the older space form — a real wildcard, identical to `cmd:*` on every case tested | `Bash(git *)` permits `git push`, refuses `gitfoo` |
+
+Two consequences worth internalising:
+
+- **The space form is not narrow.** `Bash(mc-tool-board *)` permits
+  `mc-tool-board remove`, not just the read-only subcommands. It is a wildcard,
+  not a literal.
+- **A boundary is not a subcommand.** Everything after the boundary is
+  permitted, flags included, so `Bash(git branch:*)` does span `git branch -D`.
+  Narrowing has to happen inside the prefix: `Bash(git diff --stat:*)`, or an
+  exact invocation with no wildcard at all.
+
+What `:*` does **not** do is span into a longer token —
+`Bash(git diff:*)` refuses `git difftool --extcmd=<anything>`. Earlier revisions
+of this page claimed the opposite; that claim was tested and is false on 2.1.220.
+
+Separately, Claude Code auto-approves some read-only commands (`git status`,
+`git diff --stat`) regardless of `permissions.allow`, so a grant for one of
+those may be doing nothing at all.
+
+All of the above is pinned to 2.1.220 and is undocumented matcher behaviour — a
+future release could change it, so prefer prefixes that would still be safe if
+the boundary were dropped. Check your patterns mechanically rather than by eye:
 
 ```python
 from mait_code.cli import _permissions as perms
@@ -347,9 +371,9 @@ bad = [(p, c) for p in MY_PATTERNS for c in perms.MUTATING_INVOCATIONS
        if perms.matches_command(p, c)]
 ```
 
-`MUTATING_INVOCATIONS` is a floor, not a proof — it has no `git difftool` entry, so
-a clean result means "no *known* mutating command is permitted", not "safe". Think
-about siblings the list does not cover.
+`MUTATING_INVOCATIONS` is a floor, not a proof — a clean result means "no *known*
+mutating command is permitted", not "safe". Think about siblings the list does not
+cover.
 
 `skills/pre-pr-review/SKILL.md` is the worked example.
 

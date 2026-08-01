@@ -246,21 +246,29 @@ those commands per session.
 ### Why every rule comes in pairs
 
 Enable a preset and you'll see two rules written, not one — `Bash(git diff)` and
-`Bash(git diff :*)`. The trailing space is doing real work.
+`Bash(git diff :*)` — the bare invocation and anything with arguments.
 
-Claude Code matches permission rules by string prefix, with no word boundary, so
-`Bash(git diff:*)` also matches `git difftool --extcmd=<anything>` — which runs an
-arbitrary command once per changed file. The same trap caught three other presets:
-`stat` reached `static-sh` (a shell), `tail` reached `tailscale`, and `file`
-reached `file-roller`. Whether any of those bite depends on what happens to be
-installed on the machine, which is exactly why the rules are shaped so the
-question never arises.
+The original reason was defensive: the rules were shaped on the belief that
+Claude Code matched by raw string prefix with no word boundary, which would have
+let `Bash(git diff:*)` reach `git difftool --extcmd=<anything>` — an arbitrary
+command per changed file — and `stat` reach `static-sh`, `tail` reach
+`tailscale`, `file` reach `file-roller`.
+
+That belief was tested against Claude Code 2.1.220 and turned out to be wrong:
+`:*` already stops at a token boundary, so `Bash(git diff:*)` refuses
+`git difftool`. None of those four escapes exist on this version.
+
+The pair form stays regardless. It costs nothing, it says the intended boundary
+out loud instead of leaning on an undocumented matcher detail, and it still
+holds if a future release changes the rule. It just isn't the thing keeping a
+shell out of your `git diff` grant.
 
 !!! note "Upgrading from before 0.68.0"
 
-    Rules already in your `~/.claude/settings.json` keep their old unbounded form.
-    Disable and re-enable a preset to rewrite it — worth doing if you enabled
-    **file / stat** or **head / tail**.
+    Rules already in your `~/.claude/settings.json` keep their older form.
+    Disable and re-enable a preset to rewrite it. On 2.1.220 this is tidiness
+    rather than a fix — the boundary the rewrite adds is one the matcher was
+    already applying.
 
 Writes are surgical: your own hand-written rules keep their place and their
 order, unrelated keys are preserved, and the file is backed up (once per
