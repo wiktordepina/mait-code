@@ -2,7 +2,7 @@
 name: memory-store
 description: Store observations to memory when you learn something new about the user, their preferences, projects, or technical decisions. Use proactively after learning new facts.
 user-invocable: false
-allowed-tools: Bash(mc-tool-memory store *), Bash(mc-tool-memory supersede *)
+allowed-tools: Bash(mc-tool-memory store:*), Bash(mc-tool-memory supersede:*)
 ---
 
 # Memory Store

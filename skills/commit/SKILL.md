@@ -1,7 +1,7 @@
 ---
 name: commit
 description: Commit changes with a generated conventional-commit message, after confirming with you. Use whenever you ask to commit, check in, or save changes — invoke this instead of running git commit directly, so messages stay conventional.
-allowed-tools: Bash(git *)
+allowed-tools: Bash(git status --porcelain:*), Bash(git diff --stat:*), Bash(git diff --cached:*), Bash(git ls-files --others --exclude-standard:*), Bash(git add:*), Bash(git commit -m:*), Bash(git commit -F:*)
 ---
 
 # /commit

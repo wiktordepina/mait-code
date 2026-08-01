@@ -10,6 +10,61 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.69.0] — 2026-08-01
+
+### Fixed
+
+- **Skill permissions no longer grant far more than the skill uses.** Claude
+  Code's `Bash(cmd *)` pattern is a real wildcard, which had been assumed but
+  never confirmed — so the grants in skill frontmatter were exactly as wide as
+  they looked. `/commit` held an unrestricted `Bash(git *)`, covering `push`,
+  `reset --hard` and `clean -fdx`. `/recall`, which only searches, could
+  `delete`, `retire` and `reindex` the memory store. `/reminders`, which shows
+  reminders, could set and dismiss them.
+
+  Every skill now grants only the subcommands it invokes. Two things are
+  deliberately left out: `mc-tool-board remove`, which the board's own docs call
+  destructive and unrecoverable, and `git commit --amend`. Ask for either and it
+  still happens — you just get a permission prompt first, which is the point.
+
+  A new guard (`tests/test_skill_grants.py`) fails the build if a grant ever
+  widens back out.
+
+- **`matches_command` now models the space form.** It treated anything without a
+  trailing `:*` as an exact string match, so it reported that `Bash(git *)`
+  permits nothing at all. It permits `git push`. Any audit run through it before
+  now understated what the skills could do.
+
+### Changed
+
+- **The prefix hazard behind 0.68.0 was overstated, and the docs now say so.**
+  That release described `Bash(cmd:*)` as a raw string prefix with no word
+  boundary, and listed four escapes it supposedly opened: `git diff` reaching
+  `git difftool --extcmd=<cmd>`, `stat` reaching `static-sh`, `tail` reaching
+  `tailscale`, `file` reaching `file-roller`.
+
+  Measured against Claude Code 2.1.220, that premise is wrong. `:*` stops at a
+  token boundary on its own — `Bash(git diff:*)` refuses `git difftool` — so
+  none of those four escapes existed. What a `:*` rule *does* permit is any
+  continuation after the boundary, flags included, so `Bash(git branch:*)` does
+  reach `git branch -D`; narrowing has to happen inside the prefix.
+
+  The paired `Bash(cmd)` / `Bash(cmd :*)` shape stays. It costs nothing and
+  holds if a future version changes the rule — it simply was never the thing
+  standing between the catalogue and arbitrary code execution.
+
+- **A grant buys unsandboxed execution, not merely a quiet prompt.** An
+  ungranted command that Claude Code can contain runs in a filesystem-isolated
+  sandbox with no prompt, and its writes are discarded — `touch marker.txt`
+  reported success and created nothing under an unrelated rule. Uncontainable
+  commands are still refused outright. This is why the grants above could be
+  narrowed so aggressively: read-only paths keep working regardless.
+
+  Recorded in `docs/development.md`, along with the matcher being operator-aware
+  (it decomposes `a || b` and requires both parts to be permitted). All of it is
+  undocumented behaviour pinned to 2.1.220, so prefer prefixes that stay safe if
+  it changes.
+
 ## [0.68.0] — 2026-08-01
 
 ### Fixed
@@ -2070,7 +2125,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.68.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.69.0...HEAD
+[0.69.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.0
 [0.68.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.68.0
 [0.67.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.67.0
 [0.66.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.66.0

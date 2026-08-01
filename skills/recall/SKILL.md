@@ -2,7 +2,7 @@
 name: recall
 description: Search memory for past facts, decisions, patterns, and preferences. Use when the user asks about something previously discussed or stored.
 argument-hint: "<query>"
-allowed-tools: Bash(mc-tool-memory *)
+allowed-tools: Bash(mc-tool-memory search:*), Bash(mc-tool-memory list:*)
 ---
 
 # /recall

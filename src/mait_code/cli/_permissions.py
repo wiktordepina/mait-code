@@ -36,41 +36,38 @@ The UI says so at the point of opting in; restoring the capability properly
 means an explicit ``--project <path>`` argument, a named target rather than an
 inherited one.
 
-**The prefix hazard.** A ``Bash(<prefix>:*)`` rule is a *raw string prefix*
-match, so it cannot express "this subcommand but not that flag" — and it does
-not respect word boundaries. Two consequences drive what is in the catalogue:
+**The prefix hazard.** A ``Bash(<prefix>:*)`` rule permits any continuation
+after the prefix, so it cannot express "this subcommand but not that flag".
+Two consequences drive what is in the catalogue:
 
 * ``Bash(mc-tool-board next:*)`` would also permit ``next --claim``, which
   claims a card; ``Bash(mc-tool-memory entities:*)`` would permit
   ``entities merge``, which rewrites the graph. Both are excluded.
-* ``Bash(mc-tool-memory review:*)`` would also permit ``mc-tool-memory
-  reviewed``, a *different, mutating* subcommand that merely shares a prefix.
-  Excluded for the same reason, despite reading as safe.
+* ``Bash(git branch:*)`` would also permit ``git branch -D``. A flag is a
+  continuation like any other, so narrowing has to happen in the prefix itself.
 
-**The trailing space is load-bearing.** Every pattern here is written as a pair —
-``Bash(cmd)`` for the bare invocation and ``Bash(cmd :*)`` for anything with
-arguments — because the space at the end of the prefix is the only thing that
-restores the word boundary the matcher lacks. Without it a rule is hostage to
-whatever else happens to be installed on the machine, and the sibling is often
-far more dangerous than the command being approved:
+**The boundary is native, and the trailing space is belt-and-braces.** Every
+pattern here is written as a pair — ``Bash(cmd)`` for the bare invocation and
+``Bash(cmd :*)`` for anything with arguments. The original rationale was that
+``:*`` was a *raw* string prefix, so ``Bash(git diff:*)`` would also reach
+``git difftool --extcmd=<cmd>`` and the trailing space was the only thing
+restoring a word boundary.
 
-===================  ==========================================================
-Innocent prefix      What it also reached, before the boundary
-===================  ==========================================================
-``git diff``         ``git difftool --extcmd=<cmd>`` — runs a command per file
-``stat``             ``static-sh -c <cmd>`` — a shell
-``tail``             ``tailscale up`` / ``logout`` — reconfigures a VPN
-``file``             ``file-roller --extract-to`` — writes archives to disk
-===================  ==========================================================
+Measurement against Claude Code 2.1.220 falsified that premise: ``:*`` respects
+a token boundary on its own. ``Bash(git diff:*)`` refuses ``git difftool``, and
+``Bash(git branch:*)`` refuses ``git branchfoo`` while still permitting
+``git branch -D``. The ``difftool`` escape does not exist on this version.
 
-Which of those exist varies by machine, which is exactly why the fix is
-structural rather than a list of exclusions. New presets must follow the same
-shape; :data:`MUTATING_INVOCATIONS` carries a concrete example of each so the
+The pair form is kept anyway. It costs nothing, it states the intended boundary
+explicitly rather than relying on an undocumented matcher detail, and it holds
+if a future version changes the rule. What it is *not* is the thing standing
+between the catalogue and arbitrary code execution.
+:data:`MUTATING_INVOCATIONS` carries a concrete example of each shape so the
 guard test fails if the boundary is ever dropped.
 
-:func:`matches_command` implements the permissive (raw-prefix) reading
-deliberately: the catalogue is guarded against the worst case a real matcher
-might do, not the best case.
+:func:`matches_command` models the measured semantics, staying pessimistic only
+where measurement ran out — the catalogue is guarded against the worst case a
+real matcher might plausibly do, not the friendliest.
 """
 
 from __future__ import annotations
@@ -576,21 +573,45 @@ def allow_rules(path: Path) -> tuple[str, ...]:
 def matches_command(pattern: str, command: str) -> bool:
     """Return ``True`` if a ``Bash(...)`` *pattern* would permit *command*.
 
-    Implements the permissive reading of Claude Code's prefix matching: a
-    ``:*`` suffix matches any command whose text starts with the prefix, with
-    **no word-boundary requirement**. That is what makes
-    ``Bash(mc-tool-memory review:*)`` dangerous — it also spans ``reviewed``.
-    Modelling the worst case here means the catalogue guard in the test suite
-    rejects such a pattern instead of trusting a friendlier matcher.
+    Models the three grant forms as measured against Claude Code 2.1.220 (the
+    method and results are recorded under "Granting ``allowed-tools``" in
+    ``docs/development.md``):
 
-    Non-``Bash(...)`` patterns never match; a pattern without ``:*`` matches
-    only the exact command.
+    - ``Bash(cmd)`` — exact match only. ``Bash(git push)`` does not permit
+      ``git push --dry-run``.
+    - ``Bash(cmd:*)`` — prefix match **at a token boundary**. It permits any
+      continuation after the boundary, so ``Bash(git branch:*)`` does span
+      ``git branch -D``; it does not permit a longer token, so ``git branchfoo``
+      is refused.
+    - ``Bash(cmd *)`` — the older space form. Indistinguishable from ``cmd:*``
+      on every probe pair tested, and modelled identically here. It is a real
+      wildcard, not the literal text ``cmd *``: ``Bash(git *)`` permits
+      ``git push``.
+
+    The boundary test itself is deliberately pessimistic where measurement ran
+    out. A continuation starting with an alphanumeric or ``_`` is treated as
+    the same token (refused, as observed); anything else is treated as a new
+    token (permitted), which over-matches rather than under-matches so the
+    catalogue guard errs toward rejecting a pattern.
+
+    Shell operators are not modelled. The real matcher decomposes a compound
+    command and requires every part to be permitted — ``Bash(git push:*)``
+    refuses ``git push --dry-run || git commit -m x`` — so treating the whole
+    string as one command over-matches here, which is the safe direction for a
+    guard.
+
+    Non-``Bash(...)`` patterns never match.
     """
     if not (pattern.startswith("Bash(") and pattern.endswith(")")):
         return False
     body = pattern[len("Bash(") : -1]
-    if body.endswith(":*"):
-        return command.startswith(body[: -len(":*")])
+    for suffix in (":*", " *"):
+        if body.endswith(suffix):
+            prefix = body[: -len(suffix)]
+            if not command.startswith(prefix):
+                return False
+            rest = command[len(prefix) :]
+            return not rest or not (rest[0].isalnum() or rest[0] == "_")
     return command == body
 
 

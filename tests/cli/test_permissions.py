@@ -107,19 +107,58 @@ def test_preset_groups_preserve_catalogue_order() -> None:
         ("Bash(git status:*)", "git status", True),
         ("Bash(git status:*)", "git status --short", True),
         ("Bash(git status:*)", "git stash", False),
-        # The word-boundary hazard the catalogue is curated around: a raw
-        # prefix spans into a longer, different subcommand.
-        ("Bash(mc-tool-memory review:*)", "mc-tool-memory reviewed 3", True),
         ("Bash(mc-tool-memory search:*)", "mc-tool-memory store x", False),
-        # No wildcard means exact match only.
+        # No wildcard means exact match only. Measured: Bash(git push) refuses
+        # git push --dry-run.
         ("Bash(wc)", "wc", True),
         ("Bash(wc)", "wc -l file", False),
         # Non-Bash rules are none of this module's business.
         ("Read(~/**)", "git status", False),
+        # --- measured against Claude Code 2.1.220 -------------------------
+        # `:*` stops at a token boundary; it does not span into a longer
+        # subcommand. This pair replaces an earlier raw-prefix assumption
+        # that claimed the opposite.
+        ("Bash(mc-tool-memory review:*)", "mc-tool-memory reviewed 3", False),
+        ("Bash(git diff:*)", "git difftool --extcmd=sh", False),
+        ("Bash(git branch:*)", "git branchfoo", False),
+        # ...but any continuation *after* the boundary is permitted, flags
+        # included — which is why narrowing must happen in the prefix.
+        ("Bash(git branch:*)", "git branch -D main", True),
+        # The space form is a real wildcard, not the literal text "git *".
+        ("Bash(git *)", "git push origin main", True),
+        ("Bash(git *)", "git status", True),
+        ("Bash(git *)", "gitfoo", False),
+        ("Bash(mc-tool-board *)", "mc-tool-board remove 1", True),
+        # Space and colon forms were indistinguishable on every probe pair,
+        # including the bare command with no arguments.
+        ("Bash(git push *)", "git push", True),
+        ("Bash(git push:*)", "git push", True),
+        ("Bash(git push *)", "git pushfoo", False),
+        ("Bash(git push:*)", "git pushfoo", False),
     ],
 )
 def test_matches_command(pattern: str, command: str, expected: bool) -> None:
     assert perms.matches_command(pattern, command) is expected
+
+
+def test_space_and_colon_forms_agree() -> None:
+    """Measured equivalence: `cmd *` and `cmd:*` behaved identically throughout.
+
+    Pinned as a property so a future change to one form cannot silently
+    diverge from the other.
+    """
+    commands = [
+        "git push",
+        "git push --dry-run",
+        "git pushfoo",
+        "git status",
+        "gitfoo",
+    ]
+    for prefix in ("git", "git push"):
+        for command in commands:
+            space = perms.matches_command(f"Bash({prefix} *)", command)
+            colon = perms.matches_command(f"Bash({prefix}:*)", command)
+            assert space == colon, f"{prefix!r} disagreed on {command!r}"
 
 
 # ---------------------------------------------------------------------------
