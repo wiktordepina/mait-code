@@ -20,6 +20,7 @@ from textual.widgets import Button, Input, RadioButton, RadioSet, Static, Tree
 
 from mait_code import config
 from mait_code.cli import _permissions as perms
+
 from mait_code.cli._settings_tui import (
     _ENV_ADD_KEY,
     _ENV_GROUP_LABEL,
@@ -30,6 +31,9 @@ from mait_code.cli._settings_tui import (
     SettingsApp,
     _leaf_label,
 )
+
+_GIT_STATUS = perms.preset_by_id("git-status").patterns
+_HEAD_TAIL = perms.preset_by_id("head-tail").patterns
 
 
 def _run(coro_factory):
@@ -688,7 +692,8 @@ class TestToolApprovals:
                 return rules, target
 
         rules, target = _run(scenario)
-        assert "Bash(git status:*)" in rules
+        for pattern in _GIT_STATUS:
+            assert pattern in rules
         assert "~/.claude/settings.json" in target
 
     def test_detail_offers_no_scope_picker(self, fake_home: Path) -> None:
@@ -761,7 +766,7 @@ class TestToolApprovals:
         document = json.loads(
             (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
         )
-        assert document["permissions"]["allow"] == ["Bash(git status:*)"]
+        assert document["permissions"]["allow"] == list(_GIT_STATUS)
 
     def test_enable_ignores_the_working_directory(
         self, fake_home: Path, tmp_path: Path, monkeypatch
@@ -791,7 +796,7 @@ class TestToolApprovals:
         _run(scenario)
         assert json.loads(
             (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
-        )["permissions"]["allow"] == ["Bash(git status:*)"]
+        )["permissions"]["allow"] == list(_GIT_STATUS)
         # The repo's own file is untouched, and no committed file was created.
         assert json.loads(
             (repo / ".claude" / "settings.local.json").read_text(encoding="utf-8")
@@ -817,7 +822,7 @@ class TestToolApprovals:
         path = fake_home / ".claude" / "settings.json"
         path.parent.mkdir(parents=True)
         path.write_text(
-            '{"permissions": {"allow": ["Bash(head:*)"]}}', encoding="utf-8"
+            json.dumps({"permissions": {"allow": [_HEAD_TAIL[0]]}}), encoding="utf-8"
         )
 
         async def scenario():
@@ -846,7 +851,7 @@ class TestToolApprovals:
         document = json.loads(
             (fake_home / ".claude" / "settings.json").read_text(encoding="utf-8")
         )
-        assert document["permissions"]["allow"] == ["Bash(git status:*)"]
+        assert document["permissions"]["allow"] == list(_GIT_STATUS)
 
     def test_disable_confirms_then_removes(self, fake_home: Path) -> None:
         self._reset()

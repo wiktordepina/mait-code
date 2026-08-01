@@ -243,6 +243,25 @@ wider reach than the same preset had when 0.66.0 defaulted to a per-repo file.
 If that's not a trade you want, leave the not-read-only presets off and approve
 those commands per session.
 
+### Why every rule comes in pairs
+
+Enable a preset and you'll see two rules written, not one — `Bash(git diff)` and
+`Bash(git diff :*)`. The trailing space is doing real work.
+
+Claude Code matches permission rules by string prefix, with no word boundary, so
+`Bash(git diff:*)` also matches `git difftool --extcmd=<anything>` — which runs an
+arbitrary command once per changed file. The same trap caught three other presets:
+`stat` reached `static-sh` (a shell), `tail` reached `tailscale`, and `file`
+reached `file-roller`. Whether any of those bite depends on what happens to be
+installed on the machine, which is exactly why the rules are shaped so the
+question never arises.
+
+!!! note "Upgrading from before 0.68.0"
+
+    Rules already in your `~/.claude/settings.json` keep their old unbounded form.
+    Disable and re-enable a preset to rewrite it — worth doing if you enabled
+    **file / stat** or **head / tail**.
+
 Writes are surgical: your own hand-written rules keep their place and their
 order, unrelated keys are preserved, and the file is backed up (once per
 session, as `settings.json.bak-<timestamp>`) before the first change. A settings

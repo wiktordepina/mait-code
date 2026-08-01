@@ -12,6 +12,36 @@ don't change the public surface. Everything is still in flux.
 
 ## [0.68.0] — 2026-08-01
 
+### Fixed
+
+- **Tool-approval presets no longer reach dangerous look-alike commands.** Every
+  pattern in the catalogue was a raw string prefix, and raw prefixes have no word
+  boundary — so a preset labelled **read-only** could permit a wholly different
+  program that merely shared its opening characters:
+
+  | Preset | Prefix | Also permitted |
+  |---|---|---|
+  | `git diff` | `Bash(git diff:*)` | `git difftool --extcmd=<cmd>` — runs a command per changed file |
+  | `file / stat` | `Bash(stat:*)` | `static-sh -c <cmd>` — a shell |
+  | `head / tail` | `Bash(tail:*)` | `tailscale up`, `tailscale logout` |
+  | `file / stat` | `Bash(file:*)` | `file-roller --extract-to` |
+
+  Which of those exist depends on what is installed, so the fix is structural
+  rather than a list of exclusions: every pattern is now a pair — `Bash(cmd)` for
+  the bare invocation and `Bash(cmd :*)` for anything with arguments — where the
+  trailing space supplies the missing boundary. Two new tests pin the shape, and
+  `MUTATING_INVOCATIONS` gained a concrete example of each hazard so the guard
+  fails if a boundary is ever dropped.
+
+  Enabled presets are rewritten on next toggle; rules already written to
+  `~/.claude/settings.json` by an earlier version keep the old unbounded form
+  until you disable and re-enable them. Worth doing if you enabled `file / stat`
+  or `head / tail`.
+
+  Side effect: `ls` no longer incidentally covers `lsof`/`lsblk`, and `git show`
+  no longer covers `show-ref`/`show-branch`. Both were accidents of prefix
+  matching rather than intent, and the rationales said so.
+
 ### Added
 
 - **`/pre-pr-review` — an independent review of the current branch, by a reviewer that has seen none of the session's conversation.**
