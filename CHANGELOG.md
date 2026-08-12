@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.69.2] — 2026-08-12
+
 ### Fixed
 
 - **`/pre-pr-review` assumed every repo's trunk is called `main`.** It was, and it
@@ -2231,7 +2233,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.69.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.69.2...HEAD
+[0.69.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.2
 [0.69.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.1
 [0.69.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.0
 [0.68.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.68.0
