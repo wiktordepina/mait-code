@@ -209,7 +209,7 @@ conversation.
 
 **Usage:**
 ```
-/pre-pr-review                   # Review main...HEAD before opening a PR
+/pre-pr-review                   # Review origin/HEAD...HEAD before opening a PR
 ```
 
 **Why it exists:**
@@ -220,7 +220,10 @@ intent was right. A reviewer with no context checks the second thing.
 
 **How it works:**
 
-1. Preprocesses the branch name, commits vs `main`, diff stat, and uncommitted files
+1. Preprocesses the branch name, the base ref, commits vs that base, diff stat, and
+   uncommitted files. The base comes from `origin/HEAD` — the branch the remote calls
+   default — so a trunk named `master` or `develop` works untouched, and a local trunk
+   lagging behind the remote cannot drag old commits into the review
 2. Warns which files are dirty and therefore *not* under review, then spawns one
    `pre-pr-reviewer` agent (see [Agents](#agents)) with a deliberately bare prompt —
    repository path, diff range, and the brief, and nothing about why the change was
@@ -268,11 +271,19 @@ wrong problem, saying so is more useful than a tidy review of a bad idea. It is 
 to distrust green CI, on the grounds that the tests were written by whoever wrote the
 bug.
 
-**Read-only, with a caveat.** The definition forbids writes, mutating git commands
-and any `gh` write. But agent frontmatter lists tool *names*, not permission
-patterns, and the reviewer needs a real shell to run tests and typecheckers — so the
-constraint is enforced by instruction plus the usual permission prompts, not
-mechanically. If it asks to run something that writes, that is a bug in the review.
+**Read-only, with two caveats.** The definition forbids mutating git commands, any
+`gh` write, and changing or deleting any file the reviewer did not itself create.
+But agent frontmatter lists tool *names*, not permission patterns, and the reviewer
+needs a real shell to run tests and typecheckers — so the constraint is enforced by
+instruction plus the usual permission prompts, not mechanically.
+
+The second caveat is that read-only is not write-*never*. A reviewer running a repro
+script has to put it somewhere, and its scratchpad is shared with the session that
+spawned it — so an unqualified "don't write" leaves it either hobbled or quietly
+overwriting the author's scratch files. The brief instead sends it to a `mktemp -d`
+directory of its own, off-limits to everything else, and bars writing into the
+repository at all so nothing it does can surface in `git status`. A write inside its
+own directory is expected; a write anywhere else is a bug in the review.
 
 ## Skill Architecture
 
