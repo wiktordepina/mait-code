@@ -1,7 +1,7 @@
 ---
 name: pre-pr-review
 description: Run an independent review of the current branch by a reviewer that has seen none of this session's conversation, before opening a pull request. Use when you ask for a pre-PR review, a cold second opinion on a branch, or want changes scrutinised before pushing or requesting a merge.
-allowed-tools: Bash(git log --oneline:*), Bash(git diff --stat:*), Bash(git status --porcelain:*), Bash(git branch --show-current)
+allowed-tools: Bash(git log --oneline:*), Bash(git diff --stat:*), Bash(git status --porcelain:*), Bash(git branch --show-current), Bash(git rev-parse --abbrev-ref origin/HEAD)
 ---
 
 # /pre-pr-review
@@ -14,13 +14,19 @@ Branch:
 
 !`git branch --show-current`
 
-Commits vs main — an error here means this repo's trunk is not `main` (see step 1):
+Base ref — the branch the remote itself calls default, not an assumed `main`. It
+must name a branch (`origin/main`, `origin/develop`); the literal string
+`origin/HEAD` is what an *unresolved* ref echoes back (see step 1):
 
-!`git log --oneline -30 main..HEAD`
+!`git rev-parse --abbrev-ref origin/HEAD`
+
+Commits vs that base — an error here means `origin/HEAD` does not resolve (see step 1):
+
+!`git log --oneline -30 origin/HEAD..HEAD`
 
 Diff stat:
 
-!`git diff --stat main...HEAD`
+!`git diff --stat origin/HEAD...HEAD`
 
 Uncommitted changes (these are *not* reviewed):
 
@@ -68,17 +74,37 @@ skill exists to prevent.
 ## Instructions
 
 1. **Establish the base ref, then check the range is worth reviewing.** The blocks
-   above assume the trunk is `main`. If they show a `fatal: ambiguous argument
-   'main'`, this repo's trunk is something else (`master`, `develop`, a fork's
-   upstream) — find it and re-run the range against that instead. Never read an
-   error, or a suppressed one, as "no commits to review": a silent false negative
-   here tells the user their branch is empty when it is full of work.
+   above resolve the base from `origin/HEAD` rather than assuming `main`. That is
+   correct for a repo whose trunk is `master` or `develop`, and it compares against
+   the *remote* tip, so a local trunk several commits behind cannot silently move
+   the merge base backwards and pull work someone else already merged into the
+   review — inflating an expensive run with findings on code that is not under
+   review.
 
-   Check the base is *current*, not merely present. A local `main` several commits
-   behind `origin/main` moves the merge base backwards, so the review covers work
-   someone else already merged — inflating an expensive run and producing findings
-   on code that is not under review. Prefer `origin/main` where it exists, or say
-   that the local base is stale.
+   **Read the base-ref block carefully, because its failure looks like a success.**
+   Measured: when `origin/HEAD` does not resolve, `git rev-parse --abbrev-ref` writes
+   `fatal: ambiguous argument 'origin/HEAD'` to *stderr* and echoes the literal string
+   `origin/HEAD` to *stdout*, exiting 128. If stderr is not surfaced, the block above
+   reads simply `origin/HEAD` — which is not a branch name and must never be treated
+   as the base. A resolved base always looks like `origin/<branch>`.
+
+   Two causes, indistinguishable from that block alone, so check `git remote` to tell
+   them apart:
+
+   - **`origin/HEAD` is unset.** Common after a `--single-branch` clone, and in older
+     clones that predate the ref. The fix is `git remote set-head origin --auto`,
+     which writes a local ref — so it is the user's to run, not this skill's. Ask.
+   - **There is no `origin`.** A local-only repo, or one whose remote is named
+     `upstream` or `forge`. Use `<remote>/HEAD` instead, and fall back to the local
+     trunk only if there is genuinely no remote — saying which you used either way.
+
+   Sanity-check the ref it *did* resolve to, too. `origin/HEAD` is a cached local
+   pointer: if the upstream renamed its default branch, this still names the old one
+   until `git remote set-head origin --auto` refreshes it. And on a fork it names the
+   fork's default branch, which is not the base if the PR targets upstream.
+
+   Never read an error, or a suppressed one, as "no commits to review": a silent
+   false negative here tells the user their branch is empty when it is full of work.
 
    Once the range resolves: if there really are no commits ahead of the base, say so
    and stop. If the diff is trivial (a handful of lines, a docs typo, a version
@@ -86,7 +112,7 @@ skill exists to prevent.
    rather than spending that by default. If the commit list above hit its 30-entry
    cap, say so rather than letting a truncated list read as complete.
 
-2. **Warn on a dirty tree.** The review covers `main...HEAD` — committed work only.
+2. **Warn on a dirty tree.** The review covers `<base>...HEAD` — committed work only.
    If `git status --porcelain` is non-empty, tell the user exactly which files are
    uncommitted and therefore *not* under review, before spawning anything. Let them
    commit first if they want those included.
@@ -106,7 +132,8 @@ skill exists to prevent.
    The prompt should carry only:
 
    - the absolute repository path
-   - the diff range (`main...HEAD`) and how to read it
+   - the diff range, written with the base *resolved* (`origin/main...HEAD`, not
+     `origin/HEAD...HEAD`) so the review names a concrete ref, and how to read it
    - a pointer to the standing brief, and the read-only constraint
 
    Do **not** pass a PR number. A reviewer holding one will fetch the pull request,
@@ -166,9 +193,19 @@ skill exists to prevent.
   definitions list tool *names*, not permission patterns, and the reviewer needs a
   real shell to run the test suite and typechecker. Its read-only constraint is
   therefore enforced by instruction, backed by the normal permission prompts, rather
-  than mechanically. Worth knowing when you approve its commands: if it asks to run
-  something that writes, that is a bug in the review, not a step you should wave
-  through.
+  than mechanically. Worth knowing when you approve its commands.
+
+- **"Read-only" means it changes nothing that already exists** — it does not mean it
+  never writes at all. A reviewer that wants to run a probe or a repro script needs
+  somewhere to put it, and the obvious somewhere is the session scratchpad, which it
+  *shares with this session*. A stray `repro.py` or `notes.md` written at the root of
+  that directory can overwrite a file this session put there minutes earlier, and
+  neither side would notice. Its brief therefore sends it to a `mktemp -d`
+  subdirectory of its own and forbids touching anything outside it.
+
+  So when approving its commands: a write inside its own scratch directory is the
+  design. A write anywhere else — the scratchpad root, the repository, a file it did
+  not create — is a bug in the review, not a step to wave through.
 
 - **Session-only by default.** Nothing goes to GitHub — no review, no comment, no
   approval — unless the user explicitly asks for that afterwards. A cold review is

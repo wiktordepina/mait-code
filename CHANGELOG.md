@@ -10,6 +10,35 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`/pre-pr-review` assumed every repo's trunk is called `main`.** It was, and it
+  told you to go and find the real one by hand when the preprocessed `git log`
+  came back `fatal: ambiguous argument 'main'` — which is a repair, not a design.
+  The base now comes from `origin/HEAD`, the branch the remote itself calls
+  default, so `master`, `develop` or anything else works untouched. It also fixes
+  a quieter failure the old text could only warn about: a local trunk lagging
+  behind the remote moved the merge base backwards, so the review silently
+  covered commits someone else had already merged. The two ways `origin/HEAD`
+  itself fails — unset after a `--single-branch` clone, or no `origin` at all —
+  are handled explicitly, along with the two ways it can resolve to the *wrong*
+  base: a stale pointer after an upstream branch rename, and a fork whose default
+  branch is not the PR's target. Including the trap that made the check worth
+  writing down — when the ref is unset, `git rev-parse --abbrev-ref` puts the
+  `fatal:` on stderr but echoes the literal string `origin/HEAD` to stdout, so the
+  failure renders as something that looks like an answer.
+
+- **The "read-only" reviewer could overwrite the calling session's files.** Its
+  brief forbade writes without saying where writes would land, and its scratchpad
+  is the same directory the session that spawned it is using — so a reviewer
+  writing `repro.py` to reproduce a suspected bug could clobber a file written
+  minutes earlier, with neither side noticing. Read-only now means what it should
+  have meant: nothing it did not create gets modified, moved or deleted, and the
+  repository working tree is off-limits entirely so no untracked leftover can
+  surface in the author's `git status`. Scratch work is legitimate and goes in a
+  `mktemp -d` directory of the reviewer's own, which is the only place it may
+  write.
+
 ## [0.69.1] — 2026-08-02
 
 ### Fixed
