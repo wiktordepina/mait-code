@@ -202,6 +202,8 @@ def cmd_edit(args):
         fields["priority"] = args.priority
     if args.acceptance is not None:
         fields["acceptance_criteria"] = args.acceptance
+    if args.project is not None:
+        fields["project"] = args.project
 
     if not fields:
         print("Error: nothing to edit (pass at least one field).", file=sys.stderr)
@@ -595,6 +597,7 @@ def main():
     p_edit.add_argument("--description", help="New description")
     p_edit.add_argument("--priority", choices=PRIORITIES, help="New priority")
     p_edit.add_argument("--acceptance", help="New acceptance criteria")
+    p_edit.add_argument("--project", help="New project")
     p_edit.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_edit.set_defaults(func=cmd_edit)
 

@@ -41,7 +41,7 @@ Present the board above clearly, then act on what the user asks.
 The **description**, **acceptance criteria** and **completion summary** fields render markdown in the card detail view (plain text works too — it's a subset). Write these in markdown when it helps: headings, lists, emphasis, inline and fenced code all display formatted, and single newlines are kept as line breaks. No need to flatten a markdown source into plain prose.
 
 - Add: `mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project <name>]`. New cards land in `backlog`. Use `--project` for work with no git repo yet (e.g. an app idea).
-- Edit: `mc-tool-board edit N [--title ...] [--description ...] [--priority ...] [--acceptance ...]`.
+- Edit: `mc-tool-board edit N [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...]`.
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
 - References (label→value links on a card): `mc-tool-board ref add N <label> <value>` — *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
 - Show one card with its comments and references: `mc-tool-board show N`.
