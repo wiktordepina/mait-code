@@ -10,6 +10,16 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.70.0] — 2026-08-17
+
+### Added
+
+- **A card's project can now be edited from the board CLI.** `mc-tool-board edit`
+  gains a `--project` flag, so a card captured under the wrong project — or one
+  whose work has moved home — can be reassigned without deleting and re-adding
+  it. It composes with the other edit flags and `--json` like every other field,
+  and the board skill and docs now show it.
+
 ## [0.69.2] — 2026-08-12
 
 ### Fixed
@@ -2233,7 +2243,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.69.2...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.70.0...HEAD
+[0.70.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.70.0
 [0.69.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.2
 [0.69.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.1
 [0.69.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.0

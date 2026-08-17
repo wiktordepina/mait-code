@@ -897,6 +897,7 @@ def test_cmd_edit(mock_conn):
             description=None,
             priority="high",
             acceptance=None,
+            project=None,
         )
     )
     row = mock_conn.execute(
@@ -905,13 +906,38 @@ def test_cmd_edit(mock_conn):
     assert row == ("new title", "high")
 
 
+def test_cmd_edit_project(mock_conn):
+    cid = _insert_card(mock_conn, "c")
+    from mait_code.tools.board.cli import cmd_edit
+
+    cmd_edit(
+        _ns(
+            id=cid,
+            title=None,
+            description=None,
+            priority=None,
+            acceptance=None,
+            project="other-project",
+        )
+    )
+    row = mock_conn.execute("SELECT project FROM cards WHERE id = ?", (cid,)).fetchone()
+    assert row == ("other-project",)
+
+
 def test_cmd_edit_no_fields(mock_conn):
     cid = _insert_card(mock_conn, "c")
     from mait_code.tools.board.cli import cmd_edit
 
     with pytest.raises(SystemExit):
         cmd_edit(
-            _ns(id=cid, title=None, description=None, priority=None, acceptance=None)
+            _ns(
+                id=cid,
+                title=None,
+                description=None,
+                priority=None,
+                acceptance=None,
+                project=None,
+            )
         )
 
 
@@ -1097,6 +1123,7 @@ def test_cmd_edit_json_emits_card(mock_conn, capsys):
             description=None,
             priority=None,
             acceptance=None,
+            project=None,
             json=True,
         )
     )

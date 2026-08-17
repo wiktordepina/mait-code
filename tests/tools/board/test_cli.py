@@ -131,7 +131,14 @@ def test_cmd_edit_not_found(mock_conn):
 
     with pytest.raises(SystemExit):
         cmd_edit(
-            _ns(id=999, title="x", description=None, priority=None, acceptance=None)
+            _ns(
+                id=999,
+                title="x",
+                description=None,
+                priority=None,
+                acceptance=None,
+                project=None,
+            )
         )
 
 
@@ -151,6 +158,7 @@ def test_cmd_edit_sets_description_and_acceptance(mock_conn):
             description="new desc",
             priority=None,
             acceptance="done when X",
+            project=None,
         )
     )
     row = mock_conn.execute(

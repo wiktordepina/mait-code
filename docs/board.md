@@ -253,7 +253,7 @@ mc-tool-board summary [--all] [--project PROJECT] [--json]
 
 # Create & edit
 mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ...] [--json]
-mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--json]
+mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...] [--json]
 mc-tool-board comment ID "<note>" [--author me|claude] [--json]
 
 # Flow
