@@ -17,6 +17,7 @@ one, falling back to a read-only render otherwise.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
 from textual.screen import ModalScreen, Screen
+from textual.suggester import SuggestFromList
 from textual.theme import Theme
 from textual.widget import Widget
 from textual.widgets import (
@@ -61,7 +63,7 @@ from mait_code.tools.board.columns import (
     REFINED,
     label as col_label,
 )
-from mait_code.tools.board.db import get_connection, get_project
+from mait_code.tools.board.db import get_connection
 from mait_code.tui import palette as p
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.banner import BrandBanner
@@ -239,10 +241,10 @@ class CardScreen(ModalScreen[None]):
 
     One screen, two modes. *view* is read-only — the card's fields and its
     comment thread, with comment / complete / block reachable in place. *edit*
-    is the comprehensive form: title, priority, status, tags, references,
-    description and acceptance, all in one place. Tags, references and status
-    are a working copy applied only on **Save**, so the form is the single,
-    cohesive editor and ``escape`` discards every pending change. ``e`` flips
+    is the comprehensive form: title, project, priority, status, tags,
+    references, description and acceptance, all in one place. Tags, references
+    and status are a working copy applied only on **Save**, so the form is the
+    single, cohesive editor and ``escape`` discards every pending change. ``e`` flips
     view→edit; **Save** (or ``ctrl+s``) persists in place and flips back to view
     (so an edit lands without a round-trip to the board); ``escape`` cancels an
     edit back to view, or closes the screen from view.
@@ -270,9 +272,9 @@ class CardScreen(ModalScreen[None]):
         """Posted when an edit is saved; carries the whole working copy.
 
         The form is the single place a card is changed, so a save carries every
-        editable facet: ``fields`` (title/priority/description/acceptance for
-        :func:`edit_card`), the target ``status``, and the full ``tags`` and
-        ``references`` sets (set-replace). The app persists these via the
+        editable facet: ``fields`` (title/project/priority/description/
+        acceptance for :func:`edit_card`), the target ``status``, and the full
+        ``tags`` and ``references`` sets (set-replace). The app persists these via the
         service layer and refreshes the open screen — the screen deliberately
         doesn't write to the DB itself.
         """
@@ -331,12 +333,16 @@ class CardScreen(ModalScreen[None]):
         *,
         mode: str = "view",
         chip_colours: ChipColours = PALETTE_CHIPS,
+        projects: Sequence[str] = (),
     ) -> None:
         super().__init__()
         self._card = card
         self._comments = comments
         self._mode = mode
         self._chip_colours = chip_colours
+        # Known projects, offered as completions in the edit form's Project
+        # field; a name outside the list is still accepted.
+        self._projects = list(projects)
         # The edit form's working copy of the list-valued fields: edits stay
         # here until Save, so Cancel discards them. Re-snapshotted from the card
         # whenever the form opens (see _reset_edit_fields).
@@ -363,6 +369,13 @@ class CardScreen(ModalScreen[None]):
                 with VerticalScroll(id="edit-fields"):
                     yield Label("Title", classes="field-label")
                     yield Input(value=card["title"], id="edit-title")
+                    yield Label("Project", classes="field-label")
+                    yield Input(
+                        value=card["project"],
+                        placeholder="project",
+                        suggester=SuggestFromList(self._projects),
+                        id="edit-project",
+                    )
                     yield Label("Priority", classes="field-label")
                     yield RadioSet(
                         *(
@@ -546,11 +559,15 @@ class CardScreen(ModalScreen[None]):
     @work
     async def action_export(self) -> None:
         """``x`` in view mode prompts for a destination — pre-filled with
-        ``card-N.md`` in the cwd — and writes the card's markdown there,
-        rendered through the same export layer as the CLI."""
+        ``card-N.md`` in the last directory exported to this session, else
+        ``~`` — and writes the card's markdown there, rendered through the same
+        export layer as the CLI. Never the launch directory: the board is
+        cross-project, so where it was started from means nothing here."""
         if self._mode != "view":
             return
-        suggestion = Path.cwd() / f"card-{self._card['id']}.md"
+        app = self.app
+        last_dir = app.last_export_dir if isinstance(app, BoardApp) else None
+        suggestion = (last_dir or Path.home()) / f"card-{self._card['id']}.md"
         raw = await self.app.push_screen_wait(
             ExportScreen(self._card["id"], suggestion)
         )
@@ -564,6 +581,10 @@ class CardScreen(ModalScreen[None]):
         except OSError as exc:
             self.notify(f"Export failed: {exc}", severity="error")
             return
+        if isinstance(app, BoardApp):
+            # Resolved, so a relative path typed here doesn't turn the next
+            # suggestion relative (and so launch-directory-bound) again.
+            app.last_export_dir = path.resolve().parent
         self.notify(f"Exported to {path}")
 
     def action_block(self) -> None:
@@ -596,14 +617,22 @@ class CardScreen(ModalScreen[None]):
                 return BLOCKED_TAG in self._card.get("tags", [])
         return True
 
-    async def show_card(self, card: dict, comments: list[dict]) -> None:
+    async def show_card(
+        self,
+        card: dict,
+        comments: list[dict],
+        projects: Sequence[str] | None = None,
+    ) -> None:
         """Re-render with a freshly-saved card and return to view mode.
 
         Called by the app after it persists a :class:`Saved`, so the edit lands
-        visibly without bouncing back to the board.
+        visibly without bouncing back to the board. *projects*, when given,
+        refreshes the Project field's completions (a save may have added one).
         """
         self._card = card
         self._comments = comments
+        if projects is not None:
+            self._projects = list(projects)
         header = self.query_one("#card-header-content", Vertical)
         await header.remove_children()
         await header.mount(*self._header_widgets())
@@ -622,6 +651,9 @@ class CardScreen(ModalScreen[None]):
         values, and discards any uncommitted edits on the next open)."""
         card = self._card
         self.query_one("#edit-title", Input).value = card["title"]
+        project = self.query_one("#edit-project", Input)
+        project.value = card["project"]
+        project.suggester = SuggestFromList(self._projects)
         radio = self.query_one("#edit-priority", RadioSet)
         for index, button in enumerate(radio.query(RadioButton)):
             if _PRIORITIES[index] == card["priority"]:
@@ -731,7 +763,12 @@ class CardScreen(ModalScreen[None]):
     def _submit(self) -> None:
         title = self.query_one("#edit-title", Input).value.strip()
         if not title:
-            return  # title required; stay in the form
+            self.notify("A card needs a title", severity="warning")
+            return
+        project = self.query_one("#edit-project", Input).value.strip()
+        if not project:
+            self.notify("A card needs a project", severity="warning")
+            return
         idx = self.query_one("#edit-priority", RadioSet).pressed_index
         priority = _PRIORITIES[idx] if idx >= 0 else self._card["priority"]
         status_val = self.query_one("#edit-status", Select).value
@@ -744,6 +781,7 @@ class CardScreen(ModalScreen[None]):
                 self._card["id"],
                 {
                     "title": title,
+                    "project": project,
                     "priority": priority,
                     "description": self.query_one("#edit-description", TextArea).text,
                     "acceptance_criteria": self.query_one(
@@ -1005,22 +1043,28 @@ class NewCardScreen(ModalScreen[dict | None]):
     """Capture a new card's title, project and priority.
 
     Resolves to a ``{title, project, priority}`` dict, or ``None`` on cancel.
-    An empty title keeps the modal open (a titleless card is never created);
-    escape always cancels.
+    An empty title or project keeps the modal open (a card is never created
+    without both); escape always cancels. The project field is pre-filled only
+    when the caller has one to offer (the active filter) and otherwise starts
+    empty — a blank never falls back to the launch directory.
     """
 
     BINDINGS = [("escape", "cancel", "Cancel")]
 
-    def __init__(self, default_project: str) -> None:
+    def __init__(self, default_project: str = "", projects: Sequence[str] = ()) -> None:
         super().__init__()
         self._default_project = default_project
+        self._projects = list(projects)
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-dialog"):
             yield Label("New card", classes="modal-title")
             yield Input(placeholder="Title…", id="new-title")
             yield Input(
-                value=self._default_project, placeholder="project", id="new-project"
+                value=self._default_project,
+                placeholder="project",
+                suggester=SuggestFromList(self._projects),
+                id="new-project",
             )
             yield RadioSet(
                 *(RadioButton(p, value=(p == "medium")) for p in _PRIORITIES),
@@ -1045,10 +1089,12 @@ class NewCardScreen(ModalScreen[dict | None]):
     def _submit(self) -> None:
         title = self.query_one("#new-title", Input).value.strip()
         if not title:
-            return  # title required; stay open (escape to cancel)
-        project = (
-            self.query_one("#new-project", Input).value.strip() or self._default_project
-        )
+            self.notify("A card needs a title", severity="warning")
+            return
+        project = self.query_one("#new-project", Input).value.strip()
+        if not project:
+            self.notify("A card needs a project", severity="warning")
+            return
         idx = self.query_one("#new-priority", RadioSet).pressed_index
         priority = _PRIORITIES[idx] if idx >= 0 else "medium"
         self.dismiss({"title": title, "project": project, "priority": priority})
@@ -1116,6 +1162,9 @@ class BoardApp(MaitApp):
         self._project_filter: str | None = None  # None == all projects
         self._search: str | None = None  # None == no title filter
         self._projects: list[str] = []
+        # Where the card screen's export last wrote, so the next suggestion
+        # follows it; None until the first export (then ``~`` is offered).
+        self.last_export_dir: Path | None = None
         self._show_done = False  # Done is hidden by default to widen the flow
         self._show_archived = False
         self._focused_col = 0
@@ -1539,8 +1588,15 @@ class BoardApp(MaitApp):
         if card is None:
             return
         comments = service.get_comments(self._conn, card_id)
+        self._projects = service.list_projects(self._conn)
         await self.push_screen_wait(
-            CardScreen(card, comments, mode=mode, chip_colours=self._chip_colours())
+            CardScreen(
+                card,
+                comments,
+                mode=mode,
+                chip_colours=self._chip_colours(),
+                projects=self._projects,
+            )
         )
         self._reload()
         self._select_card(card_id)
@@ -1561,12 +1617,22 @@ class BoardApp(MaitApp):
         service.set_references(self._conn, message.card_id, message.references)
         if message.status != existing["status"]:
             service.move_card(self._conn, message.card_id, message.status)
+        self._projects = service.list_projects(self._conn)
         self._reload()
         card = service.get_card(self._conn, message.card_id)
         comments = service.get_comments(self._conn, message.card_id)
         if card is not None and isinstance(self.screen, CardScreen):
-            await self.screen.show_card(card, comments)
-        self.notify(f"Updated card #{message.card_id}")
+            await self.screen.show_card(card, comments, self._projects)
+        project = message.fields.get("project", existing["project"])
+        if self._project_filter is not None and project != self._project_filter:
+            # The card has left the filtered view; say where it went, since it
+            # won't be on the board when the card screen closes.
+            self.notify(
+                f"Moved card #{message.card_id} to {project} "
+                f"(hidden by the {self._project_filter} filter)"
+            )
+        else:
+            self.notify(f"Updated card #{message.card_id}")
 
     async def on_card_screen_mutate(self, message: CardScreen.Mutate) -> None:
         """Apply an in-place card action, then refresh the open card screen.
@@ -1633,8 +1699,10 @@ class BoardApp(MaitApp):
 
     @work
     async def action_new(self) -> None:
-        default = self._project_filter or get_project()
-        result = await self.push_screen_wait(NewCardScreen(default))
+        self._projects = service.list_projects(self._conn)
+        result = await self.push_screen_wait(
+            NewCardScreen(self._project_filter or "", self._projects)
+        )
         if not result:
             return
         card_id = service.add_card(
