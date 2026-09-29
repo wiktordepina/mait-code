@@ -203,7 +203,11 @@ def cmd_edit(args):
     if args.acceptance is not None:
         fields["acceptance_criteria"] = args.acceptance
     if args.project is not None:
-        fields["project"] = args.project
+        project = args.project.strip()
+        if not project:
+            print("Error: --project cannot be blank.", file=sys.stderr)
+            sys.exit(1)
+        fields["project"] = project
 
     if not fields:
         print("Error: nothing to edit (pass at least one field).", file=sys.stderr)

@@ -924,6 +924,31 @@ def test_cmd_edit_project(mock_conn):
     assert row == ("other-project",)
 
 
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_cmd_edit_blank_project_rejected(mock_conn, capsys, blank):
+    cid = _insert_card(mock_conn, "c")
+    from mait_code.tools.board.cli import cmd_edit
+
+    with pytest.raises(SystemExit) as exc:
+        cmd_edit(
+            _ns(
+                id=cid,
+                title="renamed",
+                description=None,
+                priority=None,
+                acceptance=None,
+                project=blank,
+            )
+        )
+    assert exc.value.code == 1
+    assert "--project cannot be blank" in capsys.readouterr().err
+    # Nothing is written, not even the other fields in the same call.
+    row = mock_conn.execute(
+        "SELECT title, project FROM cards WHERE id = ?", (cid,)
+    ).fetchone()
+    assert row == ("c", TEST_PROJECT)
+
+
 def test_cmd_edit_no_fields(mock_conn):
     cid = _insert_card(mock_conn, "c")
     from mait_code.tools.board.cli import cmd_edit

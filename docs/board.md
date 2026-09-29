@@ -152,7 +152,7 @@ Every card carries:
 | Field | Notes |
 |-------|-------|
 | **Title** | Required. The one-line summary. |
-| **Project** | Required at creation. Which repo (or idea) the card belongs to. |
+| **Project** | Required. Which repo (or idea) the card belongs to. Change it later with `edit --project` or the TUI edit form. |
 | **Priority** | `low`, `medium` (default), or `high`. Drives pick-up order. |
 | **Description** | The "what and why". Renders [markdown](#markdown-in-the-body), and plain text works just as well. |
 | **Acceptance criteria** | The contract for *done*, usually set when refining. Renders [markdown](#markdown-in-the-body) too. |
@@ -198,7 +198,7 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Highlight the previous / next card |
 | <kbd>1</kbd>–<kbd>5</kbd> | Jump straight to a visible column (<kbd>4</kbd>/<kbd>5</kbd> need Done/Archived shown) |
 | <kbd>Enter</kbd> | Open the highlighted card's detail screen |
-| <kbd>n</kbd> | New card |
+| <kbd>n</kbd> | New card (the project is pre-filled from the active filter, else left for you to choose) |
 | <kbd>e</kbd> | Edit the highlighted card |
 | <kbd>c</kbd> | Add a comment |
 | <kbd>C</kbd> | Complete the card (prompts for a summary) |
@@ -224,11 +224,14 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 | <kbd>c</kbd> | Add a comment |
 | <kbd>C</kbd> | Complete the card |
 | <kbd>b</kbd> / <kbd>u</kbd> | Block / unblock |
-| <kbd>x</kbd> | Export the card to markdown (prompts for the path, pre-filled with `card-N.md` in the current directory) |
+| <kbd>x</kbd> | Export the card to markdown (prompts for the path, pre-filled with `card-N.md` in your home directory, then in whichever directory you last exported to) |
 
 The edit form (<kbd>e</kbd>) is the single place a card is changed: title,
-priority, **status**, **tags**, **references**, description and acceptance
-criteria all live on one form. Tags, references and status are a working copy —
+**project**, priority, **status**, **tags**, **references**, description and
+acceptance criteria all live on one form. The project field completes known
+project names as you type (<kbd>→</kbd> accepts) and takes a new one just as
+well; moving a card out of the active project filter drops it from the board,
+with a toast naming where it went. Tags, references and status are a working copy —
 **Save** (<kbd>Ctrl</kbd>+<kbd>S</kbd>) applies them all at once, and <kbd>Esc</kbd>
 discards every pending change. Block / unblock stay outside the form (they carry
 a reason comment a plain tag can't), so the form's tag editor leaves the

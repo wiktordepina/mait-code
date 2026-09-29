@@ -1078,6 +1078,58 @@ class TestMutationModals:
         assert still_open is True
         assert count == 0
 
+    def test_new_card_project_starts_empty_without_filter(
+        self, board_path: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        # Launched from a directory that would name a project, the field
+        # still starts empty — the cwd is not a default.
+        launch = tmp_path / "launch-dir"
+        launch.mkdir()
+        monkeypatch.chdir(launch)
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("n")
+                await pilot.pause()
+                return app.screen.query_one("#new-project", Input).value
+
+        assert _run(scenario) == ""
+
+    def test_new_card_project_defaults_to_active_filter(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "seed", "project": "alpha"}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                app._project_filter = "alpha"
+                app._reload()
+                await pilot.press("n")
+                await pilot.pause()
+                return app.screen.query_one("#new-project", Input).value
+
+        assert _run(scenario) == "alpha"
+
+    def test_new_card_blank_project_stays_open(self, board_path: Path) -> None:
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 30)) as pilot:
+                await pilot.pause()
+                await pilot.press("n")
+                await pilot.pause()
+                app.screen.query_one("#new-title", Input).value = "No home"
+                app.screen.query_one("#new-project", Input).value = "   "
+                await pilot.click("#new-add")
+                await pilot.pause()
+                still_open = isinstance(app.screen, NewCardScreen)
+                return still_open, len(service.list_cards(app._conn))
+
+        still_open, count = _run(scenario)
+        assert still_open is True
+        assert count == 0
+
     def test_edit_card_updates_fields(self, board_path: Path) -> None:
         ids = _seed(board_path, [{"title": "old", "status": REFINED}])
 
@@ -1699,6 +1751,10 @@ class TestCardFormEditing:
                 service.add_tag(app._conn, ids["card"], "drop")
                 app._reload()
                 await self._open_edit(pilot)
+                # The chip sits below the fold of the scrolling form; bring it
+                # into view so the click lands whatever the form's height.
+                app.screen.query_one("#edit-tag-rm-0").scroll_visible(animate=False)
+                await pilot.pause()
                 await pilot.click("#edit-tag-rm-0")  # ✕ on the only chip
                 await pilot.pause()
                 await pilot.press("ctrl+s")
@@ -1709,10 +1765,129 @@ class TestCardFormEditing:
         assert _run(scenario) == []
 
 
+class TestCardFormProject:
+    """The edit form's Project field: reassigning a card between projects."""
+
+    async def _open_edit(self, pilot) -> None:
+        pilot.app._focus_status(REFINED)
+        await pilot.press("enter")
+        await pilot.pause()
+        await pilot.press("e")
+        await pilot.pause()
+
+    def test_field_prefilled_with_known_projects_suggested(
+        self, board_path: Path
+    ) -> None:
+        _seed(
+            board_path,
+            [
+                {"title": "card", "project": "alpha", "status": REFINED},
+                {"title": "other", "project": "beta"},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await self._open_edit(pilot)
+                field = app.screen.query_one("#edit-project", Input)
+                suggestion = await field.suggester.get_suggestion("be")
+                return field.value, suggestion
+
+        value, suggestion = _run(scenario)
+        assert value == "alpha"
+        assert suggestion == "beta"
+
+    def test_save_moves_card_to_another_project(self, board_path: Path) -> None:
+        ids = _seed(
+            board_path, [{"title": "card", "project": "alpha", "status": REFINED}]
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await self._open_edit(pilot)
+                app.screen.query_one("#edit-project", Input).value = "gamma"
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                meta = str(app.screen.query_one(".detail-meta", Static).render())
+                return service.get_card(app._conn, ids["card"]), meta, app._projects
+
+        card, meta, projects = _run(scenario)
+        assert card["project"] == "gamma"
+        assert meta.startswith("gamma")
+        # The new name is picked up for the filter picker straight away.
+        assert "gamma" in projects
+
+    def test_blank_project_keeps_form_open(self, board_path: Path) -> None:
+        ids = _seed(
+            board_path, [{"title": "card", "project": "alpha", "status": REFINED}]
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                await self._open_edit(pilot)
+                app.screen.query_one("#edit-project", Input).value = "  "
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                mode = app.screen._mode if isinstance(app.screen, CardScreen) else None
+                return service.get_card(app._conn, ids["card"]), mode
+
+        card, mode = _run(scenario)
+        assert card["project"] == "alpha"
+        assert mode == "edit"
+
+    def test_leaving_the_filter_toasts_and_drops_from_view(
+        self, board_path: Path
+    ) -> None:
+        ids = _seed(
+            board_path, [{"title": "card", "project": "alpha", "status": REFINED}]
+        )
+        messages: list[str] = []
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._project_filter = "alpha"
+                app._reload()
+                original_notify = app.notify
+
+                def spy(message, *args, **kwargs):
+                    messages.append(str(message))
+                    return original_notify(message, *args, **kwargs)
+
+                app.notify = spy  # type: ignore[method-assign]
+                await self._open_edit(pilot)
+                app.screen.query_one("#edit-project", Input).value = "beta"
+                await pilot.press("ctrl+s")
+                await pilot.pause()
+                await pilot.pause()
+                await pilot.press("escape")  # close the card screen
+                await pilot.pause()
+                await pilot.pause()
+                return app._select_card(ids["card"])
+
+        still_visible = _run(scenario)
+        assert still_visible is False
+        assert any(
+            f"#{ids['card']} to beta" in m and "alpha filter" in m for m in messages
+        )
+
+
 class TestExport:
     def test_x_prompts_with_suggestion_and_writes_on_accept(
         self, board_path: Path, tmp_path: Path, monkeypatch
     ) -> None:
+        # The suggestion is under ~, not the launch directory.
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setenv("HOME", str(home))
         monkeypatch.chdir(tmp_path)
         ids = _seed(board_path, [{"title": "card", "status": REFINED}])
         conn = get_connection(board_path)
@@ -1737,8 +1912,9 @@ class TestExport:
                 return suggested
 
         suggested = _run(scenario)
-        exported = tmp_path / f"card-{ids['card']}.md"
+        exported = home / f"card-{ids['card']}.md"
         assert suggested == str(exported)
+        assert not (tmp_path / f"card-{ids['card']}.md").exists()
         content = exported.read_text(encoding="utf-8")
         assert content.startswith("# card\n")
         assert "> note" in content
@@ -1767,6 +1943,78 @@ class TestExport:
         _run(scenario)
         assert target.read_text(encoding="utf-8").startswith("# card\n")
         assert not (tmp_path / f"card-{ids['card']}.md").exists()
+
+    def test_x_suggests_the_last_export_directory(
+        self, board_path: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        ids = _seed(
+            board_path,
+            [
+                {"title": "first", "status": REFINED},
+                {"title": "second", "status": BACKLOG},
+            ],
+        )
+        target_dir = tmp_path / "exports"
+        target_dir.mkdir()
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("x")
+                await pilot.pause()
+                app.screen.query_one("#export-path", Input).value = str(
+                    target_dir / "first.md"
+                )
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.pause()
+                await pilot.press("escape")  # close the first card
+                await pilot.pause()
+                app._focus_status(BACKLOG)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("x")
+                await pilot.pause()
+                return app.screen.query_one("#export-path", Input).value
+
+        suggested = _run(scenario)
+        assert suggested == str(target_dir / f"card-{ids['second']}.md")
+
+    def test_relative_export_keeps_next_suggestion_absolute(
+        self, board_path: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        launch = tmp_path / "launch"
+        launch.mkdir()
+        monkeypatch.chdir(launch)
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.press("x")
+                await pilot.pause()
+                app.screen.query_one("#export-path", Input).value = "notes.md"
+                await pilot.press("enter")
+                await pilot.pause()
+                await pilot.pause()
+                await pilot.press("x")
+                await pilot.pause()
+                return app.screen.query_one("#export-path", Input).value
+
+        suggested = _run(scenario)
+        # The relative export is remembered by its absolute directory, not
+        # as "." — which would re-bind the next export to the launch dir.
+        assert suggested == str(launch.resolve() / f"card-{ids['card']}.md")
 
     def test_x_cancel_writes_nothing(
         self, board_path: Path, tmp_path: Path, monkeypatch
