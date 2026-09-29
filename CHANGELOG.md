@@ -10,6 +10,30 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.71.0] — 2026-09-29
+
+### Added
+
+- **A card's project can now be edited in the board TUI.** The card edit form
+  gains a Project field, pre-filled with the card's project and completing known
+  project names as you type, so a card can be reassigned in place — a new name
+  works just as well. Moving a card out of the active project filter drops it
+  from the board, with a toast naming where it went.
+
+### Changed
+
+- **The board TUI no longer takes defaults from its launch directory.** A new
+  card's project comes from the active filter, or is left empty for you to
+  choose, rather than being named after wherever the TUI was started. Export
+  suggests your home directory first, then whichever directory you last exported
+  to.
+- **A blank title or project is refused with a warning** in both the new-card and
+  edit forms, rather than the Save silently doing nothing or the project quietly
+  falling back to a default.
+- **`mc-tool-board edit --project` rejects a blank value.** Passing an empty or
+  whitespace-only project used to clear the field; it now exits with an error
+  and leaves the card untouched. Surrounding whitespace is trimmed.
+
 ## [0.70.0] — 2026-08-17
 
 ### Added
@@ -2243,7 +2267,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.70.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.71.0...HEAD
+[0.71.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.71.0
 [0.70.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.70.0
 [0.69.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.2
 [0.69.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.1
