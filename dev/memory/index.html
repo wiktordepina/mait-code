@@ -3023,7 +3023,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <p>Before storing a new memory, the writer checks for near-duplicates:</p>
 <ol>
 <li>Extracts key words from the new content</li>
-<li>Gathers candidates from both FTS5 keyword search and vector similarity search (scoped to the entry's project)</li>
+<li>Gathers candidates from both FTS5 keyword search and vector similarity search (scoped to the entry's project <strong>and its entry type</strong> — the same content stored as a different type is never treated as a duplicate)</li>
 <li>Compares candidates two ways — <code>SequenceMatcher</code> string similarity ≥ 0.85, or vector cosine similarity ≥ 0.92; a hit on either marks it a duplicate</li>
 <li>Duplicates update the existing entry's timestamp and keep the highest importance</li>
 </ol>
@@ -3037,7 +3037,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <p>When a fact has genuinely changed, replace the stale entry rather than letting two coexist:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mc-tool-memory<span class="w"> </span>supersede<span class="w"> </span>&lt;old_id&gt;<span class="w"> </span><span class="s2">&quot;&lt;new, current content&gt;&quot;</span>
 </span></code></pre></div>
-<p>This inserts the new content as a fresh entry (inheriting the old one's type and scope), then marks the old entry <strong>superseded</strong> — recording <code>superseded_by</code> (the new id) and <code>superseded_at</code> (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:</p>
+<p>This inserts the new content as a fresh entry (inheriting the old one's type, scope, memory class and importance — pass <code>--importance</code> to override), then marks the old entry <strong>superseded</strong> — recording <code>superseded_by</code> (the new id) and <code>superseded_at</code> (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mc-tool-memory<span class="w"> </span>list<span class="w"> </span>--include-superseded
 </span></code></pre></div>
 <p>Supersede is one of three consolidation moves that leave a row in place but drop it from the live set:</p>
@@ -3045,7 +3045,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mc-tool-memory<span class="w"> </span>merge<span class="w"> </span>&lt;id1&gt;<span class="w"> </span>&lt;id2&gt;<span class="w"> </span>…<span class="w"> </span>--into<span class="w"> </span><span class="s2">&quot;&lt;consolidated&gt;&quot;</span><span class="w">  </span><span class="c1"># fold several into one</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>mc-tool-memory<span class="w"> </span>retire<span class="w"> </span>&lt;id&gt;<span class="w">                                </span><span class="c1"># drop a stale entry, no replacement</span>
 </span></code></pre></div>
-<p><strong>Merge</strong> is the N→1 counterpart to supersede: it inserts one consolidated entry (inheriting type/scope from the first row, importance promoted to the max of the sources) and points every merged row's <code>superseded_by</code> at it. <strong>Retire</strong> drops a fact that has no successor — it stamps <code>superseded_at</code> while leaving <code>superseded_by</code> null. A row is <strong>live</strong> (surfaced by default) only when <em>both</em> are null; superseded and retired rows are hidden from all default search, listing, and dedup but kept for audit.</p>
+<p><strong>Merge</strong> is the N→1 counterpart to supersede: it inserts one consolidated entry (inheriting type/scope from the first row that actually exists — missing ids are skipped and reported — with importance promoted to the max of the sources, or <code>--importance</code> if given) and points every merged row's <code>superseded_by</code> at it. <strong>Retire</strong> drops a fact that has no successor — it stamps <code>superseded_at</code> while leaving <code>superseded_by</code> null. A row is <strong>live</strong> (surfaced by default) only when <em>both</em> are null; superseded and retired rows are hidden from all default search, listing, and dedup but kept for audit.</p>
 <p>This is manually-driven: the companion <em>suggests</em> these moves — during <a href="#tier-2-reflections">reflection</a>, or when it spots a conflict — and you decide. Nothing is replaced automatically.</p>
 <h3 id="review-keeping-curated-memory-fresh">Review: keeping curated memory fresh<a class="headerlink" href="#review-keeping-curated-memory-fresh" title="Permanent link">&para;</a></h3>
 <p>Left alone, an important fact can quietly go stale — still stored, never re-checked. <strong>Review resurfacing</strong> surfaces important-but-ageing memories for a quick "still true? refine? promote? retire?" pass.</p>
@@ -3054,7 +3054,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mc-tool-memory<span class="w"> </span>review<span class="w"> </span>--json<span class="w">          </span><span class="c1"># same, as structured JSON</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mc-tool-memory<span class="w"> </span>reviewed<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># mark one reviewed — stamps reviewed_at = now, resetting its curve</span>
 </span></code></pre></div>
-<p>Reviewing an entry (confirming, refining, or retiring it) resets its decay curve so it drops out of the due set until a fresh half-life passes. The home hub (<code>mait-code</code>) shows a <strong>Due for review</strong> count under Memory, and <a href="../review/"><code>mait-code review</code></a> is the interactive way to work the batch — confirm, refine, or retire each in place, without reaching for the CLI. This is a nudge, not an alarm: nothing is changed for you.</p>
+<p>Confirming or refining an entry resets its decay curve so it drops out of the due set until a fresh half-life passes; retiring it drops it from the live set altogether, so it never returns. The home hub (<code>mait-code</code>) shows a <strong>Due for review</strong> count under Memory, and <a href="../review/"><code>mait-code review</code></a> is the interactive way to work the batch — confirm, refine, or retire each in place, without reaching for the CLI. This is a nudge, not an alarm: nothing is changed for you.</p>
 <h2 id="storage-the-memory-database">Storage: The Memory Database<a class="headerlink" href="#storage-the-memory-database" title="Permanent link">&para;</a></h2>
 <p>All structured data lives in a single SQLite file (<code>memory.db</code>) with three search layers:</p>
 <h3 id="memory-entries">Memory entries<a class="headerlink" href="#memory-entries" title="Permanent link">&para;</a></h3>
@@ -3223,6 +3223,14 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <td><code>project-aliases-path</code></td>
 <td><code>data-dir</code> + <code>/project-aliases.json</code></td>
 </tr>
+<tr>
+<td><code>bridge-config-path</code></td>
+<td><code>data-dir</code> + <code>/bridge.json</code></td>
+</tr>
+<tr>
+<td><code>dashboard-config-path</code></td>
+<td><code>data-dir</code> + <code>/dashboard.toml</code></td>
+</tr>
 </tbody>
 </table>
 <p><strong>Important:</strong> The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires re-embedding, which detects the dimension mismatch and recreates the vec table. The simplest path is <code>mait-code settings set embedding-provider bedrock --reindex</code> (a migration key requires an explicit <code>--reindex</code>/<code>--no-reindex</code>), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run <code>mc-tool-memory reindex</code> yourself. <code>mait-code settings list</code> shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at <code>reindex</code>.</p>
@@ -3280,6 +3288,12 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <td><code>5</code></td>
 <td>Timeout (seconds) for git context probes</td>
 </tr>
+<tr>
+<td><code>dashboard-tile-timeout</code></td>
+<td><code>MAIT_CODE_DASHBOARD_TILE_TIMEOUT</code></td>
+<td><code>5</code></td>
+<td>Timeout (seconds) for a start-page shell tile</td>
+</tr>
 </tbody>
 </table>
 <h4 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h4>
@@ -3294,15 +3308,20 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <h4 id="corporate-setup-bedrock">Corporate setup (Bedrock)<a class="headerlink" href="#corporate-setup-bedrock" title="Permanent link">&para;</a></h4>
 <p>If HuggingFace is blocked on your corporate network, use the Bedrock provider:</p>
 <ol>
-<li>Install with the bedrock flag: <code>mait-code install --from &lt;source&gt; --embedding-provider bedrock</code>
-   (or re-install if already installed)</li>
-<li>Ensure AWS credentials are available (e.g. via <code>aws configure</code> or IAM role).
+<li>Install with the bedrock extra, so <code>boto3</code> is actually present:</li>
+</ol>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">MAIT_CODE_EMBEDDING_PROVIDER</span><span class="o">=</span>bedrock<span class="w"> </span>./scripts/install.sh
+</span></code></pre></div>
+<p>The shell installer is what resolves the extra (<code>uv tool install '&lt;source&gt;[bedrock]'</code>).
+   <code>mait-code install --embedding-provider bedrock</code> only records the choice in
+   settings — run on its own against an existing install it leaves <code>boto3</code>
+   missing, and memory silently falls back to keyword-only search.
+2. Ensure AWS credentials are available (e.g. via <code>aws configure</code> or IAM role).
    If you authenticate via a named profile, declare it once in the <code>[env]</code>
    table of <code>settings.toml</code> so every tool picks it up — inside and outside
-   Claude Code sessions:</li>
-</ol>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[env]</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
+   Claude Code sessions:</p>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">[env]</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
 </span></code></pre></div>
 <p>See <a href="../settings/#custom-environment-variables-the-env-table">Custom environment variables</a>.
 3. If you have existing local embeddings, run <code>mc-tool-memory reindex</code> to migrate</p>
@@ -3311,7 +3330,8 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <p>The default search mode (<code>hybrid</code>) runs both FTS5 and vector search, then merges:</p>
 <ul>
 <li>Entries found by <strong>both</strong> methods use vector cosine similarity as the relevance score</li>
-<li>Entries found by <strong>only one</strong> method get a default relevance of 0.3</li>
+<li>Entries found by <strong>vector search only</strong> keep their cosine similarity</li>
+<li>Entries found by <strong>FTS only</strong> get a default relevance of 0.3</li>
 <li>All results are then ranked by the composite scoring formula (see below)</li>
 </ul>
 <p>You can also force a single mode: <code>mc-tool-memory search "query" --mode fts</code> or <code>--mode vector</code>.</p>
@@ -3323,7 +3343,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <li>Mention count (incremented each time the entity is seen)</li>
 <li>First and last seen timestamps</li>
 </ul>
-<p>Both vocabularies are canonical and enforced at write time: entity types
+<p>Both vocabularies are canonical and enforced on the extraction path: entity types
 (<code>person</code>, <code>project</code>, <code>tool</code>, <code>service</code>, <code>concept</code>, <code>org</code>) coerce to <code>unknown</code>
 when the extraction model invents something else, and relationship types
 (<code>uses</code>, <code>owns</code>, <code>contributes_to</code>, <code>depends_on</code>, <code>manages</code>, <code>related_to</code>)
@@ -3331,6 +3351,9 @@ coerce to <code>related_to</code>. The extraction prompt enums are built from th
 tuples (<code>ENTITY_TYPES</code>, <code>RELATIONSHIP_TYPES</code> in <code>tools/memory/entities.py</code>),
 so prompt and enforcement cannot drift. Every relationship carries a free-text
 context field explaining the connection.</p>
+<p>One gap worth knowing: <code>mc-tool-memory restore</code> replays historical JSONL verbatim
+and does <strong>not</strong> coerce, so restoring logs written before migration 12 can
+reintroduce the legacy type values that migration cleaned up.</p>
 <p>The graph has its own interactive surface — <a href="../graph/">the graph
 explorer</a> (<code>mait-code graph</code>) — which renders any entity's
 neighbourhood as a node-link diagram or a flat relationship table.</p>
@@ -3342,8 +3365,11 @@ edge), mention counts are summed, the seen window widens to span both, and
 the source entity is deleted.</p>
 <h2 id="scoring-how-results-are-ranked">Scoring: How Results Are Ranked<a class="headerlink" href="#scoring-how-results-are-ranked" title="Permanent link">&para;</a></h2>
 <p>Search results are ranked by a composite score:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>score = (0.3 × recency + 0.3 × importance + 0.4 × relevance) × scope_boost
 </span></code></pre></div>
+<p>The scope boost multiplies the whole weighted base, not the relevance term alone.
+It is <code>1.0</code> for a branch match and <code>0.85</code> for a project match — both fixed — and
+<code>scope-boost-global</code> / <code>scope-boost-cross-project</code> for the wider scopes.</p>
 <h3 id="recency">Recency<a class="headerlink" href="#recency" title="Permanent link">&para;</a></h3>
 <p>Exponential decay based on memory class:</p>
 <table>
@@ -3373,6 +3399,12 @@ the source entity is deleted.</p>
 <td><code>procedure</code></td>
 <td>180 days</td>
 <td>Most durable — workflows go stale when superseded, not with time</td>
+</tr>
+<tr>
+<td><em>(unknown or missing)</em></td>
+<td>—</td>
+<td>7 days</td>
+<td>Fallback when an entry carries no recognised class</td>
 </tr>
 </tbody>
 </table>
@@ -3456,13 +3488,13 @@ the source entity is deleted.</p>
 <td><code>scope-boost-global</code></td>
 <td><code>0.7</code></td>
 <td>0.0–1.0</td>
-<td>Relevance multiplier for global memories.</td>
+<td>Composite-score multiplier for global memories.</td>
 </tr>
 <tr>
 <td><code>scope-boost-cross-project</code></td>
 <td><code>0.3</code></td>
 <td>0.0–1.0</td>
-<td>Relevance multiplier across project boundaries.</td>
+<td>Composite-score multiplier across project boundaries.</td>
 </tr>
 <tr>
 <td><code>review-threshold</code></td>
@@ -3525,11 +3557,11 @@ the source entity is deleted.</p>
 <li><strong>Batching:</strong> Processes entries in configurable batches (default 50), oldest first</li>
 </ul>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/reflect                                    # Standard reflection
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/reflect                                    # Standard reflection
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 </span></code></pre></div>
 <h3 id="how-it-works_1">How it works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
 <ol>
@@ -3734,6 +3766,10 @@ launched.</p>
 <td>Limit entries per batch (default 50)</td>
 </tr>
 <tr>
+<td><code>reflect --json</code></td>
+<td>Structured <code>{skipped, reason, insights, ops, stored}</code> — what <code>/reflect</code> runs</td>
+</tr>
+<tr>
 <td><code>reflect --drain</code></td>
 <td>Loop until all unreflected entries are processed</td>
 </tr>
@@ -3768,7 +3804,7 @@ launched.</p>
 </table>
 <h3 id="memory-browser-mait-code-memory">Memory browser (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-mait-code-memory" title="Permanent link">&para;</a></h3>
 <p>Open the interactive, read-only memory browser with:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mait-code<span class="w"> </span>memory
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mait-code<span class="w"> </span>memory
 </span></code></pre></div>
 <p>This is a full-screen <a href="https://textual.textualize.io/">Textual</a> app over the
 same store: a tree of memories grouped by entry type on the left (newest

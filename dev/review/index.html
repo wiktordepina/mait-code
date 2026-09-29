@@ -768,15 +768,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-four-decisions" class="md-nav__link">
+  <a href="#the-three-decisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The four decisions
+        The three decisions
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The four decisions">
+    <nav class="md-nav" aria-label="The three decisions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2203,15 +2203,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-four-decisions" class="md-nav__link">
+  <a href="#the-three-decisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The four decisions
+        The three decisions
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The four decisions">
+    <nav class="md-nav" aria-label="The three decisions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2383,12 +2383,13 @@ is scannable at a glance.</p>
 <li>and the <strong>body</strong>, rendered as markdown (plain text is just a subset).</li>
 </ul>
 <p><em>Recall</em> leads because it's why the memory surfaced: the lower it is, the longer
-since the memory was last engaged with. <em>Class</em> sets the decay pace — <code>semantic</code>
+since the memory was last reviewed. It's a decay curve, not a hit count — nothing
+tracks how often a memory gets retrieved. <em>Class</em> sets the decay pace — <code>semantic</code>
 (facts, preferences — slow), <code>episodic</code> (events — fast), <code>procedural</code> (how-tos —
 slowest) — measured from when the memory was last reviewed rather than created.</p>
-<h2 id="the-four-decisions">The four decisions<a class="headerlink" href="#the-four-decisions" title="Permanent link">&para;</a></h2>
-<p>Each verb operates on the highlighted memory and, bar <em>skip</em>, writes through the
-same store operation the CLI uses — nothing here is bespoke:</p>
+<h2 id="the-three-decisions">The three decisions<a class="headerlink" href="#the-three-decisions" title="Permanent link">&para;</a></h2>
+<p>Each verb operates on the highlighted memory and writes through the same store
+operation the CLI uses — nothing here is bespoke:</p>
 <table>
 <thead>
 <tr>
@@ -2413,16 +2414,13 @@ same store operation the CLI uses — nothing here is bespoke:</p>
 <td><strong>Retire</strong></td>
 <td>No longer true — drop it from recall (kept for audit). Backs <code>retire</code>, behind a confirm.</td>
 </tr>
-<tr>
-<td><code>j</code> / <code>k</code></td>
-<td><strong>Skip</strong></td>
-<td>Move on without deciding — nothing is written.</td>
-</tr>
 </tbody>
 </table>
 <p>Whichever you choose, the memory leaves the queue and the cursor advances to the
 next, the count ticking down as you go. When the last one's decided the pane
 switches to an all-caught-up state — you're done.</p>
+<p>To skip, just move the highlight with <code>↑</code>/<code>↓</code> — nothing is written and the memory
+stays in the queue for next time.</p>
 <h3 id="refining-a-memory">Refining a memory<a class="headerlink" href="#refining-a-memory" title="Permanent link">&para;</a></h3>
 <p>Press <code>e</code> and the memory opens in an editor, prefilled with its current text:</p>
 <p><img alt="The refine editor: the highlighted memory's body prefilled in a text area,
@@ -2450,8 +2448,10 @@ footer showing only navigation." src="../assets/review/review-empty.png" /></p>
 <h2 id="off-the-terminal">Off the terminal<a class="headerlink" href="#off-the-terminal" title="Permanent link">&para;</a></h2>
 <p>Like the other TUIs, <code>mait-code review</code> only opens on a TTY. Piped or redirected,
 it prints the due list as text — id, recall, first line, most-decayed first — so
-it stays useful in a log or an SSH one-liner (the same view as <code>mc-tool-memory
-review</code>).</p>
+it stays useful in a log or an SSH one-liner. <code>mc-tool-memory review</code> prints a
+fuller record per entry (type, importance, class, recall, last-reviewed date and
+a content excerpt) and caps at <code>--limit 10</code>, where the piped TUI lists every due
+item.</p>
 <h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <h3 id="keys">Keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h3>
 <table>
@@ -2463,7 +2463,7 @@ review</code>).</p>
 </thead>
 <tbody>
 <tr>
-<td><kbd>↑</kbd> / <kbd>↓</kbd> (or <kbd>k</kbd> / <kbd>j</kbd>)</td>
+<td><kbd>↑</kbd> / <kbd>↓</kbd></td>
 <td>Move the highlight; the detail pane follows</td>
 </tr>
 <tr>

@@ -2497,7 +2497,7 @@ that below).</p>
 <tbody>
 <tr>
 <td><strong>General</strong></td>
-<td><code>data-dir</code> (where everything lives) and <code>theme</code>.</td>
+<td><code>data-dir</code> (where everything lives), <code>theme</code>, and <code>dashboard-tile-timeout</code> — how many seconds a <a href="../home/#the-start-page">start-page</a> shell tile may run before it's cut off (default <code>5</code>).</td>
 </tr>
 <tr>
 <td><strong>Bridge</strong></td>
@@ -2521,7 +2521,7 @@ that below).</p>
 </tr>
 <tr>
 <td><strong>Paths (derived)</strong></td>
-<td>Read-only paths computed from <code>data-dir</code> — the database files, the model cache, the observations directory.</td>
+<td>Read-only values the editor computes rather than stores — the database files, the model cache, the observations directory, and the Bridge / project-alias / dashboard config paths, all from <code>data-dir</code>; plus <code>embedding-dim</code>, derived from the provider and model.</td>
 </tr>
 <tr>
 <td><strong>Custom env</strong></td>
@@ -2548,8 +2548,9 @@ set of every installed theme, the current one marked." src="../assets/settings/s
   become an <strong>input with live validation</strong>: a bad value shows its error as you
   type, and <em>Apply</em> won't write it.</li>
 <li><strong>Derived values</strong> (everything under <em>Paths</em>) are <strong>read-only</strong> — they're
-  computed from <code>data-dir</code>, so the editor shows the value and says so rather than
-  pretending you can change it.</li>
+  computed from other settings rather than stored, so the editor shows the value
+  and says so rather than pretending you can change it. Most follow <code>data-dir</code>;
+  <code>embedding-dim</code> follows the provider and model.</li>
 </ul>
 <p>Press <code>Ctrl+S</code> (or <code>Enter</code> in an input) to apply. A line under the editor
 confirms <code>✓ applied</code>, along with any warning the change carries.</p>
@@ -2676,8 +2677,8 @@ by an argument is left out rather than shipped with a caveat:</p>
 <li><code>mc-tool-board next</code> — read-only until <code>--claim</code>, which claims a card.</li>
 <li><code>mc-tool-memory entities</code> — searches until <code>entities merge</code>, which rewrites
   the graph.</li>
-<li><code>mc-tool-memory review</code> — a prefix rule for it also spans <code>reviewed</code>, a
-  different, mutating subcommand.</li>
+<li><code>mc-tool-memory review</code> — kept out so the read-only tier stays clear of the
+  review write path (<code>reviewed</code> stamps a memory).</li>
 <li><code>mc-tool-inbox drain</code> and <code>mc-tool-reminders check</code>, which both mutate.</li>
 </ul>
 <p>A few presets <em>are</em> offered but flagged <strong>not read-only</strong> — <code>uv run ruff check</code>
@@ -2706,6 +2707,19 @@ command per changed file — and <code>stat</code> reach <code>static-sh</code>,
 out loud instead of leaning on an undocumented matcher detail, and it still
 holds if a future release changes the rule. It just isn't the thing keeping a
 shell out of your <code>git diff</code> grant.</p>
+<p>Two other measured details are worth knowing before you write rules by hand:</p>
+<ul>
+<li><strong><code>Bash(cmd *)</code>, the older space form, is a real wildcard.</strong> <code>Bash(git *)</code>
+  permits <code>git push</code>. It is not a safer spelling of <code>Bash(git:*)</code>.</li>
+<li><strong>A grant buys unsandboxed execution, not merely a quiet prompt.</strong> An ungranted
+  command Claude Code can contain runs in a filesystem-isolated sandbox with no
+  prompt at all, and its writes are discarded; uncontainable ones are refused
+  outright. So "no prompt appeared" is not evidence that a rule matched, and
+  narrowing a grant needn't break anything that only reads.</li>
+</ul>
+<p>Both are undocumented matcher behaviour pinned to 2.1.220 — see
+<a href="../development/#granting-allowed-tools">Granting allowed-tools</a> for the full
+measurement.</p>
 <div class="admonition note">
 <p class="admonition-title">Upgrading from before 0.68.0</p>
 <p>Rules already in your <code>~/.claude/settings.json</code> keep their older form.

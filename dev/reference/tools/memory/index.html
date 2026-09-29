@@ -4904,8 +4904,8 @@ Bedrock providers.</p>
 score suitable for <code>composite_score()</code>:</p>
 <ul>
 <li>Entries found by both: use vector similarity as relevance.</li>
-<li>FTS-only entries: default relevance <code>0.3</code>.</li>
-<li>Vector-only entries: default relevance <code>0.3</code>.</li>
+<li>Vector-only entries: keep their cosine similarity as relevance.</li>
+<li>FTS-only entries: default relevance <code>0.3</code> (no vector to score with).</li>
 </ul>
 <p>Falls back to FTS-only if no embeddings are available.</p>
 

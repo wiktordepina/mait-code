@@ -1236,6 +1236,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#review-queue-tui-mait-code-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review Queue TUI (mait-code review)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#observations-browser-tui-mait-code-observations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1328,6 +1339,39 @@
     <span class="md-ellipsis">
       
         Home Hub TUI (mait-code home)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-start-page-dashboardtoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Start Page (dashboard.toml)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-bridge-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Bridge (bridge/)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-and-theming-consolepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Console and Theming (console.py)
       
     </span>
   </a>
@@ -2500,6 +2544,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#review-queue-tui-mait-code-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review Queue TUI (mait-code review)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#observations-browser-tui-mait-code-observations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2592,6 +2647,39 @@
     <span class="md-ellipsis">
       
         Home Hub TUI (mait-code home)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-start-page-dashboardtoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Start Page (dashboard.toml)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-bridge-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Bridge (bridge/)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-and-theming-consolepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Console and Theming (console.py)
       
     </span>
   </a>
@@ -2707,7 +2795,7 @@
 <li><strong>Standalone project</strong> — Self-contained Python package managed by <code>uv</code>. No system-wide installation required.</li>
 <li><strong>Memory-first</strong> — The memory system is the core differentiator. All other features feed into or read from memory.</li>
 <li><strong>Companion identity</strong> — Not a generic assistant. The soul document and user context create a consistent personality.</li>
-<li><strong>uv-managed</strong> — All Python execution goes through <code>uv run --project</code>. No manual venv activation.</li>
+<li><strong>uv-managed</strong> — Packaging and environments are <code>uv</code>'s job; no manual venv activation. A shipped install is <code>uv tool install</code>, so <code>mait-code</code> and the <code>mc-tool-*</code> entry points are called directly; <code>uv run</code> is the development path.</li>
 <li><strong>CLI tools + skills over MCP</strong> — Simpler, no process overhead, preprocessing injects results before Claude sees the prompt.</li>
 </ol>
 <h2 id="system-architecture">System Architecture<a class="headerlink" href="#system-architecture" title="Permanent link">&para;</a></h2>
@@ -2725,24 +2813,33 @@
             auto_format["auto_format/ &lt;i&gt;(placeholder, not registered)&lt;/i&gt;"]
         end
         subgraph tools_pkg ["tools/"]
-            memory_tool["memory/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, writer&lt;br/&gt;search, scoring, entities&lt;br/&gt;embeddings, reflect"]
-            reminders_tool["reminders/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate"]
-            board_tool["board/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, columns, service"]
+            memory_tool["memory/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, writer&lt;br/&gt;search, scoring, entities&lt;br/&gt;embeddings, reflect, review&lt;br/&gt;native, observations, stats"]
+            reminders_tool["reminders/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, service"]
+            board_tool["board/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, columns, service, export"]
             inbox_tool["inbox/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, service"]
             web_fetch_tool["web_fetch/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, fetch, convert"]
         end
-        shared["llm.py + logging.py + ssl.py &lt;i&gt;(shared)&lt;/i&gt;"]
+        subgraph bridge_pkg ["bridge/ &lt;i&gt;(opt-in transport)&lt;/i&gt;"]
+            bridge_core["base, registry, service, config&lt;br/&gt;control, ntfy, loopback"]
+        end
+        subgraph ui_pkg ["cli/ + tui/"]
+            cli_layer["cli/ &lt;i&gt;(mait-code)&lt;/i&gt;&lt;br/&gt;install, update, status, doctor&lt;br/&gt;settings, permissions, dashboard&lt;br/&gt;+ 10 Textual TUIs"]
+            tui_layer["tui/ &lt;i&gt;(shared)&lt;/i&gt;&lt;br/&gt;app, theme, palette, banner&lt;br/&gt;brand, confirm, filters, markdown"]
+        end
+        shared["config.py + context.py + console.py&lt;br/&gt;llm.py + logging.py + ssl.py &lt;i&gt;(shared)&lt;/i&gt;"]
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md&lt;br/&gt;user_context.md"]
         memory_store["memory/&lt;br/&gt;MEMORY.md &lt;i&gt;(curated)&lt;/i&gt;&lt;br/&gt;memory.db &lt;i&gt;(SQLite)&lt;/i&gt;&lt;br/&gt;observations/ &lt;i&gt;(raw JSONL)&lt;/i&gt;&lt;br/&gt;reflections/ &lt;i&gt;(synthesised)&lt;/i&gt;"]
         other_dbs["reminders.db&lt;br/&gt;board.db&lt;br/&gt;inbox.db"]
+        cfg["dashboard.toml&lt;br/&gt;bridge.json&lt;br/&gt;project-aliases.json"]
     end
 
     HOOKS --&gt; mait_code
     SKILLS --&gt; mait_code
-    mait_code --&gt; data_dir</code></pre>
+    mait_code --&gt; data_dir
+    bridge_pkg -.-&gt;|"ntfy topic"| phone["Phone / other devices"]</code></pre>
 <h2 id="memory-architecture">Memory Architecture<a class="headerlink" href="#memory-architecture" title="Permanent link">&para;</a></h2>
 <h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h3>
 <p>The memory system combines three tiers of storage with a SQLite database for structured search. Raw observations flow in from hooks, get indexed in the database, and the highest-confidence facts are promoted to MEMORY.md for always-on context.</p>
@@ -2771,7 +2868,7 @@
 <tr>
 <td><code>entry_type</code></td>
 <td>TEXT</td>
-<td>fact, preference, event, decision, insight, task, relationship</td>
+<td>fact, preference, event, decision, insight, task, relationship, procedure</td>
 </tr>
 <tr>
 <td><code>importance</code></td>
@@ -2817,6 +2914,7 @@
 <ul>
 <li><strong>Episodic</strong> (fast decay, 3-day half-life): <code>event</code>, <code>task</code></li>
 <li><strong>Semantic</strong> (slow decay, 90-day half-life): <code>fact</code>, <code>preference</code>, <code>decision</code>, <code>insight</code>, <code>relationship</code></li>
+<li><strong>Procedural</strong> (slowest decay, 180-day half-life): <code>procedure</code></li>
 </ul>
 <p><strong>FTS5 virtual table: <code>memory_entries_fts</code></strong>
 - Full-text search with BM25 ranking
@@ -2935,14 +3033,18 @@
 <p>Tracks the last <code>memory_entries.id</code> reflected on per project, so <code>/reflect</code> is idempotent across runs. Primary key on <code>project</code> (empty string for global). Columns: <code>project</code>, <code>last_reflected_id</code>, <code>last_reflected_at</code>.</p>
 <h3 id="composite-scoring">Composite Scoring<a class="headerlink" href="#composite-scoring" title="Permanent link">&para;</a></h3>
 <p>Memory retrieval results are ranked by a composite score:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>score = 0.3 × recency + 0.3 × importance + 0.4 × relevance
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>score = (0.3 × recency + 0.3 × importance + 0.4 × relevance) × scope_boost
 </span></code></pre></div>
+<p>The scope boost scales the whole weighted base: <code>1.0</code> for a branch match, <code>0.85</code>
+for a project match (both fixed), and <code>scope-boost-global</code> / <code>scope-boost-cross-project</code>
+for the wider scopes.</p>
 <p><strong>Recency</strong> uses exponential decay:</p>
 <ul>
 <li><code>recency = exp(-ln(2) × age_days / half_life)</code></li>
 <li>Episodic half-life: 3 days (events decay fast)</li>
 <li>Semantic half-life: 90 days (facts persist)</li>
-<li>Default half-life: 7 days (unknown class)</li>
+<li>Procedural half-life: 180 days (workflows go stale when superseded, not with time)</li>
+<li>Default half-life: 7 days (unknown or missing class)</li>
 </ul>
 <p><strong>Importance</strong> is normalized from 1-10 to 0.0-1.0:</p>
 <ul>
@@ -3073,11 +3175,38 @@ new entry's project) using two complementary measures:</p>
 <td>--dry-run?</td>
 <td>Rewrite stored project slugs per the project-alias map</td>
 </tr>
+<tr>
+<td><code>review</code></td>
+<td>--limit?, --json?, --project?, --branch?, --scope?</td>
+<td>List memories due for review, most-decayed first</td>
+</tr>
+<tr>
+<td><code>reviewed</code></td>
+<td>id</td>
+<td>Stamp <code>reviewed_at = now</code>, resetting the entry's decay curve</td>
+</tr>
+<tr>
+<td><code>supersede</code></td>
+<td>old_id, content, --importance?</td>
+<td>Replace an entry with a revised version, keeping the old row for audit (importance inherits unless overridden)</td>
+</tr>
+<tr>
+<td><code>retire</code></td>
+<td>id</td>
+<td>Drop an entry from recall, keeping the row for audit</td>
+</tr>
+<tr>
+<td><code>merge</code></td>
+<td>ids…, --into content, --importance?</td>
+<td>Fold several entries into one, retiring the originals (importance defaults to the max among them)</td>
+</tr>
 </tbody>
 </table>
 <p>Scope flags apply to every command that touches <code>memory_entries</code>: <code>--project</code> and <code>--branch</code> override the auto-detected context; <code>--scope</code> filters or sets the entry scope (<code>global</code>, <code>project</code>, <code>branch</code>, or <code>all</code> — the last disables filtering at query time).</p>
 <h2 id="memory-browser-tui-mait-code-memory">Memory Browser TUI (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-tui-mait-code-memory" title="Permanent link">&para;</a></h2>
 <p><code>mait-code memory</code> opens a full-screen, read-only master–detail browser over the memory store: a tree of memories grouped by entry type on the left (counts per group, newest first), the selected memory's body — rendered as markdown, plain text being a subset — plus its metadata (created, importance, scope, class) on the right. <code>/</code> focuses a live substring filter (groups expand to the matches, the subtitle reports the narrowed count), <code>r</code> re-reads the store, a <code>Ctrl+P</code> command palette exposes the actions, and <code>?</code> opens the context help screen. It deliberately browses <em>everything</em> — across projects and scopes — and performs no mutations: reading is its whole job, and writes stay with <code>mc-tool-memory</code>. It is built on Textual over the same query layer as the CLI tool (<code>search.list_entries</code>), following the house TUI conventions: a TTY-gated launch (piped or redirected, it prints a grouped read-only summary instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
+<h2 id="review-queue-tui-mait-code-review">Review Queue TUI (<code>mait-code review</code>)<a class="headerlink" href="#review-queue-tui-mait-code-review" title="Permanent link">&para;</a></h2>
+<p><code>mait-code review</code> is the memory browser's writing counterpart: a queue of curated memories whose recall probability has decayed below <code>review-threshold</code> while their importance sits at or above <code>review-min-importance</code>, most-decayed first. Where the browser deliberately never writes, this surface exists to write — each entry gets one of three verbs, and each backs the same store operation the CLI exposes: <code>c</code> confirm (<code>mark_reviewed</code>, resetting the decay curve), <code>e</code> refine (an editor that supersedes the entry on save), <code>x</code> retire (behind a confirm, since it hides a fact from recall). Moving the highlight without choosing leaves the memory in the queue. <code>p</code> narrows to one project using the memory browser's picker, <code>r</code> recomputes the queue. The resurfacing query lives in <code>tools/memory/review.py</code> and decays from the <code>reviewed_at</code> anchor (migration 13) rather than <code>created_at</code>, so a memory's clock restarts when it is confirmed, not when it was first stored — the recall figure is a decay function, not a usage count, since nothing tracks retrieval. Same house conventions: TTY-gated (piped, it prints the due list as text), lazily imported, one connection for the app's lifetime.</p>
 <h2 id="observations-browser-tui-mait-code-observations">Observations Browser TUI (<code>mait-code observations</code>)<a class="headerlink" href="#observations-browser-tui-mait-code-observations" title="Permanent link">&para;</a></h2>
 <p><code>mait-code observations</code> is the memory browser's sibling over the <strong>raw extraction tier</strong>: a read-only master–detail browser of every non-insight entry, grouped by capture day (newest first), each flagged <strong>pending</strong> or <strong>reflected</strong> against the reflection watermark — so what reads pending here is precisely what the next <code>/reflect</code> run will consider. Highlighting a day renders its capture sessions (trigger, project, per-category extraction counts) from the daily JSONL logs; highlighting an entry renders its body and metadata, including its reflection standing. <code>/</code> filters live by content; <code>p</code> narrows to one project via a <code>Select</code> dropdown (the board's filter pattern) and judges entries against <em>that project's</em> watermark, since reflection runs per-project. The query layer lives in <code>tools/memory/observations.py</code> — <code>memory.db</code> is the operative source (the watermark is defined over its entry IDs); the JSONL logs contribute only per-capture metadata, read best-effort. Same house conventions: TTY-gated (a day-grouped text summary when piped), lazily imported, one connection for the app's lifetime, and no mutations — synthesis stays with <code>/reflect</code>.</p>
 <h2 id="board-database">Board Database<a class="headerlink" href="#board-database" title="Permanent link">&para;</a></h2>
@@ -3316,6 +3445,11 @@ new entry's project) using two complementary measures:</p>
 <td>--all?, --project?, --json?</td>
 <td>Per-column counts (the session-start hook reads the same counts via <code>service.summary_counts</code>)</td>
 </tr>
+<tr>
+<td><code>export</code></td>
+<td>id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search?</td>
+<td>Export one card or the whole board as markdown or JSON (stdout, or a file with <code>--out</code>)</td>
+</tr>
 </tbody>
 </table>
 <p>Every query and mutation — including the done-invariant (<code>completed_at</code> is set on entering <code>done</code> and cleared on leaving) — lives in <code>src/mait_code/tools/board/service.py</code>, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.</p>
@@ -3358,7 +3492,7 @@ new entry's project) using two complementary measures:</p>
 </table>
 <p>Unlike the board, the inbox is <strong>global, not project-scoped</strong> — <code>project</code> is only a hint to help triage route the item later.</p>
 <h2 id="inbox-cli-tool-mc-tool-inbox">Inbox CLI Tool (<code>mc-tool-inbox</code>)<a class="headerlink" href="#inbox-cli-tool-mc-tool-inbox" title="Permanent link">&para;</a></h2>
-<p>A thin capture-and-drain CLI over <code>inbox.db</code>. <code>add "&lt;text&gt;"</code> captures an item (frictionless — no flags required), <code>list [--json]</code> shows the inbox oldest-first, <code>remove &lt;id&gt;</code> drains an item out, and <code>count</code> prints the item total (the session-start hook reads the same count via <code>service.count_items</code>). Queries and mutations live in <code>src/mait_code/tools/inbox/service.py</code>, the presentation-agnostic layer mirroring the board's <code>cli</code>/<code>service</code>/<code>db</code> split.</p>
+<p>A thin capture-and-drain CLI over <code>inbox.db</code>. <code>add "&lt;text&gt;"</code> captures an item (frictionless — no flags required), <code>list [--json]</code> shows the inbox oldest-first, <code>remove &lt;id&gt;</code> drains an item out, <code>count</code> prints the item total (the session-start hook reads the same count via <code>service.count_items</code>), and <code>drain</code> pulls any captures waiting on the <a href="../bridge/">Bridge</a> into the inbox. Queries and mutations live in <code>src/mait_code/tools/inbox/service.py</code>, the presentation-agnostic layer mirroring the board's <code>cli</code>/<code>service</code>/<code>db</code> split.</p>
 <p>The intended lifecycle is <strong>capture → triage → empty</strong>: the <code>/triage</code> skill walks the captured items, proposes a destination for each (board card or memory), creates it on the user's confirmation, and removes the item — keeping the inbox near-empty rather than letting it become a second backlog. Routing is suggestion-based: the companion proposes, the user decides.</p>
 <h2 id="reminders-cli-tool-mc-tool-reminders">Reminders CLI Tool (<code>mc-tool-reminders</code>)<a class="headerlink" href="#reminders-cli-tool-mc-tool-reminders" title="Permanent link">&para;</a></h2>
 <table>
@@ -3438,8 +3572,16 @@ new entry's project) using two complementary measures:</p>
 <p>Content-type routing: HTML→markdown (via <code>markdownify</code>), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.</p>
 <h2 id="home-hub-tui-mait-code-home">Home Hub TUI (<code>mait-code home</code>)<a class="headerlink" href="#home-hub-tui-mait-code-home" title="Permanent link">&para;</a></h2>
 <p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>e</code> embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
-<p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the observations browser, or the settings editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and the board/memory/observations/settings apps are launched unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with.</p>
-<p>This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from <code>mait_code.tui.brand</code>. The <code>BrandBanner</code> (<code>mait_code.tui.banner</code>) wraps them into one size-responsive masthead worn by every TUI — home, board, settings, the memory browser and the observations browser — in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the <code>mc-tool-*</code> CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, <code>mait-code home</code> prints a compact text summary and bare <code>mait-code</code> keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.</p>
+<p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with.</p>
+<p>This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from <code>mait_code.tui.brand</code>. The <code>BrandBanner</code> (<code>mait_code.tui.banner</code>) wraps them into one size-responsive masthead worn by every TUI in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the <code>mc-tool-*</code> CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, <code>mait-code home</code> prints a compact text summary and bare <code>mait-code</code> keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.</p>
+<h2 id="the-start-page-dashboardtoml">The Start Page (<code>dashboard.toml</code>)<a class="headerlink" href="#the-start-page-dashboardtoml" title="Permanent link">&para;</a></h2>
+<p>The home hub's root node renders a <strong>user-authored start page</strong> rather than a fixed readout: a grid of tiles declared in <code>dashboard.toml</code> in the data directory, one to four columns wide. A tile is either a <strong>built-in widget</strong> — the six in <code>_dashboard.py</code>'s <code>BUILTIN_WIDGETS</code>, reading the same store layers as the rest of the hub — or an arbitrary <strong>shell command</strong> whose stdout fills the tile. Shell tiles are what make the page personal (a <code>git log</code>, a deploy status, a weather one-liner) and are also the risk surface, so each runs under <code>dashboard-tile-timeout</code> seconds (default <code>5</code>) and a failure renders a snag line in that tile instead of taking the page down. The guided setup editor (<code>_dashboard_tui.py</code>, reachable from the hub or its command palette) writes the TOML so the format stays an implementation detail unless you want it. Loading and validation live in <code>cli/_dashboard.py</code>, kept separate from the TUI so the config can be parsed and checked without a terminal.</p>
+<h2 id="the-bridge-bridge">The Bridge (<code>bridge/</code>)<a class="headerlink" href="#the-bridge-bridge" title="Permanent link">&para;</a></h2>
+<p>The Bridge is the companion's optional link to devices that aren't the terminal — capture in, notifications out. It is <strong>disabled by default and makes zero network calls while disabled</strong>: the drain short-circuits before any request. That default is deliberate rather than cautious-by-habit — enabling it means outbound network access, which a work machine under corporate policy may not permit, so it is a per-machine opt-in.</p>
+<p>The package is a small pluggable-channel design: <code>base.py</code> defines the channel protocol, <code>registry.py</code> maps a <code>bridge-type</code> setting to an implementation, and <code>service.py</code> holds the transport-agnostic drain/publish logic. Two channels ship — <code>ntfy.py</code> (a private <a href="https://ntfy.sh">ntfy</a> topic, the real one) and <code>loopback.py</code> (in-process, for tests). Channel credentials live in <code>bridge.json</code> in the data directory; the per-machine drain watermark lives beside it in <code>bridge-state.json</code>, which is why that file must not be synced between machines.</p>
+<p>Both directions ride the existing reactive triggers rather than a daemon: the session-start hook and <code>mc-tool-inbox drain</code> pull captures into the inbox, and the session-start hook and <code>mc-tool-reminders check</code> publish due reminders outward. A published reminder carries a <strong>Done</strong> action that posts <code>mait-ctl:dismiss:&lt;id&gt;</code> back to the capture topic; <code>control.py</code> intercepts any <code>mait-ctl:</code>-prefixed inbound message as a command rather than filing it as a capture, and the next drain dismisses the reminder. Each reminder publishes once, guarded by a <code>notified_at</code> stamp. <code>doctor</code> checks the Bridge but only ever warns — an unreachable phone is not a broken install.</p>
+<h2 id="console-and-theming-consolepy">Console and Theming (<code>console.py</code>)<a class="headerlink" href="#console-and-theming-consolepy" title="Permanent link">&para;</a></h2>
+<p>Every CLI surface prints through one shared <code>rich</code> <code>Console</code> in <code>console.py</code>, carrying the same palette the TUIs theme from. It is why <code>status</code>, <code>doctor</code> and <code>update</code> look like the TUIs rather than like stock argparse output, and why <code>--no-color</code> is a single global switch rather than a per-command concern. The TUI side of the same palette lives in <code>tui/theme.py</code>.</p>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3597,11 +3739,14 @@ new entry's project) using two complementary measures:</p>
 <li>Sensitive parameters (<code>content</code>, <code>query</code>, <code>what</code>, <code>prompt</code>, <code>message</code>) are automatically truncated to 80 chars</li>
 <li><code>TimedRotatingFileHandler</code> — rotates at midnight, keeps <code>log-backup-count</code> days (default 14)</li>
 </ul>
-<p><strong>Log format:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>2026-03-08T14:23:01 INFO  mait_code.tools.memory.cli — invoked: mc-tool-memory query=&quot;dark mo...&quot; limit=10 mode=&#39;hybrid&#39;
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>2026-03-08T14:23:01 DEBUG mait_code.tools.memory.search — Vector search: 3 results
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>2026-03-08T14:23:01 INFO  mait_code.invocation — completed: mc-tool-memory (0.42s)
-</span></code></pre></div></p>
+<p><strong>Log format:</strong> JSON Lines — one object per line, written to <code>mait-code.jsonl</code>.
+Core fields are <code>ts</code> (epoch seconds), <code>level</code>, <code>logger</code> (with the <code>mait_code.</code>
+prefix stripped), <code>msg</code>, <code>tool</code> and <code>pid</code>; see <a href="../development/#log-format">the schema
+table</a> for the full list.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span><span class="nt">&quot;ts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1772029381.412</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;logger&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tools.memory.cli&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invoked: mc-tool-memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;tool&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mc-tool-memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">48120</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invoked&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;query&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dark mo...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;limit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hybrid&quot;</span><span class="p">}}</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="p">{</span><span class="nt">&quot;ts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1772029381.598</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;debug&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;logger&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;tools.memory.search&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Vector search: 3 results&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;tool&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mc-tool-memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">48120</span><span class="p">}</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">{</span><span class="nt">&quot;ts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1772029381.834</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;logger&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invocation&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed: mc-tool-memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;tool&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mc-tool-memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">48120</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">422</span><span class="p">}</span>
+</span></code></pre></div>
 <h2 id="identity-system">Identity System<a class="headerlink" href="#identity-system" title="Permanent link">&para;</a></h2>
 <p>Three files compose the companion's identity:</p>
 <ol>
@@ -3624,6 +3769,9 @@ new entry's project) using two complementary measures:</p>
 <li>Add <code>scope</code>, <code>project</code>, <code>branch</code> columns to <code>memory_entries</code>; rebuild FTS with new columns; add scope/project indexes</li>
 <li>Create <code>reflection_watermark</code> table for idempotent reflection</li>
 <li>Relabel extraction-sourced <code>insight</code> entries as <code>decision</code> (one-time; guarded to run only before reflection has ever run, so genuine reflection insights are never touched)</li>
+<li>Add the supersession columns (<code>superseded_by</code>, <code>superseded_at</code>) to <code>memory_entries</code></li>
+<li>Remap entity and relationship types onto the canonical vocabularies, folding legacy values</li>
+<li>Add the <code>reviewed_at</code> anchor that review resurfacing decays from</li>
 </ol>
 <p>Adding a new migration:</p>
 <ol>
@@ -3645,12 +3793,21 @@ new entry's project) using two complementary measures:</p>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>├── models/                   # Cached embedding models (local provider only)
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── reminders.db              # Reminder database
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── board.db                  # Cross-project kanban board database
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>└── inbox.db                  # Quick-capture inbox database
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>├── inbox.db                  # Quick-capture inbox database
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├── dashboard.toml            # Start-page tile layout
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>├── bridge.json               # Bridge channel config (may hold a token)
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>├── bridge-state.json         # Per-machine drain watermark — never sync
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>└── project-aliases.json      # Project slug alias map
 </span></code></pre></div>
 <blockquote>
 <p>Rotating log files do <strong>not</strong> live in the data directory — they go to the XDG
 state dir (<code>~/.local/state/mait-code/mait-code.jsonl</code> by default, structured
-JSON Lines), configurable via <code>MAIT_CODE_LOG_FILE</code>.</p>
+JSON Lines), configurable via <code>MAIT_CODE_LOG_FILE</code>. Nor does the settings file:
+<code>$XDG_CONFIG_HOME/mait-code/settings.toml</code> is the single source of truth for
+every <code>MAIT_CODE_*</code> knob and sits outside the synced directory by design.</p>
+<p><code>bridge-state.json</code> and <code>memory/observations/cursors.json</code> describe how far
+<em>this machine</em> has read. See <a href="../sync/">Multi-machine sync</a> for what to commit
+and what to leave behind.</p>
 </blockquote>
 <h2 id="key-technical-decisions">Key Technical Decisions<a class="headerlink" href="#key-technical-decisions" title="Permanent link">&para;</a></h2>
 <table>
@@ -3723,7 +3880,7 @@ JSON Lines), configurable via <code>MAIT_CODE_LOG_FILE</code>.</p>
 </tr>
 <tr>
 <td>File-based rotating logs</td>
-<td>No stdout/stderr interference with hook JSON; configurable via env vars; <code>RotatingFileHandler</code> keeps log size bounded</td>
+<td>No stdout/stderr interference with hook JSON; configurable via env vars; <code>TimedRotatingFileHandler</code> rotates at midnight and keeps <code>log-backup-count</code> days</td>
 </tr>
 <tr>
 <td>Watermark table for reflection idempotency</td>

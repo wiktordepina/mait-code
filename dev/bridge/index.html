@@ -2197,14 +2197,22 @@ allows outbound network access, which isn't always permitted (a work machine
 under a corporate policy). While disabled it makes <em>zero</em> network calls — the
 drain short-circuits before any request. Turn it on only where that access is
 allowed, per machine.</p>
-<p>Enable and configure it from the home hub — <strong>System ▸ ↗ Configure Bridge</strong> —
-or launch the editor directly. The form collects the channel's settings and
-offers a <strong>Test connection</strong> button that probes them before you save.</p>
+<p>Enable and configure it from the home hub — <strong>System ▸ ↗ Configure Bridge</strong>.
+That leaf is the only way into the editor; there is no <code>mait-code bridge</code>
+command. The form collects the channel's settings and offers a <strong>Test
+connection</strong> button that probes them before you save.</p>
+<p>The gate and the channel choice are also plain settings, if you'd rather script
+them or edit <code>settings.toml</code> directly:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>bridge<span class="w"> </span>enabled
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>bridge-type<span class="w"> </span>ntfy
+</span></code></pre></div>
+<p>The channel's server, topics and token stay in the Bridge screen — they aren't
+registry settings.</p>
 <h2 id="setting-up-ntfy">Setting up ntfy<a class="headerlink" href="#setting-up-ntfy" title="Permanent link">&para;</a></h2>
 <p>The Bridge expects a private <a href="https://ntfy.sh">ntfy</a> topic. ntfy self-hosts as
 a single container, so the home server is the natural place for it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>ntfy<span class="w"> </span>-p<span class="w"> </span><span class="m">80</span>:80<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>binwiederhier/ntfy<span class="w"> </span>serve
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>ntfy<span class="w"> </span>-p<span class="w"> </span><span class="m">80</span>:80<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>binwiederhier/ntfy<span class="w"> </span>serve
 </span></code></pre></div>
 <p>Pick a <strong>private, unguessable capture topic</strong> (it's the address captures are
 published to and drained from — treat it like a secret), and, on a protected
@@ -2237,11 +2245,15 @@ server, mint an access token. Then in the Bridge editor:</p>
 </table>
 <p>Set <strong>Status</strong> to <em>enabled</em>, <strong>Test connection</strong> to confirm the server is
 reachable and the token works, then <strong>Save</strong>.</p>
+<p>A <strong>403</strong> here isn't always the token. Cloudflare-fronted servers reject
+requests carrying urllib's default user-agent, so the Bridge sends a real one —
+if you still see a 403, suspect a proxy or WAF in front of ntfy before you go
+regenerating credentials.</p>
 <h2 id="capturing">Capturing<a class="headerlink" href="#capturing" title="Permanent link">&para;</a></h2>
 <p>Anything published to the capture topic becomes an inbox item on the next
 drain. Publish however suits the moment:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># from any machine</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>curl<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;ring the vet about Cody&#39;s booster&quot;</span><span class="w"> </span>https://ntfy.example.org/mait-capture-7f3a9c
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># from any machine</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>curl<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;ring the vet about Cody&#39;s booster&quot;</span><span class="w"> </span>https://ntfy.example.org/mait-capture-7f3a9c
 </span></code></pre></div>
 <p>On a phone, the ntfy app, an Android <a href="https://http-shortcuts.rmy.ch/">HTTP Shortcut</a>
 or an Apple Shortcut turns the share sheet into the same authenticated POST —
@@ -2262,6 +2274,10 @@ a reminder falls due, it's published to that topic and lands on your phone's
 lock screen. Each notification carries a <strong>"Done"</strong> button — tapping it posts a
 control message back to the capture topic, and the next drain dismisses the
 reminder for you. No terminal required, from either direction.</p>
+<p>The control message is a plain string, <code>mait-ctl:dismiss:&lt;id&gt;</code>. Any inbound
+message starting <code>mait-ctl:</code> is intercepted as a command rather than filed as a
+capture — worth knowing, since captures can arrive from any device that can
+publish to the topic.</p>
 <p>Publishing rides the same reactive triggers as draining — the session-start
 hook and <code>mc-tool-reminders check</code> — and each reminder is sent <strong>once</strong> (a
 <code>notified_at</code> stamp stops a still-overdue reminder from re-notifying every
