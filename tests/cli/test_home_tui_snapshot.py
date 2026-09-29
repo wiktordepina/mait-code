@@ -2,8 +2,9 @@
 
 Renders the hub against accepted SVG baselines under ``__snapshots__/``.
 Everything environment- or time-dependent is pinned: stores are seeded with
-fixed timestamps (overdue in the past, upcoming far in the future), the doctor
-report and version are stubbed, and the theme is the ``mait-dark`` default.
+fixed timestamps (overdue in the past, upcoming far in the future), memory
+decay is read against a pinned clock, the doctor report and version are
+stubbed, and the theme is the ``mait-dark`` default.
 
 Regenerate the baselines intentionally (and eyeball the diff) with::
 
@@ -12,15 +13,20 @@ Regenerate the baselines intentionally (and eyeball the diff) with::
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 import mait_code.cli._dashboard as dashboard_mod
 import mait_code.cli._doctor as doctor_mod
+import mait_code.tools.memory.review as review_mod
 import mait_code.tui.banner as banner_mod
 from mait_code.cli._doctor import Check, DoctorReport
 from mait_code.cli._home_tui import HomeApp
+
+#: The clock memory decay is read against — a fortnight after the seeds below.
+_PINNED_NOW = datetime(2026, 6, 15, 12, 0, tzinfo=UTC)
 
 
 @pytest.fixture(autouse=True)
@@ -45,6 +51,15 @@ def _pin_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         dashboard_mod,
         "dashboard_path",
         lambda: Path("~/.claude/mait-code-data/dashboard.toml"),
+    )
+    # Memory decay runs off the wall clock, so the seeded memories drift into
+    # "due for review" as real time passes and the Memory section's count
+    # changes under the snapshot. Pin "now" to a fortnight after the seeds.
+    real_due = review_mod.due_for_review
+    monkeypatch.setattr(
+        review_mod,
+        "due_for_review",
+        lambda conn, **kw: real_due(conn, now=_PINNED_NOW, **kw),
     )
 
 
