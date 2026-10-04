@@ -76,6 +76,7 @@ src/mait_code/
 ├── context.py       # Project/branch detection (get_context, get_project)
 ├── llm.py           # Shared LLM invocation (call_claude)
 ├── logging.py       # Shared logging (setup_logging, @log_invocation)
+├── remote.py        # Executive-free remote API for a host service (no listener)
 ├── ssl.py           # OS trust store injection (setup_ssl, for corporate proxies)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
 ├── bridge/          # Opt-in capture-in / notify-out transport (ntfy, loopback)

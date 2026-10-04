@@ -61,7 +61,7 @@ __all__ = [
 _PRIORITY_ORDER = "CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"
 _CARD_COLS = (
     "id, project, title, description, acceptance_criteria, status, priority, "
-    "completion_summary, created_at, updated_at, completed_at"
+    "completion_summary, created_at, updated_at, completed_at, created_by"
 )
 _CARD_KEYS = (
     "id",
@@ -75,6 +75,7 @@ _CARD_KEYS = (
     "created_at",
     "updated_at",
     "completed_at",
+    "created_by",
 )
 
 
@@ -441,13 +442,19 @@ def add_card(
     title: str,
     description: str | None = None,
     priority: str = "medium",
+    created_by: str | None = None,
 ) -> int:
-    """Insert a backlog card and return its new id."""
+    """Insert a backlog card and return its new id.
+
+    *created_by* names the client that raised the card when it arrives from
+    somewhere other than a local session (see :mod:`mait_code.remote`);
+    ``None`` means it was created locally.
+    """
     now = _now()
     cursor = conn.execute(
         "INSERT INTO cards (project, title, description, status, priority, "
-        "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (project, title, description, BACKLOG, priority, now, now),
+        "created_at, updated_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (project, title, description, BACKLOG, priority, now, now, created_by),
     )
     conn.commit()
     card_id = cursor.lastrowid

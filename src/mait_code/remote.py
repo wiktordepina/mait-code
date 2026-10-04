@@ -1,0 +1,512 @@
+"""The remote API — what another machine or agent may do to a mait-code instance.
+
+A deliberately small, executive-free surface over one instance's board,
+memories and reminders, for a host service to expose to remote clients — over
+MCP, say. mait-code itself never listens on anything: transport,
+authentication, scopes and process lifecycle all belong to the host.
+
+What is here is the whole contract:
+
+* **Read** the board, a card with its comments, the project list, memories
+  (ranked like ``mc-tool-memory search``) and active reminders.
+* **Create** a card. It always lands in ``backlog`` — there is no status
+  parameter to override.
+* **Refine** a card: edit its description and acceptance criteria, and move
+  it between ``backlog`` and ``refined``. Any other column is refused.
+
+What is absent is just as deliberate: deleting or archiving, tags, moves into
+``in_progress`` / ``in_review`` / ``done``, memory writes, reflections and
+reminder changes. Those are decisions for whoever hosts the instance, so the
+functions do not exist here rather than refusing at runtime. A test pins
+``__all__`` to an allowlist.
+
+Every mutating call takes a required *client* name, recorded as the card's
+``created_by`` on create and as the author of a comment on refine, so a card
+raised remotely is identifiable before anyone acts on it.
+
+The host runs as a different user from the instance it serves and pins its
+own mait-code release, so this module is careful about what it trusts:
+
+* Every function takes the instance's *data_dir* explicitly and reads only the
+  databases in it — never ``dashboard.toml``, the settings ``[env]`` table or
+  any other agent-writable file that would execute — and never touches
+  ``os.environ``.
+* It never runs migrations. A database whose schema version differs from the
+  one this release expects raises :class:`SchemaMismatch`.
+* Memories, reminders and board reads open read-only; the two board writes
+  open read-write with a busy timeout, since the instance writes it
+  concurrently.
+
+Memory search is the one path that also reads the *host's* own setup: the
+query is embedded with the provider and model in the host's settings, and the
+local provider caches its model under the host's data dir (downloading it on
+first use). The host's settings must name the same provider and model the
+instance used. A mismatch in vector *dimension* degrades to keyword-only
+results; a different model of the same dimension is **not** detected and
+ranks on meaningless similarities.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+from collections.abc import Iterable, Sequence
+from datetime import datetime, timezone
+from pathlib import Path
+
+from mait_code.tools.board import migrate as _board_migrate
+from mait_code.tools.board import service as _board
+from mait_code.tools.board.columns import (
+    BACKLOG,
+    REFINED,
+    is_valid_status,
+)
+from mait_code.tools.board.service import CardNotFound
+from mait_code.tools.reminders import migrate as _reminders_migrate
+from mait_code.tools.reminders import service as _reminders
+
+__all__ = [
+    # Errors
+    "CardNotFound",
+    "RemoteError",
+    "SchemaMismatch",
+    "TransitionRefused",
+    # Board
+    "create_card",
+    "get_card",
+    "list_cards",
+    "list_projects",
+    "refine_card",
+    # Memory
+    "search_memories",
+    # Reminders
+    "list_reminders",
+]
+
+#: How long a board write waits for the instance's own writer, in seconds.
+BUSY_TIMEOUT = 10.0
+
+#: Longest accepted *client* name; it is stored on cards and comments.
+MAX_CLIENT_LENGTH = 64
+
+_PRIORITIES = ("low", "medium", "high")
+_REFINABLE = (BACKLOG, REFINED)
+
+
+class RemoteError(Exception):
+    """Base class for errors raised by the remote API."""
+
+
+class SchemaMismatch(RemoteError):
+    """A database's schema version is not the one this release expects.
+
+    Raised instead of migrating: the host pins its own mait-code release, so
+    a newer or older instance needs the host upgrading (or the instance), not
+    a schema change made by the host.
+
+    Attributes:
+        database: The database file name, e.g. ``"board.db"``.
+        expected: The schema version this release of mait-code expects.
+        found: The version recorded in the database (``0`` if it has none).
+    """
+
+    def __init__(self, database: str, expected: int, found: int) -> None:
+        super().__init__(
+            f"{database}: schema version {found}, this mait-code expects "
+            f"{expected} — upgrade whichever side is older"
+        )
+        self.database = database
+        self.expected = expected
+        self.found = found
+
+
+class TransitionRefused(RemoteError):
+    """A refine asked for a card or column outside ``backlog``/``refined``.
+
+    Attributes:
+        card_id: The card the refine targeted.
+        status: The column involved — the card's current one, or the
+            requested target.
+    """
+
+    def __init__(self, card_id: int, status: str) -> None:
+        super().__init__(
+            f"card #{card_id}: refine only works between backlog and refined "
+            f"(got {status!r})"
+        )
+        self.card_id = card_id
+        self.status = status
+
+
+# --- Connections ---
+
+
+def _open(
+    data_dir: Path,
+    name: str,
+    migrations: Sequence[tuple],
+    *,
+    readonly: bool,
+) -> sqlite3.Connection:
+    """Open *name* under *data_dir* without creating or migrating it."""
+    path = Path(data_dir) / name
+    if not path.is_file():
+        raise FileNotFoundError(f"{path}: no such database")
+    mode = "ro" if readonly else "rw"
+    conn = sqlite3.connect(
+        f"{path.resolve().as_uri()}?mode={mode}", uri=True, timeout=BUSY_TIMEOUT
+    )
+    try:
+        _check_schema(conn, name, migrations)
+    except BaseException:
+        conn.close()
+        raise
+    return conn
+
+
+def _check_schema(
+    conn: sqlite3.Connection, name: str, migrations: Sequence[tuple]
+) -> None:
+    expected = migrations[-1][0]
+    try:
+        found = conn.execute(
+            "SELECT COALESCE(MAX(version), 0) FROM schema_version"
+        ).fetchone()[0]
+    except sqlite3.OperationalError:
+        found = 0
+    if found != expected:
+        raise SchemaMismatch(name, expected, found)
+
+
+def _board_conn(data_dir: Path, *, readonly: bool) -> sqlite3.Connection:
+    conn = _open(data_dir, "board.db", _board_migrate.MIGRATIONS, readonly=readonly)
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+
+def _memory_conn(data_dir: Path) -> sqlite3.Connection:
+    import sqlite_vec
+
+    from mait_code.tools.memory import migrate as _memory_migrate
+
+    conn = _open(data_dir, "memory.db", _memory_migrate.MIGRATIONS, readonly=True)
+    conn.enable_load_extension(True)
+    sqlite_vec.load(conn)
+    conn.enable_load_extension(False)
+    return conn
+
+
+def _reminders_conn(data_dir: Path) -> sqlite3.Connection:
+    return _open(data_dir, "reminders.db", _reminders_migrate.MIGRATIONS, readonly=True)
+
+
+def _require_client(client: str) -> str:
+    client = client.strip()
+    if not client:
+        raise ValueError("client must name the caller")
+    if len(client) > MAX_CLIENT_LENGTH:
+        raise ValueError(f"client name is longer than {MAX_CLIENT_LENGTH} characters")
+    return client
+
+
+# --- Board ---
+
+
+def list_cards(
+    data_dir: Path,
+    *,
+    project: str | None = None,
+    statuses: Iterable[str] | None = None,
+    tag: str | None = None,
+    search: str | None = None,
+) -> list[dict]:
+    """Return cards ordered priority-then-oldest.
+
+    Args:
+        data_dir: The instance's data directory.
+        project: Restrict to one project, or ``None`` for every project.
+        statuses: Restrict to these columns; ``None`` means every column
+            except ``archived``.
+        tag: Restrict to cards carrying this tag.
+        search: Case-insensitive substring of the title.
+
+    Returns:
+        Card dicts in the ``mc-tool-board show --json`` shape, without
+        comments.
+
+    Raises:
+        ValueError: If *statuses* names an unknown column.
+    """
+    if statuses is not None:
+        statuses = list(statuses)
+        unknown = [s for s in statuses if not is_valid_status(s)]
+        if unknown:
+            raise ValueError(f"unknown status: {', '.join(unknown)}")
+    conn = _board_conn(data_dir, readonly=True)
+    try:
+        return _board.list_cards(
+            conn, project=project, statuses=statuses, tag=tag, search=search
+        )
+    finally:
+        conn.close()
+
+
+def get_card(data_dir: Path, card_id: int) -> dict:
+    """Return one card with its comments.
+
+    Args:
+        data_dir: The instance's data directory.
+        card_id: The card's id.
+
+    Returns:
+        The card dict with a ``comments`` list, as ``show --json`` emits it.
+
+    Raises:
+        CardNotFound: If no card has that id.
+    """
+    conn = _board_conn(data_dir, readonly=True)
+    try:
+        return _card_with_comments(conn, card_id)
+    finally:
+        conn.close()
+
+
+def list_projects(data_dir: Path) -> list[str]:
+    """Return the distinct projects that have cards, sorted.
+
+    Args:
+        data_dir: The instance's data directory.
+    """
+    conn = _board_conn(data_dir, readonly=True)
+    try:
+        return _board.list_projects(conn)
+    finally:
+        conn.close()
+
+
+def create_card(
+    data_dir: Path,
+    *,
+    client: str,
+    project: str,
+    title: str,
+    description: str | None = None,
+    priority: str = "medium",
+) -> dict:
+    """Create a card in ``backlog``, recording *client* as its creator.
+
+    There is no way to create a card anywhere but ``backlog``.
+
+    Args:
+        data_dir: The instance's data directory.
+        client: Name of the calling client, stored as ``created_by``.
+        project: Project the card belongs to.
+        title: Card title.
+        description: Optional markdown description.
+        priority: ``"low"``, ``"medium"`` or ``"high"``.
+
+    Returns:
+        The new card, with its (empty) comments.
+
+    Raises:
+        ValueError: If *client*, *project* or *title* is blank, *client* is
+            too long, or *priority* is unknown.
+    """
+    client = _require_client(client)
+    if not project.strip():
+        raise ValueError("project is required")
+    if not title.strip():
+        raise ValueError("title is required")
+    if priority not in _PRIORITIES:
+        raise ValueError(f"priority must be one of {', '.join(_PRIORITIES)}")
+    conn = _board_conn(data_dir, readonly=False)
+    try:
+        card_id = _board.add_card(
+            conn,
+            project=project.strip(),
+            title=title.strip(),
+            description=description,
+            priority=priority,
+            created_by=client,
+        )
+        return _card_with_comments(conn, card_id)
+    finally:
+        conn.close()
+
+
+def refine_card(
+    data_dir: Path,
+    card_id: int,
+    *,
+    client: str,
+    description: str | None = None,
+    acceptance: str | None = None,
+    to: str = REFINED,
+) -> dict:
+    """Edit a card's description/acceptance and place it in backlog or refined.
+
+    The card must currently sit in ``backlog`` or ``refined``, and *to* must
+    be one of those two. The change and a comment authored by *client*
+    recording it are written in one transaction, after re-checking the
+    card's column under the write lock.
+
+    Args:
+        data_dir: The instance's data directory.
+        card_id: The card to refine.
+        client: Name of the calling client, recorded as the comment author.
+        description: New description, or ``None`` to leave it.
+        acceptance: New acceptance criteria, or ``None`` to leave them.
+        to: Target column, ``"refined"`` (default) or ``"backlog"``.
+
+    Returns:
+        The card after the change, with its comments.
+
+    Raises:
+        CardNotFound: If no card has that id.
+        TransitionRefused: If the card is outside backlog/refined, or *to*
+            is any other column.
+        ValueError: If *client* is blank or too long, or the call would change
+            nothing.
+    """
+    client = _require_client(client)
+    if to not in _REFINABLE:
+        raise TransitionRefused(card_id, to)
+    conn = _board_conn(data_dir, readonly=False)
+    try:
+        # Plain SQL rather than the service helpers: each of those commits on
+        # its own, and the column re-check must share one transaction with the
+        # write. That skips move_card's done-invariant, which is safe only
+        # because backlog and refined never carry completed_at — revisit if
+        # the service layer grows other bookkeeping for these columns.
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = conn.execute(
+                "SELECT status FROM cards WHERE id = ?", (card_id,)
+            ).fetchone()
+            if row is None:
+                raise CardNotFound(card_id)
+            current = row[0]
+            if current not in _REFINABLE:
+                raise TransitionRefused(card_id, current)
+            changed = [
+                name
+                for name, value in (
+                    ("description", description),
+                    ("acceptance", acceptance),
+                )
+                if value is not None
+            ]
+            if not changed and current == to:
+                raise ValueError("nothing to change")
+
+            now = datetime.now(timezone.utc).isoformat()
+            fields: dict[str, str] = {"status": to, "updated_at": now}
+            if description is not None:
+                fields["description"] = description
+            if acceptance is not None:
+                fields["acceptance_criteria"] = acceptance
+            cols = ", ".join(f"{key} = ?" for key in fields)
+            conn.execute(
+                f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), card_id)
+            )
+            note = "Refined remotely"
+            if changed:
+                note += f": {' and '.join(changed)} updated"
+            if current != to:
+                note += f"{';' if changed else ':'} {current} → {to}"
+            conn.execute(
+                "INSERT INTO card_comments (card_id, author, body, created_at) "
+                "VALUES (?, ?, ?, ?)",
+                (card_id, client, note, now),
+            )
+        except BaseException:
+            conn.rollback()
+            raise
+        conn.commit()
+        return _card_with_comments(conn, card_id)
+    finally:
+        conn.close()
+
+
+def _card_with_comments(conn: sqlite3.Connection, card_id: int) -> dict:
+    card = _board.get_card(conn, card_id)
+    if card is None:
+        raise CardNotFound(card_id)
+    card["comments"] = _board.get_comments(conn, card_id)
+    return card
+
+
+# --- Memory ---
+
+
+def search_memories(
+    data_dir: Path,
+    query: str,
+    *,
+    limit: int = 10,
+    entry_type: str | None = None,
+    project: str | None = None,
+) -> list[dict]:
+    """Search memories (keyword plus vector) and rank them.
+
+    The same hybrid search and composite ranking as ``mc-tool-memory
+    search``. Superseded and retired entries are excluded.
+
+    Args:
+        data_dir: The instance's data directory.
+        query: Search text.
+        limit: Maximum number of results.
+        entry_type: Restrict to one entry type (e.g. ``"preference"``).
+        project: Project context: global entries plus that project's are
+            searched, and the project's own rank higher. ``None`` searches
+            every scope.
+
+    Returns:
+        Memory entry dicts, best first, each with a ``score`` key.
+
+    Raises:
+        ValueError: If *query* is blank or *limit* is not positive.
+    """
+    if not query.strip():
+        raise ValueError("query is required")
+    if limit < 1:
+        raise ValueError("limit must be positive")
+
+    from mait_code.tools.memory.scoring import rank_results
+    from mait_code.tools.memory.search import hybrid_search
+
+    conn = _memory_conn(data_dir)
+    try:
+        results = hybrid_search(
+            conn, query, limit=limit * 2, entry_type=entry_type, project=project
+        )
+    finally:
+        conn.close()
+    return [
+        {**entry, "score": round(score, 4)}
+        for score, entry in rank_results(results, limit=limit, query_project=project)
+    ]
+
+
+# --- Reminders ---
+
+
+def list_reminders(data_dir: Path) -> list[dict]:
+    """Return active (undismissed) reminders, ordered by due time.
+
+    Args:
+        data_dir: The instance's data directory.
+
+    Returns:
+        Dicts with ``id``, ``what``, ``due`` (ISO 8601 string) and
+        ``overdue`` (bool).
+    """
+    conn = _reminders_conn(data_dir)
+    try:
+        overdue, upcoming = _reminders.active_reminders(conn)
+    finally:
+        conn.close()
+    return [
+        {**r, "due": r["due"].isoformat(), "overdue": is_overdue}
+        for is_overdue, group in ((True, overdue), (False, upcoming))
+        for r in group
+    ]

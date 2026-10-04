@@ -167,6 +167,7 @@ Every card carries:
 | **References** | An ordered list of `label → value` links — a PR, a ticket, a file, a spec. Kept out of the description so they stay tidy and clickable. |
 | **Tags** | Free-form labels that ride alongside status (`blocked`, `urgent`, …). |
 | **Comments** | A threaded log — your notes and Claude's, each timestamped. |
+| **Created by** | Only on cards raised through the [remote API](remote.md): the client that created it, shown as *via &lt;client&gt;* on the meta line and as `created by:` in `show`. Locally created cards have none. |
 | **Completion summary** | The handoff note recorded when the card reaches **Done**. Renders [markdown](#markdown-in-the-body). |
 
 **References** deserve a mention: they're a recent addition for keeping a card's

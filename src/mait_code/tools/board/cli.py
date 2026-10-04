@@ -148,6 +148,8 @@ def cmd_show(args):
 
     print(f"#{card['id']} ({card['priority']}) {card['title']}")
     print(f"  project: {card['project']}   status: {label(card['status'])}")
+    if card["created_by"]:
+        print(f"  created by: {card['created_by']}")
     if card["tags"]:
         print(f"  tags: {', '.join(card['tags'])}")
     if card["description"]:

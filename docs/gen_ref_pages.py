@@ -54,6 +54,7 @@ REFERENCE_MODULES: dict[str, list[tuple[str, str]]] = {
         ("config", "Configuration"),
         ("llm", "LLM"),
         ("logging", "Logging"),
+        ("remote", "Remote API"),
         ("ssl", "SSL"),
     ],
     "Bridge": [

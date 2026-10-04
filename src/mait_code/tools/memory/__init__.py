@@ -60,6 +60,7 @@ from mait_code.tools.memory.reflect import (
 from mait_code.tools.memory.scoring import (
     composite_score,
     importance_score,
+    rank_results,
     recency_score,
     scope_boost,
 )
@@ -111,6 +112,7 @@ __all__ = [
     # Scoring
     "composite_score",
     "importance_score",
+    "rank_results",
     "recency_score",
     "scope_boost",
     # Entities

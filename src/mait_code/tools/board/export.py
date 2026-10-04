@@ -58,6 +58,8 @@ def _meta_lines(card: dict) -> list[str]:
     ]
     if card["tags"]:
         lines.append(f"- **Tags:** {', '.join(card['tags'])}")
+    if card["created_by"]:
+        lines.append(f"- **Created by:** {card['created_by']}")
     lines.append(f"- **Created:** {card['created_at']}")
     lines.append(f"- **Updated:** {card['updated_at']}")
     if card["completed_at"]:

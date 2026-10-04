@@ -10,6 +10,23 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.73.0] — 2026-10-04
+
+### Added
+
+- **A remote API, `mait_code.remote`.** A small, documented Python surface for
+  a separate service to expose one instance to other machines and agents —
+  over MCP, say — without mait-code itself ever listening on anything. It can
+  read the board, a card, memories and reminders, create cards (always into
+  backlog) and refine them (backlog ↔ refined). Deleting, archiving, other
+  moves, tags and every memory or reminder write are absent by design. It
+  never migrates a database, opens everything read-only except the two board
+  writes, and reads no agent-writable config. See [the remote API](docs/remote.md).
+- **Card provenance.** Cards gain a `created_by` field, set when a card comes
+  in through the remote API. `show` prints it, export includes it, and the
+  board TUI's card meta line reads *via &lt;client&gt;*. Remote refines leave a
+  comment authored by the client.
+
 ## [0.72.0] — 2026-10-04
 
 ### Added
@@ -2300,7 +2317,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.72.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.73.0...HEAD
+[0.73.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.73.0
 [0.72.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.72.0
 [0.71.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.71.0
 [0.70.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.70.0

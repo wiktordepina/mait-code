@@ -20,6 +20,7 @@ REFERENCE_MODULES = [
     "mait_code.context",
     "mait_code.llm",
     "mait_code.logging",
+    "mait_code.remote",
     "mait_code.ssl",
     # Bridge
     "mait_code.bridge",
