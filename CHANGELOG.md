@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.73.0] — 2026-10-04
+
 ### Added
 
 - **A remote API, `mait_code.remote`.** A small, documented Python surface for
@@ -2315,7 +2317,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.72.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.73.0...HEAD
+[0.73.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.73.0
 [0.72.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.72.0
 [0.71.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.71.0
 [0.70.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.70.0
