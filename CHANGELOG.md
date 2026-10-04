@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.74.0] — 2026-10-05
+
 ### Added
 
 - **The TUIs can be served to a browser.** With `TEXTUAL_DRIVER` set, as
@@ -2344,7 +2346,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.73.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.74.0...HEAD
+[0.74.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.74.0
 [0.73.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.73.0
 [0.72.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.72.0
 [0.71.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.71.0
