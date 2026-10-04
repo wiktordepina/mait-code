@@ -16,6 +16,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from textual.widgets import Button, Input, RadioButton, RadioSet, Static, Tree
 
 from mait_code import config
@@ -337,6 +339,34 @@ class TestFollowups:
         called = _run(scenario)
         config._settings_cache = None
         assert called == 0
+        assert config.read_settings_file()["embedding-provider"] == "bedrock"
+
+    def test_migration_served_to_a_browser_defers_without_asking(
+        self, fake_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Under the web driver the re-embed cannot suspend to a terminal, so
+        the change applies with no confirm and the user is told what to run."""
+        config.write_settings_file({"embedding-provider": "local"})
+        monkeypatch.setattr(SettingsApp, "is_web", property(lambda self: True))
+
+        async def scenario():
+            app = SettingsApp()
+            with patch.object(SettingsApp, "_run_reindex_suspended") as reindex:
+                async with app.run_test() as pilot:
+                    await _goto(pilot, app, "embedding-provider")
+                    _select_radio(app, "bedrock")
+                    await pilot.press("ctrl+s")
+                    await pilot.pause()
+                    await pilot.pause()
+                    depth = len(app.screen_stack)
+                    messages = [n.message for n in app._notifications]
+                return reindex.call_count, depth, messages
+
+        called, depth, messages = _run(scenario)
+        config._settings_cache = None
+        assert called == 0
+        assert depth == 1  # no ConfirmScreen was pushed
+        assert any("mc-tool-memory reindex" in m for m in messages)
         assert config.read_settings_file()["embedding-provider"] == "bedrock"
 
 

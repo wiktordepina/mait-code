@@ -636,6 +636,31 @@ def test_reindex_skips_modal_when_nothing_missing(
     assert calls == []
 
 
+def test_reindex_served_to_a_browser_points_at_a_shell(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Under the web driver there is nothing to suspend to, so the action
+    says what to run instead of confirming."""
+    calls: list[bool] = []
+    monkeypatch.setattr(HomeApp, "is_web", property(lambda self: True))
+
+    async def scenario():
+        _seed_memory(("a fact", "fact"))
+        app = HomeApp()
+        monkeypatch.setattr(app, "_run_reindex_suspended", lambda: calls.append(True))
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.press("e")
+            await pilot.pause()
+            await pilot.pause()
+            return len(app.screen_stack), [n.message for n in app._notifications]
+
+    depth, messages = _run(scenario)
+    assert depth == 1
+    assert calls == []
+    assert any("mait-code doctor --fix" in m for m in messages)
+
+
 # --- start-page dashboard ---
 
 

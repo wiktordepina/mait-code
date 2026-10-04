@@ -7,6 +7,7 @@ the compact text summary, and bare ``mait-code`` off a TTY still prints help.
 
 from __future__ import annotations
 
+import pytest
 from typer.testing import CliRunner
 
 from mait_code.cli import app
@@ -68,3 +69,19 @@ def test_home_loop_relaunches_until_quit(monkeypatch) -> None:
     cli._run_home_loop()
 
     assert launched == ["board", "settings"]
+
+
+@pytest.mark.parametrize("args", [[], ["home"]])
+def test_textual_driver_opens_the_hub_off_a_tty(monkeypatch, args) -> None:
+    """A host such as textual-serve runs the app over pipes with
+    ``TEXTUAL_DRIVER`` set; that must open the hub, not print the fallback."""
+    import mait_code.cli as cli
+
+    calls: list[bool] = []
+    monkeypatch.setattr(cli, "_run_home_loop", lambda: calls.append(True))
+
+    result = runner.invoke(
+        app, args, env={"TEXTUAL_DRIVER": "textual.drivers.web_driver:WebDriver"}
+    )
+    assert result.exit_code == 0
+    assert calls == [True]

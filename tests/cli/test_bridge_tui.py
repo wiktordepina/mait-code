@@ -143,3 +143,41 @@ def test_switching_channel_rerenders_fields(monkeypatch):
             assert app.query_one("#field-name", Input) is not None
 
     _run(scenario)
+
+
+def test_ctrl_g_tests_the_connection(monkeypatch):
+    """Test connection sits on ctrl+g: served to a browser, ctrl+t opens a new
+    tab and ctrl+r reloads the page, so neither reaches the app."""
+    calls: list[bool] = []
+    monkeypatch.setattr(BridgeApp, "action_test", lambda self: calls.append(True))
+
+    async def scenario():
+        app = BridgeApp()
+        async with app.run_test() as pilot:
+            await pilot.press("ctrl+g")
+            await pilot.pause()
+
+    _run(scenario)
+    assert calls == [True]
+
+
+def test_test_connection_scrolls_the_result_into_view():
+    """The result line sits below the form, so running the test from the key
+    binding must bring it into view rather than appear to do nothing."""
+
+    async def scenario():
+        app = BridgeApp()
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            body = app.query_one("#body")
+            assert body.scroll_y == 0
+            await pilot.press("ctrl+g")
+            await app.workers.wait_for_complete()
+            await pilot.pause(0.5)
+            msg = app.query_one("#msg", Static)
+            return body.scroll_y, msg.region.y, body.region.bottom, str(msg.render())
+
+    scroll_y, msg_y, body_bottom, text = _run(scenario)
+    assert scroll_y > 0
+    assert msg_y < body_bottom  # the result line is on screen
+    assert text.startswith("✗")

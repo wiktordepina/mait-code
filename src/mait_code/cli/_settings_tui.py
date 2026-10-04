@@ -854,13 +854,15 @@ class SettingsApp(MaitApp):
         run_reindex_after = False
 
         if setting.requires_migration:
-            confirmed = await self.push_screen_wait(
-                ConfirmScreen(
-                    "Re-embed all memories now? This rebuilds the vector table."
-                )
-            )
             reindex = False  # persist now; we run the slow re-embed ourselves
-            run_reindex_after = confirmed
+            # Served to a browser there is no terminal to suspend to, so the
+            # re-embed is left to the user rather than offered.
+            if not self.is_web:
+                run_reindex_after = await self.push_screen_wait(
+                    ConfirmScreen(
+                        "Re-embed all memories now? This rebuilds the vector table."
+                    )
+                )
         elif key == "data-dir":
             move_data = await self.push_screen_wait(
                 ConfirmScreen(f"Move existing data to {value}?")
@@ -881,6 +883,13 @@ class SettingsApp(MaitApp):
             self.theme = value
 
         self._after_apply(setting, outcome)
+        if setting.requires_migration and self.is_web:
+            self.notify(
+                "Re-embedding needs a terminal: run `mc-tool-memory reindex` "
+                "in a shell.",
+                title="Settings",
+                severity="warning",
+            )
 
     async def _apply_env_edit(self, name: str) -> None:
         """Persist an edited [env] value and refresh the row in place."""

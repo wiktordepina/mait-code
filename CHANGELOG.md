@@ -10,6 +10,33 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **The TUIs can be served to a browser.** With `TEXTUAL_DRIVER` set, as
+  hosts such as textual-serve set it, `mait-code` and its TUI commands open
+  the app even though no terminal is attached, instead of printing the
+  plain-text fallback. Single-screen commands such as `mait-code board` work
+  under stock textual-serve. Opening a sibling TUI from the home hub ends one
+  app and starts the next in the same process, which stock textual-serve
+  treats as the end of the session; the hub needs a host that tolerates that.
+  Serving the hub hands whoever reaches it a shell as you (start-page command
+  tiles run, and the settings editor sets `[env]`), and textual-serve has no
+  login, so keep it on localhost or a socket behind one.
+
+### Changed
+
+- **"Run" keys move to `Ctrl+G`.** The Bridge editor's Test connection (was
+  `Ctrl+T`) and the start-page editor's Run preview (was `Ctrl+R`). Served to
+  a browser, Chrome and Firefox both keep `Ctrl+T` for a new tab and reload
+  the page on `Ctrl+R`, so neither key reached the app; `Ctrl+G` gets through
+  in both. Test connection now scrolls its result into view, and Run preview
+  on a widget tile says why nothing runs, so neither key looks dead.
+- **Actions that drop to the terminal explain themselves in a browser.** Home's
+  reindex, the start-page editor's *Edit raw* and the settings editor's
+  re-embed after an embedding change need a terminal to suspend to. When the
+  app is served they say what to run in a shell instead of crashing; the
+  settings change still applies, with the re-embed left to you.
+
 ## [0.73.0] — 2026-10-04
 
 ### Added

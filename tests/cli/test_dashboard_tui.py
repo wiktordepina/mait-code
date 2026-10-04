@@ -90,7 +90,7 @@ def test_typing_a_command_never_executes_it(
     value, preview = _run(scenario)
     assert value == "echo hi; rm -rf x"
     assert calls == []  # nothing ran while typing
-    assert "Ctrl+R" in preview  # the preview stays a hint
+    assert "Ctrl+G" in preview  # the preview stays a hint
 
 
 def test_explicit_preview_runs_the_command(config_file: Path) -> None:
@@ -108,6 +108,44 @@ def test_explicit_preview_runs_the_command(config_file: Path) -> None:
             return str(app.query_one("#preview", Static).render())
 
     assert _run(scenario) == "hi"
+
+
+def test_preview_on_a_widget_tile_says_why_nothing_runs(config_file: Path) -> None:
+    async def scenario():
+        app = DashboardSetupApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app._select(0)  # the board widget tile
+            await pilot.pause()
+            await pilot.press("ctrl+g")
+            await pilot.pause()
+            return [n.message for n in app._notifications]
+
+    assert any("command tiles" in m for m in _run(scenario))
+
+
+def test_edit_raw_served_to_a_browser_stays_put(
+    config_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Under the web driver there is no terminal for ``$EDITOR``: the action
+    explains that and launches nothing."""
+    import mait_code.cli._dashboard_tui as dashboard_tui
+
+    def no_editor(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("the editor was launched")
+
+    monkeypatch.setattr(DashboardSetupApp, "is_web", property(lambda self: True))
+    monkeypatch.setattr(dashboard_tui.subprocess, "run", no_editor)
+
+    async def scenario():
+        app = DashboardSetupApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.press("ctrl+e")
+            await pilot.pause()
+            return [n.message for n in app._notifications]
+
+    assert any("needs a terminal" in m for m in _run(scenario))
 
 
 def test_edits_mark_dirty_and_save_writes_the_file(config_file: Path) -> None:
