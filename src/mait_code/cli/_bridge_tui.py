@@ -55,7 +55,7 @@ class BridgeApp(MaitApp):
 
     BINDINGS = [
         ("ctrl+s", "save", "Save"),
-        ("ctrl+t", "test", "Test connection"),
+        ("ctrl+g", "test", "Test connection"),
     ]
 
     def __init__(self) -> None:
@@ -173,6 +173,9 @@ class BridgeApp(MaitApp):
     @work(exclusive=True)
     async def _run_test(self) -> None:
         msg = self.query_one("#msg", Static)
+        # The result line sits below the form; bring it into view, or the key
+        # binding looks like it did nothing.
+        msg.scroll_visible()
         try:
             channel = self._build_channel()
         except ValueError as exc:

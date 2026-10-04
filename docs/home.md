@@ -142,7 +142,7 @@ right.](assets/home/home-startpage-setup.png)
 |-----|--------|
 | `a` / `d` | Add a tile after the selection / remove the selected tile |
 | `Shift+↑` / `Shift+↓` | Reorder |
-| `Ctrl+R` | Run a command tile and preview its output — commands **never** run while you type, only on this key |
+| `Ctrl+G` | Run a command tile and preview its output — commands **never** run while you type, only on this key |
 | `Ctrl+S` | Save |
 | `Ctrl+E` | Save and open the raw file in `$EDITOR`, reloading on return |
 | `q` / `Esc` | Quit — asks first if there are unsaved changes |

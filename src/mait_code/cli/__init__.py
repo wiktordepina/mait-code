@@ -26,6 +26,7 @@ Typer command callables themselves are private (their docs live in
 from __future__ import annotations
 
 import importlib.metadata
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -175,6 +176,19 @@ app = typer.Typer(
 )
 
 
+def _tui_available() -> bool:
+    """Whether to open a Textual TUI rather than the plain-text fallback.
+
+    True on an interactive terminal, and whenever ``TEXTUAL_DRIVER`` names a
+    driver: a host such as textual-serve sets it and talks to the app over
+    pipes, so the TTY test alone would print the fallback into a browser that
+    is waiting for the app to start.
+    """
+    if os.environ.get("TEXTUAL_DRIVER"):
+        return True
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
 # The callback forces Typer into multi-command mode even when only one
 # subcommand is registered. Without this, `mait-code version` would be
 # parsed as `mait-code` with `version` as an unexpected positional argument.
@@ -198,7 +212,7 @@ def _root(
     # Bare `mait-code` on a terminal opens the companion's home hub — the front
     # door. Piped or redirected it keeps printing help, so scripts and muscle
     # memory like `mait-code | grep` see what they always did.
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         _run_home_loop()
     else:
         typer.echo(ctx.get_help())
@@ -587,7 +601,7 @@ def settings_root(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is not None:
         return
     _require_settings_file()
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         from mait_code.cli._settings_tui import run_interactive_editor
 
         run_interactive_editor()
@@ -750,7 +764,7 @@ def settings_unset(key: str) -> None:
 @app.command("board")
 def board() -> None:
     """Open the interactive kanban board (read-only render when not on a TTY)."""
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         from mait_code.cli._board_tui import run_board_tui
 
         run_board_tui()
@@ -791,7 +805,7 @@ def _board_render() -> None:
 @app.command("home")
 def home() -> None:
     """Open the companion's home hub (text summary when not on a TTY)."""
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         _run_home_loop()
     else:
         _home_render()
@@ -904,7 +918,7 @@ def _home_render() -> None:
 @app.command("memory")
 def memory() -> None:
     """Browse stored memories read-only (grouped summary when not on a TTY)."""
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         from mait_code.cli._memory_tui import run_memory_tui
 
         run_memory_tui()
@@ -942,7 +956,7 @@ def _memory_render() -> None:
 @app.command("review")
 def review() -> None:
     """Work the memory review queue (text list when not on a TTY)."""
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         from mait_code.cli._review_tui import run_review_tui
 
         run_review_tui()
@@ -974,7 +988,7 @@ def _review_render() -> None:
 @app.command("graph")
 def graph() -> None:
     """Explore the entity knowledge graph (text summary when not on a TTY)."""
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         from mait_code.cli._graph_tui import run_graph_tui
 
         run_graph_tui()
@@ -1008,7 +1022,7 @@ def _graph_render() -> None:
 @app.command("observations")
 def observations() -> None:
     """Browse raw observations awaiting reflection (summary when not on a TTY)."""
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         from mait_code.cli._observations_tui import run_observations_tui
 
         run_observations_tui()
@@ -1052,7 +1066,7 @@ def _observations_render() -> None:
 @app.command("logs")
 def logs() -> None:
     """Explore the structured logs (day-grouped summary when not on a TTY)."""
-    if sys.stdin.isatty() and sys.stdout.isatty():
+    if _tui_available():
         from mait_code.cli._logs_tui import run_logs_tui
 
         run_logs_tui()

@@ -1161,6 +1161,15 @@ class HomeApp(MaitApp):
         if missing == 0:
             self.notify("Every memory entry already has a vector.", title="Reindex")
             return
+        if self.is_web:
+            # Served to a browser there is no terminal to suspend to.
+            self.notify(
+                f"{missing} memory entries lack a vector. Reindexing needs a "
+                "terminal: run `mait-code doctor --fix` in a shell.",
+                title="Reindex",
+                severity="warning",
+            )
+            return
         noun = "entry" if missing == 1 else "entries"
         confirmed = await self.push_screen_wait(
             ConfirmScreen(f"Embed the {missing} memory {noun} missing a vector?")

@@ -7,7 +7,7 @@ the right. Add, remove and reorder tiles; ``Ctrl+S`` writes the file back
 through tomlkit, so hand-authored comments and formatting survive.
 
 Two deliberate safety choices. **Command text is never executed while being
-typed** — a command tile's preview runs only on ``Ctrl+R``, so a half-typed
+typed** — a command tile's preview runs only on ``Ctrl+G``, so a half-typed
 ``rm``-anything can't fire; built-in widgets preview live because they only
 read the stores. And quitting with unsaved changes asks first.
 
@@ -60,7 +60,7 @@ def run_dashboard_setup() -> None:
 _TYPES = ("widget", "command")
 
 #: Placeholder shown for a command tile until the user runs its preview.
-_COMMAND_PREVIEW_HINT = "Ctrl+R runs the command and previews its output."
+_COMMAND_PREVIEW_HINT = "Ctrl+G runs the command and previews its output."
 
 
 class DashboardSetupApp(MaitApp):
@@ -75,7 +75,7 @@ class DashboardSetupApp(MaitApp):
         ("d", "remove_tile", "Remove"),
         ("shift+up", "move_up", "Move ↑"),
         ("shift+down", "move_down", "Move ↓"),
-        ("ctrl+r", "preview_command", "Run preview"),
+        ("ctrl+g", "preview_command", "Run preview"),
         ("ctrl+e", "open_editor", "Edit raw"),
         # Take over the base quit keys so leaving asks about unsaved changes.
         Binding("q", "request_quit", "Quit"),
@@ -292,7 +292,11 @@ class DashboardSetupApp(MaitApp):
     def action_preview_command(self) -> None:
         tile = self._tile()
         if tile.widget is not None:
-            return  # widget previews are already live
+            self.notify(
+                "Run preview is for command tiles; widget previews are already live.",
+                title="Preview",
+            )
+            return
         if not (tile.command or "").strip():
             self.notify("Type a command first.", title="Preview")
             return
@@ -381,7 +385,7 @@ class DashboardSetupApp(MaitApp):
             self._mark_dirty()
             self._refresh_list()
             # Deliberately no execution here — the preview stays a hint until
-            # the user presses Ctrl+R on the finished command.
+            # the user presses Ctrl+G on the finished command.
             self.query_one("#preview", Static).border_title = tile.title or (
                 _clip_command(tile.command)
             )
@@ -458,6 +462,14 @@ class DashboardSetupApp(MaitApp):
 
     def action_open_editor(self) -> None:
         """Save, drop to ``$EDITOR`` on the file, and reload on return."""
+        if self.is_web:
+            # Served to a browser there is no terminal to suspend to.
+            self.notify(
+                f"Edit raw needs a terminal: edit {self._model.path} in a shell.",
+                title="Start page",
+                severity="warning",
+            )
+            return
         self.action_save()
         if self._dirty:  # the save failed and said so; stay put
             return
