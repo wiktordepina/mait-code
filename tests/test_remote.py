@@ -257,6 +257,25 @@ def test_refine_refuses_every_other_target(instance, target):
     assert remote.get_card(instance, card_id)["status"] == BACKLOG
 
 
+def test_refine_checks_the_column_under_the_write_lock(instance, monkeypatch):
+    """The transaction is opened IMMEDIATE, before the column is read, so the
+    check and the write see the same state."""
+    card_id = _add(instance, "x")
+    statements: list[str] = []
+    real_open = remote._open
+
+    def traced(*args, **kwargs):
+        conn = real_open(*args, **kwargs)
+        conn.set_trace_callback(statements.append)
+        return conn
+
+    monkeypatch.setattr(remote, "_open", traced)
+    remote.refine_card(instance, card_id, client="laptop", description="d")
+    begin = statements.index("BEGIN IMMEDIATE")
+    check = next(i for i, s in enumerate(statements) if s.startswith("SELECT status"))
+    assert begin < check
+
+
 def test_refine_missing_card(instance):
     with pytest.raises(remote.CardNotFound):
         remote.refine_card(instance, 999, client="laptop", description="d")
@@ -272,6 +291,42 @@ def test_refine_requires_client(instance):
     card_id = _add(instance, "x")
     with pytest.raises(ValueError, match="client"):
         remote.refine_card(instance, card_id, client="", description="d")
+
+
+def test_client_name_is_bounded(instance):
+    card_id = _add(instance, "x")
+    long_name = "x" * (remote.MAX_CLIENT_LENGTH + 1)
+    with pytest.raises(ValueError, match="longer than"):
+        remote.create_card(instance, client=long_name, project="p", title="t")
+    with pytest.raises(ValueError, match="longer than"):
+        remote.refine_card(instance, card_id, client=long_name, description="d")
+    ok = "x" * remote.MAX_CLIENT_LENGTH
+    assert (
+        remote.create_card(instance, client=ok, project="p", title="t")["created_by"]
+        == ok
+    )
+
+
+def test_refine_cannot_overwrite_a_concurrent_move(instance, monkeypatch):
+    """While another connection holds the write lock, a refine waits and gives
+    up rather than writing over a concurrent move; once the move lands, the
+    refine sees it and refuses."""
+    card_id = _add(instance, "x")
+    monkeypatch.setattr(remote, "BUSY_TIMEOUT", 0.1)
+    holder = sqlite3.connect(instance / "board.db", isolation_level=None)
+    try:
+        holder.execute("BEGIN IMMEDIATE")
+        holder.execute(
+            "UPDATE cards SET status = ? WHERE id = ?", (IN_PROGRESS, card_id)
+        )
+        with pytest.raises(sqlite3.OperationalError, match="locked"):
+            remote.refine_card(instance, card_id, client="laptop", description="d")
+        holder.execute("COMMIT")
+    finally:
+        holder.close()
+    # Once the concurrent move lands, the refine sees it and refuses.
+    with pytest.raises(remote.TransitionRefused):
+        remote.refine_card(instance, card_id, client="laptop", description="d")
 
 
 # --- Schema version ---
@@ -321,13 +376,41 @@ def test_unversioned_database_raises(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "call, readonly",
+    [
+        (lambda d, c: remote.list_cards(d), True),
+        (lambda d, c: remote.get_card(d, c), True),
+        (lambda d, c: remote.list_projects(d), True),
+        (lambda d, c: remote.create_card(d, client="x", project="p", title="t"), False),
+        (lambda d, c: remote.refine_card(d, c, client="x", description="d"), False),
+    ],
+)
+def test_board_opens_read_write_only_to_write(instance, monkeypatch, call, readonly):
+    card_id = _add(instance, "x")
+    modes: list[bool] = []
+    real_open = remote._open
+
+    def spy(data_dir, name, migrations, *, readonly):
+        modes.append(readonly)
+        return real_open(data_dir, name, migrations, readonly=readonly)
+
+    monkeypatch.setattr(remote, "_open", spy)
+    call(instance, card_id)
+    assert modes == [readonly]
+
+
+@pytest.mark.parametrize(
     "opener, sql",
     [
         (remote._memory_conn, "DELETE FROM memory_entries"),
         (remote._reminders_conn, "DELETE FROM reminders"),
+        (
+            lambda d: remote._board_conn(d, readonly=True),
+            "DELETE FROM cards",
+        ),
     ],
 )
-def test_memory_and_reminders_are_read_only(instance, opener, sql):
+def test_read_only_connections_refuse_writes(instance, opener, sql):
     conn = opener(instance)
     try:
         with pytest.raises(sqlite3.OperationalError, match="readonly"):
@@ -418,11 +501,32 @@ def test_list_reminders(instance):
 # --- Hostile configuration ---
 
 
+class _FakeTextEmbedding:
+    """Stands in for fastembed's model so the real provider path runs offline."""
+
+    def __init__(self, model_name, cache_dir):
+        Path(cache_dir).mkdir(parents=True, exist_ok=True)
+
+    def embed(self, texts):
+        import numpy as np
+
+        return iter([np.zeros(768, dtype="float32") for _ in texts])
+
+
 def test_never_reads_agent_config_or_touches_environment(
     instance, tmp_path, monkeypatch
 ):
-    """An instance whose owner planted executable config must not be able to
-    run anything in, or change the environment of, the host process."""
+    """Hostile config planted by the instance's owner neither runs in, nor
+    changes the environment of, the host process.
+
+    Nothing in the remote API reads ``dashboard.toml`` or calls ``apply_env``
+    today; this pins that against a future change. The embedding provider is
+    stubbed only at the model itself, so the real provider path — the one
+    part that reads the host's settings — runs, and must cache under the
+    host's data dir, not the instance's.
+    """
+    import mait_code.tools.memory.embeddings as embeddings
+
     marker = tmp_path / "pwned"
     (instance / "dashboard.toml").write_text(
         f'[[tile]]\ncommand = "touch {marker}"\ntitle = "x"\n'
@@ -442,15 +546,20 @@ def test_never_reads_agent_config_or_touches_environment(
     monkeypatch.setattr("mait_code.config.apply_env", forbidden)
     monkeypatch.setattr(subprocess, "run", forbidden)
     monkeypatch.setattr(subprocess, "Popen", forbidden)
+    monkeypatch.setattr("fastembed.TextEmbedding", _FakeTextEmbedding)
+    monkeypatch.setattr(embeddings, "_provider", None)
+    monkeypatch.setattr(embeddings, "_provider_failed", False)
 
-    with patch("mait_code.tools.memory.search.embed_text", return_value=None):
-        remote.list_cards(instance)
-        remote.get_card(instance, card_id)
-        remote.list_projects(instance)
-        remote.create_card(instance, client="hermes", project="proj", title="t")
-        remote.refine_card(instance, card_id, client="laptop", description="d")
-        remote.search_memories(instance, "uses")
-        remote.list_reminders(instance)
+    remote.list_cards(instance)
+    remote.get_card(instance, card_id)
+    remote.list_projects(instance)
+    remote.create_card(instance, client="hermes", project="proj", title="t")
+    remote.refine_card(instance, card_id, client="laptop", description="d")
+    remote.search_memories(instance, "uses")
+    remote.list_reminders(instance)
 
+    assert embeddings._provider is not None, "the provider path did not run"
     assert dict(os.environ) == before
     assert not marker.exists()
+    assert not (instance / "models").exists()
+    assert (Path(os.environ["MAIT_CODE_DATA_DIR"]) / "models").is_dir()

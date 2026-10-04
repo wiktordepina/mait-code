@@ -33,12 +33,17 @@ own mait-code release, so this module is careful about what it trusts:
   ``os.environ``.
 * It never runs migrations. A database whose schema version differs from the
   one this release expects raises :class:`SchemaMismatch`.
-* Memories and reminders are opened read-only; the board read-write with a
-  busy timeout, since the instance writes it concurrently.
+* Memories, reminders and board reads open read-only; the two board writes
+  open read-write with a busy timeout, since the instance writes it
+  concurrently.
 
-Embeddings for memory search follow the *host's* own settings, which must
-name the same provider and model as the instance's. On a mismatch, vector
-search degrades to keyword-only results rather than failing.
+Memory search is the one path that also reads the *host's* own setup: the
+query is embedded with the provider and model in the host's settings, and the
+local provider caches its model under the host's data dir (downloading it on
+first use). The host's settings must name the same provider and model the
+instance used. A mismatch in vector *dimension* degrades to keyword-only
+results; a different model of the same dimension is **not** detected and
+ranks on meaningless similarities.
 """
 
 from __future__ import annotations
@@ -79,6 +84,9 @@ __all__ = [
 
 #: How long a board write waits for the instance's own writer, in seconds.
 BUSY_TIMEOUT = 10.0
+
+#: Longest accepted *client* name; it is stored on cards and comments.
+MAX_CLIENT_LENGTH = 64
 
 _PRIORITIES = ("low", "medium", "high")
 _REFINABLE = (BACKLOG, REFINED)
@@ -169,8 +177,8 @@ def _check_schema(
         raise SchemaMismatch(name, expected, found)
 
 
-def _board_conn(data_dir: Path) -> sqlite3.Connection:
-    conn = _open(data_dir, "board.db", _board_migrate.MIGRATIONS, readonly=False)
+def _board_conn(data_dir: Path, *, readonly: bool) -> sqlite3.Connection:
+    conn = _open(data_dir, "board.db", _board_migrate.MIGRATIONS, readonly=readonly)
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
@@ -195,6 +203,8 @@ def _require_client(client: str) -> str:
     client = client.strip()
     if not client:
         raise ValueError("client must name the caller")
+    if len(client) > MAX_CLIENT_LENGTH:
+        raise ValueError(f"client name is longer than {MAX_CLIENT_LENGTH} characters")
     return client
 
 
@@ -231,7 +241,7 @@ def list_cards(
         unknown = [s for s in statuses if not is_valid_status(s)]
         if unknown:
             raise ValueError(f"unknown status: {', '.join(unknown)}")
-    conn = _board_conn(data_dir)
+    conn = _board_conn(data_dir, readonly=True)
     try:
         return _board.list_cards(
             conn, project=project, statuses=statuses, tag=tag, search=search
@@ -253,7 +263,7 @@ def get_card(data_dir: Path, card_id: int) -> dict:
     Raises:
         CardNotFound: If no card has that id.
     """
-    conn = _board_conn(data_dir)
+    conn = _board_conn(data_dir, readonly=True)
     try:
         return _card_with_comments(conn, card_id)
     finally:
@@ -266,7 +276,7 @@ def list_projects(data_dir: Path) -> list[str]:
     Args:
         data_dir: The instance's data directory.
     """
-    conn = _board_conn(data_dir)
+    conn = _board_conn(data_dir, readonly=True)
     try:
         return _board.list_projects(conn)
     finally:
@@ -298,8 +308,8 @@ def create_card(
         The new card, with its (empty) comments.
 
     Raises:
-        ValueError: If *client*, *project* or *title* is blank, or
-            *priority* is unknown.
+        ValueError: If *client*, *project* or *title* is blank, *client* is
+            too long, or *priority* is unknown.
     """
     client = _require_client(client)
     if not project.strip():
@@ -308,7 +318,7 @@ def create_card(
         raise ValueError("title is required")
     if priority not in _PRIORITIES:
         raise ValueError(f"priority must be one of {', '.join(_PRIORITIES)}")
-    conn = _board_conn(data_dir)
+    conn = _board_conn(data_dir, readonly=False)
     try:
         card_id = _board.add_card(
             conn,
@@ -354,13 +364,19 @@ def refine_card(
         CardNotFound: If no card has that id.
         TransitionRefused: If the card is outside backlog/refined, or *to*
             is any other column.
-        ValueError: If *client* is blank, or the call would change nothing.
+        ValueError: If *client* is blank or too long, or the call would change
+            nothing.
     """
     client = _require_client(client)
     if to not in _REFINABLE:
         raise TransitionRefused(card_id, to)
-    conn = _board_conn(data_dir)
+    conn = _board_conn(data_dir, readonly=False)
     try:
+        # Plain SQL rather than the service helpers: each of those commits on
+        # its own, and the column re-check must share one transaction with the
+        # write. That skips move_card's done-invariant, which is safe only
+        # because backlog and refined never carry completed_at — revisit if
+        # the service layer grows other bookkeeping for these columns.
         conn.execute("BEGIN IMMEDIATE")
         try:
             row = conn.execute(

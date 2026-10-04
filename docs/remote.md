@@ -80,19 +80,31 @@ service's credentials. The module is written for that arrangement:
   `SchemaMismatch`, which names both versions, instead of upgrading or
   downgrading the instance. Upgrade whichever side is behind. A missing
   database raises `FileNotFoundError`; nothing is created.
-- **Read-only where it can be.** Memories and reminders are opened read-only.
-  The board is opened read-write with a 10-second busy timeout, since the
-  instance writes it too.
-- **Permissions.** The service user needs read access to the data directory,
-  and write access to `board.db` **and** its `board.db-wal` and `board.db-shm`
-  files. SQLite's WAL mode writes all three; group-write on the database alone
-  isn't enough. Reading the other two databases in WAL mode also needs their
-  `-shm` files to exist, so the instance should have opened them at least once.
+- **Read-only where it can be.** Memories, reminders and every board read are
+  opened read-only. Only `create_card` and `refine_card` open the board
+  read-write, with a 10-second busy timeout, since the instance writes it too.
+- **Permissions.** The service user needs read access to the data directory.
+  To create or refine cards it also needs write access to `board.db` **and**
+  its `board.db-wal` and `board.db-shm` files: SQLite's WAL mode writes all
+  three, so group-write on the database alone isn't enough. A host that only
+  reads needs no write access. Reading a database in WAL mode needs its `-shm`
+  file to exist, so the instance should have opened each one at least once.
+- **Its own data directory.** Give the host its own `MAIT_CODE_DATA_DIR` (or
+  `data-dir` setting), never the instance's. Memory search caches the local
+  embedding model under the host's data directory, so pointing that at the
+  instance would have the host writing into it.
 
 ## Embeddings
 
 `search_memories` runs keyword and vector search. The vector half embeds the
 query with the provider in the **host's** settings, which must match the
-instance's (`embedding-provider`, `embedding-model` or `bedrock-model-id`). If
-they differ, or the provider can't load, results fall back to keyword-only
-rather than failing. See [how memory works](memory.md) for the settings.
+instance's (`embedding-provider`, `embedding-model` or `bedrock-model-id`). The
+local provider downloads its model on first use, so the host needs outbound
+access to fetch it once, or a pre-populated model cache.
+
+Keep the two in step by hand: `memory.db` doesn't record which model built its
+vectors, so a mismatch is only partly caught. If the vector *dimensions*
+differ, or the provider can't load, results fall back to keyword-only. A
+different model with the **same** dimension isn't detected, and vector
+similarities are then meaningless and skew the ranking. See
+[how memory works](memory.md) for the settings.
