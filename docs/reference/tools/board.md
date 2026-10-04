@@ -19,6 +19,8 @@
 
 ::: mait_code.tools.board.IN_PROGRESS
 
+::: mait_code.tools.board.IN_REVIEW
+
 ::: mait_code.tools.board.LABELS
 
 ::: mait_code.tools.board.REFINED
@@ -94,6 +96,8 @@
 ::: mait_code.tools.board.remove_card
 
 ::: mait_code.tools.board.remove_tag
+
+::: mait_code.tools.board.review_card
 
 ::: mait_code.tools.board.summary_counts
 

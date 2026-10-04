@@ -25,6 +25,7 @@ from mait_code.tools.board.columns import (
     BOARD_ORDER,
     DONE,
     IN_PROGRESS,
+    IN_REVIEW,
     REFINED,
 )
 
@@ -50,6 +51,7 @@ __all__ = [
     "remove_card",
     "remove_reference",
     "remove_tag",
+    "review_card",
     "set_references",
     "set_tags",
     "summary_counts",
@@ -519,6 +521,21 @@ def complete_card(
         (DONE, summary or None, now, now, card_id),
     )
     conn.commit()
+
+
+def review_card(
+    conn: sqlite3.Connection, card_id: int, *, pr: str | None = None
+) -> None:
+    """Move a card to ``in_review``, recording *pr* as a ``PR`` reference.
+
+    The card is parked between ``in_progress`` and ``done`` until its pull
+    request merges. Re-reviewing with a PR the card already carries (e.g.
+    after a re-push) doesn't duplicate the reference. Raises
+    :class:`CardNotFound` if the id is unknown.
+    """
+    move_card(conn, card_id, IN_REVIEW)
+    if pr and {"label": "PR", "value": pr} not in list_references(conn, card_id):
+        add_reference(conn, card_id, "PR", pr)
 
 
 def block_card(

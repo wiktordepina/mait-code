@@ -2,7 +2,7 @@
 
 A single cross-project kanban board stored in ``board.db``. Cards carry a
 ``project`` field and move through a fixed workflow: backlog → refined →
-in_progress → done, with a hidden ``archived`` side-state. ``blocked`` is a tag
+in_progress → in_review → done, with a hidden ``archived`` side-state. ``blocked`` is a tag
 carried in place (via ``block``/``unblock``), not a column.
 
 The handlers here are thin: argument parsing, the not-found/exit helper, and
@@ -25,6 +25,7 @@ from mait_code.tools.board.columns import (
     ALL_STATUSES,
     ARCHIVED,
     BOARD_ORDER,
+    IN_REVIEW,
     REFINED,
     label,
 )
@@ -315,6 +316,16 @@ def cmd_complete(args):
         _print_card(conn, args, args.id, f"Card #{args.id} completed.")
 
 
+def cmd_review(args):
+    pr = (args.pr or "").strip()
+    with connection() as conn:
+        try:
+            service.review_card(conn, args.id, pr=pr or None)
+        except service.CardNotFound:
+            _not_found(args.id)
+        _print_card(conn, args, args.id, f"Card #{args.id} → {label(IN_REVIEW)}.")
+
+
 def cmd_block(args):
     reason = " ".join(args.reason).strip()
     with connection() as conn:
@@ -530,6 +541,14 @@ def main():
     p_complete.add_argument("--summary", nargs="+", default=[], help="Handoff summary")
     p_complete.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_complete.set_defaults(func=cmd_complete)
+
+    p_review = sub.add_parser(
+        "review", help="Move a card to in_review, optionally recording its PR"
+    )
+    p_review.add_argument("id", type=int, help="Card ID")
+    p_review.add_argument("--pr", help="Pull request URL (added as a 'PR' reference)")
+    p_review.add_argument("--json", action="store_true", help="Emit the card as JSON")
+    p_review.set_defaults(func=cmd_review)
 
     p_block = sub.add_parser(
         "block", help="Tag a card 'blocked' in place, optionally with a reason"

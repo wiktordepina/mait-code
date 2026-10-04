@@ -8,6 +8,7 @@ truth for status validation, board ordering, and display labels.
 BACKLOG = "backlog"
 REFINED = "refined"
 IN_PROGRESS = "in_progress"
+IN_REVIEW = "in_review"
 DONE = "done"
 ARCHIVED = "archived"
 
@@ -19,7 +20,7 @@ BLOCKED_TAG = "blocked"
 
 #: Columns in left-to-right board order. ``archived`` is a hidden state and is
 #: deliberately excluded.
-BOARD_ORDER: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
+BOARD_ORDER: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW, DONE)
 
 #: Every valid ``cards.status`` value, including the hidden ``archived``.
 ALL_STATUSES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
@@ -29,6 +30,7 @@ LABELS: dict[str, str] = {
     BACKLOG: "Backlog",
     REFINED: "Refined",
     IN_PROGRESS: "In Progress",
+    IN_REVIEW: "In Review",
     DONE: "Done",
     ARCHIVED: "Archived",
 }
@@ -52,6 +54,7 @@ __all__ = [
     "BOARD_ORDER",
     "DONE",
     "IN_PROGRESS",
+    "IN_REVIEW",
     "LABELS",
     "REFINED",
     "is_valid_status",

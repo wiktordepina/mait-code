@@ -35,11 +35,11 @@ work — it's a shared surface the two of you reason over together.
 
 ## The lifecycle
 
-Cards flow through four fixed columns, with one hidden side-state:
+Cards flow through five fixed columns, with one hidden side-state:
 
 ```mermaid
 flowchart LR
-    B[Backlog] --> R[Refined] --> P[In&nbsp;Progress] --> D[Done]
+    B[Backlog] --> R[Refined] --> P[In&nbsp;Progress] --> V[In&nbsp;Review] --> D[Done]
     D -. archive .-> A[Archived]
     P -. park .-> A
 ```
@@ -49,12 +49,13 @@ flowchart LR
 | **Backlog** | Raw, unrefined ideas. Where new cards land. |
 | **Refined** | Has a clear description *and* acceptance criteria. Ready to be picked up. |
 | **In&nbsp;Progress** | Actively being worked in the current session. |
+| **In&nbsp;Review** | Work finished and waiting on review, usually an open pull request. Hidden while empty. Press `v` to show it anyway; it always shows while it holds a card. |
 | **Done** | Finished, with a completion summary. Hidden by default — press `d` to show. |
 | **Archived** | Parked out of sight without deleting. Hidden by default — press `a` to show. |
 
 You don't have to march cards through every column in order — you can move a card
-anywhere via the CLI — but `backlog → refined → in_progress → done` is the
-intended grain, and following it is what makes the workflow pay off.
+anywhere via the CLI — but `backlog → refined → in_progress → in_review → done`
+is the intended grain, and following it is what makes the workflow pay off.
 
 !!! note "Blocked is a tag, not a column"
     A blocked card keeps its real column — a blocked refined card stays in
@@ -69,9 +70,13 @@ By default the board shows only the live columns — **Backlog**, **Refined**, a
 three columns you actually act on wide and uncluttered, with finished and parked
 work tucked out of sight so it can't pull your attention.
 
-Press `d` and `a` to reveal **Done** and **Archived** — the full five-column view:
+**In&nbsp;Review** joins them whenever a card is waiting on review, so work
+waiting on a pull request never disappears from view. Press `v` to show it while
+it's empty too.
 
-![The board uncollapsed: all five columns, including Done and Archived, in view.](assets/board/board-expanded.png)
+Press `d` and `a` to reveal **Done** and **Archived** — the full six-column view:
+
+![The board uncollapsed: all six columns, with a card in In Review and Done and Archived in view.](assets/board/board-expanded.png)
 
 This expanded layout is for *admin and reflection*, not for getting work done:
 reviewing what's shipped, re-reading completion summaries, sweeping stale cards
@@ -131,11 +136,14 @@ A typical board-driven session looks like this:
 4. **Track.** As work progresses, comments and references accrue on the card: a
    link to the PR, a note about a tricky edge case. If something stalls, *"block
    it — waiting on the upstream fix"* tags it `blocked` in place.
-5. **Complete.** When the acceptance criteria are met: *"complete it, summary:
+5. **Review.** When the work is up as a pull request: *"park it in review, PR
+   is #42."* The card moves to **In&nbsp;Review** with the PR attached as a
+   reference, so the board shows it as finished but not merged.
+6. **Complete.** Once it merges: *"complete it, summary:
    re-derived chip colours from the theme palette."* The card moves to **Done**,
    stamped with the time and the handoff summary.
 
-The acceptance criteria written at step 2 are the contract for steps 3 and 5 —
+The acceptance criteria written at step 2 are the contract for steps 3 to 6 —
 which is exactly why refining *before* picking up is worth the small ceremony.
 
 ## Anatomy of a card
@@ -196,7 +204,7 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 |-----|--------|
 | <kbd>←</kbd> / <kbd>→</kbd> | Focus the previous / next column |
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Highlight the previous / next card |
-| <kbd>1</kbd>–<kbd>5</kbd> | Jump straight to a visible column (<kbd>4</kbd>/<kbd>5</kbd> need Done/Archived shown) |
+| <kbd>1</kbd>–<kbd>6</kbd> | Jump straight to the *n*th visible column (hidden columns are skipped, so the numbers shift as In Review, Done and Archived come and go) |
 | <kbd>Enter</kbd> | Open the highlighted card's detail screen |
 | <kbd>n</kbd> | New card (the project is pre-filled from the active filter, else left for you to choose) |
 | <kbd>e</kbd> | Edit the highlighted card |
@@ -207,6 +215,7 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 | <kbd>&lt;</kbd> / <kbd>&gt;</kbd> | Move the card left / right through the flow |
 | <kbd>p</kbd> | Filter by project (dropdown picker) |
 | <kbd>/</kbd> | Search cards by title |
+| <kbd>v</kbd> | Toggle the **In Review** column (it stays visible while it holds cards) |
 | <kbd>d</kbd> | Toggle the **Done** column |
 | <kbd>a</kbd> | Toggle the **Archived** pane |
 | <kbd>r</kbd> | Reload the board from disk (it also reloads on its own when the store changes underneath it) |
@@ -262,8 +271,9 @@ mc-tool-board comment ID "<note>" [--author me|claude] [--json]
 # Flow
 mc-tool-board refine ID [--description ...] [--acceptance ...] [--json]   # → refined
 mc-tool-board next [--project ...] [--claim] [--json]                     # top refined card; --claim → in_progress
+mc-tool-board review ID [--pr <url>] [--json]                             # → in_review; --pr adds a PR reference
 mc-tool-board complete ID --summary "<what was done>" [--json]            # → done
-mc-tool-board move ID <backlog|refined|in_progress|done|archived> [--json]
+mc-tool-board move ID <backlog|refined|in_progress|in_review|done|archived> [--json]
 mc-tool-board archive ID [--json]                                         # hide without deleting
 mc-tool-board remove ID [--json]                                          # permanent delete
 

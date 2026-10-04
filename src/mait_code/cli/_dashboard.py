@@ -309,11 +309,14 @@ def _tile_board() -> list[TileLine]:
     if not live:
         return [TileLine("all clear", "dim")]
     in_progress = [c for c in live if c["status"] == "in_progress"]
+    in_review = sum(c["status"] == "in_review" for c in live)
     refined = [c for c in live if c["status"] == "refined"]
     projects = len({c["project"] for c in live})
+    # In Review only joins the headline while it holds cards, as on the board.
+    review = f"{in_review} in review · " if in_review else ""
     lines = [
         TileLine(
-            f"{len(live)} live · {len(in_progress)} in progress · "
+            f"{len(live)} live · {len(in_progress)} in progress · {review}"
             f"{len(refined)} next up · {projects} project(s)",
             "",
         )

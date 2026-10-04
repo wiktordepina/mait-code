@@ -10,6 +10,39 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.72.0] — 2026-10-04
+
+### Added
+
+- **An In Review column between In Progress and Done.** Finished work waiting
+  on a pull request now has its own place on the board, instead of sitting in
+  In Progress or being marked Done before it merges. It's a normal step in the
+  flow: `>` from In Progress lands there, and `move N in_review`, `list --status
+  in_review`, export and `summary` all handle it.
+- **`mc-tool-board review N [--pr <url>]`** moves a card to In Review and
+  records the pull request as a `PR` reference. Reviewing again with the same
+  link doesn't duplicate it. Supports `--json` like every other mutating verb.
+- **In Review in the hub and on the start page.** The hub's Board section gains
+  an *In review* leaf and lists in-review cards, and the dashboard's board tile
+  counts them while there are any.
+
+### Changed
+
+- **The board TUI shows In Review only when it matters.** The column is hidden
+  while empty and always shown while it holds a card, so work waiting on review
+  never drops out of sight. Press `v` to show it regardless; `6` now focuses the
+  sixth pane.
+- **Toggling a column no longer moves the cursor.** Showing or hiding In Review,
+  Done or Archived keeps focus on the column you were on, rather than letting a
+  pane that appears to its left take the cursor. The palette's *Jump to* commands
+  now jump to the named column, rather than to a position that shifts as
+  columns hide.
+
+### Security
+
+- **urllib3 upgraded to 2.8.0** (a transitive dependency via `botocore` and
+  `requests`), patching PYSEC-2026-4175, PYSEC-2026-4176 and PYSEC-2026-4177.
+
 ## [0.71.0] — 2026-09-29
 
 ### Added
@@ -2267,7 +2300,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.71.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.72.0...HEAD
+[0.72.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.72.0
 [0.71.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.71.0
 [0.70.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.70.0
 [0.69.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.69.2

@@ -438,6 +438,7 @@ MUTATING_INVOCATIONS: tuple[str, ...] = (
     "find . -exec rm {} ;",
     "mc-tool-board next --claim",
     "mc-tool-board add title",
+    "mc-tool-board review 3 --pr x",
     "mc-tool-board complete 3 --summary done",
     "mc-tool-board remove 3",
     "mc-tool-board archive 3",

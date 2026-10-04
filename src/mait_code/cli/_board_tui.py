@@ -60,6 +60,7 @@ from mait_code.tools.board.columns import (
     BOARD_ORDER,
     DONE,
     IN_PROGRESS,
+    IN_REVIEW,
     REFINED,
     label as col_label,
 )
@@ -85,7 +86,7 @@ _PANES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
 
 #: The linear flow the ``<``/``>`` keys move a card along — every real status
 #: except the hidden ``archived`` side-state, which is reached only via the CLI.
-_MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, DONE)
+_MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW, DONE)
 
 #: Companion-voice hint shown (dim, non-selectable) in an empty column, so a
 #: bare pane still sounds like the companion rather than rendering as a void.
@@ -93,6 +94,7 @@ _EMPTY_HINTS: dict[str, str] = {
     BACKLOG: "Nothing waiting.",
     REFINED: "Nothing ready to pick up.",
     IN_PROGRESS: "Nothing in flight.",
+    IN_REVIEW: "Nothing awaiting review.",
     DONE: "Nothing finished yet.",
     ARCHIVED: "Nothing tucked away.",
 }
@@ -196,6 +198,7 @@ class BoardColumn(OptionList):
         Binding("3", "app.focus_col(2)", "Col 3", show=False),
         Binding("4", "app.focus_col(3)", "Col 4", show=False),
         Binding("5", "app.focus_col(4)", "Col 5", show=False),
+        Binding("6", "app.focus_col(5)", "Col 6", show=False),
         Binding("n", "app.new", "New"),
         Binding("e", "app.edit", "Edit"),
         Binding("C", "app.complete", "Complete"),
@@ -205,6 +208,7 @@ class BoardColumn(OptionList):
         Binding("u", "app.unblock", "Unblock"),
         Binding("p", "app.filter_project", "Project"),
         Binding("slash", "app.search", "Search"),
+        Binding("v", "app.toggle_review", "Review"),
         Binding("d", "app.toggle_done", "Done"),
         Binding("a", "app.toggle_archived", "Archived"),
         Binding("r", "app.reload_board", "Reload"),
@@ -1166,6 +1170,10 @@ class BoardApp(MaitApp):
         # follows it; None until the first export (then ``~`` is offered).
         self.last_export_dir: Path | None = None
         self._show_done = False  # Done is hidden by default to widen the flow
+        # In Review is hidden by default too, but always shown while it holds
+        # a card (after filters) so parked work never goes invisible.
+        self._show_review = False
+        self._review_nonempty = False
         self._show_archived = False
         self._focused_col = 0
         self._card_status: dict[int, str] = {}
@@ -1184,7 +1192,9 @@ class BoardApp(MaitApp):
 
     def on_mount(self) -> None:
         self._projects = service.list_projects(self._conn)
-        # Done and archived stay hidden until their toggles (`d` / `a`) reveal them.
+        # In Review, Done and archived stay hidden until their toggles (`v` / `d`
+        # / `a`) reveal them; In Review also shows itself while it holds cards.
+        self.query_one("#col-in_review", Vertical).display = False
         self.query_one("#col-done", Vertical).display = False
         self.query_one("#col-archived", Vertical).display = False
         # Re-render the chip-bearing surfaces whenever the theme changes, so a
@@ -1243,6 +1253,8 @@ class BoardApp(MaitApp):
 
     def _visible_statuses(self) -> list[str]:
         statuses = [BACKLOG, REFINED, IN_PROGRESS]
+        if self._show_review or self._review_nonempty:
+            statuses.append(IN_REVIEW)
         if self._show_done:
             statuses.append(DONE)
         if self._show_archived:
@@ -1257,8 +1269,20 @@ class BoardApp(MaitApp):
             parts.append(f"search: {self._search!r}")
         self.query_one(BrandBanner).set_subtitle("  ".join(parts))
 
-    def _reload(self) -> None:
-        """Re-query with the active filter and repaint every pane."""
+    def _focused_status(self) -> str:
+        """The status of the focused pane (clamped if the index overran)."""
+        statuses = self._visible_statuses()
+        return statuses[min(self._focused_col, len(statuses) - 1)]
+
+    def _reload(self, focused: str | None = None) -> None:
+        """Re-query with the active filter and repaint every pane.
+
+        Focus stays on the *focused* pane (default: the one focused now) even
+        as panes appear or vanish around it. A pane toggle passes the status it
+        captured *before* flipping its flag, since afterwards the old index
+        already points into the new layout.
+        """
+        focused = focused or self._focused_status()
         cards = service.list_cards(
             self._conn,
             project=self._project_filter,
@@ -1269,6 +1293,7 @@ class BoardApp(MaitApp):
         by_status: dict[str, list[dict]] = {}
         for card in cards:
             by_status.setdefault(card["status"], []).append(card)
+        self._sync_review_pane(IN_REVIEW in by_status, focused)
         show_project = self._project_filter is None
         colours = self._chip_colours()
         # #id uses the theme primary, but falls back to hex under a non-hex
@@ -1300,6 +1325,22 @@ class BoardApp(MaitApp):
                 )
             head = self.query_one(f"#head-{status}", Label)
             head.update(f"{col_label(status)} ({len(group)})")
+
+    def _sync_review_pane(self, nonempty: bool, focused: str) -> None:
+        """Show or hide In Review for its contents, keeping focus on *focused*.
+
+        Panes appear and vanish on reloads (In Review as cards move in or out,
+        here or externally) and on toggles, shifting the panes to their right.
+        Re-index focus by status so it stays put, or clamp it if the focused
+        pane itself went.
+        """
+        self._review_nonempty = nonempty
+        statuses = self._visible_statuses()
+        self.query_one("#col-in_review", Vertical).display = IN_REVIEW in statuses
+        if focused in statuses:
+            self._focused_col = statuses.index(focused)
+        else:
+            self._focused_col = min(self._focused_col, len(statuses) - 1)
 
     def _focus_current(self) -> None:
         status = self._visible_statuses()[self._focused_col]
@@ -1334,18 +1375,21 @@ class BoardApp(MaitApp):
         """Follow a card to its (possibly new) pane and highlight it.
 
         Returns ``True`` if the card was found in a visible pane and selected,
-        ``False`` if it's gone, archived out of view, or filtered out — letting
-        callers fall back to a sensible default focus.
+        ``False`` if it's gone, archived out of view, or filtered out. On
+        ``False`` focus falls back to the current pane, since the card's old
+        pane may have vanished with it (the last card out of In Review).
         """
         status = self._card_status.get(card_id)
         statuses = self._visible_statuses()
         if status is None or status not in statuses:
+            self._focus_current()
             return False
         self._focused_col = statuses.index(status)
         column = self.query_one(f"#tbl-{status}", BoardColumn)
         try:
             column.highlighted = column.get_option_index(str(card_id))
         except OptionDoesNotExist:
+            self._focus_current()
             return False
         column.focus()
         return True
@@ -1361,6 +1405,11 @@ class BoardApp(MaitApp):
             "Complete card",
             "Complete the focused card with a summary",
             self.action_complete,
+        )
+        yield SystemCommand(
+            "Toggle In Review",
+            "Show or hide the In Review column (always shown while it holds cards)",
+            self.action_toggle_review,
         )
         yield SystemCommand(
             "Toggle Done",
@@ -1385,11 +1434,12 @@ class BoardApp(MaitApp):
         yield SystemCommand(
             "Reload board", "Re-read the board from disk", self.action_reload_board
         )
-        for idx, status in enumerate(BOARD_ORDER):
+        # Jump by status, not position: hidden panes shift the visible indices.
+        for status in self._visible_statuses():
             yield SystemCommand(
                 f"Jump to {col_label(status)}",
                 "Focus this column",
-                partial(self._jump_to, idx),
+                partial(self._focus_status, status),
             )
 
     def _jump_to(self, index: int) -> None:
@@ -1494,20 +1544,29 @@ class BoardApp(MaitApp):
         self._reload()
         self._focus_current()
 
+    def action_toggle_review(self) -> None:
+        focused = self._focused_status()
+        self._show_review = not self._show_review
+        # _reload settles the pane's visibility (it stays while it holds cards).
+        self._reload(focused)
+        self._focus_current()
+        if not self._show_review and self._review_nonempty:
+            self.notify("In Review stays visible while it holds cards.")
+
     def action_toggle_done(self) -> None:
+        focused = self._focused_status()
         self._show_done = not self._show_done
         self.query_one("#col-done", Vertical).display = self._show_done
-        # If a now-hidden pane was focused, fall back to the last visible one.
-        self._focused_col = min(self._focused_col, len(self._visible_statuses()) - 1)
-        self._reload()
+        # Focus stays on its pane, or falls back if that pane was the one hidden.
+        self._reload(focused)
         self._focus_current()
 
     def action_toggle_archived(self) -> None:
+        focused = self._focused_status()
         self._show_archived = not self._show_archived
         self.query_one("#col-archived", Vertical).display = self._show_archived
-        # If a now-hidden pane was focused, fall back to the last visible one.
-        self._focused_col = min(self._focused_col, len(self._visible_statuses()) - 1)
-        self._reload()
+        # Focus stays on its pane, or falls back if that pane was the one hidden.
+        self._reload(focused)
         self._focus_current()
 
     def action_reload_board(self) -> None:
