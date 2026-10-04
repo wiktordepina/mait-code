@@ -211,14 +211,25 @@ class TestInReview:
             async with app.run_test() as pilot:
                 await pilot.pause()
                 shown = self._pane_shown(app)
-                # The toggle can't hide a pane that holds cards.
-                await pilot.press("v")
+                # The toggle starts off, so one press turns it on...
                 await pilot.press("v")
                 await pilot.pause()
-                return shown, self._pane_shown(app), app._visible_statuses()
+                toggled_on = app._show_review
+                # ...and a second turns it off, which can't hide a non-empty pane.
+                await pilot.press("v")
+                await pilot.pause()
+                return (
+                    shown,
+                    toggled_on,
+                    app._show_review,
+                    self._pane_shown(app),
+                    app._visible_statuses(),
+                )
 
-        shown, still_shown, statuses = _run(scenario)
-        assert shown and still_shown
+        shown, toggled_on, toggle_after, still_shown, statuses = _run(scenario)
+        assert shown
+        assert toggled_on and not toggle_after
+        assert still_shown
         assert statuses == [BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW]
 
     def test_toggle_reveals_an_empty_pane(self, board_path: Path) -> None:
@@ -281,6 +292,48 @@ class TestInReview:
         assert not shown
         assert IN_REVIEW not in statuses
         assert widget is not None and widget.id == f"tbl-{focused}"
+
+    def test_toggle_keeps_focus_on_pane_to_its_right(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "done", "status": DONE}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.press("d")
+                await pilot.pause()
+                app._focus_status(DONE)
+                await pilot.press("v")  # In Review slides in left of Done
+                await pilot.pause()
+                focused = app._visible_statuses()[app._focused_col]
+                return focused, app.focused
+
+        focused, widget = _run(scenario)
+        assert focused == DONE
+        assert widget is not None and widget.id == f"tbl-{DONE}"
+
+    def test_done_toggle_keeps_focus_on_archived(self, board_path: Path) -> None:
+        # Every pane toggle re-finds focus by status, not just In Review's.
+        _seed(
+            board_path,
+            [
+                {"title": "parked", "status": IN_REVIEW},
+                {"title": "old", "status": ARCHIVED},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.press("a")
+                await pilot.pause()
+                app._focus_status(ARCHIVED)
+                await pilot.press("d")  # Done slides in left of Archived
+                await pilot.pause()
+                return app._visible_statuses()[app._focused_col]
+
+        assert _run(scenario) == ARCHIVED
 
     def test_external_arrival_keeps_focus_on_its_pane(self, board_path: Path) -> None:
         ids = _seed(

@@ -71,6 +71,25 @@ def test_review_card_without_pr_adds_no_reference(board_db):
     assert card["references"] == []
 
 
+def test_review_card_twice_with_same_pr_keeps_one_reference(board_db):
+    cid = _card(board_db, "x", IN_PROGRESS)
+    service.review_card(board_db, cid, pr="https://example.com/pr/7")
+    service.review_card(board_db, cid, pr="https://example.com/pr/7")
+    refs = service.get_card(board_db, cid)["references"]
+    assert refs == [{"label": "PR", "value": "https://example.com/pr/7"}]
+
+
+def test_review_card_with_a_new_pr_adds_it(board_db):
+    cid = _card(board_db, "x", IN_PROGRESS)
+    service.review_card(board_db, cid, pr="https://example.com/pr/7")
+    service.review_card(board_db, cid, pr="https://example.com/pr/8")
+    refs = service.get_card(board_db, cid)["references"]
+    assert [r["value"] for r in refs] == [
+        "https://example.com/pr/7",
+        "https://example.com/pr/8",
+    ]
+
+
 def test_review_card_from_done_clears_completed_at(board_db):
     # Reopening a done card into review must honour the done-invariant.
     cid = _card(board_db, "x", DONE)

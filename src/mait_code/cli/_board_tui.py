@@ -1269,10 +1269,20 @@ class BoardApp(MaitApp):
             parts.append(f"search: {self._search!r}")
         self.query_one(BrandBanner).set_subtitle("  ".join(parts))
 
-    def _reload(self) -> None:
-        """Re-query with the active filter and repaint every pane."""
-        before = self._visible_statuses()
-        focused = before[min(self._focused_col, len(before) - 1)]
+    def _focused_status(self) -> str:
+        """The status of the focused pane (clamped if the index overran)."""
+        statuses = self._visible_statuses()
+        return statuses[min(self._focused_col, len(statuses) - 1)]
+
+    def _reload(self, focused: str | None = None) -> None:
+        """Re-query with the active filter and repaint every pane.
+
+        Focus stays on the *focused* pane (default: the one focused now) even
+        as panes appear or vanish around it. A pane toggle passes the status it
+        captured *before* flipping its flag, since afterwards the old index
+        already points into the new layout.
+        """
+        focused = focused or self._focused_status()
         cards = service.list_cards(
             self._conn,
             project=self._project_filter,
@@ -1319,9 +1329,10 @@ class BoardApp(MaitApp):
     def _sync_review_pane(self, nonempty: bool, focused: str) -> None:
         """Show or hide In Review for its contents, keeping focus on *focused*.
 
-        In Review can appear or vanish on any reload (a card moved in or out,
-        here or externally), shifting the panes to its right. Re-index focus by
-        status so it stays put, or clamp it if the focused pane itself went.
+        Panes appear and vanish on reloads (In Review as cards move in or out,
+        here or externally) and on toggles, shifting the panes to their right.
+        Re-index focus by status so it stays put, or clamp it if the focused
+        pane itself went.
         """
         self._review_nonempty = nonempty
         statuses = self._visible_statuses()
@@ -1534,27 +1545,28 @@ class BoardApp(MaitApp):
         self._focus_current()
 
     def action_toggle_review(self) -> None:
+        focused = self._focused_status()
         self._show_review = not self._show_review
         # _reload settles the pane's visibility (it stays while it holds cards).
-        self._reload()
+        self._reload(focused)
         self._focus_current()
         if not self._show_review and self._review_nonempty:
             self.notify("In Review stays visible while it holds cards.")
 
     def action_toggle_done(self) -> None:
+        focused = self._focused_status()
         self._show_done = not self._show_done
         self.query_one("#col-done", Vertical).display = self._show_done
-        # If a now-hidden pane was focused, fall back to the last visible one.
-        self._focused_col = min(self._focused_col, len(self._visible_statuses()) - 1)
-        self._reload()
+        # Focus stays on its pane, or falls back if that pane was the one hidden.
+        self._reload(focused)
         self._focus_current()
 
     def action_toggle_archived(self) -> None:
+        focused = self._focused_status()
         self._show_archived = not self._show_archived
         self.query_one("#col-archived", Vertical).display = self._show_archived
-        # If a now-hidden pane was focused, fall back to the last visible one.
-        self._focused_col = min(self._focused_col, len(self._visible_statuses()) - 1)
-        self._reload()
+        # Focus stays on its pane, or falls back if that pane was the one hidden.
+        self._reload(focused)
         self._focus_current()
 
     def action_reload_board(self) -> None:

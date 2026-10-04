@@ -529,10 +529,12 @@ def review_card(
     """Move a card to ``in_review``, recording *pr* as a ``PR`` reference.
 
     The card is parked between ``in_progress`` and ``done`` until its pull
-    request merges. Raises :class:`CardNotFound` if the id is unknown.
+    request merges. Re-reviewing with a PR the card already carries (e.g.
+    after a re-push) doesn't duplicate the reference. Raises
+    :class:`CardNotFound` if the id is unknown.
     """
     move_card(conn, card_id, IN_REVIEW)
-    if pr:
+    if pr and {"label": "PR", "value": pr} not in list_references(conn, card_id):
         add_reference(conn, card_id, "PR", pr)
 
 
