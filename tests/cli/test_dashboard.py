@@ -181,6 +181,22 @@ def test_board_tile_summarises_live_cards() -> None:
     lines = builtin_tile_lines("board")
     assert "2 live" in lines[0].text and "1 in progress" in lines[0].text
     assert any("Work the thing" in line.text for line in lines)
+    # In Review stays out of the headline while it's empty.
+    assert "in review" not in lines[0].text
+
+
+def test_board_tile_counts_in_review_cards() -> None:
+    from mait_code.tools.board import service
+    from mait_code.tools.board.db import get_connection
+
+    conn = get_connection()
+    try:
+        cid = service.add_card(conn, project="demo", title="Awaiting merge")
+        service.review_card(conn, cid)
+    finally:
+        conn.close()
+    lines = builtin_tile_lines("board")
+    assert "1 live" in lines[0].text and "1 in review" in lines[0].text
 
 
 def test_velocity_tile_buckets_this_week_against_last() -> None:

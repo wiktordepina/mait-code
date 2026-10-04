@@ -158,6 +158,44 @@ def test_board_detail_lists_live_cards_and_launch_hint() -> None:
     assert "Open board" in text and "launch the full board" in text
 
 
+def test_board_in_review_detail_lists_parked_cards() -> None:
+    from mait_code.tools.board import service
+    from mait_code.tools.board.db import get_connection
+
+    _seed_board()
+    conn = get_connection()
+    try:
+        cid = service.add_card(conn, project="demo", title="Awaiting merge")
+        service.review_card(conn, cid, pr="https://example.com/pr/1")
+    finally:
+        conn.close()
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            leaf = await _show(app, pilot, "board:in_review")
+            board = await _show(app, pilot, "board")
+            return leaf, board
+
+    leaf, board = _run(scenario)
+    assert "In review" in leaf and "Awaiting merge" in leaf
+    assert "Work the thing" not in leaf
+    assert "In review" in board and "Awaiting merge" in board
+
+
+def test_board_in_review_detail_empty_state() -> None:
+    _seed_board()
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "board:in_review")
+
+    assert "Nothing awaiting review" in _run(scenario)
+
+
 def test_board_by_project_breakdown() -> None:
     _seed_board()
 

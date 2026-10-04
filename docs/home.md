@@ -205,7 +205,7 @@ leaves only — they have no palette entry.
 
 | Section | Highlighting it shows | Leaves |
 |---------|----------------------|--------|
-| **Board** | Live cards split into *In progress* and *Next up* | `↗ Open board`, In progress, Next up, By project |
+| **Board** | Live cards split into *In progress*, *In review* and *Next up* | `↗ Open board`, In progress, In review, Next up, By project |
 | **Memory** | Entry count and a by-type breakdown | `↗ Open memory browser`, By type, Due for review, `↗ Open review`, Embedding coverage, Reflection status, `↗ Open observations`, `↗ Open graph explorer` |
 | **Reminders** | Overdue and upcoming, with the overdue count raised in alarm | Overdue, Upcoming |
 | **Inbox** | How many captured items are waiting for triage | — |

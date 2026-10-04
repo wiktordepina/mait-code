@@ -342,6 +342,7 @@ class HomeApp(MaitApp):
         )
         launch_leaf(board, "Open board", NodeSpec("board", HomeTarget.BOARD))
         leaf(board, "In progress", NodeSpec("board:in_progress"))
+        leaf(board, "In review", NodeSpec("board:in_review"))
         leaf(board, "Next up", NodeSpec("board:refined"))
         leaf(board, "By project", NodeSpec("board:by_project"))
 
@@ -419,6 +420,7 @@ class HomeApp(MaitApp):
             "home": self._detail_home,
             "board": self._detail_board,
             "board:in_progress": self._detail_board_in_progress,
+            "board:in_review": self._detail_board_in_review,
             "board:refined": self._detail_board_refined,
             "board:by_project": self._detail_board_by_project,
             "memory": self._detail_memory,
@@ -598,7 +600,11 @@ class HomeApp(MaitApp):
                 classes="hint",
             )
         )
-        for status, head in (("in_progress", "In progress"), ("refined", "Next up")):
+        for status, head in (
+            ("in_progress", "In progress"),
+            ("in_review", "In review"),
+            ("refined", "Next up"),
+        ):
             group = [c for c in cards if c["status"] == status]
             if group:
                 widgets.append(Label(head, classes="subhead"))
@@ -610,6 +616,14 @@ class HomeApp(MaitApp):
         if not group:
             return [Label(empty_state("Nothing in progress right now."))]
         widgets: list[Widget] = [Label("In progress", classes="title")]
+        widgets += [_card_line(c) for c in group]
+        return widgets
+
+    def _detail_board_in_review(self) -> list[Widget]:
+        group = [c for c in self._board_cards() if c["status"] == "in_review"]
+        if not group:
+            return [Label(empty_state("Nothing awaiting review."))]
+        widgets: list[Widget] = [Label("In review", classes="title")]
         widgets += [_card_line(c) for c in group]
         return widgets
 

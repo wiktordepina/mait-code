@@ -1,7 +1,7 @@
 ---
 name: board
 description: View and drive the project kanban board. Use when the user mentions the board, asks to pick up / refine / move / complete a card, asks what's on the board, or wants to add a card to the board.
-allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*)
+allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*)
 ---
 
 # /board
@@ -14,7 +14,7 @@ View and drive the kanban board for the current project.
 
 ## Instructions
 
-The board is a **manually-driven** kanban — *you (Claude) are the worker*. There is no autonomous dispatcher; you act only when the user asks. Drive it through `mc-tool-board` via Bash. Cards flow through fixed columns: **backlog → refined → in_progress → done**, plus a hidden **archived** side-state. **blocked** is a tag carried in place (not a column), so a blocked card keeps its real column.
+The board is a **manually-driven** kanban — *you (Claude) are the worker*. There is no autonomous dispatcher; you act only when the user asks. Drive it through `mc-tool-board` via Bash. Cards flow through fixed columns: **backlog → refined → in_progress → in_review → done**, plus a hidden **archived** side-state. **blocked** is a tag carried in place (not a column), so a blocked card keeps its real column.
 
 Present the board above clearly, then act on what the user asks.
 
@@ -29,12 +29,13 @@ Present the board above clearly, then act on what the user asks.
 
 ### Finishing & parking
 
-- Complete: `mc-tool-board complete N --summary "what was done"` (moves to `done`, records a handoff summary).
+- Review: `mc-tool-board review N [--pr <url>]` — moves the card to `in_review` (finished, awaiting review or merge) and, with `--pr`, records the PR as a `PR` reference. Use it once the work is up as a pull request.
+- Complete: `mc-tool-board complete N --summary "what was done"` (moves to `done` from any column, records a handoff summary).
 - Block: `mc-tool-board block N <reason>` — tags the card `blocked` **in place** (keeps its column); the reason is recorded as a comment. Unblock: `mc-tool-board unblock N` removes the tag. These are thin aliases over the tag system below.
 - Tag / untag: `mc-tool-board tag N <tag>` / `mc-tool-board untag N <tag>` — free-form tags that ride alongside a card's status.
 - Archive (hide, don't delete): `mc-tool-board archive N`.
 - Delete permanently: `mc-tool-board remove N` — destructive and unrecoverable; prefer `archive` to hide a card. Only delete when the user explicitly asks.
-- Arbitrary move: `mc-tool-board move N <backlog|refined|in_progress|done|archived>`.
+- Arbitrary move: `mc-tool-board move N <backlog|refined|in_progress|in_review|done|archived>`.
 
 ### Adding & editing
 
@@ -45,7 +46,7 @@ The **description**, **acceptance criteria** and **completion summary** fields r
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
 - References (label→value links on a card): `mc-tool-board ref add N <label> <value>` — *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
 - Show one card with its comments and references: `mc-tool-board show N`.
-- Every mutating subcommand (`add`, `move`, `refine`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `comment`, `edit`, `remove`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape — e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.
+- Every mutating subcommand (`add`, `move`, `refine`, `review`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `comment`, `edit`, `remove`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape — e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.
 
 ### Viewing
 
@@ -58,4 +59,4 @@ The **description**, **acceptance criteria** and **completion summary** fields r
 
 ## Proactive behaviour
 
-If you spot work worth tracking during a session, you may **suggest** adding a card — but always ask before adding. When you finish a chunk of work that maps to an in-progress card, offer to complete it with a summary. Never move, complete, or archive cards without the user's say-so.
+If you spot work worth tracking during a session, you may **suggest** adding a card — but always ask before adding. When you open a PR for an in-progress card, offer to move it to review with the PR link; when you finish a chunk of work that maps to a card (or its PR merges), offer to complete it with a summary. Never move, complete, or archive cards without the user's say-so.

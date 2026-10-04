@@ -32,6 +32,7 @@ from mait_code.tools.board.columns import (
     BLOCKED_TAG,
     DONE,
     IN_PROGRESS,
+    IN_REVIEW,
     REFINED,
     label,
 )
@@ -168,6 +169,79 @@ class TestMoving:
         assert _run(scenario) == DONE
 
     def test_move_to_done_sets_completed_at(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": IN_REVIEW}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(IN_REVIEW)
+                await pilot.press("greater_than_sign")
+                await pilot.pause()
+                return service.get_card(app._conn, ids["card"])
+
+        card = _run(scenario)
+        assert card["status"] == DONE
+        assert card["completed_at"] is not None
+
+
+class TestInReview:
+    @staticmethod
+    def _pane_shown(app: BoardApp) -> bool:
+        return app.query_one("#col-in_review").display
+
+    def test_hidden_when_empty(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": IN_PROGRESS}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                return self._pane_shown(app), app._visible_statuses()
+
+        shown, statuses = _run(scenario)
+        assert not shown
+        assert statuses == [BACKLOG, REFINED, IN_PROGRESS]
+
+    def test_shown_while_it_holds_cards(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": IN_REVIEW}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                shown = self._pane_shown(app)
+                # The toggle can't hide a pane that holds cards.
+                await pilot.press("v")
+                await pilot.press("v")
+                await pilot.pause()
+                return shown, self._pane_shown(app), app._visible_statuses()
+
+        shown, still_shown, statuses = _run(scenario)
+        assert shown and still_shown
+        assert statuses == [BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW]
+
+    def test_toggle_reveals_an_empty_pane(self, board_path: Path) -> None:
+        _seed(board_path, [{"title": "card", "status": BACKLOG}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.press("v")
+                await pilot.pause()
+                on = self._pane_shown(app)
+                await pilot.press("v")
+                await pilot.pause()
+                return on, self._pane_shown(app)
+
+        on, off = _run(scenario)
+        assert on
+        assert not off
+
+    def test_move_right_from_in_progress_lands_in_review(
+        self, board_path: Path
+    ) -> None:
         ids = _seed(board_path, [{"title": "card", "status": IN_PROGRESS}])
 
         async def scenario():
@@ -177,11 +251,67 @@ class TestMoving:
                 app._focus_status(IN_PROGRESS)
                 await pilot.press("greater_than_sign")
                 await pilot.pause()
-                return service.get_card(app._conn, ids["card"])
+                status = service.get_card(app._conn, ids["card"])["status"]
+                followed = app._visible_statuses()[app._focused_col]
+                return status, followed, self._pane_shown(app)
 
-        card = _run(scenario)
-        assert card["status"] == DONE
-        assert card["completed_at"] is not None
+        status, followed, shown = _run(scenario)
+        assert status == IN_REVIEW
+        assert followed == IN_REVIEW  # the pane appeared and the cursor followed
+        assert shown
+
+    def test_last_card_out_hides_pane_and_keeps_focus(self, board_path: Path) -> None:
+        ids = _seed(board_path, [{"title": "card", "status": IN_REVIEW}])
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(IN_REVIEW)
+                await pilot.press("greater_than_sign")  # into the hidden Done
+                await pilot.pause()
+                status = service.get_card(app._conn, ids["card"])["status"]
+                statuses = app._visible_statuses()
+                focused = statuses[app._focused_col]
+                widget = app.focused
+                return status, statuses, focused, widget, self._pane_shown(app)
+
+        status, statuses, focused, widget, shown = _run(scenario)
+        assert status == DONE
+        assert not shown
+        assert IN_REVIEW not in statuses
+        assert widget is not None and widget.id == f"tbl-{focused}"
+
+    def test_external_arrival_keeps_focus_on_its_pane(self, board_path: Path) -> None:
+        ids = _seed(
+            board_path,
+            [
+                {"title": "done", "status": DONE},
+                {"title": "wip", "status": IN_PROGRESS},
+            ],
+        )
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.press("d")
+                await pilot.pause()
+                app._focus_status(DONE)
+                # Another connection parks a card in review: the pane appears
+                # to the left of Done, and focus must stay on Done.
+                other = get_connection(board_path)
+                try:
+                    service.move_card(other, ids["wip"], IN_REVIEW)
+                finally:
+                    other.close()
+                await app._poll_external_changes()
+                await pilot.pause()
+                return app._visible_statuses()[app._focused_col], self._pane_shown(app)
+
+        focused, shown = _run(scenario)
+        assert shown
+        assert focused == DONE
 
 
 class TestBlocking:
@@ -563,13 +693,13 @@ class TestDoneToggle:
         assert in_ring is True
 
     def test_move_to_done_keeps_done_hidden(self, board_path: Path) -> None:
-        ids = _seed(board_path, [{"title": "wip", "status": IN_PROGRESS}])
+        ids = _seed(board_path, [{"title": "wip", "status": IN_REVIEW}])
 
         async def scenario():
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                app._focus_status(IN_PROGRESS)
+                app._focus_status(IN_REVIEW)
                 await pilot.press("greater_than_sign")  # → Done (hidden)
                 await pilot.pause()
                 from textual.containers import Vertical
