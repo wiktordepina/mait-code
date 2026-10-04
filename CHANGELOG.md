@@ -38,6 +38,11 @@ don't change the public surface. Everything is still in flux.
   now jump to the named column, rather than to a position that shifts as
   columns hide.
 
+### Security
+
+- **urllib3 upgraded to 2.8.0** (a transitive dependency via `botocore` and
+  `requests`), patching PYSEC-2026-4175, PYSEC-2026-4176 and PYSEC-2026-4177.
+
 ## [0.71.0] — 2026-09-29
 
 ### Added
