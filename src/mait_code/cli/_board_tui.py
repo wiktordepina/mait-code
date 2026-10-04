@@ -811,7 +811,9 @@ class CardScreen(ModalScreen[None]):
 
     def _meta(self, card: dict) -> Text:
         """One line of fields, each set off by the same dim middot:
-        ``project · status · priority · #tag #tag``.
+        ``project · status · priority · via client · #tag #tag``. The
+        ``via`` field only appears on cards raised through
+        :mod:`mait_code.remote`.
 
         The uniform separator gives priority and the tags the same rhythm as
         project/status, instead of trailing off space-separated. Tags read as
@@ -825,6 +827,9 @@ class CardScreen(ModalScreen[None]):
         meta.append(col_label(card["status"]))
         meta.append(sep, style="dim")
         meta.append_text(priority_chip(card["priority"], self._chip_colours))
+        if card.get("created_by"):
+            meta.append(sep, style="dim")
+            meta.append(f"via {card['created_by']}", style="dim")
         tags = card.get("tags", [])
         if tags:
             meta.append(sep, style="dim")

@@ -10,6 +10,21 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **A remote API, `mait_code.remote`.** A small, documented Python surface for
+  a separate service to expose one instance to other machines and agents —
+  over MCP, say — without mait-code itself ever listening on anything. It can
+  read the board, a card, memories and reminders, create cards (always into
+  backlog) and refine them (backlog ↔ refined). Deleting, archiving, other
+  moves, tags and every memory or reminder write are absent by design. It
+  never migrates a database, opens memories and reminders read-only, and
+  reads no agent-writable config. See [the remote API](docs/remote.md).
+- **Card provenance.** Cards gain a `created_by` field, set when a card comes
+  in through the remote API. `show` prints it, export includes it, and the
+  board TUI's card meta line reads *via &lt;client&gt;*. Remote refines leave a
+  comment authored by the client.
+
 ## [0.72.0] — 2026-10-04
 
 ### Added

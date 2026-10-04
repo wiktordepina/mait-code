@@ -24,7 +24,7 @@ from mait_code.tools.memory.entities import (
     merge_entities,
     search_entities as _search_entities,
 )
-from mait_code.tools.memory.scoring import composite_score
+from mait_code.tools.memory.scoring import rank_results
 from mait_code.tools.memory.stats import collect_stats
 from mait_code.tools.memory.search import (
     delete_entry,
@@ -114,23 +114,9 @@ def cmd_search(args):
             print(f"No memories found matching '{query}'.")
             return
 
-        scored = []
-        for r in results:
-            score = composite_score(
-                r["created_at"],
-                r["importance"],
-                relevance=r.get("relevance", 0.5),
-                memory_class=r.get("memory_class"),
-                entry_scope=r.get("scope"),
-                entry_project=r.get("project"),
-                entry_branch=r.get("branch"),
-                query_project=project,
-                query_branch=branch,
-            )
-            scored.append((score, r))
-
-        scored.sort(key=lambda x: x[0], reverse=True)
-        scored = scored[: args.limit]
+        scored = rank_results(
+            results, limit=args.limit, query_project=project, query_branch=branch
+        )
 
         print(f"Found {len(scored)} memories matching '{query}':\n")
         for score, r in scored:

@@ -63,6 +63,8 @@
 
 ::: mait_code.tools.memory.importance_score
 
+::: mait_code.tools.memory.rank_results
+
 ::: mait_code.tools.memory.recency_score
 
 ::: mait_code.tools.memory.scope_boost

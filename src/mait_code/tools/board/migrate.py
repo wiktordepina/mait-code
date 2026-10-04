@@ -78,6 +78,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "ON card_references(card_id)",
         ],
     ),
+    (
+        4,
+        "Add cards.created_by for card provenance (NULL = created locally)",
+        ["ALTER TABLE cards ADD COLUMN created_by TEXT"],
+    ),
 ]
 
 

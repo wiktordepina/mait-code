@@ -19,6 +19,7 @@ Contributors: see the
 - [Configuration](config.md) — `mait_code.config`
 - [LLM](llm.md) — `mait_code.llm`
 - [Logging](logging.md) — `mait_code.logging`
+- [Remote API](remote.md) — `mait_code.remote`
 - [SSL](ssl.md) — `mait_code.ssl`
 
 ## Bridge

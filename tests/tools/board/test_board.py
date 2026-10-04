@@ -39,8 +39,8 @@ def test_ensure_schema_idempotent(board_db: sqlite3.Connection):
     ensure_schema(board_db)
     ensure_schema(board_db)
     versions = board_db.execute("SELECT version FROM schema_version").fetchall()
-    assert len(versions) == 3
-    assert versions[-1][0] == 3
+    assert len(versions) == 4
+    assert versions[-1][0] == 4
 
 
 def test_migration_blocked_becomes_refined_with_tag(tmp_path):
@@ -138,6 +138,7 @@ def test_cards_columns(board_db: sqlite3.Connection):
         "created_at",
         "updated_at",
         "completed_at",
+        "created_by",
     ]
 
 

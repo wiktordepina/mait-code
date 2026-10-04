@@ -215,3 +215,46 @@ def composite_score(
         return base * boost
 
     return base
+
+
+def rank_results(
+    results: list[dict],
+    *,
+    limit: int,
+    query_project: str | None = None,
+    query_branch: str | None = None,
+) -> list[tuple[float, dict]]:
+    """Score search results with :func:`composite_score` and keep the best.
+
+    The shared ranking step behind ``mc-tool-memory search`` and
+    :func:`mait_code.remote.search_memories`, so both order results the same
+    way. A result without a ``relevance`` key scores as ``0.5``.
+
+    Args:
+        results: Entries from one of the search functions.
+        limit: Maximum number of results to keep.
+        query_project: Project context the query was made in.
+        query_branch: Branch context the query was made in.
+
+    Returns:
+        ``(score, entry)`` pairs, best first, at most *limit* long.
+    """
+    scored = [
+        (
+            composite_score(
+                r["created_at"],
+                r["importance"],
+                relevance=r.get("relevance", 0.5),
+                memory_class=r.get("memory_class"),
+                entry_scope=r.get("scope"),
+                entry_project=r.get("project"),
+                entry_branch=r.get("branch"),
+                query_project=query_project,
+                query_branch=query_branch,
+            ),
+            r,
+        )
+        for r in results
+    ]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[:limit]
