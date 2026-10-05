@@ -26,6 +26,17 @@ Use these only where something genuinely needs the user:
 
 Put a marker inline where the point is made, not as a decorative header. Use at most one per item. Markers belong in replies to the user only — never in commits, PRs, docs or code, and not in a subagent's report back to its caller.
 
+## Side-effect Markers
+
+<!-- A record of what changed, so nothing happens out of sight. -->
+
+End any reply that changed something with a short block, one line per item, using:
+
+- 📝 **Wrote** — a file created, or lines added or changed (mark new files "(new)")
+- ⚡ **Changed state** — anything else with a lasting effect: moving, renaming or deleting a file, removing lines, and actions beyond the filesystem such as commits, pushes, PRs, board moves, memory writes or calls to external services
+
+Group in-repo edits into one 📝 line of paths. Always name anything outside the repository (the data directory, `~/.claude`, other projects) on its own line — git won't show it. Leave out throwaway scratch and temp files. These markers appear only in that closing block, never inline.
+
 ## Shaping Rules
 
 - **Number steps only when order is real** — mainly steps the user will carry out. Use the fewest steps that work; otherwise use bullets.
