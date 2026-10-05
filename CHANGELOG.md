@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.77.1] — 2026-10-05
+
 ### Added
 
 - **Side-effect markers.** Any reply that changed something ends with a short
@@ -2435,7 +2437,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.1...HEAD
+[0.77.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.1
 [0.77.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.0
 [0.76.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.76.0
 [0.75.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.75.0
