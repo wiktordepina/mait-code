@@ -15,7 +15,7 @@ don't change the public surface. Everything is still in flux.
 ### Added
 
 - **Side-effect markers.** Any reply that changed something ends with a short
-  block listing what changed: 📝 for files written, 🔄 for anything else with
+  block listing what changed: 📝 for files written, 🔧 for anything else with
   a lasting effect (moves, deletions, removed lines, commits, pushes, board
   moves, memory writes). Changes outside the repository always get their own
   line, since git won't show them. These were meant to ship in 0.77.0 but

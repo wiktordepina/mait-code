@@ -35,7 +35,7 @@ Put a marker inline where the point is made, not as a decorative header. Use at 
 End any reply that changed something with a short block, one line per item, using:
 
 - 📝 **Wrote** — a file created, or lines added or changed (mark new files "(new)")
-- 🔄 **Changed state** — anything else with a lasting effect: moving, renaming or deleting a file, removing lines, and actions beyond the filesystem such as commits, pushes, PRs, board moves, memory writes or calls to external services
+- 🔧 **Changed state** — anything else with a lasting effect: moving, renaming or deleting a file, removing lines, and actions beyond the filesystem such as commits, pushes, PRs, board moves, memory writes or calls to external services
 
 Group in-repo edits into one 📝 line of paths. Always name anything outside the repository (the data directory, `~/.claude`, other projects) on its own line — git won't show it. Leave out throwaway scratch and temp files. These markers appear only in that closing block, never inline.
 
