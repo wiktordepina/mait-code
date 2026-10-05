@@ -56,3 +56,32 @@ def test_role_colours_legible_as_text(theme) -> None:
         assert ratio >= 3.0, (
             f"{theme.name}: {name} ({colour}) on background is {ratio:.2f}, below AA-large"
         )
+
+
+# -- theme_palette: the colours handed to consumers outside Python -------------
+
+
+@pytest.mark.parametrize("theme", HOUSE_THEMES, ids=lambda t: t.name)
+def test_palette_keeps_house_colours_exact(theme) -> None:
+    from mait_code.tui.theme import theme_palette
+
+    name, colours = theme_palette(theme.name)
+    assert name == theme.name
+    assert colours["primary"] == theme.primary.upper()
+    assert colours["panel"] == theme.panel.upper()
+
+
+def test_palette_fills_unset_roles_for_builtins() -> None:
+    from mait_code.tui.theme import PALETTE_ROLES, theme_palette
+
+    name, colours = theme_palette("nord")
+    assert name == "nord"
+    assert set(colours) == set(PALETTE_ROLES)
+    assert all(v.startswith("#") and len(v) == 7 for v in colours.values())
+
+
+@pytest.mark.parametrize("requested", ["no-such-theme", "ansi-dark", ""])
+def test_palette_falls_back_to_mait_dark(requested) -> None:
+    from mait_code.tui.theme import theme_palette
+
+    assert theme_palette(requested)[0] == "mait-dark"

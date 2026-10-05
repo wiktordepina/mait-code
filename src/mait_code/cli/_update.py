@@ -55,6 +55,9 @@ from mait_code.console import console
 from mait_code.cli._record import InstallRecord, read_record, write_record
 from mait_code.cli._settings import (
     merge_settings,
+    mod_dir,
+    mods_enabled,
+    sync_mod_dir,
     read_settings_file as read_claude_settings,
     write_settings_file as write_claude_settings,
 )
@@ -336,6 +339,7 @@ def update(
         dst_settings,
         user_settings=user_settings,
     )
+    merged = sync_mod_dir(merged, mod_dir(source_dir) if mods_enabled() else None)
     write_claude_settings(settings_path, merged)
 
     # 4. Bump the install record, preserving the original first-install date.

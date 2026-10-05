@@ -483,3 +483,55 @@ def test_cli_show_lists_sessions(monkeypatch, capsys):
         service.bind_session(conn, cid, session)
     _main(monkeypatch, "show", str(cid))
     assert f"sessions: 01234567 (pid {os.getpid()})" in capsys.readouterr().out
+
+
+# --- summary --session (the status-bar payload) ---
+
+
+def _summary(monkeypatch, capsys, *argv: str) -> dict:
+    _main(monkeypatch, "summary", "--json", *argv)
+    return json.loads(capsys.readouterr().out)
+
+
+def test_summary_session_payload(monkeypatch, capsys):
+    from mait_code.tools.inbox import service as inbox_service
+    from mait_code.tools.inbox.db import connection as inbox_connection
+
+    with connection() as conn:
+        mine = _card(conn, "mine")
+        theirs = _card(conn, "theirs")
+        review = _card(conn, "waiting", status=IN_REVIEW)
+        service.bind_session(conn, mine, LIVE)
+        service.bind_session(conn, theirs, SessionRef("other", os.getpid()))
+    with inbox_connection() as conn:
+        inbox_service.add_item(conn, body="a thought")
+
+    data = _summary(monkeypatch, capsys, "--session", LIVE.session_id)
+    assert data["bound"] == [{"id": mine, "title": "mine"}]
+    assert data["in_review"] == [{"id": review, "title": "waiting"}]
+    assert data["inbox"] == 1
+    assert data["counts"][IN_PROGRESS] == 2
+
+
+def test_summary_session_bound_spans_projects(monkeypatch, capsys):
+    with connection() as conn:
+        cid = service.add_card(conn, project="elsewhere", title="far away")
+        service.move_card(conn, cid, IN_PROGRESS)
+        service.bind_session(conn, cid, LIVE)
+        service.add_card(conn, project="elsewhere", title="not in review")
+
+    data = _summary(monkeypatch, capsys, "--session", LIVE.session_id)
+    assert [c["id"] for c in data["bound"]] == [cid]
+    assert data["in_review"] == []
+
+
+def test_summary_session_drops_dead_bindings(monkeypatch, capsys, dead_pid):
+    with connection() as conn:
+        cid = _card(conn)
+        service.bind_session(conn, cid, SessionRef("gone", dead_pid))
+
+    assert _summary(monkeypatch, capsys, "--session", "gone")["bound"] == []
+
+
+def test_summary_without_session_keeps_its_shape(monkeypatch, capsys):
+    assert set(_summary(monkeypatch, capsys)) == {"project", "counts"}

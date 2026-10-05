@@ -89,6 +89,7 @@ templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh
 skills/              # Skill definitions (loaded by Claude Code)
 agents/              # Agent definitions
+mods/                # Optional Claude Code mods (mait-companion; opt-in via the `mods` setting)
 docs/                # Documentation
 ```
 

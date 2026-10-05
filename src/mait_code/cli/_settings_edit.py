@@ -29,6 +29,7 @@ __all__ = [
     "SettingError",
     "apply_setting",
     "move_data_dir",
+    "sync_mods",
     "validation_error",
     # Custom [env] variables
     "EnvOutcome",
@@ -108,6 +109,8 @@ def apply_setting(
     config._settings_cache = None
 
     warnings = _enforce(setting, value)
+    if setting.key == "mods":
+        warnings += sync_mods()
 
     followup, followup_done = _run_followup(
         setting,
@@ -213,6 +216,45 @@ def _enforce(setting: config.Setting, written: str) -> list[str]:
             f"{setting.key} is exported as ${setting.env} in your shell "
             f"({value!r}); it overrides the settings file until you unset it."
         )
+    return warnings
+
+
+def sync_mods() -> list[str]:
+    """Load or unload the mait-companion mod to match the ``mods`` setting.
+
+    Rewrites ``CLAUDE_CODE_PLUGIN_DIRS`` in ``~/.claude/settings.json``; the
+    mod folder comes from the install record's source tree. Claude Code reads
+    the variable at startup, so the change lands in the next session.
+
+    Returns:
+        Warnings for the caller to show (no install record, missing folder).
+    """
+    from mait_code.cli._paths import claude_dir
+    from mait_code.cli._record import RecordError, read_record
+    from mait_code.cli._settings import (
+        mod_dir,
+        mods_enabled,
+        read_settings_file as read_claude_settings,
+        sync_mod_dir,
+        write_settings_file as write_claude_settings,
+    )
+
+    warnings: list[str] = []
+    folder: Path | None = None
+    if mods_enabled():
+        try:
+            folder = mod_dir(Path(read_record().source_dir))
+        except RecordError as exc:
+            return [
+                f"mods: can't find the mod folder ({exc}); run `mait-code install`."
+            ]
+        if not folder.is_dir():
+            warnings.append(f"mods: {folder} is missing; run `mait-code update`.")
+    cj_path = claude_dir() / "settings.json"
+    cj = read_claude_settings(cj_path)
+    synced = sync_mod_dir(cj, folder)
+    if synced != cj:
+        write_claude_settings(cj_path, synced)
     return warnings
 
 

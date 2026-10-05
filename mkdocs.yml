@@ -123,6 +123,7 @@ nav:
       - The graph explorer: graph.md
       - The log viewer: logs.md
       - The Bridge: bridge.md
+      - The companion mod: companion-mod.md
       - The remote API: remote.md
       - Multi-machine sync: sync.md
   - Concepts:

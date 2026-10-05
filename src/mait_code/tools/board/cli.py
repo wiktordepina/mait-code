@@ -533,13 +533,40 @@ def cmd_unbind(args):
         _print_card(conn, args, args.id, message)
 
 
+def _brief(cards: list[dict]) -> list[dict]:
+    return [{"id": c["id"], "title": c["title"]} for c in cards]
+
+
+def _session_brief(conn, session: str, project: str | None) -> dict:
+    """What a status surface (the Claude Code mod) shows, in one payload.
+
+    The session's bound cards (any project), the In Review cards (scoped like
+    the counts) and the global inbox count.
+    """
+    from mait_code.tools.inbox import service as inbox_service
+    from mait_code.tools.inbox.db import connection as inbox_connection
+
+    with inbox_connection() as inbox_conn:
+        inbox = inbox_service.count_items(inbox_conn)
+    return {
+        "bound": _brief(service.list_cards(conn, session=session)),
+        "in_review": _brief(
+            service.list_cards(conn, project=project, statuses=[IN_REVIEW])
+        ),
+        "inbox": inbox,
+    }
+
+
 def cmd_summary(args):
     project = args.project or (None if args.all else get_project())
     with connection() as conn:
         counts = service.summary_counts(conn, project=project)
+        payload: dict = {"project": project, "counts": counts}
+        if args.json and args.session:
+            payload |= _session_brief(conn, args.session, project)
 
     if args.json:
-        print(json.dumps({"project": project, "counts": counts}, indent=2))
+        print(json.dumps(payload, indent=2))
         return
 
     if sum(counts.values()) == 0:
@@ -760,6 +787,12 @@ def main():
     )
     p_summary.add_argument("--all", action="store_true", help="Span all projects")
     p_summary.add_argument("--project", help="Project (defaults to git root or cwd)")
+    p_summary.add_argument(
+        "--session",
+        metavar="ID",
+        help="With --json, add this session's bound cards, the In Review cards "
+        "and the inbox count",
+    )
     p_summary.add_argument("--json", action="store_true", help="Emit JSON")
     p_summary.set_defaults(func=cmd_summary)
 

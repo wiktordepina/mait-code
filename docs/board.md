@@ -276,7 +276,7 @@ discards every pending change. Block / unblock stay outside the form (they carry
 a reason comment a plain tag can't), so the form's tag editor leaves the
 `blocked` tag alone.
 
-!!! tip "Theming"
+!!! tip "Theming"ee4bf0f2-4c30-466e-beb1-3f25a4712432
     The board ships several house themes (`mait-dark`, `mait-ember`,
     `mait-aurora`, `mait-bubblegum`, `mait-syntax`) plus Textual's built-ins.
     Switch via <kbd>Ctrl</kbd>+<kbd>P</kbd> → search *theme*. Your choice
@@ -291,7 +291,7 @@ can call directly. The same store backs both.
 # View
 mc-tool-board list [--all] [--status STATUS] [--archived] [--search TEXT] [--mine | --session ID] [--json]
 mc-tool-board show ID [--json]
-mc-tool-board summary [--all] [--project PROJECT] [--json]
+mc-tool-board summary [--all] [--project PROJECT] [--json [--session ID]]   # --session adds bound/in-review cards + inbox count
 
 # Create & edit
 mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ...] [--json]

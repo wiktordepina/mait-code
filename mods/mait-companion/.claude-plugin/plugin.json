@@ -1,0 +1,9 @@
+{
+  "name": "mait-companion",
+  "version": "0.1.0",
+  "description": "mait-code in the prompt: /capture to the inbox, and a status bar of this session's cards, In Review, the inbox and context use.",
+  "author": {
+    "name": "Wiktor de Pina"
+  },
+  "types": "./types/index.d.ts"
+}

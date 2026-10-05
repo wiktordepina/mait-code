@@ -29,7 +29,7 @@ from mait_code.cli._paths import claude_dir as default_claude_dir
 from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.cli._paths import settings_path
 from mait_code.cli._record import RecordError, read_record
-from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX
+from mait_code.cli._settings import MAIT_CODE_HOOK_PREFIX, read_settings_file
 from mait_code.config import get as config_get
 from mait_code.config import read_env_table, validate_settings
 from mait_code.console import GLYPH, console
@@ -487,6 +487,50 @@ def _check_bridge() -> Check:
     return Check("bridge", "ok", f"enabled, channel '{bridge_config.active_type()}'")
 
 
+def _check_mods(cdir: Path, source: Path | None) -> Check:
+    """The ``mods`` setting and ``CLAUDE_CODE_PLUGIN_DIRS`` must agree.
+
+    Off and unregistered is the default, healthy state. A mismatch either way
+    (on but not loaded, off but still loaded, or loaded from a stale source
+    tree) is a warning that toggling the setting again repairs.
+    """
+    from mait_code.cli._settings import mod_dir, mod_registered, mods_enabled
+
+    registered = mod_registered(read_settings_file(cdir / "settings.json"))
+    hint = "re-apply it: mait-code settings set mods <enabled|disabled>"
+    if not mods_enabled():
+        if registered:
+            return Check(
+                "mods",
+                "warn",
+                f"disabled, but Claude Code still loads {registered}",
+                fix_hint=hint,
+            )
+        return Check("mods", "ok", "disabled (the default)")
+    if registered is None:
+        return Check(
+            "mods",
+            "warn",
+            "enabled, but missing from CLAUDE_CODE_PLUGIN_DIRS",
+            fix_hint=hint,
+        )
+    if source is not None and Path(registered) != mod_dir(source):
+        return Check(
+            "mods",
+            "warn",
+            f"loads {registered}, not this install's mod folder",
+            fix_hint=hint,
+        )
+    if not Path(registered).expanduser().is_dir():
+        return Check(
+            "mods",
+            "warn",
+            f"{registered} does not exist",
+            fix_hint="mait-code update",
+        )
+    return Check("mods", "ok", f"enabled, loading {registered}")
+
+
 def _check_uv(_ddir: Path) -> Check:
     """``uv`` must be on PATH for install/update to work."""
     if shutil.which("uv") is None:
@@ -537,6 +581,7 @@ def run_doctor(
         _check_vector_search(ddir),
         _check_observe_pipeline(ddir),
         _check_bridge(),
+        _check_mods(cdir, source),
         _check_uv(ddir),
     ]
 

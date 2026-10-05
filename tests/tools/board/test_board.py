@@ -1300,7 +1300,7 @@ def test_cmd_summary_counts(mock_conn, capsys):
     _insert_card(mock_conn, "r2", status=REFINED)
     from mait_code.tools.board.cli import cmd_summary
 
-    cmd_summary(_ns(all=False, project=None, json=True))
+    cmd_summary(_ns(all=False, project=None, json=True, session=None))
     data = json.loads(capsys.readouterr().out)
     assert data["counts"][REFINED] == 2
     assert data["counts"][BACKLOG] == 1
@@ -1311,7 +1311,7 @@ def test_cmd_summary_excludes_archived(mock_conn, capsys):
     _insert_card(mock_conn, "old", status=ARCHIVED)
     from mait_code.tools.board.cli import cmd_summary
 
-    cmd_summary(_ns(all=False, project=None, json=False))
+    cmd_summary(_ns(all=False, project=None, json=False, session=None))
     assert "No cards" in capsys.readouterr().out
 
 
@@ -1320,7 +1320,7 @@ def test_cmd_summary_all_projects(mock_conn, capsys):
     _insert_card(mock_conn, "b", status=DONE, project="proj-b")
     from mait_code.tools.board.cli import cmd_summary
 
-    cmd_summary(_ns(all=True, project=None, json=True))
+    cmd_summary(_ns(all=True, project=None, json=True, session=None))
     data = json.loads(capsys.readouterr().out)
     assert data["project"] is None
     assert data["counts"][REFINED] == 1

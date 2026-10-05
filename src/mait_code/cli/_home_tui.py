@@ -19,7 +19,8 @@ nothing here writes. The only subprocesses are the user's own command tiles
 file) and ``e`` (reindex): after a confirm it drops out via
 :meth:`App.suspend` so ``run_reindex`` can embed the entries missing a vector
 with its normal terminal progress, then home reloads with the fresh embedding
-counts.
+counts. The one other write is the System → Companion mod toggle, which goes
+through the same ``apply_setting`` path as ``mait-code settings``.
 
 The brand debuts here too: the
 wordmark (with a plain-text fallback on narrow terminals), the signature glyph,
@@ -49,6 +50,7 @@ from textual.widgets.tree import TreeNode
 
 from mait_code.cli import _dashboard as dashboard
 from mait_code.config import data_dir, get_int
+from mait_code.config import get as config_get
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.confirm import ConfirmScreen
 from mait_code.tui.banner import BrandBanner, installed_version
@@ -100,6 +102,12 @@ def _clip(text: str, width: int = _LINE_WIDTH) -> str:
     return first_line
 
 
+def _mods_enabled() -> bool:
+    from mait_code.cli._settings import mods_enabled
+
+    return mods_enabled()
+
+
 # -- tree model ----------------------------------------------------------------
 
 
@@ -108,14 +116,22 @@ class NodeSpec:
 
     *detail* keys into :meth:`HomeApp._detail_builders`. *launch* (when set)
     makes ``Enter`` on the node hand off to that sibling TUI instead of just
-    rendering detail.
+    rendering detail; *action* (when set) names a ``HomeApp`` action that
+    ``Enter`` runs in place.
     """
 
-    __slots__ = ("detail", "launch")
+    __slots__ = ("action", "detail", "launch")
 
-    def __init__(self, detail: str, launch: HomeTarget | None = None) -> None:
+    def __init__(
+        self,
+        detail: str,
+        launch: HomeTarget | None = None,
+        *,
+        action: str | None = None,
+    ) -> None:
         self.detail = detail
         self.launch = launch
+        self.action = action
 
 
 # -- shared line helpers (pure; no theme needed) -------------------------------
@@ -410,6 +426,10 @@ class HomeApp(MaitApp):
         launch_leaf(
             system, "Configure Bridge", NodeSpec("system:bridge", HomeTarget.BRIDGE)
         )
+        mods_on = _mods_enabled()
+        mods = Text("Companion mod  ")
+        mods.append("on" if mods_on else "off", style=accent if mods_on else "dim")
+        system.add_leaf(mods, data=NodeSpec("system:mods", action="toggle_mods"))
         leaf(system, "Doctor", NodeSpec("system:doctor"))
         leaf(system, "Version & paths", NodeSpec("system:version"))
 
@@ -439,6 +459,7 @@ class HomeApp(MaitApp):
             "system:doctor": self._detail_doctor,
             "system:settings": self._detail_settings,
             "system:bridge": self._detail_bridge,
+            "system:mods": self._detail_mods,
             "system:version": self._detail_version,
         }
 
@@ -456,6 +477,8 @@ class HomeApp(MaitApp):
         spec = event.node.data
         if spec is not None and spec.launch is not None:
             self.action_launch(spec.launch)
+        elif spec is not None and spec.action is not None:
+            self.run_worker(self.run_action(spec.action))
         elif event.node.allow_expand:
             event.node.toggle()
 
@@ -1087,6 +1110,33 @@ class HomeApp(MaitApp):
             return widgets + [Label(empty_state(f"Couldn't read Bridge config: {exc}"))]
         return widgets + _kv_rows(rows)
 
+    def _detail_mods(self) -> list[Widget]:
+        from mait_code.cli._paths import claude_dir
+        from mait_code.cli._settings import mod_registered, read_settings_file
+
+        widgets: list[Widget] = [
+            Label("Companion mod", classes="title"),
+            Label(
+                "An optional Claude Code mod: /capture <text> files a thought to "
+                "the inbox with no model turn, and a status bar above the prompt "
+                "shows this session's cards, In Review, the inbox and context use. "
+                "Built on Claude Code's early-access mods API, so it is off by "
+                "default. Press Enter to switch it on or off; it applies to new "
+                "Claude Code sessions.",
+                classes="hint",
+            ),
+        ]
+        try:
+            loaded = mod_registered(read_settings_file(claude_dir() / "settings.json"))
+            rows = [
+                ("status", "enabled" if _mods_enabled() else "disabled"),
+                ("style", config_get("status-bar-style")),
+                ("loaded from", loaded or "—"),
+            ]
+        except Exception as exc:  # noqa: BLE001
+            return widgets + [Label(empty_state(f"Couldn't read mod state: {exc}"))]
+        return widgets + _kv_rows(rows)
+
     def _detail_version(self) -> list[Widget]:
         from mait_code.cli._paths import settings_path
 
@@ -1203,6 +1253,34 @@ class HomeApp(MaitApp):
                 print_error(f"reindex failed: {exc}")
             input("\nPress Enter to return home… ")
         return note, failed
+
+    @work
+    async def action_toggle_mods(self) -> None:
+        """Switch the companion mod on (after a confirm) or off."""
+        from mait_code.cli._settings_edit import SettingError, apply_setting
+
+        enable = not _mods_enabled()
+        if enable:
+            confirmed = await self.push_screen_wait(
+                ConfirmScreen(
+                    "Enable the companion mod? It runs on Claude Code's "
+                    "early-access mods API, in new sessions."
+                )
+            )
+            if not confirmed:
+                return
+        try:
+            outcome = apply_setting("mods", "enabled" if enable else "disabled")
+        except SettingError as exc:
+            self.notify(str(exc), title="Companion mod", severity="error")
+            return
+        self._refresh()
+        self.notify(
+            "; ".join(outcome.warnings)
+            or f"{'Enabled' if enable else 'Disabled'} — applies to new sessions.",
+            title="Companion mod",
+            severity="warning" if outcome.warnings else "information",
+        )
 
     def action_launch(self, target: HomeTarget) -> None:
         """Leave home and open a sibling TUI; the home command relaunches us."""

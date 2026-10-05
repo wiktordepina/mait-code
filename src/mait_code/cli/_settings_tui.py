@@ -100,6 +100,7 @@ class _LiveValidator(Validator):
 _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("General", ("data-dir", "theme", "dashboard-tile-timeout")),
     ("Bridge", ("bridge", "bridge-type")),
+    ("Companion mod", ("mods", "status-bar-style")),
     ("Logging", ("log-level", "log-file", "log-backup-count")),
     (
         "Embeddings",
@@ -1003,6 +1004,8 @@ class SettingsApp(MaitApp):
         self.query_one("#source", Static).update(f"source: {source}")
         warnings = getattr(outcome, "warnings", []) or []
         note = "✓ applied"
+        if setting.key == "mods":
+            note += " — applies to new Claude Code sessions"
         if warnings:
             note += "  ⚠ " + "; ".join(warnings)
         self.query_one("#msg", Static).update(note)
