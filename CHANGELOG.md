@@ -10,6 +10,36 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.76.0] — 2026-10-05
+
+### Added
+
+- **The companion mod: mait-code in the Claude Code prompt.** An optional
+  mod, `mods/mait-companion`, built on Claude Code's early-access mods API and
+  **off by default**. `/capture <text>` files a thought to the inbox with no
+  model turn. A one-row status bar above the prompt shows the cards bound to
+  this session, what is In Review (its `#id`, or a count once there are
+  several), the inbox count and context use, coloured by how full the window
+  is. It refreshes when a session starts, after each turn, after a capture and
+  after a compaction, with no timers or polling. It fails closed: a missing
+  CLI, output it can't read or a change in the API leaves the bar empty and
+  never breaks the session.
+- **`mods` and `status-bar-style` settings.** Switch the mod on from
+  **System ▸ Companion mod** in the home hub (it asks you to confirm), the
+  settings editor's new **Companion mod** group, or
+  `mait-code settings set mods enabled`. This adds the mod's folder to
+  `CLAUDE_CODE_PLUGIN_DIRS` in `~/.claude/settings.json`, and turning it off
+  or uninstalling removes it again; other plugin folders are left alone. The
+  bar comes in `blocks` (the default) or `slim`. `doctor` reports when the
+  setting and `settings.json` disagree.
+- **`mait-code settings get theme --palette`** prints the resolved theme's
+  colours as JSON, so tools outside Python can draw with mait-code's theme.
+  Textual's built-in themes are included, and the `ansi-*` themes fall back to
+  mait-dark.
+- **`mc-tool-board summary --json --session ID`** adds the session's bound
+  cards, the In Review cards and the inbox count to the summary, all in one
+  call.
+
 ## [0.75.0] — 2026-10-05
 
 ### Added
@@ -2369,7 +2399,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.75.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.76.0...HEAD
+[0.76.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.76.0
 [0.75.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.75.0
 [0.74.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.74.0
 [0.73.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.73.0
