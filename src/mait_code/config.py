@@ -223,6 +223,28 @@ def _bridge_gate(value: str) -> str | None:
     )
 
 
+_MODS_GATE = ("enabled", "disabled")
+
+
+def _mods_gate(value: str) -> str | None:
+    return (
+        None
+        if value.strip().lower() in _MODS_GATE
+        else f"must be one of {', '.join(_MODS_GATE)}, got {value!r}"
+    )
+
+
+_STATUS_BAR_STYLES = ("blocks", "slim")
+
+
+def _status_bar_style(value: str) -> str | None:
+    return (
+        None
+        if value in _STATUS_BAR_STYLES
+        else f"must be one of {', '.join(_STATUS_BAR_STYLES)}, got {value!r}"
+    )
+
+
 def _bridge_type(value: str) -> str | None:
     """Validate the channel selector against the registered channels.
 
@@ -283,6 +305,24 @@ SETTINGS: tuple[Setting, ...] = (
         "ntfy",
         help="Which Bridge channel to use (configured in the Bridge screen).",
         validate=_bridge_type,
+    ),
+    Setting(
+        "mods",
+        "MAIT_CODE_MODS",
+        "disabled",
+        kind="bool",
+        help="The mait-companion Claude Code mod (/capture + status bar): "
+        "'enabled' or 'disabled'. Off by default — early-access mods API.",
+        validate=_mods_gate,
+        choices=_MODS_GATE,
+    ),
+    Setting(
+        "status-bar-style",
+        "MAIT_CODE_STATUS_BAR_STYLE",
+        "blocks",
+        help="How the mod's status bar draws: 'blocks' or 'slim'.",
+        validate=_status_bar_style,
+        choices=_STATUS_BAR_STYLES,
     ),
     Setting(
         "embedding-provider",

@@ -21,8 +21,14 @@ from typing import Any
 __all__ = [
     "MAIT_CODE_HOOK_PREFIX",
     "MAIT_CODE_MCP_SERVERS",
+    "MOD_NAME",
+    "PLUGIN_DIRS_ENV",
     "merge_settings",
+    "mod_dir",
+    "mod_registered",
+    "mods_enabled",
     "read_settings_file",
+    "sync_mod_dir",
     "unmerge_settings",
     "write_settings_file",
 ]
@@ -38,6 +44,13 @@ MAIT_CODE_MCP_SERVERS = ("mait-reminders",)
 """Historical mait-code MCP server names. Kept for backwards-compatible
 uninstall (the project no longer ships MCP servers, but old installs
 may still have these entries)."""
+
+MOD_NAME = "mait-companion"
+"""The optional Claude Code mod shipped under ``mods/`` in the source tree."""
+
+PLUGIN_DIRS_ENV = "CLAUDE_CODE_PLUGIN_DIRS"
+"""The ``settings.json`` ``env`` entry Claude Code reads extra plugin folders
+from: absolute paths joined by the platform's path-list separator."""
 
 
 def merge_settings(
@@ -128,6 +141,7 @@ def unmerge_settings(settings: dict[str, Any]) -> dict[str, Any]:
     else:
         cleaned.pop("mcpServers", None)
 
+    cleaned = sync_mod_dir(cleaned, None)
     env = dict(cleaned.get("env", {}) or {})
     for key in list(env):
         if isinstance(key, str) and key.startswith("MAIT_CODE_"):
@@ -138,6 +152,77 @@ def unmerge_settings(settings: dict[str, Any]) -> dict[str, Any]:
         cleaned.pop("env", None)
 
     return cleaned
+
+
+def mod_dir(source_dir: Path) -> Path:
+    """The mait-companion mod folder inside a mait-code source tree."""
+    return source_dir / "mods" / MOD_NAME
+
+
+def _is_mod_entry(entry: str) -> bool:
+    """Whether a plugin-dir entry is a mait-companion folder, wherever it lives.
+
+    Matched on the trailing ``mods/mait-companion`` rather than one exact path,
+    so a moved or re-cloned source tree can't leave a stale entry behind.
+    """
+    return Path(entry).expanduser().parts[-2:] == ("mods", MOD_NAME)
+
+
+def _plugin_dirs(settings: dict[str, Any]) -> list[str]:
+    env = settings.get("env") or {}
+    raw = env.get(PLUGIN_DIRS_ENV, "") if isinstance(env, dict) else ""
+    if not isinstance(raw, str):
+        return []
+    return [entry for entry in raw.split(os.pathsep) if entry]
+
+
+def mods_enabled() -> bool:
+    """Whether the ``mods`` setting is on, read fresh from the settings file.
+
+    The cache is dropped first: install and update rewrite ``settings.toml``
+    just before they sync ``settings.json``, and must see what they wrote.
+    """
+    from mait_code import config
+
+    config.reset_cache()
+    return config.get_bool("mods")
+
+
+def mod_registered(settings: dict[str, Any]) -> str | None:
+    """Return the mait-companion folder ``settings`` loads, or ``None``."""
+    return next((e for e in _plugin_dirs(settings) if _is_mod_entry(e)), None)
+
+
+def sync_mod_dir(settings: dict[str, Any], folder: Path | None) -> dict[str, Any]:
+    """Point ``CLAUDE_CODE_PLUGIN_DIRS`` at *folder*, or drop the mod from it.
+
+    Every mait-companion entry is removed first, then *folder* (when given) is
+    appended, so the result names the mod at most once. Other plugin folders
+    keep their order. An emptied variable, and then an emptied ``env``, are
+    dropped. Pure: returns a new dict.
+
+    Args:
+        settings: A ``settings.json`` document.
+        folder: The mod folder to load, or ``None`` to unload it.
+
+    Returns:
+        The updated settings dict.
+    """
+    updated: dict[str, Any] = {k: v for k, v in settings.items()}
+    kept = [e for e in _plugin_dirs(settings) if not _is_mod_entry(e)]
+    if folder is not None:
+        kept.append(str(folder))
+    env = settings.get("env")
+    env = dict(env) if isinstance(env, dict) else {}
+    if kept:
+        env[PLUGIN_DIRS_ENV] = os.pathsep.join(kept)
+    else:
+        env.pop(PLUGIN_DIRS_ENV, None)
+    if env:
+        updated["env"] = env
+    else:
+        updated.pop("env", None)
+    return updated
 
 
 def _entry_is_mait_code(entry: Any) -> bool:

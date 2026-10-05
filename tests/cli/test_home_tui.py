@@ -850,3 +850,104 @@ def test_home_tree_offers_start_page_setup_leaf() -> None:
     labels, target = _run(scenario)
     assert any("Set up start page" in label for label in labels)
     assert target is HomeTarget.DASHBOARD
+
+
+# --- System → Companion mod toggle ---
+
+
+def _mods_node(app: HomeApp):
+    from textual.widgets import Tree
+
+    tree = app.query_one("#tree", Tree)
+    system = next(c for c in tree.root.children if str(c.label) == "System")
+    return next(n for n in system.children if n.data and n.data.detail == "system:mods")
+
+
+def _patch_mods(monkeypatch: pytest.MonkeyPatch, enabled: bool) -> list[tuple]:
+    import mait_code.cli._home_tui as home_mod
+    from mait_code.cli._settings_edit import ApplyOutcome
+
+    calls: list[tuple] = []
+    state = {"on": enabled}
+
+    def fake_apply(key: str, value: str) -> ApplyOutcome:
+        calls.append((key, value))
+        state["on"] = value == "enabled"
+        return ApplyOutcome(key, "", value, None, False)
+
+    monkeypatch.setattr(home_mod, "_mods_enabled", lambda: state["on"])
+    monkeypatch.setattr("mait_code.cli._settings_edit.apply_setting", fake_apply)
+    return calls
+
+
+def test_mods_toggle_on_confirms_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    from textual.widgets import Tree
+
+    calls = _patch_mods(monkeypatch, enabled=False)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.on_tree_node_selected(Tree.NodeSelected(_mods_node(app)))
+            await pilot.pause()
+            await pilot.click("#yes")
+            await pilot.pause()
+            await pilot.pause()
+            return str(_mods_node(app).label)
+
+    label = _run(scenario)
+    assert calls == [("mods", "enabled")]
+    assert label.endswith("on")  # the rebuilt leaf shows the new state
+
+
+def test_mods_toggle_on_declined_writes_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from textual.widgets import Tree
+
+    calls = _patch_mods(monkeypatch, enabled=False)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.on_tree_node_selected(Tree.NodeSelected(_mods_node(app)))
+            await pilot.pause()
+            await pilot.press("escape")
+            await pilot.pause()
+
+    _run(scenario)
+    assert calls == []
+
+
+def test_mods_toggle_off_needs_no_confirm(monkeypatch: pytest.MonkeyPatch) -> None:
+    from textual.widgets import Tree
+
+    calls = _patch_mods(monkeypatch, enabled=True)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.on_tree_node_selected(Tree.NodeSelected(_mods_node(app)))
+            await pilot.pause()
+            await pilot.pause()
+            return len(app.screen_stack)
+
+    assert _run(scenario) == 1
+    assert calls == [("mods", "disabled")]
+
+
+def test_mods_detail_shows_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_mods(monkeypatch, enabled=False)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "system:mods")
+
+    text = _run(scenario)
+    assert "/capture" in text
+    assert "disabled" in text

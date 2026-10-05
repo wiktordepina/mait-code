@@ -48,6 +48,7 @@ The categories:
 |----------|--------------|
 | **General** | `data-dir` (where everything lives), `theme`, and `dashboard-tile-timeout` — how many seconds a [start-page](home.md#the-start-page) shell tile may run before it's cut off (default `5`). |
 | **Bridge** | Whether the [Bridge](bridge.md) is `enabled`, and which channel it uses. (The channel's server/topics/token live in the Bridge screen, not here.) |
+| **Companion mod** | Whether the [companion mod](companion-mod.md) is `enabled`, and its status bar's style (`blocks` or `slim`). Applies to new Claude Code sessions. |
 | **Logging** | Log level, log file, and how many rotated backups to keep. |
 | **Embeddings** | The provider (`local` or `bedrock`), the model, and the Bedrock model id / region. |
 | **Models** | The extraction and reflection models, LLM and git timeouts, and reflection batch/novelty tuning. |

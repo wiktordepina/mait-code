@@ -6,6 +6,8 @@ only needs colours should import :mod:`mait_code.tui.palette` instead.
 
 from __future__ import annotations
 
+import re
+
 from textual.theme import Theme
 
 from mait_code.tui import palette as p
@@ -17,6 +19,8 @@ __all__ = [
     "MAIT_EMBER",
     "MAIT_SYNTAX",
     "HOUSE_THEMES",
+    "PALETTE_ROLES",
+    "theme_palette",
 ]
 
 
@@ -131,3 +135,51 @@ MAIT_SYNTAX = Theme(
 #: Textual's built-ins (which stay available in the Ctrl+P theme switcher).
 #: ``mait-dark`` stays the default (see ``MaitApp.HOUSE_THEME``).
 HOUSE_THEMES = (MAIT_DARK, MAIT_BUBBLEGUM, MAIT_AURORA, MAIT_EMBER, MAIT_SYNTAX)
+
+#: The colour roles :func:`theme_palette` emits, in a stable order.
+PALETTE_ROLES = (
+    "primary",
+    "secondary",
+    "accent",
+    "foreground",
+    "background",
+    "surface",
+    "panel",
+    "success",
+    "warning",
+    "error",
+)
+
+_HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def theme_palette(name: str) -> tuple[str, dict[str, str]]:
+    """Resolve a theme name to its colour roles as ``#rrggbb`` strings.
+
+    Covers the house themes and Textual's built-ins, with roles a theme leaves
+    unset (``surface``, ``panel``) filled in by Textual's own colour system, the
+    way a mait-code TUI fills them when it draws. An unknown name, or a theme
+    whose roles aren't hex (the ``ansi-*`` themes defer to the terminal's
+    palette), falls back to mait-dark, as :class:`~mait_code.tui.app.MaitApp`
+    does.
+
+    Args:
+        name: A theme name, e.g. the resolved ``theme`` setting.
+
+    Returns:
+        ``(resolved_name, {role: "#rrggbb"})`` over :data:`PALETTE_ROLES`.
+    """
+    from textual.theme import BUILTIN_THEMES
+
+    themes = {**BUILTIN_THEMES, **{t.name: t for t in HOUSE_THEMES}}
+    for theme in (themes.get(name), MAIT_DARK):
+        if theme is None:
+            continue
+        generated = theme.to_color_system().generate()
+        roles = {
+            role: str(getattr(theme, role) or generated.get(role, "")).upper()
+            for role in PALETTE_ROLES
+        }
+        if all(_HEX.match(v) for v in roles.values()):
+            return theme.name, roles
+    raise AssertionError("mait-dark must resolve to hex colours")  # pragma: no cover

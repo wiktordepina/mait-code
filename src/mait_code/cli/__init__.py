@@ -640,9 +640,19 @@ def settings_get(
             help="Emit the value and source as a JSON document.",
         ),
     ] = False,
+    palette: Annotated[
+        bool,
+        typer.Option(
+            "--palette",
+            help="theme only: emit the resolved theme's colour roles as JSON.",
+        ),
+    ] = False,
 ) -> None:
     """Print one resolved setting value and its source (for scripting)."""
     _require_settings_file()
+    if palette:
+        _print_palette(key)
+        return
     if key.startswith("env."):
         from mait_code import config as _config
 
@@ -665,6 +675,23 @@ def settings_get(
         typer.echo(json.dumps({"key": key, "value": value, "source": source}))
     else:
         typer.echo(f"{value}\t({source})")
+
+
+def _print_palette(key: str) -> None:
+    """Emit the resolved theme's colours for consumers outside Python."""
+    import json
+
+    if key != "theme":
+        print_error("--palette only applies to the theme setting")
+        raise typer.Exit(code=1)
+    from mait_code.config import get as config_get
+    from mait_code.tui.theme import theme_palette
+
+    requested = config_get("theme")
+    resolved, colours = theme_palette(requested)
+    typer.echo(
+        json.dumps({"theme": requested, "resolved": resolved, "palette": colours})
+    )
 
 
 @settings_app.command("set")
@@ -720,6 +747,8 @@ def settings_set(
     )
     for warning in outcome.warnings:
         print_warning(warning)
+    if outcome.key == "mods":
+        console.print("  applies to new Claude Code sessions.", markup=False)
     if outcome.followup == "reindex":
         console.print(
             "  re-embedded stored memories."

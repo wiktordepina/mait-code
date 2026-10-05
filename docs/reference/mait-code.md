@@ -361,6 +361,7 @@ mait-code doctor --json | jq '.checks[] | select(.level=="fail")'
 mait-code settings                          # interactive editor (TTY) / list (piped)
 mait-code settings list [--json]            # read-only, provenance-aware view
 mait-code settings get <key> [--json]       # one resolved value + source
+mait-code settings get theme --palette       # the resolved theme's colours, as JSON
 mait-code settings set <key> <value> [flags]
 ```
 

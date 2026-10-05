@@ -201,6 +201,11 @@ Most of the hand-offs also live in the `Ctrl+P` command palette (**Open board**,
 **Reindex memory**. The graph explorer and the Bridge configurator are tree
 leaves only — they have no palette entry.
 
+One leaf under **System** does its job in place rather than opening another TUI.
+Pressing `Enter` on **Companion mod** switches the
+[companion mod](companion-mod.md) on, after asking you to confirm, or off. Its
+badge shows whether it's currently on or off.
+
 ## What each section shows
 
 | Section | Highlighting it shows | Leaves |
@@ -210,7 +215,7 @@ leaves only — they have no palette entry.
 | **Reminders** | Overdue and upcoming, with the overdue count raised in alarm | Overdue, Upcoming |
 | **Inbox** | How many captured items are waiting for triage | — |
 | **Identity** | What Claude is made of | System prompt |
-| **System** | Health, configuration, and where things live | `↗ Open settings`, `↗ Open logs`, `↗ Configure Bridge`, Doctor, Version & paths |
+| **System** | Health, configuration, and where things live | `↗ Open settings`, `↗ Open logs`, `↗ Configure Bridge`, Companion mod, Doctor, Version & paths |
 
 A section's badge carries the headline number — `3 active`, `1 overdue!` — so the
 tree is a status readout on its own, before you open anything.

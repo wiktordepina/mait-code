@@ -62,3 +62,21 @@ jobs:
         run: uv export --locked --no-emit-project --no-hashes --format requirements-txt > requirements.audit.txt
       - name: Audit dependencies
         run: uv run --with pip-audit pip-audit --strict --requirement requirements.audit.txt
+
+  # The optional Claude Code mod (mods/mait-companion). The mods API is early
+  # access, so this job reports without gating merges; the CLI is pinned to the
+  # release the mod was last tested against — bump it deliberately.
+  mod:
+    name: Claude Code mod (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      CLAUDE_CODE_VERSION: "2.1.289"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: npm install --global "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+      - run: claude plugin validate mods/mait-companion
+      - run: claude plugin test mods/mait-companion
