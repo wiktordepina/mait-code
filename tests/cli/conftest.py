@@ -48,7 +48,7 @@ def fake_source(tmp_path: Path) -> Path:
 
     Includes ``pyproject.toml`` with the right project name, an
     ``src/mait_code/`` directory, ``config/CLAUDE.md`` + ``settings.json``,
-    a ``templates/`` dir with the two identity stubs, and empty
+    a ``templates/`` dir with the identity stubs, and empty
     ``skills/`` + ``agents/`` directories.
     """
     src = tmp_path / "mait-code-src"
@@ -88,6 +88,10 @@ def fake_source(tmp_path: Path) -> Path:
     templates.mkdir()
     (templates / "soul_document.md").write_text("# soul template\n")
     (templates / "user_context.md").write_text("# user context template\n")
+    (templates / "communication_styles").mkdir()
+    (templates / "communication_styles" / "default.md").write_text(
+        "# communication style template\n"
+    )
 
     (src / "skills").mkdir()
     (src / "agents").mkdir()

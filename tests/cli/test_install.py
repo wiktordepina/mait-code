@@ -15,7 +15,7 @@ from mait_code.cli import (
     read_record,
     unmerge_settings,
 )
-from mait_code.cli._install import install, verify_source
+from mait_code.cli._install import _IDENTITY_TEMPLATES, install, verify_source
 from mait_code.cli._settings import (
     _entry_is_mait_code,
     read_settings_file as read_claude_settings,
@@ -87,9 +87,22 @@ class TestInstallHappyPath:
         install(source_dir=fake_source)
         data_dir = fake_home / ".claude" / "mait-code-data"
         assert (data_dir / "soul_document.md").read_text() == "# soul template\n"
+        assert (data_dir / "communication_style.md").read_text() == (
+            "# communication style template\n"
+        )
         assert (data_dir / "user_context.md").read_text() == (
             "# user context template\n"
         )
+
+    @pytest.mark.parametrize(("template", "name"), _IDENTITY_TEMPLATES)
+    def test_identity_template_ships_and_is_imported(
+        self, template: str, name: str
+    ) -> None:
+        """Every seeded identity file has a real template and an ``@`` import."""
+        repo = Path(__file__).resolve().parents[2]
+        assert (repo / "templates" / template).is_file()
+        imports = (repo / "config" / "CLAUDE.md").read_text().splitlines()
+        assert f"@~/.claude/mait-code-data/{name}" in imports
 
     def test_creates_memory_md(self, fake_home: Path, fake_source: Path) -> None:
         install(source_dir=fake_source)

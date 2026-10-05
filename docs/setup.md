@@ -67,7 +67,7 @@ mait-code install --from "$PWD" --embedding-provider local
 
 1. Validates the source path is a mait-code clone.
 2. Creates `~/.claude/mait-code-data/` with memory subdirectories (`memory/observations/`, `memory/reflections/`).
-3. Copies identity templates (`soul_document.md`, `user_context.md`) — never overwrites existing files.
+3. Copies identity templates (`soul_document.md`, `user_context.md`, `communication_style.md`) — never overwrites existing files.
 4. Bootstraps `memory/MEMORY.md` with a placeholder if missing.
 5. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file to `CLAUDE.md.backup`).
 6. Symlinks every `skills/*` directory into `~/.claude/skills/`.
@@ -128,11 +128,10 @@ After installation, edit these files to customise your companion:
 
 ### Soul Document (`~/.claude/mait-code-data/soul_document.md`)
 
-Defines the companion's identity — its values, communication style, and personality. Key sections to personalise:
+Defines the companion's identity — its values and personality. Key sections to personalise:
 
 - **Core Values** — Pick 3-5 values that matter to you (defaults provided)
 - **Personality** — Set the tone for how the companion develops over time
-- **Communication Style** — Adjust verbosity, formality, etc.
 - **Constructive Challenge** — How pushback should feel
 
 ### User Context (`~/.claude/mait-code-data/user_context.md`)
@@ -146,6 +145,16 @@ Tells the companion about you:
 
 Fill in what's relevant, delete what isn't. The observation system will suggest additions over time.
 
+### Communication Style (`~/.claude/mait-code-data/communication_style.md`)
+
+Shapes how responses are written:
+
+- **Basics** — Length, clarification, handling mistakes
+- **Attention Markers** — A small set of inline markers (❓ ⛔ ❗ ⚠️ 💭 ✅) that make whatever needs you easy to spot
+- **Shaping Rules** — When to number steps, how side issues are raised, restating progress on multi-step work
+
+Drop the markers, add your own, or rewrite it entirely — it's your copy.
+
 ## Verification
 
 After installation, verify everything works:
@@ -157,7 +166,7 @@ ls -la ~/.claude/CLAUDE.md
 
 # Check data directory
 ls ~/.claude/mait-code-data/
-# Should contain: soul_document.md  user_context.md  memory/
+# Should contain: soul_document.md  user_context.md  communication_style.md  memory/
 
 # Check settings
 cat ~/.claude/settings.json | python3 -m json.tool

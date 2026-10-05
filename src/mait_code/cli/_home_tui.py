@@ -1347,6 +1347,7 @@ def _identity_files() -> tuple[tuple[str, Path], ...]:
     return (
         ("Soul document", ddir / "soul_document.md"),
         ("User context", ddir / "user_context.md"),
+        ("Communication style", ddir / "communication_style.md"),
         ("Curated memory (MEMORY.md)", ddir / "memory" / "MEMORY.md"),
     )
 
