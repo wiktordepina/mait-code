@@ -66,10 +66,11 @@ style once, when a session starts.
 
 ## How it behaves
 
-The mod only reads: it calls the `mc-tool-*` and `mait-code` CLIs and draws
-what they return. The one exception is `/capture`, which writes through the
-inbox CLI. It runs nothing in the background and has no timers. The bar
-refreshes at these points only:
+The mod is a thin client: it calls the `mc-tool-*` and `mait-code` CLIs and
+draws what they return, and holds no data of its own. The only thing it
+changes is the inbox, through the inbox CLI, when you `/capture`. It runs
+nothing in the background and has no timers. The bar refreshes at these points
+only:
 
 - when a session starts
 - after each turn

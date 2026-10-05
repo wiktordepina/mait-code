@@ -535,3 +535,10 @@ def test_summary_session_drops_dead_bindings(monkeypatch, capsys, dead_pid):
 
 def test_summary_without_session_keeps_its_shape(monkeypatch, capsys):
     assert set(_summary(monkeypatch, capsys)) == {"project", "counts"}
+
+
+def test_summary_session_needs_json(monkeypatch, capsys):
+    with pytest.raises(SystemExit) as exc:
+        _main(monkeypatch, "summary", "--session", LIVE.session_id)
+    assert exc.value.code == 1
+    assert "--session needs --json" in capsys.readouterr().err

@@ -3,8 +3,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { BarData, BarStyle, Card, Palette } from '../types'
 
-// A read-only consumer of the mc-tool-* and mait-code CLIs: every capability
-// and every colour lives in mait-code; this mod only calls and draws. It rides
+// A thin client of the mc-tool-* and mait-code CLIs: every capability and
+// every colour lives in mait-code; this mod only calls them and draws. It rides
 // an early-access API, so it fails closed: a missing CLI, output it can't read
 // or a host call that throws leaves the bar empty, never the session broken.
 

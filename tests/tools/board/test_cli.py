@@ -208,7 +208,7 @@ def test_cmd_summary_text_with_cards(mock_conn, capsys):
 
     _insert_card(mock_conn, "b", status=BACKLOG)
     _insert_card(mock_conn, "r", status=REFINED)
-    cmd_summary(_ns(all=False, project=None, json=False))
+    cmd_summary(_ns(all=False, project=None, json=False, session=None))
     out = capsys.readouterr().out
     assert TEST_PROJECT in out
     assert "Backlog: 1" in out
@@ -219,7 +219,7 @@ def test_cmd_summary_text_all_projects_header(mock_conn, capsys):
     from mait_code.tools.board.cli import cmd_summary
 
     _insert_card(mock_conn, "a", status=REFINED, project="proj-a")
-    cmd_summary(_ns(all=True, project=None, json=False))
+    cmd_summary(_ns(all=True, project=None, json=False, session=None))
     assert "All projects —" in capsys.readouterr().out
 
 

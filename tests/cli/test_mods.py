@@ -156,6 +156,16 @@ class TestApplyMods:
         apply_setting("mods", "disabled")
         assert _claude_settings(fake_home) == {"env": {PLUGIN_DIRS_ENV: OTHER}}
 
+    def test_disable_inside_a_session_unloads(
+        self, fake_home: Path, installed: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A Claude Code session exports the settings.json mirror; the written
+        # value, not that stale export, must decide the plugin dirs.
+        apply_setting("mods", "enabled")
+        monkeypatch.setenv("MAIT_CODE_MODS", "enabled")
+        apply_setting("mods", "disabled")
+        assert mod_registered(_claude_settings(fake_home)) is None
+
     def test_disable_without_settings_json_writes_nothing(
         self, fake_home: Path, installed: Path
     ) -> None:

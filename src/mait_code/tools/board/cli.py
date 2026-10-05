@@ -558,6 +558,8 @@ def _session_brief(conn, session: str, project: str | None) -> dict:
 
 
 def cmd_summary(args):
+    if args.session and not args.json:
+        _fail("--session needs --json (it adds fields to the JSON summary).")
     project = args.project or (None if args.all else get_project())
     with connection() as conn:
         counts = service.summary_counts(conn, project=project)
@@ -790,8 +792,8 @@ def main():
     p_summary.add_argument(
         "--session",
         metavar="ID",
-        help="With --json, add this session's bound cards, the In Review cards "
-        "and the inbox count",
+        help="Add this session's bound cards, the In Review cards and the inbox "
+        "count (requires --json)",
     )
     p_summary.add_argument("--json", action="store_true", help="Emit JSON")
     p_summary.set_defaults(func=cmd_summary)

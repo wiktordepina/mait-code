@@ -110,7 +110,7 @@ def apply_setting(
 
     warnings = _enforce(setting, value)
     if setting.key == "mods":
-        warnings += sync_mods()
+        warnings += sync_mods(value.strip().lower() == "enabled")
 
     followup, followup_done = _run_followup(
         setting,
@@ -219,12 +219,20 @@ def _enforce(setting: config.Setting, written: str) -> list[str]:
     return warnings
 
 
-def sync_mods() -> list[str]:
-    """Load or unload the mait-companion mod to match the ``mods`` setting.
+def sync_mods(enabled: bool) -> list[str]:
+    """Load or unload the mait-companion mod.
+
+    Takes the value just written rather than resolving the setting again: a
+    Claude Code session exports the ``settings.json`` mirror of ``mods`` as
+    ``$MAIT_CODE_MODS``, so a toggle run from inside one would otherwise see
+    the old value win over the settings file and undo itself.
 
     Rewrites ``CLAUDE_CODE_PLUGIN_DIRS`` in ``~/.claude/settings.json``; the
     mod folder comes from the install record's source tree. Claude Code reads
     the variable at startup, so the change lands in the next session.
+
+    Args:
+        enabled: Whether the mod should load.
 
     Returns:
         Warnings for the caller to show (no install record, missing folder).
@@ -233,7 +241,6 @@ def sync_mods() -> list[str]:
     from mait_code.cli._record import RecordError, read_record
     from mait_code.cli._settings import (
         mod_dir,
-        mods_enabled,
         read_settings_file as read_claude_settings,
         sync_mod_dir,
         write_settings_file as write_claude_settings,
@@ -241,7 +248,7 @@ def sync_mods() -> list[str]:
 
     warnings: list[str] = []
     folder: Path | None = None
-    if mods_enabled():
+    if enabled:
         try:
             folder = mod_dir(Path(read_record().source_dir))
         except RecordError as exc:
