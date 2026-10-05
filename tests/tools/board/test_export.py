@@ -145,6 +145,8 @@ def test_export_card_json_matches_show_shape(board_db):
 
     expected = service.get_card(board_db, cid)
     expected["comments"] = service.get_comments(board_db, cid)
+    # Live session bindings are the one show field an export leaves out.
+    del expected["sessions"]
     assert data == expected
     assert data["tags"] == ["tui"]
     assert data["references"][0]["label"] == "PR"

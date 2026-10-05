@@ -83,6 +83,22 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
         "Add cards.created_by for card provenance (NULL = created locally)",
         ["ALTER TABLE cards ADD COLUMN created_by TEXT"],
     ),
+    (
+        5,
+        "Add card_sessions binding In Progress cards to Claude Code sessions",
+        [
+            """CREATE TABLE IF NOT EXISTS card_sessions (
+                card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                session_id TEXT NOT NULL,
+                pid INTEGER NOT NULL,
+                bound_at TEXT NOT NULL,
+                UNIQUE(card_id, session_id)
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_card_sessions_session "
+            "ON card_sessions(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_card_sessions_pid ON card_sessions(pid)",
+        ],
+    ),
 ]
 
 

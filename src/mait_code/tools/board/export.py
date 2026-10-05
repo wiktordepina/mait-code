@@ -8,7 +8,9 @@ in two formats:
   ``acceptance_criteria`` and ``completion_summary`` is embedded verbatim,
   so what was authored round-trips unchanged.
 - **json**: full fidelity, matching the ``show --json`` shape — every card
-  carries its ``tags``, ``references`` and ``comments``.
+  carries its ``tags``, ``references`` and ``comments``. Live session
+  bindings (``sessions``) are left out: they name running processes, which
+  mean nothing once the document leaves this machine.
 
 Like :mod:`~mait_code.tools.board.service`, functions here take an open
 ``sqlite3.Connection`` and raise :class:`~mait_code.tools.board.service.CardNotFound`
@@ -143,6 +145,7 @@ def board_markdown(cards: Iterable[dict], *, project: str | None = None) -> str:
 def _attach_comments(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     for card in cards:
         card["comments"] = service.get_comments(conn, card["id"])
+        card.pop("sessions", None)
     return cards
 
 

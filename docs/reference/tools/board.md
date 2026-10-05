@@ -63,6 +63,8 @@
 
 ::: mait_code.tools.board.CardNotFound
 
+::: mait_code.tools.board.NotInProgress
+
 ::: mait_code.tools.board.add_card
 
 ::: mait_code.tools.board.add_comment
@@ -71,7 +73,11 @@
 
 ::: mait_code.tools.board.archive_card
 
+::: mait_code.tools.board.bind_session
+
 ::: mait_code.tools.board.block_card
+
+::: mait_code.tools.board.card_sessions
 
 ::: mait_code.tools.board.complete_card
 
@@ -101,7 +107,15 @@
 
 ::: mait_code.tools.board.summary_counts
 
+::: mait_code.tools.board.unbind_session
+
 ::: mait_code.tools.board.unblock_card
+
+## Sessions
+
+::: mait_code.tools.board.SessionRef
+
+::: mait_code.tools.board.current_session
 
 ## Entry point
 

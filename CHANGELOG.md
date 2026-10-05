@@ -10,7 +10,30 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
-## [0.74.0] — 2026-10-05
+## [0.75.0] — 2026-10-05
+
+### Added
+
+- **Board cards know which Claude Code sessions are working on them.** With
+  several sessions running against one project, In Progress no longer looks
+  equally "current" to all of them. Moving a card into In Progress from inside
+  a session (`next --claim`, `move N in_progress`) binds it to that session,
+  `bind N` binds a card that was already started, and `unbind N` lets go. A
+  card can carry several sessions; any move out of In Progress releases them
+  all. A binding counts only while its session's Claude Code process is alive,
+  survives a resume, and follows a `/clear` to the new session id.
+- **`list --mine` / `list --session ID`** show the cards bound to a session,
+  across every project. `show` lists a card's sessions, and `--json` output
+  carries them as `sessions`; exports leave these live bindings out.
+- **Session start names the session's cards.** The injected context opens
+  with a "Session" section when the session is bound to a card. The `/board`
+  skill binds when you ask it to pick up or continue a card.
+
+### Changed
+
+- **Board schema v5** adds the `card_sessions` table. The board tool migrates
+  on first use; a host reading the database through the remote API needs
+  this release too.
 
 ### Added
 
@@ -2346,7 +2369,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.74.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.75.0...HEAD
+[0.75.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.75.0
 [0.74.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.74.0
 [0.73.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.73.0
 [0.72.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.72.0

@@ -115,6 +115,9 @@ The more transformative path is to drive the board *through Claude*. Just talk:
 - *"Pick up the next refined card."* — Claude claims the highest-priority refined
   card, moves it to **In Progress**, reads its acceptance criteria, and gets to
   work — all in the same session.
+- *"Continue card 12."* — in a fresh session, Claude binds itself to a card that's
+  already **In Progress** (see [parallel sessions](#parallel-sessions)) and
+  carries on.
 - *"That's done."* — Claude completes the card with a summary of what changed.
 
 This is the loop that replaces up-front planning: refine just-in-time, pick up,
@@ -146,6 +149,31 @@ A typical board-driven session looks like this:
 The acceptance criteria written at step 2 are the contract for steps 3 to 6 —
 which is exactly why refining *before* picking up is worth the small ceremony.
 
+## Parallel sessions
+
+You may well run several Claude Code sessions against one project at once: two
+cards being built side by side, plus a third session that's only poking at a
+bug. **In Progress** then holds more than any one session is doing, so each
+In Progress card also records *which sessions are working on it*.
+
+- **Binding is automatic.** Moving a card into **In Progress** from inside a
+  session (picking up the next card, or `move N in_progress`) binds it to that
+  session. *"Continue card 12"* in a new session runs `bind 12`. A card can
+  carry several sessions; a session with nothing bound (the bug-poking one)
+  simply has none.
+- **Release is automatic too.** A card leaving **In Progress** (review,
+  complete, archive, any move out) drops all its bindings.
+- **Bindings stay honest.** Each records the Claude Code process serving the
+  session, and only counts while that process is alive, so a closed session
+  drops out without any clean-up. A resumed session keeps its binding, and so
+  does a `/clear`: the session-start hook moves the binding to the new session.
+- **"The card I'm on"** is `mc-tool-board list --mine`, across every project. `show` lists a card's
+  sessions, and each session's start-up context names its cards.
+
+Bindings rely on the `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PID` variables Claude
+Code exports to its tools and hooks. Outside Claude Code, nothing binds and the
+board behaves exactly as before.
+
 ## Anatomy of a card
 
 ![A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread.](assets/board/card-detail.png)
@@ -167,6 +195,7 @@ Every card carries:
 | **References** | An ordered list of `label → value` links — a PR, a ticket, a file, a spec. Kept out of the description so they stay tidy and clickable. |
 | **Tags** | Free-form labels that ride alongside status (`blocked`, `urgent`, …). |
 | **Comments** | A threaded log — your notes and Claude's, each timestamped. |
+| **Sessions** | Only on **In Progress** cards: the live Claude Code sessions working on it (see [parallel sessions](#parallel-sessions)). Listed by `show` and in `--json` output; left out of exports. |
 | **Created by** | Only on cards raised through the [remote API](remote.md): the client that created it, shown as *via &lt;client&gt;* on the meta line and as `created by:` in `show`. Locally created cards have none. |
 | **Completion summary** | The handoff note recorded when the card reaches **Done**. Renders [markdown](#markdown-in-the-body). |
 
@@ -260,7 +289,7 @@ can call directly. The same store backs both.
 
 ```bash
 # View
-mc-tool-board list [--all] [--status STATUS] [--archived] [--search TEXT] [--json]
+mc-tool-board list [--all] [--status STATUS] [--archived] [--search TEXT] [--mine | --session ID] [--json]
 mc-tool-board show ID [--json]
 mc-tool-board summary [--all] [--project PROJECT] [--json]
 
@@ -277,6 +306,10 @@ mc-tool-board complete ID --summary "<what was done>" [--json]            # → 
 mc-tool-board move ID <backlog|refined|in_progress|in_review|done|archived> [--json]
 mc-tool-board archive ID [--json]                                         # hide without deleting
 mc-tool-board remove ID [--json]                                          # permanent delete
+
+# Sessions (In Progress cards; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)
+mc-tool-board bind ID [--session ID --pid PID] [--json]                  # bind a session (--session needs --pid)
+mc-tool-board unbind ID [--session ID] [--json]                           # drop a session's binding
 
 # Tags & blocking
 mc-tool-board tag ID <tag> [--json]      /  mc-tool-board untag ID <tag> [--json]
@@ -304,7 +337,7 @@ deletion.
 portable document. Markdown embeds the stored description, acceptance criteria
 and completion summary verbatim, so what you wrote round-trips unchanged; JSON
 is full fidelity (tags, references and comments included, matching the
-`show --json` shape). Output goes to stdout unless `--out FILE` is given. The
+`show --json` shape, minus live session bindings). Output goes to stdout unless `--out FILE` is given. The
 board-wide form takes the same filters as `list`.
 
 ## Tips for getting the most from it

@@ -321,11 +321,11 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | Subcommand | Args | Description |
 |------------|------|-------------|
 | `add` | title, --description?, --priority?, --project? | Add a card to the backlog |
-| `list` | --all?, --status?, --archived?, --json? | List cards grouped by column (current project by default; archived hidden) |
+| `list` | --all?, --status?, --archived?, --mine? \| --session?, --json? | List cards grouped by column (current project by default; archived hidden); `--mine`/`--session` keep cards bound to a session, across all projects |
 | `show` | id, --json? | Show a card and its comment thread |
-| `move` | id, status | Move a card to any column (sets/clears `completed_at` around `done`) |
+| `move` | id, status | Move a card to any column (sets/clears `completed_at` around `done`; into `in_progress` binds the current session, out of it releases bindings) |
 | `refine` | id, --description?, --acceptance? | Set description/acceptance and move to `refined` |
-| `next` | --project?, --claim?, --json? | Show the next refined card (priority, then oldest); `--claim` moves it to `in_progress` |
+| `next` | --project?, --claim?, --json? | Show the next refined card (priority, then oldest); `--claim` moves it to `in_progress` and binds the current session |
 | `complete` | id, --summary? | Move to `done` with a completion summary |
 | `block` | id, reason? | Tag the card `blocked` in place (keeps its column); an optional reason is recorded as a comment |
 | `unblock` | id | Remove the `blocked` tag (keeps the card's flow position) |
@@ -335,13 +335,15 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `ref remove` | id, position | Remove a reference by its 1-based position (see `ref list`) |
 | `ref list` | id, --json? | List a card's references in order |
 | `archive` | id | Archive a card (hidden, not deleted) |
+| `bind` | id, --session? --pid? | Bind a Claude Code session (default: `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`) to an In Progress card; refused without both, and `--session` needs its own `--pid` |
+| `unbind` | id, --session? | Drop a session's binding from a card |
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance? | Edit card fields |
 | `remove` | id | Delete a card permanently (cascades comments) |
 | `summary` | --all?, --project?, --json? | Per-column counts (the session-start hook reads the same counts via `service.summary_counts`) |
 | `export` | id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search? | Export one card or the whole board as markdown or JSON (stdout, or a file with `--out`) |
 
-Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
+Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) and the session-invariant (leaving `in_progress` releases every `card_sessions` binding) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
 
 ## Board TUI (`mait-code board`)
 
@@ -398,7 +400,7 @@ Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed
 
 `mait-code home` — or just `mait-code` with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim **tree sidebar** (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The **detail pane** beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete `doctor` check list. A one-line install-health verdict (reusing the `doctor` checks) sits under the tree, and the installed version shows in the brand header. `r` re-reads every store (refreshing badges and the open detail), `e` embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), `j`/`k` and the arrows move the cursor, and a `Ctrl+P` palette exposes the actions.
 
-Pressing **Enter** on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the `home` command (`_run_home_loop`): home exits its event loop returning a `HomeTarget`, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The **Identity → System prompt** node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same `build_session_context()` the hook calls, so the text on screen is exactly the text a new session opens with.
+Pressing **Enter** on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the `home` command (`_run_home_loop`): home exits its event loop returning a `HomeTarget`, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The **Identity → System prompt** node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same `build_session_context()` the hook calls, so the text on screen is exactly the text a new session opens with, less the per-session section naming the cards a session is bound to (the hub has no session).
 
 This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from `mait_code.tui.brand`. The `BrandBanner` (`mait_code.tui.banner`) wraps them into one size-responsive masthead worn by every TUI in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the `mc-tool-*` CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, `mait-code home` prints a compact text summary and bare `mait-code` keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.
 
@@ -422,7 +424,7 @@ Every CLI surface prints through one shared `rich` `Console` in `console.py`, ca
 
 | Hook | Trigger | Mode | Purpose |
 |------|---------|------|---------|
-| `session_start` | SessionStart | sync | Inject companion context (reminders, board summary, inbox count) — built by `hooks/session_start/context.py`, which reads each tool's store layer directly and is shared with the home TUI's system prompt view |
+| `session_start` | SessionStart | sync | Inject companion context (the session's bound cards, reminders, board summary, inbox count) — built by `hooks/session_start/context.py`, which reads each tool's store layer directly and is shared with the home TUI's system prompt view. On `resume`/`clear` it first moves card↔session bindings to the new pid / session id |
 | `observe` | PreCompact | async | Extract observations before context compaction |
 | `observe` | SessionEnd | async | Final observation extraction |
 | `auto_format` | *not registered* | — | Placeholder package — entry point exists (`mc-hook-format`) but no settings.json registration and no implementation |

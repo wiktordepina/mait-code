@@ -26,15 +26,45 @@ def _drain_bridge() -> None:
         logger.exception("session start: bridge sync failed")
 
 
+def _sync_session_bindings(event: dict) -> None:
+    """Keep board card ↔ session bindings pointing at this session.
+
+    A ``resume`` keeps its session id under a new Claude Code process, so its
+    bindings take the new pid. A ``/clear`` keeps the process under a new id,
+    so the process's bindings move to that id. Best-effort: a board problem
+    must never break session start.
+    """
+    source = event.get("source")
+    session_id = event.get("session_id")
+    if source not in ("resume", "clear") or not session_id:
+        return
+    try:
+        from mait_code.tools.board import service
+        from mait_code.tools.board.db import connection
+        from mait_code.tools.board.sessions import current_pid
+
+        pid = current_pid()
+        if pid is None:
+            return
+        with connection() as conn:
+            if source == "resume":
+                service.refresh_session_pid(conn, session_id, pid)
+            else:
+                service.rebind_pid(conn, pid, session_id)
+    except Exception:
+        logger.exception("session start: card binding sync failed")
+
+
 @log_invocation(name="mc-hook-session-start")
 def main():
     """Read session start event from stdin and output companion context."""
     setup_logging()
-    _event = json.loads(sys.stdin.read())
+    event = json.loads(sys.stdin.read())
 
     _drain_bridge()
+    _sync_session_bindings(event)
 
-    context = build_session_context()
+    context = build_session_context(session_id=event.get("session_id"))
     if context:
         result = {
             "hookSpecificOutput": {

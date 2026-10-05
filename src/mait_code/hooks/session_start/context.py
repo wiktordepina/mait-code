@@ -13,12 +13,14 @@ exception — session start must not be able to fail from here.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 __all__ = [
     "board_section",
     "build_session_context",
     "inbox_section",
     "reminders_section",
+    "session_section",
 ]
 
 logger = logging.getLogger(__name__)
@@ -48,6 +50,27 @@ def reminders_section() -> str:
     ]
     lines += ["", "Use `mc-tool-reminders dismiss <id>` to dismiss."]
     return "\n".join(lines)
+
+
+def session_section(session_id: str) -> str:
+    """The cards bound to this Claude Code session, one line each.
+
+    Returns "" when the session has no active binding, so a session that isn't
+    working a card (a quick check, a debugging detour) stays quiet.
+    """
+    from mait_code.tools.board import service
+    from mait_code.tools.board.columns import IN_PROGRESS
+    from mait_code.tools.board.db import get_connection
+
+    conn = get_connection()
+    try:
+        cards = service.list_cards(conn, statuses=[IN_PROGRESS], session=session_id)
+    finally:
+        conn.close()
+
+    return "\n".join(
+        f"This session is working on #{card['id']} — {card['title']}" for card in cards
+    )
 
 
 def board_section() -> str:
@@ -92,18 +115,27 @@ def inbox_section() -> str:
     return f"{count} inbox" if count else ""
 
 
-def build_session_context() -> str:
+def build_session_context(session_id: str | None = None) -> str:
     """Assemble the full session-start context markdown.
+
+    Args:
+        session_id: The starting Claude Code session, when known (the hook
+            passes it; the home TUI's preview has none), adding the cards
+            bound to it.
 
     Returns "" when every section is silent — the hook then emits nothing,
     keeping quiet sessions quiet.
     """
-    parts: list[tuple[str, str]] = []
-    for title, builder in (
+    builders: list[tuple[str, Callable[[], str]]] = []
+    if session_id:
+        builders.append(("Session", lambda: session_section(session_id)))
+    builders += [
         ("Reminders", reminders_section),
         ("Board", board_section),
         ("Inbox", inbox_section),
-    ):
+    ]
+    parts: list[tuple[str, str]] = []
+    for title, builder in builders:
         try:
             body = builder()
         except Exception:

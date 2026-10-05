@@ -341,10 +341,10 @@ def test_missing_database_is_not_created(tmp_path):
 def test_older_schema_raises_and_is_not_migrated(instance):
     path = instance / "board.db"
     conn = sqlite3.connect(path)
-    conn.execute("DELETE FROM schema_version WHERE version = 4")
+    expected = board_migrate.MIGRATIONS[-1][0]
+    conn.execute("DELETE FROM schema_version WHERE version = ?", (expected,))
     conn.commit()
     conn.close()
-    expected = board_migrate.MIGRATIONS[-1][0]
     with pytest.raises(remote.SchemaMismatch) as exc:
         remote.list_cards(instance)
     assert (exc.value.expected, exc.value.found) == (expected, expected - 1)
