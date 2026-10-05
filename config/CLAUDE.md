@@ -2,6 +2,7 @@
 
 @~/.claude/mait-code-data/soul_document.md
 @~/.claude/mait-code-data/user_context.md
+@~/.claude/mait-code-data/communication_style.md
 @~/.claude/mait-code-data/memory/MEMORY.md
 
 ## Companion Behaviour

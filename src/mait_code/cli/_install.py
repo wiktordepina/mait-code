@@ -46,6 +46,13 @@ __all__ = [
 EMBEDDING_PROVIDERS = ("local", "bedrock")
 """The valid values for ``--embedding-provider``."""
 
+_IDENTITY_TEMPLATES = (
+    ("soul_document.md", "soul_document.md"),
+    ("user_context.md", "user_context.md"),
+    ("communication_styles/default.md", "communication_style.md"),
+)
+"""Identity templates as ``(path under templates/, name in the data dir)``."""
+
 
 class InstallSummary:
     """What :func:`install` produces &mdash; used by the CLI to render output."""
@@ -147,8 +154,8 @@ def install(
 
     # 2. Copy templates — never overwrite.
     templates_copied: list[str] = []
-    for name in ("soul_document.md", "user_context.md"):
-        src = source_dir / "templates" / name
+    for template, name in _IDENTITY_TEMPLATES:
+        src = source_dir / "templates" / template
         dst = ddir / name
         if src.is_file() and not dst.exists():
             shutil.copy(src, dst)

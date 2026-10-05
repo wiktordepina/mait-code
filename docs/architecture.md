@@ -43,7 +43,7 @@ graph TD
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
-        identity["soul_document.md<br/>user_context.md"]
+        identity["soul_document.md<br/>user_context.md<br/>communication_style.md"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>memory.db <i>(SQLite)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
         other_dbs["reminders.db<br/>board.db<br/>inbox.db"]
         cfg["dashboard.toml<br/>bridge.json<br/>project-aliases.json"]
@@ -499,13 +499,14 @@ table](development.md#log-format) for the full list.
 
 ## Identity System
 
-Three files compose the companion's identity:
+Four files compose the companion's identity:
 
-1. **Soul Document** — Values, personality, communication style (stable, rarely changes)
+1. **Soul Document** — Values and personality (stable, rarely changes)
 2. **User Context** — Who the user is, their stack, preferences (updates occasionally)
-3. **MEMORY.md** — Accumulated knowledge (updates frequently)
+3. **Communication Style** — How responses are shaped: length, attention markers, shaping rules (stable, rarely changes)
+4. **MEMORY.md** — Accumulated knowledge (updates frequently)
 
-All three are referenced via `@` imports in `config/CLAUDE.md` and loaded into every Claude Code session.
+The first three are seeded from `templates/` on install (the communication style from `templates/communication_styles/default.md`) and never overwritten. All four are referenced via `@` imports in `config/CLAUDE.md` and loaded into every Claude Code session.
 
 ## Migration System
 
@@ -539,6 +540,7 @@ Adding a new migration:
 ~/.claude/mait-code-data/
 ├── soul_document.md          # Companion identity
 ├── user_context.md           # User profile
+├── communication_style.md    # Response shaping
 ├── memory/
 │   ├── MEMORY.md             # Curated facts (loaded every session)
 │   ├── memory.db             # SQLite FTS5 + vec0 + entities database

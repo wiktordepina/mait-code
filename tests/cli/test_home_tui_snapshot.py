@@ -151,6 +151,11 @@ def _seed_identity() -> None:
         "Casual, direct, British spelling. Prefers deep focus and proper TUIs "
         "over questionnaire-style prompts.\n"
     )
+    (ddir / "communication_style.md").write_text(
+        "# Communication style\n\n"
+        "- **Length:** exactly as long as necessary.\n"
+        "- ❓ **Question** — you want an answer, but can carry on meanwhile.\n"
+    )
     (ddir / "memory" / "MEMORY.md").write_text(
         "# Memory\n\n"
         "## Feedback\n\n"

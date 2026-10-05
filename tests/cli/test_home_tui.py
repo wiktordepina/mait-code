@@ -481,6 +481,7 @@ def test_system_prompt_node_renders_identity_and_context() -> None:
     text, docs = _run(scenario)
     assert "Soul document" in text
     assert "User context" in text
+    assert "Communication style" in text
     assert "isn't written yet" in text  # missing files speak, not error
     assert "Session context" in text
     assert "A quiet start" in text  # empty stores → silent context, voiced
