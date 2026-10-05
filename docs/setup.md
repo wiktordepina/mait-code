@@ -151,6 +151,7 @@ Shapes how responses are written:
 
 - **Basics** — Length, clarification, handling mistakes
 - **Attention Markers** — A small set of inline markers (❓ ⛔ ❗ ⚠️ 💭 ✅) that make whatever needs you easy to spot
+- **Side-effect Markers** — A closing block listing what changed (📝 files written, 🔧 anything else with a lasting effect)
 - **Shaping Rules** — When to number steps, how side issues are raised, restating progress on multi-step work
 
 Drop the markers, add your own, or rewrite it entirely — it's your copy.

@@ -10,6 +10,19 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.77.1] — 2026-10-05
+
+### Added
+
+- **Side-effect markers.** Any reply that changed something ends with a short
+  block listing what changed: 📝 for files written, 🔧 for anything else with
+  a lasting effect (moves, deletions, removed lines, commits, pushes, board
+  moves, memory writes). Changes outside the repository always get their own
+  line, since git won't show them. These were meant to ship in 0.77.0 but
+  missed the merge. Existing installs can copy the new section from
+  `templates/communication_styles/default.md` into their
+  `communication_style.md`.
+
 ## [0.77.0] — 2026-10-05
 
 ### Added
@@ -2424,7 +2437,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.1...HEAD
+[0.77.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.1
 [0.77.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.0
 [0.76.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.76.0
 [0.75.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.75.0
