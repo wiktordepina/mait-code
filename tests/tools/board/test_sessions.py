@@ -157,16 +157,20 @@ def test_card_dicts_carry_active_sessions_only(board_db, dead_pid):
     assert len(_rows(board_db)) == 2
 
 
-def test_writes_prune_dead_bindings(board_db, dead_pid):
-    cid = _card(board_db)
-    board_db.execute(
-        "INSERT INTO card_sessions (card_id, session_id, pid, bound_at) "
-        "VALUES (?, 'gone', ?, '2026-01-01')",
-        (cid, dead_pid),
+def test_a_closed_session_survives_other_writes_until_resumed(board_db, dead_pid):
+    """A dead binding is hidden, not deleted, so a later resume can reclaim it."""
+    mine = _card(board_db, "mine")
+    service.bind_session(board_db, mine, SessionRef("closed", dead_pid))
+    # A parallel session carries on writing while "closed" is shut.
+    theirs = _card(board_db, "theirs", status=REFINED)
+    service.move_card(
+        board_db, theirs, IN_PROGRESS, session=SessionRef("parallel", os.getpid())
     )
-    board_db.commit()
-    service.bind_session(board_db, cid, LIVE)
-    assert _rows(board_db) == [(cid, "live-session", os.getpid())]
+    service.bind_session(board_db, theirs, SessionRef("another", os.getpid()))
+    assert service.list_cards(board_db, session="closed") == []
+
+    assert service.refresh_session_pid(board_db, "closed", os.getpid()) == 1
+    assert [c["id"] for c in service.list_cards(board_db, session="closed")] == [mine]
 
 
 def test_unbind(board_db):
@@ -371,12 +375,8 @@ def test_cli_bind_explicit_session_and_pid(monkeypatch, capsys):
 
 @pytest.mark.parametrize(
     "argv",
-    [
-        ["--session", "only-a-session"],
-        ["--pid", "123"],
-        [],
-    ],
-    ids=["no-pid", "no-session", "nothing"],
+    [["--pid", "123"], []],
+    ids=["no-session", "nothing"],
 )
 def test_cli_bind_refuses_without_session_and_pid(monkeypatch, capsys, argv):
     cid = _cli_card()
@@ -384,6 +384,17 @@ def test_cli_bind_refuses_without_session_and_pid(monkeypatch, capsys, argv):
         _main(monkeypatch, "bind", str(cid), *argv)
     assert exc.value.code == 1
     assert "session id and a pid" in capsys.readouterr().err
+    assert _cli_rows() == []
+
+
+def test_cli_bind_session_needs_its_own_pid(monkeypatch, capsys):
+    """Inside a session, --session alone must not borrow this process's pid."""
+    _in_session(monkeypatch)
+    cid = _cli_card()
+    with pytest.raises(SystemExit) as exc:
+        _main(monkeypatch, "bind", str(cid), "--session", "someone-else")
+    assert exc.value.code == 1
+    assert "--session needs --pid" in capsys.readouterr().err
     assert _cli_rows() == []
 
 
@@ -442,6 +453,21 @@ def test_cli_list_mine_and_session(monkeypatch, capsys):
     assert [c["id"] for c in json.loads(capsys.readouterr().out)] == [mine]
     _main(monkeypatch, "list", "--session", "nobody", "--json")
     assert json.loads(capsys.readouterr().out) == []
+
+
+def test_cli_list_mine_spans_projects(monkeypatch, capsys):
+    session = _in_session(monkeypatch)
+    with connection() as conn:
+        here = _card(conn, "here")
+        cid = service.add_card(conn, project="elsewhere", title="there")
+        service.move_card(conn, cid, IN_PROGRESS)
+        service.bind_session(conn, here, session)
+        service.bind_session(conn, cid, session)
+
+    _main(monkeypatch, "list", "--mine", "--json")
+    assert sorted(c["id"] for c in json.loads(capsys.readouterr().out)) == [here, cid]
+    _main(monkeypatch, "list", "--mine")
+    assert "there [elsewhere]" in capsys.readouterr().out
 
 
 def test_cli_list_mine_needs_a_session(monkeypatch, capsys):

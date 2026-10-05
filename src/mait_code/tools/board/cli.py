@@ -117,7 +117,6 @@ def cmd_add(args):
 
 
 def cmd_list(args):
-    project = None if args.all else get_project()
     statuses = [args.status] if args.status else None
     session = args.session
     if args.mine:
@@ -127,6 +126,8 @@ def cmd_list(args):
                 f"--mine needs ${SESSION_ENV} and ${PID_ENV} (run inside Claude Code)."
             )
         session = current.session_id
+    # A session's cards are its cards whichever directory it was asked from.
+    project = None if (args.all or session) else get_project()
     with connection() as conn:
         cards = service.list_cards(
             conn,
@@ -157,7 +158,7 @@ def cmd_list(args):
             continue
         print(f"{label(status)} ({len(group)}):")
         for card in group:
-            project = f" [{card['project']}]" if args.all else ""
+            project = f" [{card['project']}]" if args.all or session else ""
             tags = "".join(f"  #{t}" for t in card["tags"])
             print(
                 f"  [#{card['id']}] ({card['priority']}) {card['title']}{project}{tags}"
@@ -480,6 +481,10 @@ def cmd_archive(args):
 
 def cmd_bind(args):
     """Bind a Claude Code session (default: the current one) to an In Progress card."""
+    if args.session and args.pid is None:
+        # Never pair another session's id with this process's pid: the binding
+        # would live, die and follow a /clear with the wrong process.
+        _fail("--session needs --pid (the pid of the Claude Code process serving it).")
     current = current_session()
     session_id = args.session or (current.session_id if current else None)
     pid = args.pid if args.pid is not None else (current.pid if current else None)

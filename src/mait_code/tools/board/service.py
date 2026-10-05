@@ -188,8 +188,9 @@ def _attach_sessions(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     """Populate each card dict's ``sessions`` key with its *active* bindings.
 
     Each binding is a ``{"session_id", "pid", "bound_at"}`` dict, oldest first.
-    A binding whose Claude Code process has gone is left out here and pruned
-    on the next write (see :func:`_prune_dead_sessions`), so reads never write.
+    A binding whose Claude Code process has gone is left out here but kept in
+    the table: a resume brings the session back under a new pid (see
+    :func:`refresh_session_pid`), and the card leaving In Progress releases it.
     """
     if not cards:
         return cards
@@ -364,7 +365,6 @@ def next_refined(
             (IN_PROGRESS, _now(), row[0], REFINED),
         ).rowcount
         if claimed and session is not None:
-            _prune_dead_sessions(conn)
             _upsert_binding(conn, row[0], session)
         conn.commit()
         row = _fetch_card_row(conn, row[0])
@@ -520,28 +520,16 @@ def _release_sessions(conn: sqlite3.Connection, card_id: int) -> None:
     conn.execute("DELETE FROM card_sessions WHERE card_id = ?", (card_id,))
 
 
-def _prune_dead_sessions(conn: sqlite3.Connection) -> None:
-    """Delete bindings whose Claude Code process has exited (uncommitted)."""
-    pids = [r[0] for r in conn.execute("SELECT DISTINCT pid FROM card_sessions")]
-    dead = [pid for pid in pids if not pid_alive(pid)]
-    if dead:
-        conn.executemany(
-            "DELETE FROM card_sessions WHERE pid = ?", [(p,) for p in dead]
-        )
-
-
 def bind_session(conn: sqlite3.Connection, card_id: int, session: SessionRef) -> None:
     """Bind a Claude Code *session* to an In Progress card.
 
     Idempotent: re-binding the same session refreshes its pid and time. A card
-    may carry several bindings (parallel sessions on one card). Bindings of
-    exited processes are pruned on the way. Raises :class:`CardNotFound` if the
+    may carry several bindings (parallel sessions on one card). Raises :class:`CardNotFound` if the
     id is unknown and :class:`NotInProgress` unless the card is In Progress.
     """
     row = _require_row(conn, card_id)
     if row[5] != IN_PROGRESS:
         raise NotInProgress(card_id, row[5])
-    _prune_dead_sessions(conn)
     _upsert_binding(conn, card_id, session)
     conn.commit()
 
@@ -666,7 +654,6 @@ def move_card(
     if new_status != IN_PROGRESS:
         _release_sessions(conn, card_id)
     elif session is not None:
-        _prune_dead_sessions(conn)
         _upsert_binding(conn, card_id, session)
     conn.commit()
 

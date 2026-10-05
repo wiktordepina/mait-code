@@ -321,7 +321,7 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | Subcommand | Args | Description |
 |------------|------|-------------|
 | `add` | title, --description?, --priority?, --project? | Add a card to the backlog |
-| `list` | --all?, --status?, --archived?, --mine? \| --session?, --json? | List cards grouped by column (current project by default; archived hidden); `--mine`/`--session` keep cards bound to a session |
+| `list` | --all?, --status?, --archived?, --mine? \| --session?, --json? | List cards grouped by column (current project by default; archived hidden); `--mine`/`--session` keep cards bound to a session, across all projects |
 | `show` | id, --json? | Show a card and its comment thread |
 | `move` | id, status | Move a card to any column (sets/clears `completed_at` around `done`; into `in_progress` binds the current session, out of it releases bindings) |
 | `refine` | id, --description?, --acceptance? | Set description/acceptance and move to `refined` |
@@ -335,7 +335,7 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `ref remove` | id, position | Remove a reference by its 1-based position (see `ref list`) |
 | `ref list` | id, --json? | List a card's references in order |
 | `archive` | id | Archive a card (hidden, not deleted) |
-| `bind` | id, --session?, --pid? | Bind a Claude Code session (default: `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`) to an In Progress card; refused without both |
+| `bind` | id, --session? --pid? | Bind a Claude Code session (default: `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`) to an In Progress card; refused without both, and `--session` needs its own `--pid` |
 | `unbind` | id, --session? | Drop a session's binding from a card |
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance? | Edit card fields |

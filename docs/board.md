@@ -167,7 +167,7 @@ In Progress card also records *which sessions are working on it*.
   session, and only counts while that process is alive, so a closed session
   drops out without any clean-up. A resumed session keeps its binding, and so
   does a `/clear`: the session-start hook moves the binding to the new session.
-- **"The card I'm on"** is `mc-tool-board list --mine`. `show` lists a card's
+- **"The card I'm on"** is `mc-tool-board list --mine`, across every project. `show` lists a card's
   sessions, and each session's start-up context names its cards.
 
 Bindings rely on the `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PID` variables Claude
@@ -308,7 +308,7 @@ mc-tool-board archive ID [--json]                                         # hide
 mc-tool-board remove ID [--json]                                          # permanent delete
 
 # Sessions (In Progress cards; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)
-mc-tool-board bind ID [--session ID] [--pid PID] [--json]                 # bind a session to the card
+mc-tool-board bind ID [--session ID --pid PID] [--json]                  # bind a session (--session needs --pid)
 mc-tool-board unbind ID [--session ID] [--json]                           # drop a session's binding
 
 # Tags & blocking
