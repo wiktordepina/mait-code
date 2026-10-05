@@ -19,6 +19,7 @@ from mait_code.hooks.session_start.context import (
     build_session_context,
     inbox_section,
     reminders_section,
+    session_section,
 )
 
 
@@ -193,3 +194,117 @@ def test_main_silent_when_nothing(monkeypatch, capsys, project):
     main()
 
     assert capsys.readouterr().out == ""
+
+
+# --- card ↔ session bindings ---
+
+
+def _bound_card(title: str, session_id: str, pid: int) -> int:
+    from mait_code.tools.board import service
+    from mait_code.tools.board.db import connection
+    from mait_code.tools.board.sessions import SessionRef
+
+    with connection() as conn:
+        cid = service.add_card(conn, project="p", title=title)
+        service.move_card(conn, cid, "in_progress")
+        service.bind_session(conn, cid, SessionRef(session_id, pid))
+    return cid
+
+
+def _bindings() -> list[tuple]:
+    from mait_code.tools.board.db import connection
+
+    with connection() as conn:
+        return conn.execute(
+            "SELECT card_id, session_id, pid FROM card_sessions ORDER BY card_id"
+        ).fetchall()
+
+
+def _start(monkeypatch, source: str, session_id: str, *, pid: int | None) -> None:
+    if pid is None:
+        monkeypatch.delenv("CLAUDE_PID", raising=False)
+    else:
+        monkeypatch.setenv("CLAUDE_PID", str(pid))
+    event = {"session_id": session_id, "source": source}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event)))
+    main()
+
+
+def test_session_section_names_bound_cards(project):
+    import os
+
+    cid = _bound_card("Bind board cards", "s1", os.getpid())
+    _bound_card("Someone else's", "s2", os.getpid())
+    assert (
+        session_section("s1") == f"This session is working on #{cid} — Bind board cards"
+    )
+    assert session_section("nobody") == ""
+
+
+def test_build_session_context_adds_the_session_section(project):
+    import os
+
+    _bound_card("Bound card", "s1", os.getpid())
+    context = build_session_context(session_id="s1")
+    assert context.index("## Session") < context.index("## Board")
+    assert "working on #" in context
+    # The home TUI's preview has no session: no section.
+    assert "## Session" not in build_session_context()
+
+
+def test_resume_moves_bindings_to_the_new_process(monkeypatch, capsys, project):
+    import os
+    import subprocess
+    import sys
+
+    proc = subprocess.Popen([sys.executable, "-c", "pass"])
+    proc.wait()
+    cid = _bound_card("Resumed card", "kept-id", proc.pid)
+
+    _start(monkeypatch, "resume", "kept-id", pid=os.getpid())
+
+    assert _bindings() == [(cid, "kept-id", os.getpid())]
+    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+    assert f"working on #{cid}" in context["additionalContext"]
+
+
+def test_clear_moves_this_process_bindings_to_the_new_id(monkeypatch, capsys, project):
+    import os
+
+    cid = _bound_card("Cleared card", "old-id", os.getpid())
+
+    _start(monkeypatch, "clear", "new-id", pid=os.getpid())
+
+    assert _bindings() == [(cid, "new-id", os.getpid())]
+    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+    assert f"working on #{cid}" in context["additionalContext"]
+
+
+@pytest.mark.parametrize("source", ["startup", "compact"])
+def test_other_sources_leave_bindings_alone(monkeypatch, project, source):
+    import os
+
+    cid = _bound_card("Card", "old-id", os.getpid())
+    _start(monkeypatch, source, "new-id", pid=os.getpid())
+    assert _bindings() == [(cid, "old-id", os.getpid())]
+
+
+def test_binding_sync_needs_claude_pid(monkeypatch, project):
+    import os
+
+    cid = _bound_card("Card", "old-id", os.getpid())
+    _start(monkeypatch, "clear", "new-id", pid=None)
+    assert _bindings() == [(cid, "old-id", os.getpid())]
+
+
+def test_binding_sync_failure_never_breaks_session_start(monkeypatch, capsys, project):
+    from mait_code.tools.board import service
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("board on fire")
+
+    monkeypatch.setattr(service, "rebind_pid", boom)
+    _seed_card(project, "refined")
+    _start(monkeypatch, "clear", "new-id", pid=12345)
+    out = json.loads(capsys.readouterr().out)
+    assert "## Board" in out["hookSpecificOutput"]["additionalContext"]

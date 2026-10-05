@@ -1,7 +1,7 @@
 ---
 name: board
 description: View and drive the project kanban board. Use when the user mentions the board, asks to pick up / refine / move / complete a card, asks what's on the board, or wants to add a card to the board.
-allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*)
+allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*), Bash(mc-tool-board bind:*), Bash(mc-tool-board unbind:*)
 ---
 
 # /board
@@ -21,7 +21,12 @@ Present the board above clearly, then act on what the user asks.
 ### Picking up work
 
 - **"pick up the next refined card"** (or similar): run `mc-tool-board next --claim --json`. This returns the highest-priority (then oldest) refined card for the current project *and* moves it to `in_progress`. Read its `acceptance_criteria`, then do the work in this session.
+- **"pick up card N"** / **"continue card N"**: if the card isn't In Progress yet, `mc-tool-board move N in_progress`; if it already is (started in an earlier or parallel session), run `mc-tool-board bind N`. Either way this session ends up bound to it. Then read its `acceptance_criteria` and carry on.
 - Peek without claiming: `mc-tool-board next --json`.
+
+### Sessions
+
+Several Claude Code sessions can work the same project at once, so each In Progress card records **which sessions are working on it**. Moving a card into `in_progress` (via `next --claim` or `move`) binds it to the current session automatically; `bind N` binds an already-started card; `unbind N` drops this session's binding. A card leaving In Progress (review, complete, archive, any move out) releases every binding. A binding stays active only while its session's Claude Code process is alive, and it follows a `/clear` or a resume on its own. Bindings are why "the card I'm on" is `mc-tool-board list --mine`, not the whole In Progress column.
 
 ### Refining
 
@@ -46,11 +51,11 @@ The **description**, **acceptance criteria** and **completion summary** fields r
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
 - References (label→value links on a card): `mc-tool-board ref add N <label> <value>` — *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
 - Show one card with its comments and references: `mc-tool-board show N`.
-- Every mutating subcommand (`add`, `move`, `refine`, `review`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `comment`, `edit`, `remove`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape — e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.
+- Every mutating subcommand (`add`, `move`, `refine`, `review`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `bind`/`unbind`, `comment`, `edit`, `remove`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape — e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.
 
 ### Viewing
 
-- This project: `mc-tool-board list`. All projects: `mc-tool-board list --all`. Include archived: add `--archived`. Filter by title: `--search`/`-q <text>` (case-insensitive substring; composes with the others — pair with `--all` to sweep every project). Machine-readable: add `--json`.
+- This project: `mc-tool-board list`. All projects: `mc-tool-board list --all`. Include archived: add `--archived`. Filter by title: `--search`/`-q <text>` (case-insensitive substring; composes with the others — pair with `--all` to sweep every project). Cards bound to this session: `--mine` (or another session's with `--session <id>`). Machine-readable: add `--json`.
 
 ### Exporting
 

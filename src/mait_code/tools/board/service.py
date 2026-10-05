@@ -7,7 +7,9 @@ one per command via :func:`~mait_code.tools.board.db.connection`; the Textual
 TUI holds a single connection for the app's lifetime.
 
 Rows are returned as the same dicts the CLI has always produced (see
-:func:`_card_dict`). Mutations raise :class:`CardNotFound` for a missing id
+:func:`_card_dict`), each carrying its ``tags``, ``references`` and active
+Claude Code ``sessions``. The *session-invariant*: a card leaving
+``in_progress`` releases every session binding, whichever verb moves it. Mutations raise :class:`CardNotFound` for a missing id
 rather than printing and exiting — that ``print``/``sys.exit`` is a CLI concern
 the caller layers on top (the CLI exits; the TUI flashes a notification).
 """
@@ -28,15 +30,19 @@ from mait_code.tools.board.columns import (
     IN_REVIEW,
     REFINED,
 )
+from mait_code.tools.board.sessions import SessionRef, pid_alive
 
 __all__ = [
     "CardNotFound",
+    "NotInProgress",
     "add_card",
     "add_comment",
     "add_reference",
     "add_tag",
     "archive_card",
+    "bind_session",
     "block_card",
+    "card_sessions",
     "complete_card",
     "edit_card",
     "get_card",
@@ -47,7 +53,9 @@ __all__ = [
     "list_tags",
     "move_card",
     "next_refined",
+    "rebind_pid",
     "refine_card",
+    "refresh_session_pid",
     "remove_card",
     "remove_reference",
     "remove_tag",
@@ -55,6 +63,7 @@ __all__ = [
     "set_references",
     "set_tags",
     "summary_counts",
+    "unbind_session",
     "unblock_card",
 ]
 
@@ -85,6 +94,15 @@ class CardNotFound(Exception):
     def __init__(self, card_id: int) -> None:
         super().__init__(f"card #{card_id} not found")
         self.card_id = card_id
+
+
+class NotInProgress(Exception):
+    """Raised when binding a session to a card that isn't In Progress."""
+
+    def __init__(self, card_id: int, status: str) -> None:
+        super().__init__(f"card #{card_id} is {status}, not in_progress")
+        self.card_id = card_id
+        self.status = status
 
 
 def _now() -> str:
@@ -166,9 +184,39 @@ def _attach_references(conn: sqlite3.Connection, cards: list[dict]) -> list[dict
     return cards
 
 
+def _attach_sessions(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
+    """Populate each card dict's ``sessions`` key with its *active* bindings.
+
+    Each binding is a ``{"session_id", "pid", "bound_at"}`` dict, oldest first.
+    A binding whose Claude Code process has gone is left out here and pruned
+    on the next write (see :func:`_prune_dead_sessions`), so reads never write.
+    """
+    if not cards:
+        return cards
+    ids = [c["id"] for c in cards]
+    placeholders = ", ".join("?" for _ in ids)
+    rows = conn.execute(
+        f"SELECT card_id, session_id, pid, bound_at FROM card_sessions "
+        f"WHERE card_id IN ({placeholders}) ORDER BY bound_at, session_id",
+        ids,
+    ).fetchall()
+    alive: dict[int, bool] = {}
+    by_card: dict[int, list[dict]] = {}
+    for card_id, session_id, pid, bound_at in rows:
+        if pid not in alive:
+            alive[pid] = pid_alive(pid)
+        if alive[pid]:
+            by_card.setdefault(card_id, []).append(
+                {"session_id": session_id, "pid": pid, "bound_at": bound_at}
+            )
+    for card in cards:
+        card["sessions"] = by_card.get(card["id"], [])
+    return cards
+
+
 def _attach(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
-    """Attach both tags and references to each card dict."""
-    return _attach_references(conn, _attach_tags(conn, cards))
+    """Attach tags, references and active session bindings to each card dict."""
+    return _attach_sessions(conn, _attach_references(conn, _attach_tags(conn, cards)))
 
 
 # --- Queries ---
@@ -182,6 +230,7 @@ def list_cards(
     include_archived: bool = False,
     tag: str | None = None,
     search: str | None = None,
+    session: str | None = None,
 ) -> list[dict]:
     """Return cards ordered priority-then-oldest.
 
@@ -195,6 +244,8 @@ def list_cards(
         tag: Restrict to cards carrying this tag, or ``None`` for no tag filter.
         search: Restrict to cards whose title contains this substring,
             case-insensitively, or ``None`` for no title filter.
+        session: Restrict to cards with an *active* binding to this Claude
+            Code session id, or ``None`` for no session filter.
     """
     where: list[str] = []
     params: list = []
@@ -215,13 +266,22 @@ def list_cards(
     if search:
         where.append("title LIKE ? ESCAPE '\\' COLLATE NOCASE")
         params.append(f"%{_escape_like(search)}%")
+    if session is not None:
+        where.append("id IN (SELECT card_id FROM card_sessions WHERE session_id = ?)")
+        params.append(session)
     clause = (" WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
         f"SELECT {_CARD_COLS} FROM cards{clause} "
         f"ORDER BY {_PRIORITY_ORDER}, created_at, id",
         params,
     ).fetchall()
-    return _attach(conn, [_card_dict(r) for r in rows])
+    cards = _attach(conn, [_card_dict(r) for r in rows])
+    if session is not None:
+        # The SQL filter can't see liveness; drop cards whose binding is dead.
+        cards = [
+            c for c in cards if any(b["session_id"] == session for b in c["sessions"])
+        ]
+    return cards
 
 
 def get_card(conn: sqlite3.Connection, card_id: int) -> dict | None:
@@ -277,13 +337,18 @@ def summary_counts(
 
 
 def next_refined(
-    conn: sqlite3.Connection, project: str, *, claim: bool = False
+    conn: sqlite3.Connection,
+    project: str,
+    *,
+    claim: bool = False,
+    session: SessionRef | None = None,
 ) -> dict | None:
     """Return the top refined card for *project* (priority, then oldest).
 
     With ``claim=True`` the card is moved to ``in_progress`` first (guarded on
-    its status so a concurrent claim can't double-move it). Returns ``None``
-    when the project has no refined cards.
+    its status so a concurrent claim can't double-move it) and, given a
+    *session*, bound to it. Returns ``None`` when the project has no refined
+    cards.
     """
     row = conn.execute(
         f"SELECT {_CARD_COLS} FROM cards "
@@ -294,10 +359,13 @@ def next_refined(
     if row is None:
         return None
     if claim:
-        conn.execute(
+        claimed = conn.execute(
             "UPDATE cards SET status = ?, updated_at = ? WHERE id = ? AND status = ?",
             (IN_PROGRESS, _now(), row[0], REFINED),
-        )
+        ).rowcount
+        if claimed and session is not None:
+            _prune_dead_sessions(conn)
+            _upsert_binding(conn, row[0], session)
         conn.commit()
         row = _fetch_card_row(conn, row[0])
     return _attach(conn, [_card_dict(row)])[0]
@@ -432,6 +500,105 @@ def set_references(
     conn.commit()
 
 
+# --- Sessions ---
+
+
+def _upsert_binding(
+    conn: sqlite3.Connection, card_id: int, session: SessionRef
+) -> None:
+    """Bind *session* to *card_id*, refreshing pid and time if already bound."""
+    conn.execute(
+        "INSERT INTO card_sessions (card_id, session_id, pid, bound_at) "
+        "VALUES (?, ?, ?, ?) ON CONFLICT(card_id, session_id) "
+        "DO UPDATE SET pid = excluded.pid, bound_at = excluded.bound_at",
+        (card_id, session.session_id, session.pid, _now()),
+    )
+
+
+def _release_sessions(conn: sqlite3.Connection, card_id: int) -> None:
+    """Drop every binding on *card_id* (uncommitted; the caller commits)."""
+    conn.execute("DELETE FROM card_sessions WHERE card_id = ?", (card_id,))
+
+
+def _prune_dead_sessions(conn: sqlite3.Connection) -> None:
+    """Delete bindings whose Claude Code process has exited (uncommitted)."""
+    pids = [r[0] for r in conn.execute("SELECT DISTINCT pid FROM card_sessions")]
+    dead = [pid for pid in pids if not pid_alive(pid)]
+    if dead:
+        conn.executemany(
+            "DELETE FROM card_sessions WHERE pid = ?", [(p,) for p in dead]
+        )
+
+
+def bind_session(conn: sqlite3.Connection, card_id: int, session: SessionRef) -> None:
+    """Bind a Claude Code *session* to an In Progress card.
+
+    Idempotent: re-binding the same session refreshes its pid and time. A card
+    may carry several bindings (parallel sessions on one card). Bindings of
+    exited processes are pruned on the way. Raises :class:`CardNotFound` if the
+    id is unknown and :class:`NotInProgress` unless the card is In Progress.
+    """
+    row = _require_row(conn, card_id)
+    if row[5] != IN_PROGRESS:
+        raise NotInProgress(card_id, row[5])
+    _prune_dead_sessions(conn)
+    _upsert_binding(conn, card_id, session)
+    conn.commit()
+
+
+def unbind_session(conn: sqlite3.Connection, card_id: int, session_id: str) -> bool:
+    """Remove *session_id*'s binding from a card.
+
+    Returns ``True`` if a binding was removed, ``False`` if there was none.
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    removed = conn.execute(
+        "DELETE FROM card_sessions WHERE card_id = ? AND session_id = ?",
+        (card_id, session_id),
+    ).rowcount
+    conn.commit()
+    return removed > 0
+
+
+def card_sessions(conn: sqlite3.Connection, card_id: int) -> list[dict]:
+    """Return a card's active session bindings (empty for an unknown id)."""
+    return _attach_sessions(conn, [{"id": card_id}])[0]["sessions"]
+
+
+def refresh_session_pid(conn: sqlite3.Connection, session_id: str, pid: int) -> int:
+    """Point every binding of *session_id* at *pid*; return how many changed.
+
+    For a resumed session: same id, new Claude Code process.
+    """
+    changed = conn.execute(
+        "UPDATE card_sessions SET pid = ? WHERE session_id = ? AND pid != ?",
+        (pid, session_id, pid),
+    ).rowcount
+    conn.commit()
+    return changed
+
+
+def rebind_pid(conn: sqlite3.Connection, pid: int, session_id: str) -> int:
+    """Move every binding held by process *pid* to *session_id*; return the count.
+
+    For a ``/clear``: the process carries on under a new session id, and its
+    cards should follow. A card already bound to *session_id* keeps that one
+    binding (the old one is dropped rather than duplicated).
+    """
+    moved = conn.execute(
+        "UPDATE OR IGNORE card_sessions SET session_id = ? "
+        "WHERE pid = ? AND session_id != ?",
+        (session_id, pid, session_id),
+    ).rowcount
+    conn.execute(
+        "DELETE FROM card_sessions WHERE pid = ? AND session_id != ?",
+        (pid, session_id),
+    )
+    conn.commit()
+    return moved
+
+
 # --- Mutations ---
 
 
@@ -462,11 +629,19 @@ def add_card(
     return card_id
 
 
-def move_card(conn: sqlite3.Connection, card_id: int, new_status: str) -> None:
-    """Move a card to *new_status*, maintaining the done-invariant.
+def move_card(
+    conn: sqlite3.Connection,
+    card_id: int,
+    new_status: str,
+    *,
+    session: SessionRef | None = None,
+) -> None:
+    """Move a card to *new_status*, maintaining the done- and session-invariants.
 
     Entering ``done`` stamps ``completed_at``; leaving it clears the stamp.
-    Raises :class:`CardNotFound` if the id is unknown.
+    Moving anywhere but ``in_progress`` releases the card's session bindings;
+    moving to ``in_progress`` with a *session* binds it. Raises
+    :class:`CardNotFound` if the id is unknown.
     """
     row = _require_row(conn, card_id)
     old_status = row[5]
@@ -488,6 +663,11 @@ def move_card(conn: sqlite3.Connection, card_id: int, new_status: str) -> None:
             "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
             (new_status, now, card_id),
         )
+    if new_status != IN_PROGRESS:
+        _release_sessions(conn, card_id)
+    elif session is not None:
+        _prune_dead_sessions(conn)
+        _upsert_binding(conn, card_id, session)
     conn.commit()
 
 
@@ -500,7 +680,8 @@ def refine_card(
 ) -> None:
     """Move a card to ``refined``, optionally setting description/acceptance.
 
-    Raises :class:`CardNotFound` if the id is unknown.
+    Releases the card's session bindings. Raises :class:`CardNotFound` if the
+    id is unknown.
     """
     fields: dict[str, str] = {"status": REFINED, "updated_at": _now()}
     if description is not None:
@@ -510,6 +691,7 @@ def refine_card(
     _require_row(conn, card_id)
     cols = ", ".join(f"{key} = ?" for key in fields)
     conn.execute(f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), card_id))
+    _release_sessions(conn, card_id)
     conn.commit()
 
 
@@ -518,7 +700,8 @@ def complete_card(
 ) -> None:
     """Move a card to ``done`` with an optional completion summary.
 
-    Raises :class:`CardNotFound` if the id is unknown.
+    Releases the card's session bindings. Raises :class:`CardNotFound` if the
+    id is unknown.
     """
     _require_row(conn, card_id)
     now = _now()
@@ -527,6 +710,7 @@ def complete_card(
         "updated_at = ? WHERE id = ?",
         (DONE, summary or None, now, now, card_id),
     )
+    _release_sessions(conn, card_id)
     conn.commit()
 
 
@@ -576,13 +760,15 @@ def unblock_card(conn: sqlite3.Connection, card_id: int) -> None:
 def archive_card(conn: sqlite3.Connection, card_id: int) -> None:
     """Archive a card (hide it from default views).
 
-    Raises :class:`CardNotFound` if the id is unknown.
+    Releases the card's session bindings. Raises :class:`CardNotFound` if the
+    id is unknown.
     """
     _require_row(conn, card_id)
     conn.execute(
         "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
         (ARCHIVED, _now(), card_id),
     )
+    _release_sessions(conn, card_id)
     conn.commit()
 
 

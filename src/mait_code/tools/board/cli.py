@@ -5,6 +5,10 @@ A single cross-project kanban board stored in ``board.db``. Cards carry a
 in_progress → in_review → done, with a hidden ``archived`` side-state. ``blocked`` is a tag
 carried in place (via ``block``/``unblock``), not a column.
 
+Run from inside a Claude Code session, ``move N in_progress`` and
+``next --claim`` also bind the card to that session (``bind``/``unbind`` do it
+explicitly), so parallel sessions can each tell their own card from the rest.
+
 The handlers here are thin: argument parsing, the not-found/exit helper, and
 presentation (text vs ``--json``). Every query and mutation — including the
 done-invariant — lives in :mod:`mait_code.tools.board.service`, the shared core
@@ -30,6 +34,12 @@ from mait_code.tools.board.columns import (
     label,
 )
 from mait_code.tools.board.db import connection, get_project
+from mait_code.tools.board.sessions import (
+    PID_ENV,
+    SESSION_ENV,
+    SessionRef,
+    current_session,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +49,18 @@ AUTHORS = ("me", "claude")
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _fail(message: str) -> NoReturn:
+    """Print an error to stderr and exit(1)."""
+    logger.warning("%s", message)
+    print(f"Error: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def _session_label(binding: dict) -> str:
+    """A compact ``<id prefix> (pid N)`` label for one session binding."""
+    return f"{binding['session_id'][:8]} (pid {binding['pid']})"
 
 
 def _not_found(card_id: int) -> NoReturn:
@@ -97,6 +119,14 @@ def cmd_add(args):
 def cmd_list(args):
     project = None if args.all else get_project()
     statuses = [args.status] if args.status else None
+    session = args.session
+    if args.mine:
+        current = current_session()
+        if current is None:
+            _fail(
+                f"--mine needs ${SESSION_ENV} and ${PID_ENV} (run inside Claude Code)."
+            )
+        session = current.session_id
     with connection() as conn:
         cards = service.list_cards(
             conn,
@@ -104,6 +134,7 @@ def cmd_list(args):
             statuses=statuses,
             include_archived=args.archived,
             search=args.search,
+            session=session,
         )
 
     if args.json:
@@ -152,6 +183,9 @@ def cmd_show(args):
         print(f"  created by: {card['created_by']}")
     if card["tags"]:
         print(f"  tags: {', '.join(card['tags'])}")
+    if card["sessions"]:
+        labels = ", ".join(_session_label(b) for b in card["sessions"])
+        print(f"  sessions: {labels}")
     if card["description"]:
         print(f"\nDescription:\n{card['description']}")
     if card["acceptance_criteria"]:
@@ -260,7 +294,7 @@ def cmd_move(args):
     new_status = args.status  # argparse choices=ALL_STATUSES guarantees validity
     with connection() as conn:
         try:
-            service.move_card(conn, args.id, new_status)
+            service.move_card(conn, args.id, new_status, session=current_session())
         except service.CardNotFound:
             _not_found(args.id)
         _print_card(conn, args, args.id, f"Card #{args.id} → {label(new_status)}.")
@@ -289,7 +323,12 @@ def cmd_next(args):
     """Print the next refined card; with --claim, move it to in_progress."""
     project = args.project or get_project()
     with connection() as conn:
-        card = service.next_refined(conn, project, claim=args.claim)
+        card = service.next_refined(
+            conn,
+            project,
+            claim=args.claim,
+            session=current_session() if args.claim else None,
+        )
 
     if card is None:
         if args.json:
@@ -439,6 +478,56 @@ def cmd_archive(args):
         _print_card(conn, args, args.id, f"Card #{args.id} → {label(ARCHIVED)}.")
 
 
+def cmd_bind(args):
+    """Bind a Claude Code session (default: the current one) to an In Progress card."""
+    current = current_session()
+    session_id = args.session or (current.session_id if current else None)
+    pid = args.pid if args.pid is not None else (current.pid if current else None)
+    if not session_id or pid is None:
+        _fail(
+            f"bind needs a session id and a pid: run inside Claude Code "
+            f"(${SESSION_ENV}, ${PID_ENV}) or pass --session and --pid."
+        )
+    if pid <= 0:
+        _fail("--pid must be a positive integer.")
+
+    with connection() as conn:
+        try:
+            service.bind_session(conn, args.id, SessionRef(session_id, pid))
+        except service.CardNotFound:
+            _not_found(args.id)
+        except service.NotInProgress as exc:
+            _fail(
+                f"card #{args.id} is {label(exc.status)}; only In Progress cards bind."
+            )
+        _print_card(
+            conn, args, args.id, f"Card #{args.id} bound to session {session_id[:8]}."
+        )
+
+
+def cmd_unbind(args):
+    """Remove a session's binding (default: the current one) from a card."""
+    current = current_session()
+    session_id = args.session or (current.session_id if current else None)
+    if not session_id:
+        _fail(
+            f"unbind needs a session id: run inside Claude Code (${SESSION_ENV}) "
+            f"or pass --session."
+        )
+
+    with connection() as conn:
+        try:
+            removed = service.unbind_session(conn, args.id, session_id)
+        except service.CardNotFound:
+            _not_found(args.id)
+        message = (
+            f"Card #{args.id} unbound from session {session_id[:8]}."
+            if removed
+            else f"Card #{args.id} was not bound to session {session_id[:8]}."
+        )
+        _print_card(conn, args, args.id, message)
+
+
 def cmd_summary(args):
     project = args.project or (None if args.all else get_project())
     with connection() as conn:
@@ -482,6 +571,13 @@ def main():
         "-q",
         metavar="TEXT",
         help="Filter by title substring (case-insensitive)",
+    )
+    p_list_session = p_list.add_mutually_exclusive_group()
+    p_list_session.add_argument(
+        "--session", metavar="ID", help="Only cards bound to this Claude Code session"
+    )
+    p_list_session.add_argument(
+        "--mine", action="store_true", help="Only cards bound to the current session"
     )
     p_list.add_argument("--json", action="store_true", help="Emit JSON")
     p_list.set_defaults(func=cmd_list)
@@ -603,6 +699,27 @@ def main():
     p_ref_list.add_argument("id", type=int, help="Card ID")
     p_ref_list.add_argument("--json", action="store_true", help="Emit JSON")
     p_ref_list.set_defaults(func=cmd_ref_list)
+
+    p_bind = sub.add_parser(
+        "bind", help="Bind a Claude Code session to an In Progress card"
+    )
+    p_bind.add_argument("id", type=int, help="Card ID")
+    p_bind.add_argument(
+        "--session", metavar="ID", help=f"Session id (default: ${SESSION_ENV})"
+    )
+    p_bind.add_argument(
+        "--pid", type=int, help=f"Claude Code process id (default: ${PID_ENV})"
+    )
+    p_bind.add_argument("--json", action="store_true", help="Emit the card as JSON")
+    p_bind.set_defaults(func=cmd_bind)
+
+    p_unbind = sub.add_parser("unbind", help="Remove a session's binding from a card")
+    p_unbind.add_argument("id", type=int, help="Card ID")
+    p_unbind.add_argument(
+        "--session", metavar="ID", help=f"Session id (default: ${SESSION_ENV})"
+    )
+    p_unbind.add_argument("--json", action="store_true", help="Emit the card as JSON")
+    p_unbind.set_defaults(func=cmd_unbind)
 
     p_archive = sub.add_parser("archive", help="Archive a card (hide it)")
     p_archive.add_argument("id", type=int, help="Card ID")

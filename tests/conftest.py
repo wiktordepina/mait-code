@@ -23,7 +23,9 @@ def _isolate_mait_settings(
     a local "red" that's actually green on a clean CI runner. Clearing them up front
     pins every setting to its default regardless of the dev's shell. Tests that need
     a specific value set it via their own ``monkeypatch``, which runs after this
-    autouse setup, so clear-all-first is safe.
+    autouse setup, so clear-all-first is safe. Claude Code's own session variables
+    (``CLAUDE_CODE_SESSION_ID``, ``CLAUDE_PID``) are cleared too, so a suite run
+    from inside a session never binds cards to it.
 
     Three things are then pointed at throwaway dirs under ``tmp_path``:
 
@@ -58,6 +60,10 @@ def _isolate_mait_settings(
     for key in list(os.environ):
         if key.startswith("MAIT_CODE_"):
             monkeypatch.delenv(key, raising=False)
+    # Running the suite from inside a Claude Code session would otherwise bind
+    # every card a CLI test moves into In Progress to that live session.
+    for key in ("CLAUDE_CODE_SESSION_ID", "CLAUDE_PID"):
+        monkeypatch.delenv(key, raising=False)
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
