@@ -10,6 +10,31 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.77.0] — 2026-10-05
+
+### Added
+
+- **A communication style file.** Response shaping now has its own identity
+  file, `communication_style.md`, which sits beside the soul document and user
+  context and loads into every session. Install creates it from
+  `templates/communication_styles/default.md` and never overwrites it, so it's
+  yours to edit. Existing installs get it on their next `mait-code install`.
+- **Attention markers.** The default style uses a small set of inline markers
+  (❓ question, ⛔ blocker, ❗ issue, ⚠️ warning, 💭 assumption, ✅ verified
+  done), so the parts of a reply that need you are easy to spot when you're
+  switching between sessions. It adds four shaping rules: number steps only
+  when the order matters, raise side issues once at the end, close multi-step
+  turns with a one-line progress note, and state what now works in concrete
+  terms. Markers never appear in commits, PRs, docs, code or subagent reports.
+
+### Changed
+
+- **The soul document no longer covers communication style.** Its
+  Communication Style section has moved into the new file. If you
+  personalised that section, move your edits across.
+- **The home hub's "What I see when I wake up" pane** lists the communication
+  style and counts its tokens.
+
 ## [0.76.0] — 2026-10-05
 
 ### Added
@@ -2399,7 +2424,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.76.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.0...HEAD
+[0.77.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.0
 [0.76.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.76.0
 [0.75.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.75.0
 [0.74.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.74.0
