@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **Side-effect markers.** Any reply that changed something ends with a short
+  block listing what changed: 📝 for files written, 🔄 for anything else with
+  a lasting effect (moves, deletions, removed lines, commits, pushes, board
+  moves, memory writes). Changes outside the repository always get their own
+  line, since git won't show them. These were meant to ship in 0.77.0 but
+  missed the merge. Existing installs can copy the new section from
+  `templates/communication_styles/default.md` into their
+  `communication_style.md`.
+
 ## [0.77.0] — 2026-10-05
 
 ### Added
@@ -26,11 +37,6 @@ don't change the public surface. Everything is still in flux.
   when the order matters, raise side issues once at the end, close multi-step
   turns with a one-line progress note, and state what now works in concrete
   terms. Markers never appear in commits, PRs, docs, code or subagent reports.
-- **Side-effect markers.** Any reply that changed something ends with a short
-  block listing what changed: 📝 for files written, ⚡ for anything else with
-  a lasting effect (moves, deletions, removed lines, commits, pushes, board
-  moves, memory writes). Changes outside the repository always get their own
-  line, since git won't show them.
 
 ### Changed
 
