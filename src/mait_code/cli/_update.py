@@ -356,8 +356,11 @@ def update(
 
     # 4. Identity templates: create any the install predates (e.g.
     #    communication_style.md, new in 0.77.0) and refresh untouched old
-    #    copies. Edited files are never overwritten.
+    #    copies. Edited files are never overwritten. This runs the code that
+    #    was loaded when the command started, so a template change shipped in
+    #    the release being installed takes effect on the *next* update.
     ddir = (data_dir if data_dir is not None else default_data_dir()).resolve()
+    ddir.mkdir(parents=True, exist_ok=True)
     templates_copied, templates_upgraded = sync_identity_templates(source_dir, ddir)
 
     # 5. Bump the install record, preserving the original first-install date.

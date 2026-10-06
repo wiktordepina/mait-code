@@ -198,7 +198,8 @@ It fetches, advances the source clone, and reinstalls only if `HEAD` actually
 moved — then refreshes symlinks, merges settings changes, and brings the identity
 templates up to date the same way install does: missing files are created and
 untouched copies of older templates are replaced, but edited files are left
-alone. Useful flags:
+alone. That step runs the code `update` started with, so a template shipped in
+the release being installed lands on the following `update`. Useful flags:
 `--ref` to advance to a specific branch or tag, `--no-pull` to reinstall from the
 clone as-is, and `--force` to reinstall even when nothing moved.
 

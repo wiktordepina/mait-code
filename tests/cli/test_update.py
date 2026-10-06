@@ -525,6 +525,18 @@ class TestUpdateIdentityTemplates:
         assert summary.templates_copied == []
         assert summary.templates_upgraded == []
 
+    def test_creates_missing_data_dir(
+        self, fake_home: Path, fake_source: Path, tmp_path: Path
+    ) -> None:
+        _install_first(fake_source)
+        moved = tmp_path / "moved-data"
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(runner=git.run, capture=git.capture, data_dir=moved)
+
+        assert (moved / "communication_style.md").is_file()
+        assert "communication_style.md" in summary.templates_copied
+
     def test_cli_reports_copied_template(
         self, fake_home: Path, fake_source: Path, monkeypatch
     ) -> None:
@@ -541,9 +553,8 @@ class TestUpdateIdentityTemplates:
 
 
 def test_superseded_digests_exclude_current_template() -> None:
-    """A digest of the *current* template in the superseded set would be
-    harmless but signals a mis-recorded entry; the real template must not
-    be listed as an old version of itself."""
+    """The current template must not be listed as an old version of itself,
+    or every update would rewrite the file and report it as updated."""
     import hashlib
 
     from mait_code.cli._install import _IDENTITY_TEMPLATES, _SUPERSEDED_TEMPLATES
