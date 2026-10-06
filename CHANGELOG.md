@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.77.2] — 2026-10-06
+
 ### Fixed
 
 - **`mait-code update` now brings identity files up to date.** Before, only
@@ -2449,7 +2451,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.2...HEAD
+[0.77.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.2
 [0.77.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.1
 [0.77.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.0
 [0.76.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.76.0
