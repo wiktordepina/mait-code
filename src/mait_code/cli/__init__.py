@@ -295,6 +295,12 @@ def _render_install_summary(summary: InstallSummary) -> None:
             markup=False,
             soft_wrap=True,
         )
+    if summary.templates_upgraded:
+        console.print(
+            f"  Templates updated: {', '.join(summary.templates_upgraded)}",
+            markup=False,
+            soft_wrap=True,
+        )
     if summary.memory_md_created:
         console.print("  Created MEMORY.md stub")
     if summary.claude_md.backed_up:
@@ -395,6 +401,18 @@ def _render_update_summary(summary: UpdateSummary) -> None:
         f"  Symlinks refreshed: {len(summary.skills.created) + len(summary.skills.updated)} new, "
         f"{len(summary.skills.already_linked)} unchanged"
     )
+    if summary.templates_copied:
+        console.print(
+            f"  Templates copied: {', '.join(summary.templates_copied)}",
+            markup=False,
+            soft_wrap=True,
+        )
+    if summary.templates_upgraded:
+        console.print(
+            f"  Templates updated: {', '.join(summary.templates_upgraded)}",
+            markup=False,
+            soft_wrap=True,
+        )
     console.print(f"  Settings: {summary.settings_path}", markup=False, soft_wrap=True)
 
 

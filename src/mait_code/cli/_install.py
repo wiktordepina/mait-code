@@ -14,6 +14,7 @@ already installed via ``uv tool install`` &mdash; that's the bash shim's
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 from pathlib import Path
 
@@ -40,6 +41,7 @@ __all__ = [
     "EMBEDDING_PROVIDERS",
     "InstallSummary",
     "install",
+    "sync_identity_templates",
     "verify_source",
 ]
 
@@ -53,6 +55,24 @@ _IDENTITY_TEMPLATES = (
 )
 """Identity templates as ``(path under templates/, name in the data dir)``."""
 
+_SUPERSEDED_TEMPLATES: dict[str, frozenset[str]] = {
+    "communication_style.md": frozenset(
+        {
+            # 0.77.0 — attention markers only, no side-effect markers.
+            "661b40da6b7d3977a1650e635043d909060a937d213f442062fb6a5c0aa38d50",
+            # Side-effect markers with the earlier state-change glyphs.
+            "e79ed2302a987317de0b9c98e4b2efe09452169935b5c5967d374049f3892885",
+            "654e3f1e478d3194a341f0aeff3c32dcd526bc0f287932885541538b0413f566",
+        }
+    ),
+}
+"""SHA-256 digests of earlier shipped versions of each identity template.
+
+A data-dir file whose bytes match one of these is an untouched copy of an
+old template, so it is safe to replace with the current one. When a
+template changes, add the digest of the version being replaced here.
+"""
+
 
 class InstallSummary:
     """What :func:`install` produces &mdash; used by the CLI to render output."""
@@ -65,6 +85,7 @@ class InstallSummary:
         skills: SymlinkResult,
         agents: SymlinkResult,
         templates_copied: list[str],
+        templates_upgraded: list[str],
         memory_md_created: bool,
         settings_path: Path,
     ) -> None:
@@ -73,6 +94,7 @@ class InstallSummary:
         self.skills = skills
         self.agents = agents
         self.templates_copied = templates_copied
+        self.templates_upgraded = templates_upgraded
         self.memory_md_created = memory_md_created
         self.settings_path = settings_path
 
@@ -83,6 +105,42 @@ MEMORY_MD_STUB = """# Memory
 <!-- Updated by the reflection system and manual editing. -->
 <!-- Keep under ~150 lines for context budget. -->
 """
+
+
+def sync_identity_templates(
+    source_dir: Path, ddir: Path
+) -> tuple[list[str], list[str]]:
+    """Bring the identity files in the data dir up to the shipped templates.
+
+    A missing file is copied from its template. An existing file is
+    replaced only when it is byte-identical to an earlier shipped version
+    (see ``_SUPERSEDED_TEMPLATES``); anything the user has edited is left
+    alone.
+
+    Args:
+        source_dir: The mait-code source tree holding ``templates/``.
+        ddir: The mait-code data directory.
+
+    Returns:
+        ``(copied, upgraded)`` &mdash; the data-dir names of files created
+        and of untouched old copies replaced with the current template.
+    """
+    copied: list[str] = []
+    upgraded: list[str] = []
+    for template, name in _IDENTITY_TEMPLATES:
+        src = source_dir / "templates" / template
+        dst = ddir / name
+        if not src.is_file():
+            continue
+        if not dst.exists():
+            shutil.copy(src, dst)
+            copied.append(name)
+            continue
+        digest = hashlib.sha256(dst.read_bytes()).hexdigest()
+        if digest in _SUPERSEDED_TEMPLATES.get(name, frozenset()):
+            shutil.copy(src, dst)
+            upgraded.append(name)
+    return copied, upgraded
 
 
 def verify_source(source_dir: Path) -> None:
@@ -152,14 +210,8 @@ def install(
     (ddir / "memory" / "observations").mkdir(parents=True, exist_ok=True)
     (ddir / "memory" / "reflections").mkdir(parents=True, exist_ok=True)
 
-    # 2. Copy templates — never overwrite.
-    templates_copied: list[str] = []
-    for template, name in _IDENTITY_TEMPLATES:
-        src = source_dir / "templates" / template
-        dst = ddir / name
-        if src.is_file() and not dst.exists():
-            shutil.copy(src, dst)
-            templates_copied.append(name)
+    # 2. Copy templates — never overwrite an edited one.
+    templates_copied, templates_upgraded = sync_identity_templates(source_dir, ddir)
 
     # 3. MEMORY.md stub if missing.
     memory_md = ddir / "memory" / "MEMORY.md"
@@ -199,6 +251,7 @@ def install(
         skills=skills_result,
         agents=agents_result,
         templates_copied=templates_copied,
+        templates_upgraded=templates_upgraded,
         memory_md_created=memory_md_created,
         settings_path=settings_path,
     )

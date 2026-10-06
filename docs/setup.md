@@ -67,7 +67,7 @@ mait-code install --from "$PWD" --embedding-provider local
 
 1. Validates the source path is a mait-code clone.
 2. Creates `~/.claude/mait-code-data/` with memory subdirectories (`memory/observations/`, `memory/reflections/`).
-3. Copies identity templates (`soul_document.md`, `user_context.md`, `communication_style.md`) — never overwrites existing files.
+3. Copies identity templates (`soul_document.md`, `user_context.md`, `communication_style.md`) — never overwrites a file you have edited. An untouched copy of an older template is replaced with the current one.
 4. Bootstraps `memory/MEMORY.md` with a placeholder if missing.
 5. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file to `CLAUDE.md.backup`).
 6. Symlinks every `skills/*` directory into `~/.claude/skills/`.
@@ -195,7 +195,11 @@ mait-code update
 ```
 
 It fetches, advances the source clone, and reinstalls only if `HEAD` actually
-moved — then refreshes symlinks and merges settings changes. Useful flags:
+moved — then refreshes symlinks, merges settings changes, and brings the identity
+templates up to date the same way install does: missing files are created and
+untouched copies of older templates are replaced, but edited files are left
+alone. That step runs the code `update` started with, so a template shipped in
+the release being installed lands on the following `update`. Useful flags:
 `--ref` to advance to a specific branch or tag, `--no-pull` to reinstall from the
 clone as-is, and `--force` to reinstall even when nothing moved.
 

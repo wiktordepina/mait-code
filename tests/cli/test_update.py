@@ -464,3 +464,102 @@ class TestUpdateCommand:
         # list repr, and never a traceback.
         assert "failed (exit 1)" in result.output
         assert "Traceback" not in result.output
+
+
+class TestUpdateIdentityTemplates:
+    """`update` creates identity files an older install predates and refreshes
+    untouched old copies, but never overwrites one the user has edited."""
+
+    def test_creates_missing_communication_style(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        style = fake_home / ".claude" / "mait-code-data" / "communication_style.md"
+        style.unlink()
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(runner=git.run, capture=git.capture)
+
+        assert (
+            style.read_text()
+            == (
+                fake_source / "templates" / "communication_styles" / "default.md"
+            ).read_text()
+        )
+        assert summary.templates_copied == ["communication_style.md"]
+        assert summary.templates_upgraded == []
+
+    def test_upgrades_untouched_old_template(
+        self, fake_home: Path, fake_source: Path, monkeypatch
+    ) -> None:
+        import hashlib
+
+        import mait_code.cli._install as _install
+
+        _install_first(fake_source)
+        style = fake_home / ".claude" / "mait-code-data" / "communication_style.md"
+        old = b"# the 0.77.0 style\n"
+        style.write_bytes(old)
+        monkeypatch.setattr(
+            _install,
+            "_SUPERSEDED_TEMPLATES",
+            {"communication_style.md": frozenset({hashlib.sha256(old).hexdigest()})},
+        )
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(runner=git.run, capture=git.capture)
+
+        assert style.read_bytes() != old
+        assert summary.templates_upgraded == ["communication_style.md"]
+        assert summary.templates_copied == []
+
+    def test_leaves_edited_file_alone(self, fake_home: Path, fake_source: Path) -> None:
+        _install_first(fake_source)
+        style = fake_home / ".claude" / "mait-code-data" / "communication_style.md"
+        style.write_text("# my own style\n")
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(runner=git.run, capture=git.capture)
+
+        assert style.read_text() == "# my own style\n"
+        assert summary.templates_copied == []
+        assert summary.templates_upgraded == []
+
+    def test_creates_missing_data_dir(
+        self, fake_home: Path, fake_source: Path, tmp_path: Path
+    ) -> None:
+        _install_first(fake_source)
+        moved = tmp_path / "moved-data"
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(runner=git.run, capture=git.capture, data_dir=moved)
+
+        assert (moved / "communication_style.md").is_file()
+        assert "communication_style.md" in summary.templates_copied
+
+    def test_cli_reports_copied_template(
+        self, fake_home: Path, fake_source: Path, monkeypatch
+    ) -> None:
+        _install_first(fake_source)
+        (fake_home / ".claude" / "mait-code-data" / "communication_style.md").unlink()
+        git = _FakeGit(branch="main", tags=[])
+        monkeypatch.setattr("mait_code.cli._update.default_runner", git.run)
+        monkeypatch.setattr("mait_code.cli._update.default_capture", git.capture)
+
+        result = runner.invoke(app, ["update", "--no-pull"])
+
+        assert result.exit_code == 0
+        assert "Templates copied: communication_style.md" in result.output
+
+
+def test_superseded_digests_exclude_current_template() -> None:
+    """The current template must not be listed as an old version of itself,
+    or every update would rewrite the file and report it as updated."""
+    import hashlib
+
+    from mait_code.cli._install import _IDENTITY_TEMPLATES, _SUPERSEDED_TEMPLATES
+
+    repo = Path(__file__).resolve().parents[2]
+    for template, name in _IDENTITY_TEMPLATES:
+        current = hashlib.sha256((repo / "templates" / template).read_bytes())
+        assert current.hexdigest() not in _SUPERSEDED_TEMPLATES.get(name, frozenset())

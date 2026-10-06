@@ -10,6 +10,25 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.77.2] — 2026-10-06
+
+### Fixed
+
+- **`mait-code update` now brings identity files up to date.** Before, only
+  `install` created them, so an install updated past 0.77.0 never got
+  `communication_style.md`, and the attention and side-effect markers never
+  showed up. `update` (and `install`) now create any missing identity file,
+  and replace one that is still an untouched copy of an older shipped
+  template, which picks up the 0.77.1 side-effect markers. A file you have
+  edited is never overwritten. The update that installs this release still
+  runs the old code, so **run `mait-code update` twice** — the second run is
+  quick and does the template step.
+
+### Security
+
+- **`fsspec` bumped to 2026.9.0** (CVE-2026-104851). It comes in through the
+  local embeddings stack (`fastembed` → `huggingface-hub`).
+
 ## [0.77.1] — 2026-10-05
 
 ### Added
@@ -2437,7 +2456,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.2...HEAD
+[0.77.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.2
 [0.77.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.1
 [0.77.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.0
 [0.76.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.76.0
