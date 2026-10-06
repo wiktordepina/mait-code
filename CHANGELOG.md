@@ -10,6 +10,16 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`mait-code update` now brings identity files up to date.** Before, only
+  `install` created them, so an install updated past 0.77.0 never got
+  `communication_style.md`, and the attention and side-effect markers never
+  showed up. `update` (and `install`) now create any missing identity file,
+  and replace one that is still an untouched copy of an older shipped
+  template, which picks up the 0.77.1 side-effect markers. A file you have
+  edited is never overwritten.
+
 ## [0.77.1] — 2026-10-05
 
 ### Added

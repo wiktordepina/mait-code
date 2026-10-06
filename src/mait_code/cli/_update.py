@@ -49,8 +49,13 @@ import subprocess
 from pathlib import Path
 from typing import Protocol
 
-from mait_code.cli._install import EMBEDDING_PROVIDERS, verify_source
+from mait_code.cli._install import (
+    EMBEDDING_PROVIDERS,
+    sync_identity_templates,
+    verify_source,
+)
 from mait_code.cli._paths import claude_dir as default_claude_dir
+from mait_code.cli._paths import data_dir as default_data_dir
 from mait_code.console import console
 from mait_code.cli._record import InstallRecord, read_record, write_record
 from mait_code.cli._settings import (
@@ -170,6 +175,8 @@ class UpdateSummary:
         claude_md: SymlinkResult,
         skills: SymlinkResult,
         agents: SymlinkResult,
+        templates_copied: list[str],
+        templates_upgraded: list[str],
         settings_path: Path,
     ) -> None:
         self.record = record
@@ -180,6 +187,8 @@ class UpdateSummary:
         self.claude_md = claude_md
         self.skills = skills
         self.agents = agents
+        self.templates_copied = templates_copied
+        self.templates_upgraded = templates_upgraded
         self.settings_path = settings_path
 
 
@@ -189,6 +198,7 @@ def update(
     ref: str | None = None,
     force: bool = False,
     claude_dir: Path | None = None,
+    data_dir: Path | None = None,
     runner: Runner | None = None,
     capture: Capture | None = None,
 ) -> UpdateSummary:
@@ -205,6 +215,8 @@ def update(
             dev checkout, where the commit is unchanged but files differ.
         claude_dir: Override the Claude Code config dir (defaults to
             :func:`~mait_code.cli._paths.claude_dir`).
+        data_dir: Override the mait-code data dir (defaults to
+            :func:`~mait_code.cli._paths.data_dir`).
         runner: Mutating subprocess runner for tests to stub out.
         capture: Read-only command runner for tests to stub out.
 
@@ -342,7 +354,13 @@ def update(
     merged = sync_mod_dir(merged, mod_dir(source_dir) if mods_enabled() else None)
     write_claude_settings(settings_path, merged)
 
-    # 4. Bump the install record, preserving the original first-install date.
+    # 4. Identity templates: create any the install predates (e.g.
+    #    communication_style.md, new in 0.77.0) and refresh untouched old
+    #    copies. Edited files are never overwritten.
+    ddir = (data_dir if data_dir is not None else default_data_dir()).resolve()
+    templates_copied, templates_upgraded = sync_identity_templates(source_dir, ddir)
+
+    # 5. Bump the install record, preserving the original first-install date.
     refreshed = InstallRecord.new(
         source_dir=source_dir,
         first_installed_at=record.first_installed_at,
@@ -358,5 +376,7 @@ def update(
         claude_md=claude_md_result,
         skills=skills_result,
         agents=agents_result,
+        templates_copied=templates_copied,
+        templates_upgraded=templates_upgraded,
         settings_path=settings_path,
     )
