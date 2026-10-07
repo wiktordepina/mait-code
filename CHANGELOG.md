@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **The companion mod's status bar now has two rows.** The top row is the work,
+  as before, plus the Jira keys of the cards bound to the session. Click a key to
+  open the issue in your browser. The bottom row shows the project, the git
+  branch, the model, the context window, and the five-hour and seven-day
+  rate-limit windows. Context and the windows are coloured green, amber or red,
+  and the context glyph fills as the window does. They now update whenever
+  Claude Code reports new figures, not only after a turn.
+- **`jira-base-url` setting.** The Jira site that bare keys such as `PLAT-4821`
+  link to. Full `https://` URLs in a card's `JIRA` reference are linked as they
+  stand. `mc-tool-board summary --json --session` now includes each bound
+  card's Jira keys and links.
+
 ## [0.77.2] — 2026-10-06
 
 ### Fixed

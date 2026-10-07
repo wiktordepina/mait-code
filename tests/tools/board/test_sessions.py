@@ -507,10 +507,39 @@ def test_summary_session_payload(monkeypatch, capsys):
         inbox_service.add_item(conn, body="a thought")
 
     data = _summary(monkeypatch, capsys, "--session", LIVE.session_id)
-    assert data["bound"] == [{"id": mine, "title": "mine"}]
+    assert data["bound"] == [{"id": mine, "title": "mine", "jira": []}]
     assert data["in_review"] == [{"id": review, "title": "waiting"}]
     assert data["inbox"] == 1
     assert data["counts"][IN_PROGRESS] == 2
+
+
+def test_summary_session_jira_links(monkeypatch, capsys):
+    monkeypatch.setenv("MAIT_CODE_JIRA_BASE_URL", "https://acme.atlassian.net/")
+    with connection() as conn:
+        cid = _card(conn, "linked")
+        service.add_reference(conn, cid, "JIRA", "PLAT-1")
+        service.add_reference(conn, cid, "jira", "https://other.example/browse/OPS-22")
+        service.add_reference(conn, cid, "Jira", "not a key")
+        service.add_reference(conn, cid, "PR", "https://github.com/x/y/pull/3")
+        service.bind_session(conn, cid, LIVE)
+
+    [card] = _summary(monkeypatch, capsys, "--session", LIVE.session_id)["bound"]
+    assert card["jira"] == [
+        {"key": "PLAT-1", "url": "https://acme.atlassian.net/browse/PLAT-1"},
+        {"key": "OPS-22", "url": "https://other.example/browse/OPS-22"},
+    ]
+
+
+@pytest.mark.parametrize("base", ["", "http://insecure.example"])
+def test_summary_session_jira_bare_key_unlinked_without_base(monkeypatch, capsys, base):
+    monkeypatch.setenv("MAIT_CODE_JIRA_BASE_URL", base)
+    with connection() as conn:
+        cid = _card(conn, "linked")
+        service.add_reference(conn, cid, "JIRA", "PLAT-1")
+        service.bind_session(conn, cid, LIVE)
+
+    [card] = _summary(monkeypatch, capsys, "--session", LIVE.session_id)["bound"]
+    assert card["jira"] == [{"key": "PLAT-1", "url": None}]
 
 
 def test_summary_session_bound_spans_projects(monkeypatch, capsys):

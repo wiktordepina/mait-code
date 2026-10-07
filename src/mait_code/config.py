@@ -245,6 +245,12 @@ def _status_bar_style(value: str) -> str | None:
     )
 
 
+def _jira_base_url(value: str) -> str | None:
+    if value == "" or value.startswith("https://"):
+        return None
+    return f"must be empty or an https:// URL, got {value!r}"
+
+
 def _bridge_type(value: str) -> str | None:
     """Validate the channel selector against the registered channels.
 
@@ -323,6 +329,13 @@ SETTINGS: tuple[Setting, ...] = (
         help="How the mod's status bar draws: 'blocks' or 'slim'.",
         validate=_status_bar_style,
         choices=_STATUS_BAR_STYLES,
+    ),
+    Setting(
+        "jira-base-url",
+        "MAIT_CODE_JIRA_BASE_URL",
+        "",
+        help="Jira site the status bar links card keys to (https://acme.atlassian.net).",
+        validate=_jira_base_url,
     ),
     Setting(
         "embedding-provider",
