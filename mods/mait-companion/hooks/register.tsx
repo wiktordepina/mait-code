@@ -1,28 +1,31 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { BarData, BarStyle, Card, Palette } from '../types'
+import type { BarStyle, BoundCard, Card, JiraRef, Palette, SessionData, WorkData } from '../types'
 
 // A thin client of the mc-tool-* and mait-code CLIs: every capability and
 // every colour lives in mait-code; this mod only calls them and draws. It rides
 // an early-access API, so it fails closed: a missing CLI, output it can't read
-// or a host call that throws leaves the bar empty, never the session broken.
+// or a host call that throws leaves its segment out, never the session broken.
 
 const ROLES = [
   'primary', 'secondary', 'accent', 'foreground', 'background',
   'surface', 'panel', 'success', 'warning', 'error',
 ] as const
 const STYLES: readonly BarStyle[] = ['blocks', 'slim']
-const EMPTY: BarData = { bound: [], inReview: [], inbox: 0 }
+const NO_WORK: WorkData = { bound: [], inReview: [], inbox: 0 }
 
-const data = atom({ plugin: 'mait-companion', key: 'data' } as const, EMPTY)
+const work = atom({ plugin: 'mait-companion', key: 'work' } as const, NO_WORK)
+const session = atom({ plugin: 'mait-companion', key: 'session' } as const, {})
 const palette = atom({ plugin: 'mait-companion', key: 'palette' } as const, null)
 const style = atom({ plugin: 'mait-companion', key: 'style' } as const, 'blocks')
 
-/** Run a CLI; its trimmed stdout, or undefined on any failure. */
-async function run($: EngineInterface, argv: string[]): Promise<string | undefined> {
+// --- reading ------------------------------------------------------------------
+
+/** Run a command; its trimmed stdout, or undefined on any failure. */
+async function run($: EngineInterface, argv: string[], cwd?: string): Promise<string | undefined> {
   try {
-    const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 10_000 })
+    const { exitCode, stdout } = await $.process.run(argv, { timeoutMs: 10_000, cwd })
     return exitCode === 0 ? stdout.trim() : undefined
   } catch {
     return undefined
@@ -42,6 +45,14 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+async function quiet<T>(call: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await call()
+  } catch {
+    return undefined
+  }
+}
+
 function cards(v: unknown): Card[] | undefined {
   if (!Array.isArray(v)) return undefined
   const out: Card[] = []
@@ -52,34 +63,79 @@ function cards(v: unknown): Card[] | undefined {
   return out
 }
 
-// One aggregate call per refresh. Anything unreadable empties the card
-// segments rather than showing stale ones; context comes from the engine.
-async function refreshData($: EngineInterface): Promise<void> {
-  let session: string | undefined
-  try {
-    session = await $.session.id()
-  } catch {
-    session = undefined
-  }
-  const out = session === undefined
-    ? undefined
-    : await runJson($, ['mc-tool-board', 'summary', '--json', '--session', session])
-  const bound = isRecord(out) ? cards(out.bound) : undefined
-  const inReview = isRecord(out) ? cards(out.in_review) : undefined
-  const inbox = isRecord(out) && typeof out.inbox === 'number' ? out.inbox : undefined
-  const fresh = bound && inReview && inbox !== undefined ? { bound, inReview, inbox } : EMPTY
-  await update($, data, prev => ({ ...prev, ...fresh }))
+/** Jira links as the board resolved them; one it can't read is dropped. */
+function jira(v: unknown): JiraRef[] {
+  if (!Array.isArray(v)) return []
+  return v.flatMap(j => {
+    if (!isRecord(j) || typeof j.key !== 'string') return []
+    return [{ key: j.key, href: typeof j.url === 'string' && j.url.startsWith('https://') ? j.url : null }]
+  })
 }
 
-async function refreshContext($: EngineInterface): Promise<void> {
-  try {
-    const { context } = await $.session.usage()
-    if (context.tokens === undefined || context.percent === undefined) return
-    const fill = { tokens: context.tokens, percent: context.percent }
-    await update($, data, prev => ({ ...prev, context: fill }))
-  } catch {
-    // Usage unavailable: the segment keeps its last value, or stays absent.
+function boundCards(v: unknown): BoundCard[] | undefined {
+  const base = cards(v)
+  if (base === undefined || !Array.isArray(v)) return undefined
+  return base.map((c, i) => ({ ...c, jira: jira((v[i] as Record<string, unknown>).jira) }))
+}
+
+// One aggregate call per refresh. Anything unreadable empties the card
+// segments rather than showing stale ones.
+async function refreshWork($: EngineInterface): Promise<void> {
+  const id = await quiet(() => $.session.id())
+  const out = id === undefined
+    ? undefined
+    : await runJson($, ['mc-tool-board', 'summary', '--json', '--session', id])
+  const bound = isRecord(out) ? boundCards(out.bound) : undefined
+  const inReview = isRecord(out) ? cards(out.in_review) : undefined
+  const inbox = isRecord(out) && typeof out.inbox === 'number' ? out.inbox : undefined
+  await update($, work, () => (bound && inReview && inbox !== undefined ? { bound, inReview, inbox } : NO_WORK))
+}
+
+/** claude-opus-5-5[1m] -> opus 5.5 · 1M; anything else as the engine says it. */
+function shortModel(raw: string): string {
+  const m = raw.match(/^claude-([a-z]+)-(\d+)(?:-(\d+))?(?:-\d{8})?(\[1m\])?$/i)
+  if (!m) return raw
+  const [, family, major, minor, wide] = m
+  return `${family!.toLowerCase()} ${major}${minor ? `.${minor}` : ''}${wide ? ' · 1M' : ''}`
+}
+
+// Where the session is: read after each turn, as /cd, a checkout or /model
+// may have moved it.
+async function refreshWhere($: EngineInterface): Promise<void> {
+  const [root, cwd, model] = await Promise.all([
+    quiet(() => $.session.root()),
+    quiet(() => $.session.cwd()),
+    quiet(() => $.session.model()),
+  ])
+  const branch = cwd === undefined
+    ? undefined
+    : (await run($, ['git', 'symbolic-ref', '--short', '-q', 'HEAD'], cwd))
+      ?? (await run($, ['git', 'rev-parse', '--short', 'HEAD'], cwd))
+  await update($, session, prev => ({
+    ...prev,
+    project: root?.split('/').filter(Boolean).at(-1),
+    branch: branch || undefined,
+    model: model ? shortModel(model) : undefined,
+  }))
+}
+
+type Usage = {
+  context: { tokens?: number; percent?: number }
+  rateLimits: readonly { kind: string; percentUsed: number }[]
+}
+
+async function applyUsage($: EngineInterface, u: Usage): Promise<void> {
+  const { tokens, percent } = u.context
+  const window = (kind: string) => {
+    const r = u.rateLimits.find(l => l.kind === kind)
+    return r ? { percent: Math.round(r.percentUsed) } : undefined
   }
+  await update($, session, prev => ({
+    ...prev,
+    ...(tokens !== undefined && percent !== undefined ? { context: { tokens, percent } } : {}),
+    fiveHour: window('five_hour'),
+    sevenDay: window('seven_day'),
+  }))
 }
 
 // Theme and style are read once per session start, resolved by mait-code
@@ -97,13 +153,20 @@ async function refreshSettings($: EngineInterface): Promise<void> {
   await update($, style, () => ((STYLES as readonly unknown[]).includes(name) ? (name as BarStyle) : 'blocks'))
 }
 
-async function guarded(work: () => Promise<unknown>): Promise<void> {
+async function guarded(task: () => Promise<unknown>): Promise<void> {
   try {
-    await work()
+    await task()
   } catch {
     // A failed refresh leaves the bar as it was; the session carries on.
   }
 }
+
+/** Open a link in the browser: xdg-open on Linux, open on macOS. */
+async function openLink($: EngineInterface, href: string): Promise<void> {
+  if ((await run($, ['xdg-open', href])) === undefined) await run($, ['open', href])
+}
+
+// --- hooks --------------------------------------------------------------------
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -112,7 +175,12 @@ export const register: Register = on => {
       name: 'capture',
       description: 'Capture a thought to the mait-code inbox without a model turn.',
     }))
-    await guarded(() => Promise.all([refreshSettings($), refreshData($), refreshContext($)]))
+    await guarded(() => Promise.all([
+      refreshSettings($),
+      refreshWork($),
+      refreshWhere($),
+      $.session.usage().then(u => applyUsage($, u)),
+    ]))
     return next(e)
   })
 
@@ -120,58 +188,81 @@ export const register: Register = on => {
     const text = e.args.trim()
     if (!text) return { text: 'Usage: /capture <text>' }
     const out = await run($, ['mc-tool-inbox', 'add', '--', text])
-    await guarded(() => refreshData($))
+    await guarded(() => refreshWork($))
     return { text: out === undefined ? 'Capture failed.' : out }
   })
 
   // Cards are bound, moved and completed by skills mid-turn.
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
-    await guarded(() => Promise.all([refreshData($), refreshContext($)]))
+    await guarded(() => Promise.all([refreshWork($), refreshWhere($)]))
     return result
   })
 
-  // A compaction empties most of the window; show it straight away.
-  on('session.compact', async ($, e, next) => {
-    const result = await next(e)
-    await guarded(() => refreshContext($))
-    return result
+  // Raised whenever the context fill or a rate-limit window moves,
+  // compactions included, so the usage segments need no polling.
+  on('session.measure', async ($, e, next) => {
+    await guarded(() => applyUsage($, e))
+    return next(e)
   })
 
-  // One blank row, then a full-width bar on the theme's panel colour: work in
-  // hand on the left, things waiting on you on the right.
+  // One blank row, then two full-width rows on the theme's panel colour: the
+  // work above (cards; Jira, in review, inbox), the session below (project,
+  // branch; model, context, rate limits).
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const c = await read($, palette)
     if (c === null) return next(e)
-    const segments = buildSegments(await read($, data), c)
-    if (segments.length === 0) return next(e)
+    const rows = [workSegments(await read($, work), c), sessionSegments(await read($, session), c)]
+      .filter(r => r.length > 0)
+    if (rows.length === 0) return next(e)
 
     const draw = RENDERERS[await read($, style)]
-    const left = segments.filter(s => s.side === 'left').flatMap(s => draw(s, c))
-    const right = segments.filter(s => s.side === 'right').flatMap(s => draw(s, c))
-    const { Box, Text } = $.ui.resolve(e)
-    const chunk = (ch: Chunk, key: string) => (
-      <Text
-        key={key}
-        backgroundColor={ch.bg}
-        color={ch.fg}
-        bold={ch.bold}
-        dimColor={ch.dim}
-        wrap="truncate-end"
-      >
-        {` ${ch.text} `}
-      </Text>
-    )
+    const { Box, Text, Button } = $.ui.resolve(e)
+    // A linked Jira key is a plain Button that opens the browser itself: a
+    // Link prints its URL beside the text wherever the engine doubts the
+    // terminal does OSC 8 (under a multiplexer, say).
+    const chunk = (ch: Chunk, key: string) => {
+      const href = ch.href
+      if (href) {
+        return (
+          <Box key={key} backgroundColor={ch.bg} paddingX={1}>
+            <Button
+              key={`jira:${ch.text}`}
+              plain
+              label={ch.text}
+              hover={{ underline: true }}
+              onPress={() => { void openLink($, href) }}
+            />
+          </Box>
+        )
+      }
+      return (
+        <Text
+          key={key}
+          backgroundColor={ch.bg}
+          color={ch.fg}
+          bold={ch.bold}
+          dimColor={ch.dim}
+          wrap="truncate-end"
+        >
+          {` ${ch.text} `}
+        </Text>
+      )
+    }
+    const row = (segments: Segment[], r: number) => {
+      const side = (which: Segment['side']) =>
+        segments.filter(s => s.side === which).flatMap(s => draw(s, c))
+      return (
+        <Box key={`row${r}`} width={e.props.bodyColumns} backgroundColor={c.panel} justifyContent="space-between">
+          <Box flexShrink={1}>{side('left').map((ch, i) => chunk(ch, `l${i}`))}</Box>
+          <Box flexShrink={0}>{side('right').map((ch, i) => chunk(ch, `r${i}`))}</Box>
+        </Box>
+      )
+    }
     return (
-      <Box
-        marginTop={1}
-        width={e.props.bodyColumns}
-        backgroundColor={c.panel}
-        justifyContent="space-between"
-      >
-        <Box flexShrink={1}>{left.map((ch, i) => chunk(ch, `l${i}`))}</Box>
-        <Box flexShrink={0}>{right.map((ch, i) => chunk(ch, `r${i}`))}</Box>
+      <Box marginTop={1} flexDirection="column" width={e.props.bodyColumns}>
+        {rows.map(row)}
       </Box>
     )
   })
@@ -184,12 +275,20 @@ type Segment = {
   glyph: string
   /** Shown before the value in the blocks style; omitted where the value speaks for itself. */
   label?: string
-  value: string
+  /** Absent on a segment that is all links. */
+  value?: string
   detail?: string
+  links?: readonly JiraRef[]
+  /** Drawn slim even in the blocks style: ambient facts, not signals. */
+  quiet?: true
   colour: string
 }
 
-function buildSegments(d: BarData, c: Palette): Segment[] {
+function fill(percent: number, c: Palette): string {
+  return percent < 50 ? c.success : percent < 80 ? c.warning : c.error
+}
+
+function workSegments(d: WorkData, c: Palette): Segment[] {
   const segments: Segment[] = d.bound.map(card => ({
     side: 'left',
     glyph: '◆',
@@ -197,6 +296,12 @@ function buildSegments(d: BarData, c: Palette): Segment[] {
     detail: card.title,
     colour: c.primary,
   }))
+  // Every bound card's keys in one block, first on the right, apart from titles.
+  const seen = new Set<string>()
+  const links = d.bound.flatMap(card => card.jira).filter(l => !seen.has(l.key) && seen.add(l.key))
+  if (links.length > 0) {
+    segments.push({ side: 'right', glyph: '⌁', label: 'jira', links, colour: c.secondary })
+  }
   const [first] = d.inReview
   if (first) {
     segments.push({
@@ -208,25 +313,36 @@ function buildSegments(d: BarData, c: Palette): Segment[] {
     })
   }
   if (d.inbox > 0) {
-    segments.push({
-      side: 'right',
-      glyph: '✉',
-      label: 'inbox',
-      value: String(d.inbox),
-      colour: c.accent,
-    })
+    segments.push({ side: 'right', glyph: '✉', label: 'inbox', value: String(d.inbox), colour: c.accent })
   }
+  return segments
+}
+
+// Row 2 reads left to right as "where" then "what it's using".
+function sessionSegments(d: SessionData, c: Palette): Segment[] {
+  const segments: Segment[] = []
+  if (d.project) segments.push({ side: 'left', glyph: '▣', value: d.project, quiet: true, colour: c.primary })
+  if (d.branch) segments.push({ side: 'left', glyph: '⎇', value: d.branch, quiet: true, colour: c.secondary })
+  if (d.model) segments.push({ side: 'right', glyph: '✦', label: '✦', value: d.model, colour: c.accent })
   if (d.context) {
     const { tokens, percent } = d.context
     segments.push({
       side: 'right',
-      glyph: '◔',
-      label: 'context',
+      glyph: pie(percent),
+      label: pie(percent),
       value: `${compact(tokens)} · ${percent}%`,
-      colour: percent < 50 ? c.success : percent < 80 ? c.warning : c.error,
+      colour: fill(percent, c),
     })
   }
+  for (const [label, w] of [['5h', d.fiveHour], ['7d', d.sevenDay]] as const) {
+    if (w) segments.push({ side: 'right', glyph: '◷', label, value: `${w.percent}%`, colour: fill(w.percent, c) })
+  }
   return segments
+}
+
+/** The context glyph fills as the window does: ○ ◔ ◑ ◕ ●. */
+function pie(percent: number): string {
+  return '○◔◑◕●'[Math.min(4, Math.max(0, Math.round(percent / 25)))]!
 }
 
 /** 1234 -> 1.2k, 142000 -> 142k, 1000000 -> 1M. */
@@ -239,18 +355,27 @@ function compact(n: number): string {
 
 // --- renderers: how the bar says it --------------------------------------------
 
-type Chunk = { text: string; bg: string; fg: string; bold?: boolean; dim?: boolean }
+type Chunk = { text: string; bg: string; fg: string; bold?: boolean; dim?: boolean; href?: string }
+
+/** A key with no link is drawn as plain text on the same background. */
+function linkChunks(s: Segment, bg: string, c: Palette): Chunk[] {
+  return (s.links ?? []).map(l => ({ text: l.key, bg, fg: c.foreground, href: l.href ?? undefined }))
+}
+
+// No blocks: a coloured glyph and value, the detail in plain foreground.
+const slim = (s: Segment, c: Palette): Chunk[] => [
+  { text: s.value === undefined ? s.glyph : `${s.glyph} ${s.value}`, bg: c.panel, fg: s.colour, bold: true },
+  ...(s.detail ? [{ text: s.detail, bg: c.panel, fg: c.foreground }] : []),
+  ...linkChunks(s, c.panel, c),
+]
 
 const RENDERERS: Record<BarStyle, (s: Segment, c: Palette) => Chunk[]> = {
-  // Dim label on the panel, value on the segment's colour, detail on surface.
-  blocks: (s, c) => [
+  // Dim label on the panel, value on the segment's colour, detail and links on surface.
+  blocks: (s, c) => s.quiet ? slim(s, c) : [
     ...(s.label ? [{ text: s.label, bg: c.panel, fg: c.foreground, dim: true }] : []),
-    { text: s.value, bg: s.colour, fg: c.background, bold: true },
+    ...(s.value !== undefined ? [{ text: s.value, bg: s.colour, fg: c.background, bold: true }] : []),
     ...(s.detail ? [{ text: s.detail, bg: c.surface, fg: c.foreground, bold: true }] : []),
+    ...linkChunks(s, c.surface, c),
   ],
-  // No blocks: a coloured glyph and value, the detail in plain foreground.
-  slim: (s, c) => [
-    { text: `${s.glyph} ${s.value}`, bg: c.panel, fg: s.colour, bold: true },
-    ...(s.detail ? [{ text: s.detail, bg: c.panel, fg: c.foreground }] : []),
-  ],
+  slim,
 }

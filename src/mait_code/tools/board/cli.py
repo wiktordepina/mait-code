@@ -18,6 +18,7 @@ the interactive TUI sits on too.
 import argparse
 import json
 import logging
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -537,11 +538,42 @@ def _brief(cards: list[dict]) -> list[dict]:
     return [{"id": c["id"], "title": c["title"]} for c in cards]
 
 
+_JIRA_KEY = re.compile(r"[A-Z][A-Z0-9]+-\d+")
+
+
+def _jira_links(references: list[dict]) -> list[dict]:
+    """A card's ``JIRA`` references as ``{"key", "url"}`` for the status bar.
+
+    A full ``https://`` value is linked as it stands, keyed by the issue key
+    in it. A bare key is linked under the ``jira-base-url`` setting, or gets
+    ``url: None`` while that is unset (the bar shows it unlinked). Anything
+    else under the label is skipped.
+    """
+    from mait_code import config
+
+    base = config.get("jira-base-url").strip().rstrip("/")
+    if not base.startswith("https://"):
+        base = ""
+    links: list[dict] = []
+    for ref in references:
+        if ref["label"].strip().lower() != "jira":
+            continue
+        value = ref["value"].strip()
+        if value.startswith("https://"):
+            found = _JIRA_KEY.search(value)
+            links.append({"key": found.group() if found else value, "url": value})
+        elif _JIRA_KEY.fullmatch(value):
+            links.append(
+                {"key": value, "url": f"{base}/browse/{value}" if base else None}
+            )
+    return links
+
+
 def _session_brief(conn, session: str, project: str | None) -> dict:
     """What a status surface (the Claude Code mod) shows, in one payload.
 
-    The session's bound cards (any project), the In Review cards (scoped like
-    the counts) and the global inbox count.
+    The session's bound cards (any project) with their Jira links, the In
+    Review cards (scoped like the counts) and the global inbox count.
     """
     from mait_code.tools.inbox import service as inbox_service
     from mait_code.tools.inbox.db import connection as inbox_connection
@@ -549,7 +581,14 @@ def _session_brief(conn, session: str, project: str | None) -> dict:
     with inbox_connection() as inbox_conn:
         inbox = inbox_service.count_items(inbox_conn)
     return {
-        "bound": _brief(service.list_cards(conn, session=session)),
+        "bound": [
+            {
+                "id": card["id"],
+                "title": card["title"],
+                "jira": _jira_links(card["references"]),
+            }
+            for card in service.list_cards(conn, session=session)
+        ],
         "in_review": _brief(
             service.list_cards(conn, project=project, statuses=[IN_REVIEW])
         ),

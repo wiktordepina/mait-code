@@ -12,22 +12,63 @@ prompt itself:
 - **`/capture <text>`** files a thought to the [quick-capture inbox](board.md)
   immediately, with no model turn. It's the same as `mc-tool-inbox add`, but
   you don't have to leave the prompt. `/capture` with no text prints its usage.
-- **A status bar above the prompt**: one row on your theme's panel colour,
-  showing the work in hand on the left and what's waiting on you on the right.
+- **A status bar above the prompt**: two rows on your theme's panel colour.
+  The top row is the work in hand and what's waiting on you; the bottom row is
+  where the session is and what it's using.
 
 ```text
- #162  Ship the mait-companion mod         in review  #158   inbox  3   context  142k · 14%
+ #162  Ship the mait-companion mod     jira  PLAT-4821  PLAT-4830   in review  #158   inbox  3
+ ▣ mait-code  ⎇ feat/two-rows          ✦  opus 5.5 · 1M   ◔  142k · 14%   5h  63%   7d  41%
 ```
+
+The top row:
 
 | Segment | Shows | Hidden when |
 | --- | --- | --- |
 | Cards (left) | Each card [bound to this session](board.md): `#id` on the primary colour, then the title. The title is cut first when the row is short. | No card is bound to the session |
+| `jira` | The Jira keys referenced by the bound cards. Click one to open it in your browser (see [Jira links](#jira-links)). | No bound card has a `JIRA` reference |
 | `in review` | The `#id` if one card is In Review for this project, or the count if there are several | Nothing is In Review |
 | `inbox` | How many captures are waiting for `/triage` | The inbox is empty |
-| `context` | Context window use as `tokens · percent`, green below 50%, amber below 80%, red above that | Claude Code hasn't measured it yet |
 
-If every segment is empty, the whole bar disappears, and it also steps aside
-while Claude Code shows a survey.
+The bottom row:
+
+| Segment | Shows | Hidden when |
+| --- | --- | --- |
+| `▣` project | The folder name of the session's project root | Never, in a session with a project |
+| `⎇` branch | The branch checked out, or the short commit on a detached HEAD | Not in a git repository |
+| `✦` model | The model in use, shortened (`opus 5.5 · 1M`) | Claude Code doesn't say |
+| Context | Context window use as `tokens · percent`. The glyph fills with the window (`○ ◔ ◑ ◕ ●`) | Claude Code hasn't measured it yet |
+| `5h`, `7d` | How much of the five-hour and seven-day rate-limit windows you've used | You're not on a subscription, or there's no reading yet |
+
+Context and both windows are green below 50%, amber below 80% and red above
+that. Project and branch are always drawn in the quieter slim style, because
+they're there to orient you rather than to warn.
+
+If every segment in a row is empty, that row disappears, and the whole bar steps
+aside while Claude Code shows a survey.
+
+## Jira links
+
+Add a Jira issue to a card as a reference labelled `JIRA`:
+
+```bash
+mc-tool-board ref add 162 JIRA PLAT-4821
+```
+
+A full `https://` URL works too and is linked as it stands. A bare key is
+linked under your Jira site, which you set once:
+
+```bash
+mait-code settings set jira-base-url https://acme.atlassian.net
+```
+
+Until that is set, bare keys are still shown, but you can't click them.
+
+Each key is a button rather than a terminal hyperlink. Claude Code prints a
+hyperlink's whole URL beside its text when it isn't sure the terminal supports
+links (under a multiplexer, for example), and a button avoids that. Clicking
+one runs `xdg-open` (or `open` on macOS). Without mouse support, press
+`ctrl+x tab` to focus the bar and select the key from there.
 
 ## Switching it on
 
@@ -75,12 +116,14 @@ only:
 - when a session starts
 - after each turn
 - after a `/capture`
-- after a compaction (the context segment only)
+- whenever Claude Code reports new context or rate-limit figures (those
+  segments only; compactions included)
 
-Each refresh is a single call to `mc-tool-board summary --json --session <id>`.
+Each refresh is one call to `mc-tool-board summary --json --session <id>` and
+one or two `git` calls for the branch.
 
 It is built to **fail closed**. If a CLI is missing, its output can't be read,
-or a Claude Code API it relies on changes, the bar draws nothing and `/capture`
+or a Claude Code API it relies on changes, the affected segments draw nothing and `/capture`
 reports that it failed. Your session is never broken. `/capture` registers
 separately from the bar, so if Claude Code refuses the command, the bar still
 works.
