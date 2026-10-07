@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.78.0] — 2026-10-07
+
 ### Added
 
 - **The companion mod's status bar now has two rows.** The top row is the work,
@@ -2470,7 +2472,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.77.2...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.78.0...HEAD
+[0.78.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.78.0
 [0.77.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.2
 [0.77.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.1
 [0.77.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.0
