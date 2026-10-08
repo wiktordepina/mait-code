@@ -480,6 +480,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1001,6 +1005,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../companion-mod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The companion mod
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The remote API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sync/" class="md-nav__link">
         
   
@@ -1388,6 +1448,8 @@
       
         
       
+        
+      
     
     
     
@@ -1617,6 +1679,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/bridge/" class="md-nav__link">
         
   
@@ -1670,10 +1760,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
             
   
   
@@ -1691,8 +1781,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_9">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1878,10 +1968,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_11" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_11" id="__nav_5_3_11_label" tabindex="0">
             
   
   
@@ -1899,8 +1989,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_10">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2485,7 +2575,7 @@ right." src="../assets/home/home-startpage-setup.png" /></p>
 <td>Reorder</td>
 </tr>
 <tr>
-<td><code>Ctrl+R</code></td>
+<td><code>Ctrl+G</code></td>
 <td>Run a command tile and preview its output — commands <strong>never</strong> run while you type, only on this key</td>
 </tr>
 <tr>
@@ -2570,6 +2660,10 @@ away.</p>
 <strong>Open logs</strong>, <strong>Set up start page</strong>), alongside <strong>Reload</strong> and
 <strong>Reindex memory</strong>. The graph explorer and the Bridge configurator are tree
 leaves only — they have no palette entry.</p>
+<p>One leaf under <strong>System</strong> does its job in place rather than opening another TUI.
+Pressing <code>Enter</code> on <strong>Companion mod</strong> switches the
+<a href="../companion-mod/">companion mod</a> on, after asking you to confirm, or off. Its
+badge shows whether it's currently on or off.</p>
 <h2 id="what-each-section-shows">What each section shows<a class="headerlink" href="#what-each-section-shows" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2582,8 +2676,8 @@ leaves only — they have no palette entry.</p>
 <tbody>
 <tr>
 <td><strong>Board</strong></td>
-<td>Live cards split into <em>In progress</em> and <em>Next up</em></td>
-<td><code>↗ Open board</code>, In progress, Next up, By project</td>
+<td>Live cards split into <em>In progress</em>, <em>In review</em> and <em>Next up</em></td>
+<td><code>↗ Open board</code>, In progress, In review, Next up, By project</td>
 </tr>
 <tr>
 <td><strong>Memory</strong></td>
@@ -2608,7 +2702,7 @@ leaves only — they have no palette entry.</p>
 <tr>
 <td><strong>System</strong></td>
 <td>Health, configuration, and where things live</td>
-<td><code>↗ Open settings</code>, <code>↗ Open logs</code>, <code>↗ Configure Bridge</code>, Doctor, Version &amp; paths</td>
+<td><code>↗ Open settings</code>, <code>↗ Open logs</code>, <code>↗ Configure Bridge</code>, Companion mod, Doctor, Version &amp; paths</td>
 </tr>
 </tbody>
 </table>

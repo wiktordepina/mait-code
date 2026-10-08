@@ -480,6 +480,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -744,6 +748,17 @@
     <span class="md-ellipsis">
       
         A session, end to end
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parallel-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parallel sessions
       
     </span>
   </a>
@@ -1031,6 +1046,62 @@
     
   
     The Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../companion-mod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The companion mod
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The remote API
   
 
     
@@ -1438,6 +1509,8 @@
       
         
       
+        
+      
     
     
     
@@ -1667,6 +1740,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/bridge/" class="md-nav__link">
         
   
@@ -1720,10 +1821,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
             
   
   
@@ -1741,8 +1842,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_9">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1928,10 +2029,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_11" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_11" id="__nav_5_3_11_label" tabindex="0">
             
   
   
@@ -1949,8 +2050,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_10">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2315,6 +2416,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#parallel-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parallel sessions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#anatomy-of-a-card" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2455,9 +2567,9 @@ completes, or archives a card on its own.</p>
 <p>That distinction matters. The board isn't a notification system nagging you about
 work — it's a shared surface the two of you reason over together.</p>
 <h2 id="the-lifecycle">The lifecycle<a class="headerlink" href="#the-lifecycle" title="Permanent link">&para;</a></h2>
-<p>Cards flow through four fixed columns, with one hidden side-state:</p>
+<p>Cards flow through five fixed columns, with one hidden side-state:</p>
 <pre class="mermaid"><code>flowchart LR
-    B[Backlog] --&gt; R[Refined] --&gt; P[In&amp;nbsp;Progress] --&gt; D[Done]
+    B[Backlog] --&gt; R[Refined] --&gt; P[In&amp;nbsp;Progress] --&gt; V[In&amp;nbsp;Review] --&gt; D[Done]
     D -. archive .-&gt; A[Archived]
     P -. park .-&gt; A</code></pre>
 <table>
@@ -2481,6 +2593,10 @@ work — it's a shared surface the two of you reason over together.</p>
 <td>Actively being worked in the current session.</td>
 </tr>
 <tr>
+<td><strong>In&nbsp;Review</strong></td>
+<td>Work finished and waiting on review, usually an open pull request. Hidden while empty. Press <code>v</code> to show it anyway; it always shows while it holds a card.</td>
+</tr>
+<tr>
 <td><strong>Done</strong></td>
 <td>Finished, with a completion summary. Hidden by default — press <code>d</code> to show.</td>
 </tr>
@@ -2491,8 +2607,8 @@ work — it's a shared surface the two of you reason over together.</p>
 </tbody>
 </table>
 <p>You don't have to march cards through every column in order — you can move a card
-anywhere via the CLI — but <code>backlog → refined → in_progress → done</code> is the
-intended grain, and following it is what makes the workflow pay off.</p>
+anywhere via the CLI — but <code>backlog → refined → in_progress → in_review → done</code>
+is the intended grain, and following it is what makes the workflow pay off.</p>
 <div class="admonition note">
 <p class="admonition-title">Blocked is a tag, not a column</p>
 <p>A blocked card keeps its real column — a blocked refined card stays in
@@ -2505,8 +2621,11 @@ as a comment), so you never lose track of <em>where</em> a card was when it stal
 <strong>In&nbsp;Progress</strong>. This collapsed view is the <em>working</em> layout: it keeps the
 three columns you actually act on wide and uncluttered, with finished and parked
 work tucked out of sight so it can't pull your attention.</p>
-<p>Press <code>d</code> and <code>a</code> to reveal <strong>Done</strong> and <strong>Archived</strong> — the full five-column view:</p>
-<p><img alt="The board uncollapsed: all five columns, including Done and Archived, in view." src="../assets/board/board-expanded.png" /></p>
+<p><strong>In&nbsp;Review</strong> joins them whenever a card is waiting on review, so work
+waiting on a pull request never disappears from view. Press <code>v</code> to show it while
+it's empty too.</p>
+<p>Press <code>d</code> and <code>a</code> to reveal <strong>Done</strong> and <strong>Archived</strong> — the full six-column view:</p>
+<p><img alt="The board uncollapsed: all six columns, with a card in In Review and Done and Archived in view." src="../assets/board/board-expanded.png" /></p>
 <p>This expanded layout is for <em>admin and reflection</em>, not for getting work done:
 reviewing what's shipped, re-reading completion summaries, sweeping stale cards
 into the archive, and taking stock of how much has moved. Step back into it when
@@ -2534,6 +2653,9 @@ glance and to do bulk triage by hand.</p>
 <li><em>"Pick up the next refined card."</em> — Claude claims the highest-priority refined
   card, moves it to <strong>In Progress</strong>, reads its acceptance criteria, and gets to
   work — all in the same session.</li>
+<li><em>"Continue card 12."</em> — in a fresh session, Claude binds itself to a card that's
+  already <strong>In Progress</strong> (see <a href="#parallel-sessions">parallel sessions</a>) and
+  carries on.</li>
 <li><em>"That's done."</em> — Claude completes the card with a summary of what changed.</li>
 </ul>
 <p>This is the loop that replaces up-front planning: refine just-in-time, pick up,
@@ -2553,12 +2675,38 @@ build, complete, repeat.</p>
 <li><strong>Track.</strong> As work progresses, comments and references accrue on the card: a
    link to the PR, a note about a tricky edge case. If something stalls, <em>"block
    it — waiting on the upstream fix"</em> tags it <code>blocked</code> in place.</li>
-<li><strong>Complete.</strong> When the acceptance criteria are met: <em>"complete it, summary:
+<li><strong>Review.</strong> When the work is up as a pull request: <em>"park it in review, PR
+   is #42."</em> The card moves to <strong>In&nbsp;Review</strong> with the PR attached as a
+   reference, so the board shows it as finished but not merged.</li>
+<li><strong>Complete.</strong> Once it merges: <em>"complete it, summary:
    re-derived chip colours from the theme palette."</em> The card moves to <strong>Done</strong>,
    stamped with the time and the handoff summary.</li>
 </ol>
-<p>The acceptance criteria written at step 2 are the contract for steps 3 and 5 —
+<p>The acceptance criteria written at step 2 are the contract for steps 3 to 6 —
 which is exactly why refining <em>before</em> picking up is worth the small ceremony.</p>
+<h2 id="parallel-sessions">Parallel sessions<a class="headerlink" href="#parallel-sessions" title="Permanent link">&para;</a></h2>
+<p>You may well run several Claude Code sessions against one project at once: two
+cards being built side by side, plus a third session that's only poking at a
+bug. <strong>In Progress</strong> then holds more than any one session is doing, so each
+In Progress card also records <em>which sessions are working on it</em>.</p>
+<ul>
+<li><strong>Binding is automatic.</strong> Moving a card into <strong>In Progress</strong> from inside a
+  session (picking up the next card, or <code>move N in_progress</code>) binds it to that
+  session. <em>"Continue card 12"</em> in a new session runs <code>bind 12</code>. A card can
+  carry several sessions; a session with nothing bound (the bug-poking one)
+  simply has none.</li>
+<li><strong>Release is automatic too.</strong> A card leaving <strong>In Progress</strong> (review,
+  complete, archive, any move out) drops all its bindings.</li>
+<li><strong>Bindings stay honest.</strong> Each records the Claude Code process serving the
+  session, and only counts while that process is alive, so a closed session
+  drops out without any clean-up. A resumed session keeps its binding, and so
+  does a <code>/clear</code>: the session-start hook moves the binding to the new session.</li>
+<li><strong>"The card I'm on"</strong> is <code>mc-tool-board list --mine</code>, across every project. <code>show</code> lists a card's
+  sessions, and each session's start-up context names its cards.</li>
+</ul>
+<p>Bindings rely on the <code>CLAUDE_CODE_SESSION_ID</code> and <code>CLAUDE_PID</code> variables Claude
+Code exports to its tools and hooks. Outside Claude Code, nothing binds and the
+board behaves exactly as before.</p>
 <h2 id="anatomy-of-a-card">Anatomy of a card<a class="headerlink" href="#anatomy-of-a-card" title="Permanent link">&para;</a></h2>
 <p><img alt="A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread." src="../assets/board/card-detail.png" /></p>
 <p>The title and the meta line beneath it (project · status · priority · tags) are
@@ -2580,7 +2728,7 @@ you're reading.</p>
 </tr>
 <tr>
 <td><strong>Project</strong></td>
-<td>Required at creation. Which repo (or idea) the card belongs to.</td>
+<td>Required. Which repo (or idea) the card belongs to. Change it later with <code>edit --project</code> or the TUI edit form.</td>
 </tr>
 <tr>
 <td><strong>Priority</strong></td>
@@ -2605,6 +2753,14 @@ you're reading.</p>
 <tr>
 <td><strong>Comments</strong></td>
 <td>A threaded log — your notes and Claude's, each timestamped.</td>
+</tr>
+<tr>
+<td><strong>Sessions</strong></td>
+<td>Only on <strong>In Progress</strong> cards: the live Claude Code sessions working on it (see <a href="#parallel-sessions">parallel sessions</a>). Listed by <code>show</code> and in <code>--json</code> output; left out of exports.</td>
+</tr>
+<tr>
+<td><strong>Created by</strong></td>
+<td>Only on cards raised through the <a href="../remote/">remote API</a>: the client that created it, shown as <em>via &lt;client&gt;</em> on the meta line and as <code>created by:</code> in <code>show</code>. Locally created cards have none.</td>
 </tr>
 <tr>
 <td><strong>Completion summary</strong></td>
@@ -2652,8 +2808,8 @@ type is what's stored; the formatting only appears in the view.</p>
 <td>Highlight the previous / next card</td>
 </tr>
 <tr>
-<td><kbd>1</kbd>–<kbd>5</kbd></td>
-<td>Jump straight to a visible column (<kbd>4</kbd>/<kbd>5</kbd> need Done/Archived shown)</td>
+<td><kbd>1</kbd>–<kbd>6</kbd></td>
+<td>Jump straight to the <em>n</em>th visible column (hidden columns are skipped, so the numbers shift as In Review, Done and Archived come and go)</td>
 </tr>
 <tr>
 <td><kbd>Enter</kbd></td>
@@ -2661,7 +2817,7 @@ type is what's stored; the formatting only appears in the view.</p>
 </tr>
 <tr>
 <td><kbd>n</kbd></td>
-<td>New card</td>
+<td>New card (the project is pre-filled from the active filter, else left for you to choose)</td>
 </tr>
 <tr>
 <td><kbd>e</kbd></td>
@@ -2694,6 +2850,10 @@ type is what's stored; the formatting only appears in the view.</p>
 <tr>
 <td><kbd>/</kbd></td>
 <td>Search cards by title</td>
+</tr>
+<tr>
+<td><kbd>v</kbd></td>
+<td>Toggle the <strong>In Review</strong> column (it stays visible while it holds cards)</td>
 </tr>
 <tr>
 <td><kbd>d</kbd></td>
@@ -2756,31 +2916,32 @@ type is what's stored; the formatting only appears in the view.</p>
 </tr>
 <tr>
 <td><kbd>x</kbd></td>
-<td>Export the card to markdown (prompts for the path, pre-filled with <code>card-N.md</code> in the current directory)</td>
+<td>Export the card to markdown (prompts for the path, pre-filled with <code>card-N.md</code> in your home directory, then in whichever directory you last exported to)</td>
 </tr>
 </tbody>
 </table>
 <p>The edit form (<kbd>e</kbd>) is the single place a card is changed: title,
-priority, <strong>status</strong>, <strong>tags</strong>, <strong>references</strong>, description and acceptance
-criteria all live on one form. Tags, references and status are a working copy —
+<strong>project</strong>, priority, <strong>status</strong>, <strong>tags</strong>, <strong>references</strong>, description and
+acceptance criteria all live on one form. The project field completes known
+project names as you type (<kbd>→</kbd> accepts) and takes a new one just as
+well; moving a card out of the active project filter drops it from the board,
+with a toast naming where it went. Tags, references and status are a working copy —
 <strong>Save</strong> (<kbd>Ctrl</kbd>+<kbd>S</kbd>) applies them all at once, and <kbd>Esc</kbd>
 discards every pending change. Block / unblock stay outside the form (they carry
 a reason comment a plain tag can't), so the form's tag editor leaves the
 <code>blocked</code> tag alone.</p>
-<div class="admonition tip">
-<p class="admonition-title">Theming</p>
-<p>The board ships several house themes (<code>mait-dark</code>, <code>mait-ember</code>,
-<code>mait-aurora</code>, <code>mait-bubblegum</code>, <code>mait-syntax</code>) plus Textual's built-ins.
-Switch via <kbd>Ctrl</kbd>+<kbd>P</kbd> → search <em>theme</em>. Your choice
-persists across sessions.</p>
-</div>
+<p>!!! tip "Theming"ee4bf0f2-4c30-466e-beb1-3f25a4712432
+    The board ships several house themes (<code>mait-dark</code>, <code>mait-ember</code>,
+    <code>mait-aurora</code>, <code>mait-bubblegum</code>, <code>mait-syntax</code>) plus Textual's built-ins.
+    Switch via <kbd>Ctrl</kbd>+<kbd>P</kbd> → search <em>theme</em>. Your choice
+    persists across sessions.</p>
 <h2 id="cli-reference">CLI reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
 <p>The TUI is a front-end over the <code>mc-tool-board</code> command, which you (or Claude)
 can call directly. The same store backs both.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># View</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mc-tool-board<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>--all<span class="o">]</span><span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--archived<span class="o">]</span><span class="w"> </span><span class="o">[</span>--search<span class="w"> </span>TEXT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>mc-tool-board<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>--all<span class="o">]</span><span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--archived<span class="o">]</span><span class="w"> </span><span class="o">[</span>--search<span class="w"> </span>TEXT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--mine<span class="w"> </span><span class="p">|</span><span class="w"> </span>--session<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>mc-tool-board<span class="w"> </span>show<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>mc-tool-board<span class="w"> </span>summary<span class="w"> </span><span class="o">[</span>--all<span class="o">]</span><span class="w"> </span><span class="o">[</span>--project<span class="w"> </span>PROJECT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>mc-tool-board<span class="w"> </span>summary<span class="w"> </span><span class="o">[</span>--all<span class="o">]</span><span class="w"> </span><span class="o">[</span>--project<span class="w"> </span>PROJECT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="w"> </span><span class="o">[</span>--session<span class="w"> </span>ID<span class="o">]]</span><span class="w">   </span><span class="c1"># --session adds bound/in-review cards + inbox count</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Create &amp; edit</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>mc-tool-board<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;&lt;title&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--description<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--priority<span class="w"> </span>low<span class="p">|</span>medium<span class="p">|</span>high<span class="o">]</span><span class="w"> </span><span class="o">[</span>--project<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
@@ -2790,24 +2951,29 @@ can call directly. The same store backs both.</p>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Flow</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>mc-tool-board<span class="w"> </span>refine<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--description<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--acceptance<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">   </span><span class="c1"># → refined</span>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>mc-tool-board<span class="w"> </span>next<span class="w"> </span><span class="o">[</span>--project<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--claim<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                     </span><span class="c1"># top refined card; --claim → in_progress</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>mc-tool-board<span class="w"> </span><span class="nb">complete</span><span class="w"> </span>ID<span class="w"> </span>--summary<span class="w"> </span><span class="s2">&quot;&lt;what was done&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">            </span><span class="c1"># → done</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>mc-tool-board<span class="w"> </span>move<span class="w"> </span>ID<span class="w"> </span>&lt;backlog<span class="p">|</span>refined<span class="p">|</span>in_progress<span class="p">|</span><span class="k">done</span><span class="p">|</span>archived&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>mc-tool-board<span class="w"> </span>archive<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                                         </span><span class="c1"># hide without deleting</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>mc-tool-board<span class="w"> </span>remove<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                                          </span><span class="c1"># permanent delete</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1"># Tags &amp; blocking</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>mc-tool-board<span class="w"> </span>tag<span class="w"> </span>ID<span class="w"> </span>&lt;tag&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">      </span>/<span class="w">  </span>mc-tool-board<span class="w"> </span>untag<span class="w"> </span>ID<span class="w"> </span>&lt;tag&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>mc-tool-board<span class="w"> </span>block<span class="w"> </span>ID<span class="w"> </span><span class="s2">&quot;&lt;reason&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">  </span>/<span class="w">  </span>mc-tool-board<span class="w"> </span>unblock<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="c1"># References</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>add<span class="w"> </span>ID<span class="w"> </span>&lt;label&gt;<span class="w"> </span>&lt;value&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>remove<span class="w"> </span>ID<span class="w"> </span>&lt;position&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>list<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>mc-tool-board<span class="w"> </span>review<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--pr<span class="w"> </span>&lt;url&gt;<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                             </span><span class="c1"># → in_review; --pr adds a PR reference</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>mc-tool-board<span class="w"> </span><span class="nb">complete</span><span class="w"> </span>ID<span class="w"> </span>--summary<span class="w"> </span><span class="s2">&quot;&lt;what was done&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">            </span><span class="c1"># → done</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>mc-tool-board<span class="w"> </span>move<span class="w"> </span>ID<span class="w"> </span>&lt;backlog<span class="p">|</span>refined<span class="p">|</span>in_progress<span class="p">|</span>in_review<span class="p">|</span><span class="k">done</span><span class="p">|</span>archived&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>mc-tool-board<span class="w"> </span>archive<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                                         </span><span class="c1"># hide without deleting</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>mc-tool-board<span class="w"> </span>remove<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                                          </span><span class="c1"># permanent delete</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="c1"># Sessions (In Progress cards; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>mc-tool-board<span class="w"> </span><span class="nb">bind</span><span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--session<span class="w"> </span>ID<span class="w"> </span>--pid<span class="w"> </span>PID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                  </span><span class="c1"># bind a session (--session needs --pid)</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>mc-tool-board<span class="w"> </span>unbind<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--session<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                           </span><span class="c1"># drop a session&#39;s binding</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="c1"># Tags &amp; blocking</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>mc-tool-board<span class="w"> </span>tag<span class="w"> </span>ID<span class="w"> </span>&lt;tag&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">      </span>/<span class="w">  </span>mc-tool-board<span class="w"> </span>untag<span class="w"> </span>ID<span class="w"> </span>&lt;tag&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>mc-tool-board<span class="w"> </span>block<span class="w"> </span>ID<span class="w"> </span><span class="s2">&quot;&lt;reason&gt;&quot;</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">  </span>/<span class="w">  </span>mc-tool-board<span class="w"> </span>unblock<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="c1"># Export</span>
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>mc-tool-board<span class="w"> </span><span class="nb">export</span><span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>markdown<span class="p">|</span>json<span class="o">]</span><span class="w"> </span><span class="o">[</span>--out<span class="w"> </span>FILE<span class="o">]</span><span class="w">    </span><span class="c1"># one card, full fidelity</span>
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>mc-tool-board<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--out<span class="w"> </span>FILE<span class="o">]</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">    </span><span class="o">[</span>--all<span class="w"> </span><span class="p">|</span><span class="w"> </span>--project<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--archived<span class="o">]</span><span class="w"> </span><span class="o">[</span>--search<span class="w"> </span>TEXT<span class="o">]</span><span class="w">   </span><span class="c1"># whole board</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="c1"># References</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>add<span class="w"> </span>ID<span class="w"> </span>&lt;label&gt;<span class="w"> </span>&lt;value&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>remove<span class="w"> </span>ID<span class="w"> </span>&lt;position&gt;<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>mc-tool-board<span class="w"> </span>ref<span class="w"> </span>list<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="c1"># Export</span>
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>mc-tool-board<span class="w"> </span><span class="nb">export</span><span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>markdown<span class="p">|</span>json<span class="o">]</span><span class="w"> </span><span class="o">[</span>--out<span class="w"> </span>FILE<span class="o">]</span><span class="w">    </span><span class="c1"># one card, full fidelity</span>
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>mc-tool-board<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--out<span class="w"> </span>FILE<span class="o">]</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="w">    </span><span class="o">[</span>--all<span class="w"> </span><span class="p">|</span><span class="w"> </span>--project<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--archived<span class="o">]</span><span class="w"> </span><span class="o">[</span>--search<span class="w"> </span>TEXT<span class="o">]</span><span class="w">   </span><span class="c1"># whole board</span>
 </span></code></pre></div>
 <p><code>--json</code> gives machine-readable output everywhere — handy for scripting or for
 Claude to consume. On the read commands it emits what they list; on mutating
@@ -2819,7 +2985,7 @@ deletion.</p>
 portable document. Markdown embeds the stored description, acceptance criteria
 and completion summary verbatim, so what you wrote round-trips unchanged; JSON
 is full fidelity (tags, references and comments included, matching the
-<code>show --json</code> shape). Output goes to stdout unless <code>--out FILE</code> is given. The
+<code>show --json</code> shape, minus live session bindings). Output goes to stdout unless <code>--out FILE</code> is given. The
 board-wide form takes the same filters as <code>list</code>.</p>
 <h2 id="tips-for-getting-the-most-from-it">Tips for getting the most from it<a class="headerlink" href="#tips-for-getting-the-most-from-it" title="Permanent link">&para;</a></h2>
 <ul>

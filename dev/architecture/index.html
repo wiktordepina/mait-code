@@ -478,6 +478,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -790,6 +794,62 @@
     
   
     The Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../companion-mod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The companion mod
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The remote API
   
 
     
@@ -1618,6 +1678,8 @@
       
         
       
+        
+      
     
     
     
@@ -1847,6 +1909,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/bridge/" class="md-nav__link">
         
   
@@ -1900,10 +1990,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_9" id="__nav_5_3_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
             
   
   
@@ -1921,8 +2011,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_9">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2108,10 +2198,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_10" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3_11" >
         
           
-          <label class="md-nav__link" for="__nav_5_3_10" id="__nav_5_3_10_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3_11" id="__nav_5_3_11_label" tabindex="0">
             
   
   
@@ -2129,8 +2219,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3_10">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_5_3_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2830,7 +2920,7 @@
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
-        identity["soul_document.md&lt;br/&gt;user_context.md"]
+        identity["soul_document.md&lt;br/&gt;user_context.md&lt;br/&gt;communication_style.md"]
         memory_store["memory/&lt;br/&gt;MEMORY.md &lt;i&gt;(curated)&lt;/i&gt;&lt;br/&gt;memory.db &lt;i&gt;(SQLite)&lt;/i&gt;&lt;br/&gt;observations/ &lt;i&gt;(raw JSONL)&lt;/i&gt;&lt;br/&gt;reflections/ &lt;i&gt;(synthesised)&lt;/i&gt;"]
         other_dbs["reminders.db&lt;br/&gt;board.db&lt;br/&gt;inbox.db"]
         cfg["dashboard.toml&lt;br/&gt;bridge.json&lt;br/&gt;project-aliases.json"]
@@ -3338,7 +3428,7 @@ new entry's project) using two complementary measures:</p>
 </tbody>
 </table>
 <p>Free-form tags ride alongside a card's status. <code>blocked</code> is the first consumer: blocking tags a card in place rather than moving it, so the card keeps its real flow position. Each card dict carries a sorted <code>tags</code> list.</p>
-<p><strong>Columns are fixed, not configurable.</strong> <code>backlog → refined → in_progress → done</code> is the whole flow; <code>archived</code> is a hidden terminal excluded from default views. <code>blocked</code> is <strong>not</strong> a column — it is a tag carried in place (via <code>block</code>/<code>unblock</code>), so a blocked card keeps its real status. The constants live in <code>src/mait_code/tools/board/columns.py</code>. Project detection uses <code>mait_code.context.get_project()</code>; pass <code>--project</code> for work with no git repo (e.g. an app idea).</p>
+<p><strong>Columns are fixed, not configurable.</strong> <code>backlog → refined → in_progress → in_review → done</code> is the whole flow; <code>archived</code> is a hidden terminal excluded from default views. <code>blocked</code> is <strong>not</strong> a column — it is a tag carried in place (via <code>block</code>/<code>unblock</code>), so a blocked card keeps its real status. The constants live in <code>src/mait_code/tools/board/columns.py</code>. Project detection uses <code>mait_code.context.get_project()</code>; pass <code>--project</code> for work with no git repo (e.g. an app idea).</p>
 <h2 id="board-cli-tool-mc-tool-board">Board CLI Tool (<code>mc-tool-board</code>)<a class="headerlink" href="#board-cli-tool-mc-tool-board" title="Permanent link">&para;</a></h2>
 <p>Manually-driven kanban board. Claude in the live session acts as the worker ("pick up the next refined card"); there is no autonomous dispatcher — <em>you</em> drive the board. Cards are project-scoped via the basename of the git root (or cwd), stored in a shared <code>board.db</code>. Read commands accept <code>--json</code> for UI/skill consumption.</p>
 <table>
@@ -3357,8 +3447,8 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>list</code></td>
-<td>--all?, --status?, --archived?, --json?</td>
-<td>List cards grouped by column (current project by default; archived hidden)</td>
+<td>--all?, --status?, --archived?, --mine? | --session?, --json?</td>
+<td>List cards grouped by column (current project by default; archived hidden); <code>--mine</code>/<code>--session</code> keep cards bound to a session, across all projects</td>
 </tr>
 <tr>
 <td><code>show</code></td>
@@ -3368,7 +3458,7 @@ new entry's project) using two complementary measures:</p>
 <tr>
 <td><code>move</code></td>
 <td>id, status</td>
-<td>Move a card to any column (sets/clears <code>completed_at</code> around <code>done</code>)</td>
+<td>Move a card to any column (sets/clears <code>completed_at</code> around <code>done</code>; into <code>in_progress</code> binds the current session, out of it releases bindings)</td>
 </tr>
 <tr>
 <td><code>refine</code></td>
@@ -3378,7 +3468,7 @@ new entry's project) using two complementary measures:</p>
 <tr>
 <td><code>next</code></td>
 <td>--project?, --claim?, --json?</td>
-<td>Show the next refined card (priority, then oldest); <code>--claim</code> moves it to <code>in_progress</code></td>
+<td>Show the next refined card (priority, then oldest); <code>--claim</code> moves it to <code>in_progress</code> and binds the current session</td>
 </tr>
 <tr>
 <td><code>complete</code></td>
@@ -3426,6 +3516,16 @@ new entry's project) using two complementary measures:</p>
 <td>Archive a card (hidden, not deleted)</td>
 </tr>
 <tr>
+<td><code>bind</code></td>
+<td>id, --session? --pid?</td>
+<td>Bind a Claude Code session (default: <code>$CLAUDE_CODE_SESSION_ID</code>/<code>$CLAUDE_PID</code>) to an In Progress card; refused without both, and <code>--session</code> needs its own <code>--pid</code></td>
+</tr>
+<tr>
+<td><code>unbind</code></td>
+<td>id, --session?</td>
+<td>Drop a session's binding from a card</td>
+</tr>
+<tr>
 <td><code>comment</code></td>
 <td>id, body, --author?</td>
 <td>Append a comment (author <code>me</code> or <code>claude</code>)</td>
@@ -3452,9 +3552,9 @@ new entry's project) using two complementary measures:</p>
 </tr>
 </tbody>
 </table>
-<p>Every query and mutation — including the done-invariant (<code>completed_at</code> is set on entering <code>done</code> and cleared on leaving) — lives in <code>src/mait_code/tools/board/service.py</code>, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.</p>
+<p>Every query and mutation — including the done-invariant (<code>completed_at</code> is set on entering <code>done</code> and cleared on leaving) and the session-invariant (leaving <code>in_progress</code> releases every <code>card_sessions</code> binding) — lives in <code>src/mait_code/tools/board/service.py</code>, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.</p>
 <h2 id="board-tui-mait-code-board">Board TUI (<code>mait-code board</code>)<a class="headerlink" href="#board-tui-mait-code-board" title="Permanent link">&para;</a></h2>
-<p><code>mait-code board</code> opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a <code>p</code> project-filter dropdown, arrow-key navigation, <code>&lt;</code>/<code>&gt;</code> to move a card along the flow (<code>backlog → refined → in_progress → done</code>), <code>t</code> to toggle a tag and <code>b</code>/<code>u</code> to tag/untag <code>blocked</code> in place, plus a near-fullscreen card screen (<code>Enter</code>) that shows the card with its comment thread and flips to an edit form in place with <code>e</code>. That form is the single place a card is changed: title, priority, <strong>status</strong>, <strong>tags</strong>, <strong>references</strong>, description and acceptance criteria all on one form. Tags, references and status are a working copy — Save applies them together and returns to the view; cancel discards every pending change. Block/unblock stay outside the form (they carry a reason comment a plain tag can't), so the form's tag editor leaves <code>blocked</code> alone. <code>n</code> creates a card, <code>C</code> completes one with a handoff summary, and <code>c</code> comments. The card screen carries a References section — a list of label→value links, clickable where the value is a URL or <code>file://</code> path. Priority and tags render as domain-coloured chips on the card rows (<code>blocked</code> distinct in the error colour). A <code>Ctrl+P</code> command palette exposes every action, <code>?</code> opens a context help screen built from the live key-bindings, number keys jump between columns, and actions raise toasts. It is built on Textual and reuses the board <code>service.py</code>, mirroring the <code>mait-code settings</code> editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
+<p><code>mait-code board</code> opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a <code>p</code> project-filter dropdown, arrow-key navigation, <code>&lt;</code>/<code>&gt;</code> to move a card along the flow (<code>backlog → refined → in_progress → in_review → done</code>; In Review hides itself while empty unless <code>v</code> reveals it), <code>t</code> to toggle a tag and <code>b</code>/<code>u</code> to tag/untag <code>blocked</code> in place, plus a near-fullscreen card screen (<code>Enter</code>) that shows the card with its comment thread and flips to an edit form in place with <code>e</code>. That form is the single place a card is changed: title, priority, <strong>status</strong>, <strong>tags</strong>, <strong>references</strong>, description and acceptance criteria all on one form. Tags, references and status are a working copy — Save applies them together and returns to the view; cancel discards every pending change. Block/unblock stay outside the form (they carry a reason comment a plain tag can't), so the form's tag editor leaves <code>blocked</code> alone. <code>n</code> creates a card, <code>C</code> completes one with a handoff summary, and <code>c</code> comments. The card screen carries a References section — a list of label→value links, clickable where the value is a URL or <code>file://</code> path. Priority and tags render as domain-coloured chips on the card rows (<code>blocked</code> distinct in the error colour). A <code>Ctrl+P</code> command palette exposes every action, <code>?</code> opens a context help screen built from the live key-bindings, number keys jump between columns, and actions raise toasts. It is built on Textual and reuses the board <code>service.py</code>, mirroring the <code>mait-code settings</code> editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
 <p>The board TUI is <strong>on-demand and foreground</strong> — it is launched explicitly, runs until you quit with <code>q</code>, and leaves nothing behind. The <em>No background services</em> principle is intact: there is no daemon polling the board, only a short-lived app you open when you want to see it.</p>
 <h2 id="inbox-database">Inbox Database<a class="headerlink" href="#inbox-database" title="Permanent link">&para;</a></h2>
 <p>The inbox database (<code>inbox.db</code>) backs a single frictionless quick-capture holding pen — a "capture now, sort later" store so a thought can be dumped without deciding upfront whether it is a board card or a memory.</p>
@@ -3572,7 +3672,7 @@ new entry's project) using two complementary measures:</p>
 <p>Content-type routing: HTML→markdown (via <code>markdownify</code>), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.</p>
 <h2 id="home-hub-tui-mait-code-home">Home Hub TUI (<code>mait-code home</code>)<a class="headerlink" href="#home-hub-tui-mait-code-home" title="Permanent link">&para;</a></h2>
 <p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>e</code> embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
-<p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with.</p>
+<p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with, less the per-session section naming the cards a session is bound to (the hub has no session).</p>
 <p>This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from <code>mait_code.tui.brand</code>. The <code>BrandBanner</code> (<code>mait_code.tui.banner</code>) wraps them into one size-responsive masthead worn by every TUI in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the <code>mc-tool-*</code> CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, <code>mait-code home</code> prints a compact text summary and bare <code>mait-code</code> keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.</p>
 <h2 id="the-start-page-dashboardtoml">The Start Page (<code>dashboard.toml</code>)<a class="headerlink" href="#the-start-page-dashboardtoml" title="Permanent link">&para;</a></h2>
 <p>The home hub's root node renders a <strong>user-authored start page</strong> rather than a fixed readout: a grid of tiles declared in <code>dashboard.toml</code> in the data directory, one to four columns wide. A tile is either a <strong>built-in widget</strong> — the six in <code>_dashboard.py</code>'s <code>BUILTIN_WIDGETS</code>, reading the same store layers as the rest of the hub — or an arbitrary <strong>shell command</strong> whose stdout fills the tile. Shell tiles are what make the page personal (a <code>git log</code>, a deploy status, a weather one-liner) and are also the risk surface, so each runs under <code>dashboard-tile-timeout</code> seconds (default <code>5</code>) and a failure renders a snag line in that tile instead of taking the page down. The guided setup editor (<code>_dashboard_tui.py</code>, reachable from the hub or its command palette) writes the TOML so the format stays an implementation detail unless you want it. Loading and validation live in <code>cli/_dashboard.py</code>, kept separate from the TUI so the config can be parsed and checked without a terminal.</p>
@@ -3597,7 +3697,7 @@ new entry's project) using two complementary measures:</p>
 <td><code>session_start</code></td>
 <td>SessionStart</td>
 <td>sync</td>
-<td>Inject companion context (reminders, board summary, inbox count) — built by <code>hooks/session_start/context.py</code>, which reads each tool's store layer directly and is shared with the home TUI's system prompt view</td>
+<td>Inject companion context (the session's bound cards, reminders, board summary, inbox count) — built by <code>hooks/session_start/context.py</code>, which reads each tool's store layer directly and is shared with the home TUI's system prompt view. On <code>resume</code>/<code>clear</code> it first moves card↔session bindings to the new pid / session id</td>
 </tr>
 <tr>
 <td><code>observe</code></td>
@@ -3748,13 +3848,14 @@ table</a> for the full list.</p>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">{</span><span class="nt">&quot;ts&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1772029381.834</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;logger&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invocation&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed: mc-tool-memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;tool&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mc-tool-memory&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">48120</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">422</span><span class="p">}</span>
 </span></code></pre></div>
 <h2 id="identity-system">Identity System<a class="headerlink" href="#identity-system" title="Permanent link">&para;</a></h2>
-<p>Three files compose the companion's identity:</p>
+<p>Four files compose the companion's identity:</p>
 <ol>
-<li><strong>Soul Document</strong> — Values, personality, communication style (stable, rarely changes)</li>
+<li><strong>Soul Document</strong> — Values and personality (stable, rarely changes)</li>
 <li><strong>User Context</strong> — Who the user is, their stack, preferences (updates occasionally)</li>
+<li><strong>Communication Style</strong> — How responses are shaped: length, attention markers, shaping rules (stable, rarely changes)</li>
 <li><strong>MEMORY.md</strong> — Accumulated knowledge (updates frequently)</li>
 </ol>
-<p>All three are referenced via <code>@</code> imports in <code>config/CLAUDE.md</code> and loaded into every Claude Code session.</p>
+<p>The first three are seeded from <code>templates/</code> on install (the communication style from <code>templates/communication_styles/default.md</code>) and never overwritten. All four are referenced via <code>@</code> imports in <code>config/CLAUDE.md</code> and loaded into every Claude Code session.</p>
 <h2 id="migration-system">Migration System<a class="headerlink" href="#migration-system" title="Permanent link">&para;</a></h2>
 <p>Schema changes are managed via forward-only migrations in <code>src/mait_code/tools/memory/migrate.py</code>. Each migration has a version number, description, and body (SQL list or callable). The <code>schema_version</code> table tracks which migrations have been applied.</p>
 <p>Current migrations:</p>
@@ -3783,21 +3884,22 @@ table</a> for the full list.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>~/.claude/mait-code-data/
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── soul_document.md          # Companion identity
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── user_context.md           # User profile
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── memory/
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│   ├── MEMORY.md             # Curated facts (loaded every session)
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│   ├── memory.db             # SQLite FTS5 + vec0 + entities database
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── observations/         # Raw JSONL session extractions
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   │   ├── YYYY-MM-DD.jsonl
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   └── reflections/          # Reserved for synthesised insights (created on install)
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>├── models/                   # Cached embedding models (local provider only)
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── reminders.db              # Reminder database
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── board.db                  # Cross-project kanban board database
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>├── inbox.db                  # Quick-capture inbox database
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├── dashboard.toml            # Start-page tile layout
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>├── bridge.json               # Bridge channel config (may hold a token)
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>├── bridge-state.json         # Per-machine drain watermark — never sync
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>└── project-aliases.json      # Project slug alias map
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── communication_style.md    # Response shaping
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>├── memory/
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│   ├── MEMORY.md             # Curated facts (loaded every session)
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── memory.db             # SQLite FTS5 + vec0 + entities database
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   ├── observations/         # Raw JSONL session extractions
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   │   ├── YYYY-MM-DD.jsonl
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│   └── reflections/          # Reserved for synthesised insights (created on install)
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── models/                   # Cached embedding models (local provider only)
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── reminders.db              # Reminder database
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>├── board.db                  # Cross-project kanban board database
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├── inbox.db                  # Quick-capture inbox database
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>├── dashboard.toml            # Start-page tile layout
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>├── bridge.json               # Bridge channel config (may hold a token)
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>├── bridge-state.json         # Per-machine drain watermark — never sync
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>└── project-aliases.json      # Project slug alias map
 </span></code></pre></div>
 <blockquote>
 <p>Rotating log files do <strong>not</strong> live in the data directory — they go to the XDG
