@@ -10,6 +10,28 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **A third status-bar row for running subagents.** It appears only while
+  subagents this session started are running, and goes when the last reports
+  back. Collapsed, it's one line: how many, their types and the oldest's
+  running time. Click it open for each agent's task, current tool and time,
+  grouped by type.
+- **Git state on the branch**: `±3` uncommitted changes and `↑1↓2` commits
+  ahead of and behind the upstream, each shown only when non-zero.
+- **A reset countdown** (`↻41m`) on a rate-limit window at 80% or more.
+
+### Changed
+
+- **Labels read with their own values.** In the `blocks` style each label now
+  sits on the surface colour joined to its value, with a gap between badges.
+  The `jira` label takes the cards' primary colour, apart from In Review.
+- **Context shows tokens over the window's size** (`142k/1M`) and an
+  eight-cell gauge. The model no longer carries the window (`opus 5.5`), and
+  is drawn in coloured text rather than a block.
+- **Both rate-limit windows share one segment**, `5h·7d 63·41%`, coloured by
+  the fuller.
+
 ## [0.78.0] — 2026-10-07
 
 ### Added
