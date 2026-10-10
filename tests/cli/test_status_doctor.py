@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
+from typing import Literal
 from unittest.mock import patch
 
+import pytest
 from typer.testing import CliRunner
 
 from mait_code import config
@@ -19,6 +21,7 @@ from mait_code.cli._doctor import (
 from mait_code.cli._install import install
 from mait_code.cli._status import collect_status, render as status_render, render_json
 from mait_code.console import console
+from mait_code.tools.memory.embeddings import EmbeddingRecord
 
 runner = CliRunner()
 
@@ -499,12 +502,28 @@ class TestDoctorMemoryChecks:
     def _data_dir(fake_home: Path) -> Path:
         return fake_home / ".claude" / "mait-code-data"
 
-    def _make_db(self, fake_home: Path, *, entries: int, embedded: int):
-        """Create a real memory.db with `entries` rows, `embedded` of them vectored."""
+    def _make_db(
+        self,
+        fake_home: Path,
+        *,
+        entries: int,
+        embedded: int,
+        record: EmbeddingRecord | None | Literal["configured"] = "configured",
+    ):
+        """Create a real memory.db with `entries` rows, `embedded` of them vectored.
+
+        The embedding record is the configured model by default; pass ``None``
+        for a pre-record database, or another record for a mismatch.
+        """
         from mait_code.tools.memory.db import get_connection
-        from mait_code.tools.memory.embeddings import serialize_f32
+        from mait_code.tools.memory.embeddings import (
+            serialize_f32,
+            write_embedding_record,
+        )
 
         conn = get_connection(self._data_dir(fake_home) / "memory.db")
+        if record is not None:
+            write_embedding_record(conn, None if record == "configured" else record)
         for i in range(entries):
             cur = conn.execute(
                 "INSERT INTO memory_entries (content) VALUES (?)", (f"entry {i}",)
@@ -602,6 +621,61 @@ class TestDoctorMemoryChecks:
             conn.commit()
         check = self._check("memory-embeddings")
         assert check.level == "ok"
+
+    def test_record_ok_when_it_matches(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=2, embedded=2)
+        check = self._check("embedding-record")
+        assert check.level == "ok"
+        assert "vectors built by local" in check.message
+
+    def test_record_unknown_warns(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=2, embedded=2, record=None)
+        check = self._check("embedding-record")
+        assert check.level == "warn"
+        assert "no record" in check.message
+        assert check.fix_hint and "doctor --fix" in check.fix_hint
+
+    def test_record_mismatch_fails_naming_both_models(self, fake_home: Path) -> None:
+        other = EmbeddingRecord("local", "some/other-model", 768)
+        self._make_db(fake_home, entries=2, embedded=2, record=other)
+        check = self._check("embedding-record")
+        assert check.level == "fail"
+        assert "some/other-model" in check.message
+        assert "nomic-ai/nomic-embed-text-v1.5" in check.message
+        assert check.fix_hint and "mc-tool-memory reindex" in check.fix_hint
+
+    @pytest.mark.parametrize(
+        "record", [None, EmbeddingRecord("local", "some/other-model", 768)]
+    )
+    def test_record_fix_reindexes_missing_only(self, fake_home: Path, record) -> None:
+        self._make_db(fake_home, entries=2, embedded=2, record=record)
+        with patch("mait_code.tools.memory.cli.run_reindex", return_value=0) as reindex:
+            report = run_doctor(fix=True)
+        check = next(c for c in report.checks if c.name == "embedding-record")
+        assert check.level == "ok"
+        reindex.assert_called_once_with(
+            self._data_dir(fake_home).resolve() / "memory.db", missing_only=True
+        )
+        assert any("recorded the embedding model" in f for f in report.fixes_applied)
+
+    def test_record_fix_failure_keeps_fail_on_mismatch(self, fake_home: Path) -> None:
+        from mait_code.tools.memory.cli import ReindexError
+
+        other = EmbeddingRecord("local", "some/other-model", 768)
+        self._make_db(fake_home, entries=2, embedded=2, record=other)
+        with patch(
+            "mait_code.tools.memory.cli.run_reindex",
+            side_effect=ReindexError("embedding model unavailable"),
+        ):
+            report = run_doctor(fix=True)
+        check = next(c for c in report.checks if c.name == "embedding-record")
+        assert check.level == "fail"
+        assert "fixing failed: embedding model unavailable" in check.message
+        assert report.fixes_applied == []
+
+    def test_record_ok_when_no_vectors_yet(self, fake_home: Path) -> None:
+        self._make_db(fake_home, entries=2, embedded=0, record=None)
+        assert self._check("embedding-record").level == "ok"
 
     def test_vector_search_reports_vector_count(self, fake_home: Path) -> None:
         self._make_db(fake_home, entries=2, embedded=2)

@@ -326,8 +326,10 @@ def _fix_memory_embeddings(
 ) -> Check:
     """Embed the entries missing a vector and report the outcome.
 
-    Existing vectors are left alone — only the gap the check found is
-    filled. Progress is redirected to stderr so ``doctor --fix --json``
+    Normally only the gap the check found is filled. ``run_reindex``
+    rebuilds every vector instead when the stored ones came from another
+    model — by then ``_check_embedding_record`` has usually settled that,
+    so this is the gap-filling case in practice. Progress is redirected to stderr so ``doctor --fix --json``
     keeps a parseable stdout. A provider that can't run leaves the
     original warn standing, with the failure folded into the message.
     """
@@ -384,6 +386,70 @@ def _check_memory_embeddings(ddir: Path, fix: bool, fixes: list[str]) -> Check:
     if not total:
         return Check("memory-embeddings", "ok", "no live entries yet")
     return Check("memory-embeddings", "ok", f"all {total} live entries embedded")
+
+
+def _check_embedding_record(ddir: Path, fix: bool, fixes: list[str]) -> Check:
+    """The stored vectors should be recorded as built by the configured model.
+
+    Vectors from another model — same width or not — make similarities
+    meaningless, so the tools stop using them until a reindex: that's a
+    fail. No record at all is a warn: the tools stay permissive, but a
+    model change would go unnoticed. ``--fix`` settles either through
+    ``run_reindex(missing_only=True)``, which adopts the configured model
+    when a re-embedded sample matches and rebuilds otherwise.
+    """
+    from mait_code.tools.memory.embeddings import vectors_usable
+
+    db = _memory_db_path(ddir)
+    if not db.exists():
+        return Check("embedding-record", "ok", "no memory database yet")
+    try:
+        conn = _open_memory_db(db)
+        try:
+            status = vectors_usable(conn)
+        finally:
+            conn.close()
+    except Exception as exc:
+        return Check("embedding-record", "warn", f"could not inspect the record: {exc}")
+
+    if status.state in ("match", "empty"):
+        return Check("embedding-record", "ok", status.reason)
+    if status.state == "absent":
+        # vector-search reports an unqueryable table; don't double-count it.
+        return Check("embedding-record", "ok", "no vector table to check")
+
+    if fix:
+        from mait_code.tools.memory.cli import ReindexError, run_reindex
+
+        try:
+            with redirect_stdout(sys.stderr):
+                embedded = run_reindex(db, missing_only=True)
+        except ReindexError as exc:
+            level: Level = "warn" if status.usable else "fail"
+            return Check(
+                "embedding-record", level, f"{status.reason}; fixing failed: {exc}"
+            )
+        fixes.append(f"recorded the embedding model ({embedded} vectors re-embedded)")
+        return Check(
+            "embedding-record",
+            "ok",
+            f"recorded {status.configured} ({embedded} vectors re-embedded)",
+        )
+
+    if status.usable:
+        return Check(
+            "embedding-record",
+            "warn",
+            f"{status.reason} — a model change would go undetected",
+            fix_hint="mait-code doctor --fix (verifies a sample, re-embeds "
+            "only if it differs) or mc-tool-memory reindex",
+        )
+    return Check(
+        "embedding-record",
+        "fail",
+        f"{status.reason} — vector search, dedup and embedding are off until a reindex",
+        fix_hint="mc-tool-memory reindex (or mait-code doctor --fix)",
+    )
 
 
 def _check_vector_search(ddir: Path) -> Check:
@@ -577,6 +643,7 @@ def run_doctor(
         _check_hook_commands(cdir),
         _check_symlinks(cdir, fix, fixes),
         _check_data_dir(ddir, fix, fixes),
+        _check_embedding_record(ddir, fix, fixes),
         _check_memory_embeddings(ddir, fix, fixes),
         _check_vector_search(ddir),
         _check_observe_pipeline(ddir),

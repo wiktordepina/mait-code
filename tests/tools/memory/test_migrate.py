@@ -73,7 +73,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 13  # Exactly 13 migrations
+    assert versions == 14  # Exactly 14 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -82,9 +82,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 13
+    assert len(rows) == 14
     assert rows[0][0] == 1
-    assert rows[-1][0] == 13
+    assert rows[-1][0] == 14
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -199,6 +199,13 @@ def test_migration_7_recreates_vec_768(memory_db: sqlite3.Connection):
         "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_vec'"
     ).fetchall()
     assert len(tables) == 1
+
+
+def test_migration_14_creates_empty_memory_meta(memory_db: sqlite3.Connection):
+    """The migration can't know what built the vectors, so it records nothing."""
+    cols = [r[1] for r in memory_db.execute("PRAGMA table_info(memory_meta)")]
+    assert cols == ["key", "value"]
+    assert memory_db.execute("SELECT COUNT(*) FROM memory_meta").fetchone()[0] == 0
 
 
 def test_migration_11_supersede_index(memory_db: sqlite3.Connection):

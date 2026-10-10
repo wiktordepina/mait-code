@@ -10,6 +10,42 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.80.0] — 2026-10-10
+
+### Added
+
+- **`memory.db` records which embedding model built its vectors.** A new
+  `memory_meta` table holds the provider, model and width. A full
+  `mc-tool-memory reindex` writes it, and so does the first vector stored into
+  an empty table. `mc-tool-memory stats` and the home hub show it.
+- **`mait-code doctor` checks the embedding record.** It warns when there is no
+  record and fails when the record names another model. `--fix` re-embeds a
+  small sample of stored entries: if the configured model reproduces them, it
+  records that model without a full re-embed; otherwise it rebuilds.
+
+### Changed
+
+- **Vectors from another model are no longer used.** When the recorded model
+  differs from the configured one, even at the same width, vector search
+  returns nothing (results are keyword-only), semantic dedup falls back to
+  string similarity, and new entries are stored without a vector until you run
+  `mc-tool-memory reindex`. Changing the embedding model now requires a
+  reindex. Databases with no record behave as before.
+- **`reindex` in missing-only mode rebuilds in full on a model mismatch**, as it
+  already did on a width mismatch, so it never mixes vectors from two models.
+- **The home hub's reindex (`e`) says when it will rebuild.** The confirm
+  prompt now states that every vector will be rebuilt (on a model mismatch,
+  or when a sample check disagrees), and the hub offers that rebuild even
+  when no entry is missing a vector.
+- **The memory schema moves to version 14.** Hosts using `mait_code.remote`
+  refuse a `memory.db` on a different schema version, so upgrade the host
+  (maitre-d) together with the instance.
+
+### Removed
+
+- **`check_dimension_match`**, replaced by `vectors_usable`, which checks the
+  model as well as the width.
+
 ## [0.79.0] — 2026-10-09
 
 ### Added
@@ -2496,7 +2532,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.79.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.80.0...HEAD
+[0.80.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.80.0
 [0.79.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.79.0
 [0.78.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.78.0
 [0.77.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.2

@@ -637,6 +637,73 @@ def test_reindex_skips_modal_when_nothing_missing(
     assert calls == []
 
 
+def _status(state: str, usable: bool = True):
+    from mait_code.tools.memory.embeddings import (
+        EmbeddingRecord,
+        VectorStatus,
+        configured_record,
+    )
+
+    other = EmbeddingRecord("local", "some/other-model", 768)
+    reason = (
+        f"vectors were built by {other}, configured is {configured_record()}"
+        if not usable
+        else "fine"
+    )
+    return VectorStatus(usable, state, reason, configured_record(), other)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("missing", "state", "usable", "expected"),
+    [
+        (0, "match", True, None),
+        (0, "empty", True, None),
+        (2, "match", True, "Embed the 2 memory entries missing a vector?"),
+        (1, "unknown", True, "if it doesn't match, every vector is rebuilt"),
+        (0, "unknown", True, "Check which model built the memory vectors?"),
+        (0, "model", False, "Rebuild every memory vector?"),
+        (3, "dimension", False, "Rebuild every memory vector?"),
+    ],
+)
+def test_reindex_prompt_says_what_will_happen(missing, state, usable, expected):
+    from mait_code.cli._home_tui import _reindex_prompt
+
+    prompt = _reindex_prompt(missing, _status(state, usable))
+    if expected is None:
+        assert prompt is None
+    else:
+        assert prompt is not None and expected in prompt
+    if not usable:
+        assert prompt is not None and prompt.startswith("Vectors were built by")
+
+
+def test_reindex_offers_rebuild_on_mismatch_with_full_coverage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nothing missing, but vectors from another model: the hub still offers
+    the rebuild rather than reporting all clear."""
+    calls: list[bool] = []
+
+    async def scenario():
+        app = HomeApp()  # empty store: zero missing
+        monkeypatch.setattr(app, "_vector_status", lambda: _status("model", False))
+        monkeypatch.setattr(
+            app,
+            "_run_reindex_suspended",
+            lambda: (calls.append(True), ("ok", False))[1],
+        )
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.press("e")
+            await pilot.pause()
+            await pilot.click("#yes")
+            await pilot.pause()
+            await pilot.pause()
+
+    _run(scenario)
+    assert calls == [True]
+
+
 def test_reindex_served_to_a_browser_points_at_a_shell(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

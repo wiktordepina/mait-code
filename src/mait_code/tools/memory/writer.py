@@ -12,7 +12,13 @@ from difflib import SequenceMatcher
 from mait_code import config
 from mait_code.context import canonical_project
 from mait_code.tools.memory.db import LIVE_ENTRY_SQL
-from mait_code.tools.memory.embeddings import embed_text, serialize_f32
+from mait_code.tools.memory.embeddings import (
+    embed_text,
+    serialize_f32,
+    vectors_usable,
+    warn_unusable_once,
+    write_embedding_record,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -111,8 +117,14 @@ def _vector_candidates(
     support arbitrary ``WHERE`` clauses in k-NN queries.
 
     Returns:
-        Tuples of ``(id, content, similarity)``.
+        Tuples of ``(id, content, similarity)``. Empty if the stored vectors
+        came from a different model — dedup then rests on string similarity.
     """
+    status = vectors_usable(conn)
+    if not status.usable:
+        warn_unusable_once(status, "dedup falls back to string similarity")
+        return []
+
     vec = embed_text(content, prefix="search_document")
     if vec is None:
         return []
@@ -546,8 +558,21 @@ def mark_reviewed(conn: sqlite3.Connection, entry_id: int) -> dict:
 
 
 def _store_embedding(conn: sqlite3.Connection, entry_id: int, content: str) -> None:
-    """Compute and store the embedding for a memory entry; never raises."""
+    """Compute and store the embedding for a memory entry; never raises.
+
+    Skips the insert when the stored vectors came from a different model, so
+    the table never mixes embedding spaces. The first vector into an empty
+    table records the model that made it.
+    """
     try:
+        status = vectors_usable(conn)
+        if not status.usable:
+            logger.warning(
+                "Entry %d stored without a vector: %s; run 'mc-tool-memory reindex'",
+                entry_id,
+                status.reason,
+            )
+            return
         vec = embed_text(content, prefix="search_document")
         if vec is None:
             logger.warning(
@@ -561,6 +586,8 @@ def _store_embedding(conn: sqlite3.Connection, entry_id: int, content: str) -> N
             "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
             (entry_id, serialize_f32(vec)),
         )
+        if status.state == "empty":
+            write_embedding_record(conn)
         conn.commit()
     except Exception as e:
         logger.warning(

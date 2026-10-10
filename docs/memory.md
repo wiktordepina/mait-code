@@ -193,7 +193,7 @@ Run `mait-code settings list` to see the active configuration and where each val
 | `bridge-config-path` | `data-dir` + `/bridge.json` |
 | `dashboard-config-path` | `data-dir` + `/dashboard.toml` |
 
-**Important:** The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires re-embedding, which detects the dimension mismatch and recreates the vec table. The simplest path is `mait-code settings set embedding-provider bedrock --reindex` (a migration key requires an explicit `--reindex`/`--no-reindex`), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run `mc-tool-memory reindex` yourself. `mait-code settings list` shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
+**Important:** The embedding provider and model are a deployment-time decision. Once you start storing embeddings, switching provider *or* model requires re-embedding (a change of width also recreates the vec table) — see [The embedding record](#the-embedding-record) for what happens if you don't. The simplest path is `mait-code settings set embedding-provider bedrock --reindex` (a migration key requires an explicit `--reindex`/`--no-reindex`), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run `mc-tool-memory reindex` yourself. `mait-code settings list` shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at `reindex`.
 
 #### Advanced settings
 
@@ -218,6 +218,23 @@ The settings file also carries an **Advanced** section of operational knobs, wri
 - **Model caching (local):** the ONNX model (~550 MB) downloads on first use and caches in `~/.claude/mait-code-data/models/`.
 - **Graceful degradation:** if the provider fails to load (missing `fastembed` or `boto3`), everything falls back to keyword-only search. Memory storage is never blocked by embedding failures.
 - **Corporate proxy support:** the `truststore` package injects the OS trust store into Python's `ssl` module, so model downloads and API calls work behind corporate proxies (e.g. Netskope) without manual certificate management.
+
+#### The embedding record
+
+Vectors from different models live in different spaces: comparing a query embedded by one model against vectors stored by another gives meaningless similarities, even when both models produce vectors of the same width. So `memory.db` records which provider, model and width built its vectors, in a small `memory_meta` table, and every vector path checks that record against your configuration before embedding anything.
+
+The record is written when the tools know what built the vectors: by `mc-tool-memory reindex`, and by the first vector stored into an empty table. Schema migrations never write it.
+
+| State | What the tools do | `mait-code doctor` |
+|-------|-------------------|--------------------|
+| Record matches configuration | Normal hybrid search, semantic dedup, embedding on store | ok |
+| No vectors yet | Normal; the first one stored records the model | ok |
+| No record (a database from before the record existed) | Normal, as before — but a model change would go undetected | warn |
+| Record names another provider or model, or the width differs | Vector search returns nothing (results are keyword-only), dedup falls back to string similarity, and new entries are stored without a vector | fail |
+
+**Changing the model now requires a reindex.** Until you run `mc-tool-memory reindex` (or `mait-code settings set ... --reindex`), memory search is keyword-only. A warning is logged once per process.
+
+**Settling an unknown record** doesn't need a full re-embed. `mait-code doctor --fix` re-embeds a small sample of stored entries, spread from the oldest to the newest, and compares each against its stored vector. The same model reproduces its vectors almost exactly, so if every sampled vector is a near-perfect match (cosine ≥ 0.99), the configured model is recorded as is and only entries missing a vector are embedded. Anything else triggers a full rebuild. It is a spot check, not a proof: it reliably catches a model switched once (the oldest and newest vectors disagree), but a short stretch under another model between two sample points can slip through. If you know the model changed, run `mc-tool-memory reindex` instead. `doctor --fix` also rebuilds on a mismatch.
 
 #### Corporate setup (Bedrock)
 

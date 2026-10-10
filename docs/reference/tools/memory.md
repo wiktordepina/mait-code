@@ -29,9 +29,13 @@
 
 ::: mait_code.tools.memory.EmbeddingProvider
 
+::: mait_code.tools.memory.EmbeddingRecord
+
 ::: mait_code.tools.memory.LocalProvider
 
-::: mait_code.tools.memory.check_dimension_match
+::: mait_code.tools.memory.VectorStatus
+
+::: mait_code.tools.memory.configured_record
 
 ::: mait_code.tools.memory.embed_text
 
@@ -41,7 +45,15 @@
 
 ::: mait_code.tools.memory.is_available
 
+::: mait_code.tools.memory.read_embedding_record
+
 ::: mait_code.tools.memory.serialize_f32
+
+::: mait_code.tools.memory.vectors_usable
+
+::: mait_code.tools.memory.verify_and_adopt
+
+::: mait_code.tools.memory.write_embedding_record
 
 ## Search
 
