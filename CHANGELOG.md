@@ -31,6 +31,10 @@ don't change the public surface. Everything is still in flux.
   reindex. Databases with no record behave as before.
 - **`reindex` in missing-only mode rebuilds in full on a model mismatch**, as it
   already did on a width mismatch, so it never mixes vectors from two models.
+- **The home hub's reindex (`e`) says when it will rebuild.** The confirm
+  prompt now states that every vector will be rebuilt (on a model mismatch,
+  or when a sample check disagrees), and the hub offers that rebuild even
+  when no entry is missing a vector.
 - **The memory schema moves to version 14.** Hosts using `mait_code.remote`
   refuse a `memory.db` on a different schema version, so upgrade the host
   (maitre-d) together with the instance.

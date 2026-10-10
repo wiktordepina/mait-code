@@ -37,6 +37,7 @@ from __future__ import annotations
 import enum
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from rich.text import Text
 from textual import work
@@ -57,6 +58,9 @@ from mait_code.tui.banner import BrandBanner, installed_version
 from mait_code.tui.brand import GLYPH, empty_state
 from mait_code.tui.markdown import md_parser
 from mait_code.tui.palette import rich_colour as _rich_colour
+
+if TYPE_CHECKING:
+    from mait_code.tools.memory.embeddings import VectorStatus
 
 __all__ = ["HomeApp", "HomeTarget", "NodeSpec", "run_home_tui"]
 
@@ -135,6 +139,28 @@ class NodeSpec:
 
 
 # -- shared line helpers (pure; no theme needed) -------------------------------
+
+
+def _reindex_prompt(missing: int, status: VectorStatus) -> str | None:
+    """Word the reindex confirm for what ``run_reindex(missing_only=True)`` will do.
+
+    Returns ``None`` when there is nothing to do.
+    """
+    if not status.usable:
+        reason = status.reason[0].upper() + status.reason[1:]
+        return f"{reason}. Rebuild every memory vector?"
+    noun = "entry" if missing == 1 else "entries"
+    if status.state == "unknown":
+        check = (
+            "A sample is re-embedded first to confirm which model built the "
+            "vectors; if it doesn't match, every vector is rebuilt."
+        )
+        if missing:
+            return f"Embed the {missing} memory {noun} missing a vector? {check}"
+        return f"Check which model built the memory vectors? {check}"
+    if missing:
+        return f"Embed the {missing} memory {noun} missing a vector?"
+    return None
 
 
 def _card_line(card: dict) -> Label:
@@ -1199,9 +1225,16 @@ class HomeApp(MaitApp):
 
     @work
     async def action_reindex(self) -> None:
-        """Confirm, embed the entries missing a vector, then refresh the hub."""
+        """Confirm, bring the vectors in line with the configured model, refresh.
+
+        Usually that means embedding the entries missing a vector, but the
+        reindex rebuilds every vector when the stored ones came from another
+        model (or there's no record and a re-embedded sample disagrees) —
+        the prompt says so, since on Bedrock a rebuild costs money.
+        """
         try:
             missing = self._memory_stats().unembedded
+            status = self._vector_status()
         except Exception as exc:  # noqa: BLE001 — a broken store mustn't kill home
             self.notify(
                 f"Couldn't read the memory store: {exc}",
@@ -1209,22 +1242,23 @@ class HomeApp(MaitApp):
                 severity="error",
             )
             return
-        if missing == 0:
-            self.notify("Every memory entry already has a vector.", title="Reindex")
+        prompt = _reindex_prompt(missing, status)
+        if prompt is None:
+            self.notify(
+                "Every memory entry already has a vector from the configured model.",
+                title="Reindex",
+            )
             return
         if self.is_web:
             # Served to a browser there is no terminal to suspend to.
             self.notify(
-                f"{missing} memory entries lack a vector. Reindexing needs a "
-                "terminal: run `mait-code doctor --fix` in a shell.",
+                f"{prompt} Reindexing needs a terminal: run "
+                "`mait-code doctor --fix` in a shell.",
                 title="Reindex",
                 severity="warning",
             )
             return
-        noun = "entry" if missing == 1 else "entries"
-        confirmed = await self.push_screen_wait(
-            ConfirmScreen(f"Embed the {missing} memory {noun} missing a vector?")
-        )
+        confirmed = await self.push_screen_wait(ConfirmScreen(prompt))
         if not confirmed:
             return
         note, failed = self._run_reindex_suspended()
@@ -1232,6 +1266,17 @@ class HomeApp(MaitApp):
         self.notify(
             note, title="Reindex", severity="error" if failed else "information"
         )
+
+    @staticmethod
+    def _vector_status():
+        from mait_code.tools.memory.db import get_connection
+        from mait_code.tools.memory.embeddings import vectors_usable
+
+        conn = get_connection()
+        try:
+            return vectors_usable(conn)
+        finally:
+            conn.close()
 
     def _run_reindex_suspended(self) -> tuple[str, bool]:
         """Drop out of the app to embed with normal terminal output.

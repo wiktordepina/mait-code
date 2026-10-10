@@ -234,7 +234,7 @@ The record is written when the tools know what built the vectors: by `mc-tool-me
 
 **Changing the model now requires a reindex.** Until you run `mc-tool-memory reindex` (or `mait-code settings set ... --reindex`), memory search is keyword-only. A warning is logged once per process.
 
-**Settling an unknown record** doesn't need a full re-embed. `mait-code doctor --fix` re-embeds a small sample of stored entries, spread from the oldest to the newest, and compares each against its stored vector. The same model reproduces its vectors almost exactly, so if every sample is a near-perfect match (cosine ≥ 0.99), the configured model is recorded as is and only entries missing a vector are embedded. Anything else triggers a full rebuild. `doctor --fix` also rebuilds on a mismatch.
+**Settling an unknown record** doesn't need a full re-embed. `mait-code doctor --fix` re-embeds a small sample of stored entries, spread from the oldest to the newest, and compares each against its stored vector. The same model reproduces its vectors almost exactly, so if every sampled vector is a near-perfect match (cosine ≥ 0.99), the configured model is recorded as is and only entries missing a vector are embedded. Anything else triggers a full rebuild. It is a spot check, not a proof: it reliably catches a model switched once (the oldest and newest vectors disagree), but a short stretch under another model between two sample points can slip through. If you know the model changed, run `mc-tool-memory reindex` instead. `doctor --fix` also rebuilds on a mismatch.
 
 #### Corporate setup (Bedrock)
 

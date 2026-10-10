@@ -38,6 +38,9 @@ logger = logging.getLogger(__name__)
 class EmbeddingProvider(ABC):
     """Internal interface for embedding providers."""
 
+    #: The ``embedding-provider`` setting value that selects this provider.
+    provider_name: str
+
     @abstractmethod
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Embed a batch of texts and return one float vector per input."""
@@ -58,6 +61,8 @@ class EmbeddingProvider(ABC):
 
 class LocalProvider(EmbeddingProvider):
     """fastembed/HuggingFace local embeddings."""
+
+    provider_name = "local"
 
     KNOWN_MODELS = {
         "nomic-ai/nomic-embed-text-v1.5": 768,
@@ -88,6 +93,8 @@ class LocalProvider(EmbeddingProvider):
 
 class BedrockProvider(EmbeddingProvider):
     """AWS Bedrock embedding provider."""
+
+    provider_name = "bedrock"
 
     KNOWN_MODELS = {
         "amazon.titan-embed-text-v2:0": 1024,
@@ -402,16 +409,34 @@ def read_embedding_record(conn: sqlite3.Connection) -> EmbeddingRecord | None:
         return None
 
 
+def _embedding_source() -> EmbeddingRecord:
+    """Return what this process actually embeds with.
+
+    The loaded provider when there is one — it is kept for the life of the
+    process, so if settings changed after it loaded, it (not the settings)
+    made the vectors. The configured model otherwise: the next embed will
+    load exactly that.
+    """
+    if _provider is not None:
+        return EmbeddingRecord(
+            _provider.provider_name, _provider.model_name, _provider.dimension
+        )
+    return configured_record()
+
+
 def write_embedding_record(
     conn: sqlite3.Connection, record: EmbeddingRecord | None = None
 ) -> None:
-    """Record what built ``memory_vec`` — the configured model by default.
+    """Record what built ``memory_vec``.
+
+    Defaults to what this process embeds with (the loaded provider, else
+    the configured model), so the record is true by construction.
 
     Does not commit: callers write the record in the same transaction that
     empties the table or inserts its first vector, so the record and the
     vectors never disagree.
     """
-    record = record or configured_record()
+    record = record or _embedding_source()
     conn.executemany(
         "INSERT OR REPLACE INTO memory_meta(key, value) VALUES (?, ?)",
         zip(_RECORD_KEYS, (record.provider, record.model, str(record.dim))),

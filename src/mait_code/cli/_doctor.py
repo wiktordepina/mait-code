@@ -326,8 +326,10 @@ def _fix_memory_embeddings(
 ) -> Check:
     """Embed the entries missing a vector and report the outcome.
 
-    Existing vectors are left alone — only the gap the check found is
-    filled. Progress is redirected to stderr so ``doctor --fix --json``
+    Normally only the gap the check found is filled. ``run_reindex``
+    rebuilds every vector instead when the stored ones came from another
+    model — by then ``_check_embedding_record`` has usually settled that,
+    so this is the gap-filling case in practice. Progress is redirected to stderr so ``doctor --fix --json``
     keeps a parseable stdout. A provider that can't run leaves the
     original warn standing, with the failure folded into the message.
     """

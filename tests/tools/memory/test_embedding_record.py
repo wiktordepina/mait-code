@@ -59,6 +59,25 @@ class TestRecord:
         write_embedding_record(memory_db)
         assert read_embedding_record(memory_db) == configured_record()
 
+    def test_defaults_to_the_loaded_provider_over_settings(
+        self, memory_db, monkeypatch
+    ):
+        """A provider loaded before a settings change made the vectors."""
+
+        class Loaded(embeddings.EmbeddingProvider):
+            provider_name = "local"
+            model_name = "loaded/model"  # type: ignore[assignment]
+            dimension = 768  # type: ignore[assignment]
+
+            def embed(self, texts):
+                return [[0.1] * 768 for _ in texts]
+
+        monkeypatch.setattr(embeddings, "_provider", Loaded())
+        write_embedding_record(memory_db)
+        assert read_embedding_record(memory_db) == EmbeddingRecord(
+            "local", "loaded/model", 768
+        )
+
     def test_missing_table_reads_none(self, memory_db):
         memory_db.execute("DROP TABLE memory_meta")
         assert read_embedding_record(memory_db) is None
