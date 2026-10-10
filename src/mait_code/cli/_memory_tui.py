@@ -28,6 +28,7 @@ from textual import work
 from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer, Input, Label, Markdown, Static, Tree
 from textual.widgets.tree import TreeNode
@@ -371,8 +372,22 @@ class MemoryApp(MaitApp):
             else:
                 await self._show_detail(data)
 
+    def _detail_pane(self) -> VerticalScroll | None:
+        """Return the detail pane, or ``None`` once the screen is torn down.
+
+        A highlight queued just before quitting is still handled after the
+        screen's widgets are gone, so the renderers below must not assume
+        the pane exists.
+        """
+        try:
+            return self.query_one("#detail", VerticalScroll)
+        except NoMatches:
+            return None
+
     async def _show_detail(self, entry: dict) -> None:
-        detail = self.query_one("#detail", VerticalScroll)
+        detail = self._detail_pane()
+        if detail is None:
+            return
         await detail.remove_children()
         meta = (
             f"created {str(entry['created_at'])[:10]}"
@@ -390,7 +405,9 @@ class MemoryApp(MaitApp):
         )
 
     async def _show_group_detail(self, node: TreeNode[dict]) -> None:
-        detail = self.query_one("#detail", VerticalScroll)
+        detail = self._detail_pane()
+        if detail is None:
+            return
         await detail.remove_children()
         count = len(node.children)
         await detail.mount(
@@ -403,7 +420,9 @@ class MemoryApp(MaitApp):
         )
 
     async def _show_native_file_detail(self, file: dict) -> None:
-        detail = self.query_one("#detail", VerticalScroll)
+        detail = self._detail_pane()
+        if detail is None:
+            return
         await detail.remove_children()
         content = self._native_text(file["path"])
         await detail.mount(
@@ -420,7 +439,9 @@ class MemoryApp(MaitApp):
         )
 
     async def _show_native_project_detail(self, project: dict) -> None:
-        detail = self.query_one("#detail", VerticalScroll)
+        detail = self._detail_pane()
+        if detail is None:
+            return
         await detail.remove_children()
         count = len(project["files"])
         await detail.mount(
@@ -436,7 +457,9 @@ class MemoryApp(MaitApp):
         )
 
     async def _show_empty(self) -> None:
-        detail = self.query_one("#detail", VerticalScroll)
+        detail = self._detail_pane()
+        if detail is None:
+            return
         await detail.remove_children()
         if self._view == "native":
             if self._query:

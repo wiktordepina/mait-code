@@ -397,3 +397,24 @@ class TestReload:
         before, after = _run(scenario)
         assert before == ["fact (1)"]
         assert after == ["fact (2)"]
+
+
+class TestTeardown:
+    def test_highlight_handled_after_teardown_is_ignored(
+        self, store_path: Path
+    ) -> None:
+        """A highlight still queued when the app quits reaches the detail
+        renderers after the screen is gone; they must not raise."""
+        _seed(store_path, [{"content": "late fact"}])
+
+        async def scenario():
+            app = MemoryApp(db_path=store_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                tree = app.query_one(Tree)
+                leaf = next(iter(tree.root.children)).children[0]
+                group = next(iter(tree.root.children))
+            await app._show_detail(leaf.data)
+            await app._show_group_detail(group)
+
+        _run(scenario)

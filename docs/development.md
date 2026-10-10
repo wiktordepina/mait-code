@@ -20,8 +20,9 @@ The suite covers every package under `src/mait_code/` (over two thousand tests
 and growing). `-n auto` runs it across every core via pytest-xdist; a focused
 run is quicker without it. The root conftest refuses to load the real
 fastembed model, so tests never download it — one that exercises the provider
-path patches `fastembed.TextEmbedding` itself. Fixtures live in tool-specific `tests/<area>/conftest.py`
-files; the root `tests/conftest.py` keeps cross-cutting setup. See the "Writing
+path patches `fastembed.TextEmbedding` itself. Fixtures live in tool-specific
+`tests/<area>/conftest.py` files; the root `tests/conftest.py` keeps
+cross-cutting setup. See the "Writing
 Tests for Memory Components" section below for the established patterns.
 
 `tests/test_imports.py` is the smoke test that asserts every reference-surface
