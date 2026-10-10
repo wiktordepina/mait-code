@@ -8,7 +8,8 @@ authentication, scopes and process lifecycle all belong to the host.
 What is here is the whole contract:
 
 * **Read** the board, a card with its comments, the project list, memories
-  (ranked like ``mc-tool-memory search``) and active reminders.
+  (ranked like ``mc-tool-memory search``), whether memory search can use its
+  vectors, and active reminders.
 * **Create** a card. It always lands in ``backlog`` — there is no status
   parameter to override.
 * **Refine** a card: edit its description and acceptance criteria, and move
@@ -39,7 +40,8 @@ own mait-code release, so this module is careful about what it trusts:
   concurrently.
 
 :func:`search_memories` is the exception: it embeds and ranks with the
-*host's* own configuration, resolved like any mait-code setting (environment
+*host's* own configuration (and :func:`memory_search_status` reads the same
+embedding settings, without loading the provider), resolved like any mait-code setting (environment
 variable, then the settings file, then the default). A host should pin all of
 it:
 
@@ -68,7 +70,8 @@ instance's ``memory.db`` records which provider and model built its vectors;
 when the host's configuration differs (a different model, even one of the same
 dimension, or a different width), vector search is skipped and results are
 keyword-only, with a warning logged once per process. An instance with no
-record yet is trusted as before. The ranking knobs are a second divergence:
+record yet is trusted as before. :func:`memory_search_status` reports the same
+check up front, for a host's health endpoint. The ranking knobs are a second divergence:
 the host's, not the instance's, decide the order of results.
 """
 
@@ -103,6 +106,7 @@ __all__ = [
     "list_projects",
     "refine_card",
     # Memory
+    "memory_search_status",
     "search_memories",
     # Reminders
     "list_reminders",
@@ -516,6 +520,49 @@ def search_memories(
         {**entry, "score": round(score, 4)}
         for score, entry in rank_results(results, limit=limit, query_project=project)
     ]
+
+
+def memory_search_status(data_dir: Path) -> dict:
+    """Report whether memory search can use the instance's vectors.
+
+    The check :func:`search_memories` makes on every query, asked up front:
+    the provider, model and width the host is configured to embed with,
+    against the record of what built the instance's vectors. When they
+    disagree, search runs keyword-only. Nothing is embedded and the
+    embedding provider is never loaded, so this is cheap enough for a
+    health check.
+
+    Note:
+        Like :func:`search_memories`, the configured side comes from the
+        host's environment and settings file — see the module docstring.
+
+    Args:
+        data_dir: The instance's data directory.
+
+    Returns:
+        A dict with ``usable`` (bool), ``state`` (``"match"``,
+        ``"unknown"``, ``"empty"``, ``"absent"``, ``"dimension"`` or
+        ``"model"``), ``reason`` (one line), ``configured`` (``provider``,
+        ``model``, ``dim``) and ``recorded`` (the same keys, or ``None``
+        when the instance has no record). ``"unknown"`` and ``"empty"`` are
+        usable; ``"absent"``, ``"dimension"`` and ``"model"`` are not.
+    """
+    from dataclasses import asdict
+
+    from mait_code.tools.memory.embeddings import vectors_usable
+
+    conn = _memory_conn(data_dir)
+    try:
+        status = vectors_usable(conn)
+    finally:
+        conn.close()
+    return {
+        "usable": status.usable,
+        "state": status.state,
+        "reason": status.reason,
+        "configured": asdict(status.configured),
+        "recorded": asdict(status.recorded) if status.recorded else None,
+    }
 
 
 # --- Reminders ---

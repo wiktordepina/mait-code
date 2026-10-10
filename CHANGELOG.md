@@ -10,6 +10,14 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **`remote.memory_search_status` reports whether memory search can use the
+  instance's vectors.** It compares the host's embedding settings with the
+  model recorded in `memory.db` and returns the verdict, its reason and both
+  sides, without loading the embedding provider — so a host can show a
+  mismatch in a health check instead of finding it in keyword-only results.
+
 ## [0.80.0] — 2026-10-10
 
 ### Added
