@@ -501,6 +501,26 @@ def test_list_reminders(instance):
 # --- Hostile configuration ---
 
 
+def test_board_and_reminders_read_no_configuration(instance, monkeypatch):
+    """Only memory search consults the host's setup; the board and reminder
+    functions resolve no setting and look up no data dir.
+    """
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("board and reminders must not read configuration")
+
+    card_id = _add(instance, "x")
+    monkeypatch.setattr("mait_code.config.resolve", forbidden)
+    monkeypatch.setattr("mait_code.config.data_dir", forbidden)
+
+    remote.list_cards(instance)
+    remote.get_card(instance, card_id)
+    remote.list_projects(instance)
+    remote.create_card(instance, client="hermes", project="proj", title="t")
+    remote.refine_card(instance, card_id, client="laptop", description="d")
+    remote.list_reminders(instance)
+
+
 class _FakeTextEmbedding:
     """Stands in for fastembed's model so the real provider path runs offline."""
 

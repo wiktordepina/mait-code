@@ -29,21 +29,45 @@ own mait-code release, so this module is careful about what it trusts:
 
 * Every function takes the instance's *data_dir* explicitly and reads only the
   databases in it — never ``dashboard.toml``, the settings ``[env]`` table or
-  any other agent-writable file that would execute — and never touches
-  ``os.environ``.
+  any other agent-writable file that would execute.
+* The board and reminder functions read nothing else at all: no
+  ``os.environ``, no settings file, no data-dir lookup.
 * It never runs migrations. A database whose schema version differs from the
   one this release expects raises :class:`SchemaMismatch`.
 * Memories, reminders and board reads open read-only; the two board writes
   open read-write with a busy timeout, since the instance writes it
   concurrently.
 
-Memory search is the one path that also reads the *host's* own setup: the
-query is embedded with the provider and model in the host's settings, and the
-local provider caches its model under the host's data dir (downloading it on
-first use). The host's settings must name the same provider and model the
-instance used. A mismatch in vector *dimension* degrades to keyword-only
-results; a different model of the same dimension is **not** detected and
-ranks on meaningless similarities.
+:func:`search_memories` is the exception: it embeds and ranks with the
+*host's* own configuration, resolved like any mait-code setting (environment
+variable, then the settings file, then the default). A host should pin all of
+it:
+
+* **Environment** — ``MAIT_CODE_EMBEDDING_PROVIDER`` and
+  ``MAIT_CODE_EMBEDDING_MODEL`` (or ``MAIT_CODE_BEDROCK_MODEL_ID`` and
+  ``MAIT_CODE_BEDROCK_REGION``); the ranking knobs
+  ``MAIT_CODE_SCORE_WEIGHT_{RECENCY,IMPORTANCE,RELEVANCE}``,
+  ``MAIT_CODE_HALF_LIFE_{EPISODIC,SEMANTIC,PROCEDURAL}`` and
+  ``MAIT_CODE_SCOPE_BOOST_{GLOBAL,CROSS_PROJECT}``; and ``MAIT_CODE_DATA_DIR``,
+  ``XDG_CONFIG_HOME`` and ``HOME``, which locate the files below.
+* **Files** — the flat keys of ``$XDG_CONFIG_HOME/mait-code/settings.toml``
+  (its ``[env]`` table is not applied), and the local provider's model cache
+  in ``models/`` under the host's data dir, downloaded on first use. The
+  Bedrock provider also reads boto3's usual AWS credential chain.
+* **Side effects** — the host's data dir is created if missing, and the
+  Bedrock provider injects the OS trust store into :mod:`ssl` for the whole
+  process.
+* **Lifetime** — the ranking knobs and the embedding dimension are fixed when
+  the memory modules are first imported, the settings file is cached on first
+  read, and the provider is kept once loaded, so changes need a restart. So
+  does a failed model load: it degrades every later search to keyword-only
+  results.
+
+The host must embed with the same provider and model the instance used. A
+mismatch in vector *dimension* degrades to keyword-only results; a different
+model of the same dimension is **not** detected and ranks on meaningless
+similarities. The ranking knobs are a second divergence: the host's, not the
+instance's, decide the order of results.
 """
 
 from __future__ import annotations
@@ -450,6 +474,11 @@ def search_memories(
 
     The same hybrid search and composite ranking as ``mc-tool-memory
     search``. Superseded and retired entries are excluded.
+
+    Note:
+        Unlike the rest of this module, the embedding provider and the
+        ranking weights come from the host's environment and settings file —
+        see the module docstring for exactly what to pin.
 
     Args:
         data_dir: The instance's data directory.
