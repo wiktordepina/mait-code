@@ -40,10 +40,10 @@ own mait-code release, so this module is careful about what it trusts:
   concurrently.
 
 :func:`search_memories` is the exception: it embeds and ranks with the
-*host's* own configuration (and :func:`memory_search_status` reads the same
-embedding settings, without loading the provider), resolved like any mait-code setting (environment
-variable, then the settings file, then the default). A host should pin all of
-it:
+*host's* own configuration, resolved like any mait-code setting (environment
+variable, then the settings file, then the default).
+:func:`memory_search_status` reads the same embedding settings, without
+loading the provider. A host should pin all of it:
 
 * **Environment** — ``MAIT_CODE_EMBEDDING_PROVIDER`` and
   ``MAIT_CODE_EMBEDDING_MODEL`` (or ``MAIT_CODE_BEDROCK_MODEL_ID`` and
@@ -546,6 +546,13 @@ def memory_search_status(data_dir: Path) -> dict:
         ``model``, ``dim``) and ``recorded`` (the same keys, or ``None``
         when the instance has no record). ``"unknown"`` and ``"empty"`` are
         usable; ``"absent"``, ``"dimension"`` and ``"model"`` are not.
+        ``usable`` says only that the vectors fit the configured model, not
+        that the provider will load: a missing model download, ``boto3`` or
+        AWS credentials still leaves search keyword-only.
+
+    Raises:
+        FileNotFoundError: If the instance has no ``memory.db``.
+        SchemaMismatch: If its schema version is not this release's.
     """
     from dataclasses import asdict
 

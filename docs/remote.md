@@ -2,10 +2,10 @@
 
 `mait_code.remote` is the part of a mait-code instance that another machine or
 agent may touch: read the board, raise cards, refine them, search memories,
-check that memory search can use its vectors, and list reminders. It is a **Python module, not a server**. A separate service you
-run — typically one that speaks MCP to remote Claude Code sessions or other
-agents — imports it and decides who may call what. mait-code itself never opens
-a port.
+check that memory search can use its vectors, and list reminders. It is a
+**Python module, not a server**. A separate service you run — typically one
+that speaks MCP to remote Claude Code sessions or other agents — imports it and
+decides who may call what. mait-code itself never opens a port.
 
 That split is deliberate. mait-code has no background services, so the
 listening, the authentication, the per-client scopes and the process lifecycle
@@ -125,6 +125,11 @@ status = remote.memory_search_status(data)
 
 `state` is `match`, `unknown` (vectors but no record) or `empty` when search
 can use vectors, and `model`, `dimension` or `absent` (no vector table) when
-it can't. The configured side comes from the host's environment and settings
-file, exactly as for `search_memories`. See [how memory works](memory.md) for
-the settings.
+it can't. `usable` covers the vectors only, not whether the host's provider
+loads: a model that can't be downloaded, or missing `boto3` or AWS
+credentials, still leaves search keyword-only, so a health check should not
+read `usable` as "vector search works". Like every other call, it raises
+`FileNotFoundError` for a missing `memory.db` and `SchemaMismatch` for a
+schema it doesn't expect. The configured side comes from the host's
+environment and settings file, exactly as for `search_memories`. See
+[how memory works](memory.md) for the settings.
