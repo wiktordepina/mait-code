@@ -29,6 +29,23 @@ def _run(coro_factory):
     return asyncio.run(coro_factory())
 
 
+async def _until(pilot, check, timeout: float = 5.0) -> None:
+    """Pause until *check()* is truthy, or *timeout* seconds pass.
+
+    The detail pane renders via ``call_after_refresh``, which a single
+    ``pilot.pause()`` doesn't wait for on a loaded machine. On timeout this
+    returns quietly so the test's own assertion reports what was there.
+    """
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while not check() and loop.time() < deadline:
+        await pilot.pause(0.01)
+
+
+def _detail_text(app, selector: str, kind) -> str:
+    return str(app.query_one(f"#detail {selector}", kind).render())
+
+
 @pytest.fixture
 def store_path(tmp_path: Path) -> Path:
     """An empty temp memory database path."""
@@ -147,7 +164,14 @@ class TestBoot:
         async def scenario():
             app = MemoryApp(db_path=store_path)
             async with app.run_test() as pilot:
-                await pilot.pause()
+                await _until(
+                    pilot,
+                    lambda: (
+                        app.query("#detail Markdown")
+                        and app.query_one("#detail Markdown", Markdown).source
+                        == "newest fact"
+                    ),
+                )
                 body = app.query_one("#detail Markdown", Markdown)
                 title = str(app.query_one("#detail .title", Label).render())
                 return body.source, title
@@ -160,8 +184,14 @@ class TestBoot:
         async def scenario():
             app = MemoryApp(db_path=store_path)
             async with app.run_test() as pilot:
-                await pilot.pause()
-                return str(app.query_one("#detail Static", Static).render())
+                await _until(
+                    pilot,
+                    lambda: (
+                        app.query("#detail Static")
+                        and "✦" in _detail_text(app, "Static", Static)
+                    ),
+                )
+                return _detail_text(app, "Static", Static)
 
         assert "✦ Nothing remembered yet — we're just getting started." in _run(
             scenario
@@ -185,8 +215,14 @@ class TestBoot:
         async def scenario():
             app = MemoryApp(db_path=store_path)
             async with app.run_test() as pilot:
-                await pilot.pause()
-                return str(app.query_one("#detail .help", Label).render())
+                await _until(
+                    pilot,
+                    lambda: (
+                        app.query("#detail .help")
+                        and "created" in _detail_text(app, ".help", Label)
+                    ),
+                )
+                return _detail_text(app, ".help", Label)
 
         meta = _run(scenario)
         assert "created 2026-05-20" in meta
@@ -248,7 +284,14 @@ class TestFiltering:
             async with app.run_test() as pilot:
                 await pilot.pause()
                 app.query_one("#filter", Input).value = "dark themes"
-                await pilot.pause()
+                await _until(
+                    pilot,
+                    lambda: (
+                        app.query("#detail Markdown")
+                        and app.query_one("#detail Markdown", Markdown).source
+                        == "prefers dark themes"
+                    ),
+                )
                 return app.query_one("#detail Markdown", Markdown).source
 
         assert _run(scenario) == "prefers dark themes"
@@ -261,8 +304,14 @@ class TestFiltering:
             async with app.run_test() as pilot:
                 await pilot.pause()
                 app.query_one("#filter", Input).value = "kubernetes"
-                await pilot.pause()
-                return str(app.query_one("#detail Static", Static).render())
+                await _until(
+                    pilot,
+                    lambda: (
+                        app.query("#detail Static")
+                        and "kubernetes" in _detail_text(app, "Static", Static)
+                    ),
+                )
+                return _detail_text(app, "Static", Static)
 
         assert "✦ I don't remember anything matching 'kubernetes'." in _run(scenario)
 
