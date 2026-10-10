@@ -47,6 +47,7 @@ ALLOWED = {
     "list_cards",
     "list_projects",
     "refine_card",
+    "memory_search_status",
     "search_memories",
     "list_reminders",
 }
@@ -472,6 +473,101 @@ def test_search_memories_validates(instance, kwargs):
         remote.search_memories(instance, **kwargs)
 
 
+def _embed_seeded(data: Path, record, dim: int = 768) -> None:
+    """Give every seeded entry a *dim*-wide vector, recorded as built by *record*."""
+    from mait_code.tools.memory.embeddings import (
+        serialize_f32,
+        write_embedding_record,
+    )
+
+    conn = memory_connection(data / "memory.db")
+    for (entry_id,) in conn.execute("SELECT id FROM memory_entries").fetchall():
+        conn.execute(
+            "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
+            (entry_id, serialize_f32([0.1] * dim)),
+        )
+    if record is not None:
+        write_embedding_record(conn, record)
+    conn.commit()
+    conn.close()
+
+
+def test_memory_search_status_empty(instance):
+    from mait_code.tools.memory.embeddings import configured_record
+
+    status = remote.memory_search_status(instance)
+    assert status["usable"] is True
+    assert status["state"] == "empty"
+    assert status["recorded"] is None
+    configured = configured_record()
+    assert status["configured"] == {
+        "provider": configured.provider,
+        "model": configured.model,
+        "dim": configured.dim,
+    }
+
+
+def test_memory_search_status_match(instance):
+    from mait_code.tools.memory.embeddings import configured_record
+
+    _seed_memories(instance)
+    _embed_seeded(instance, configured_record())
+    status = remote.memory_search_status(instance)
+    assert (status["usable"], status["state"]) == (True, "match")
+    assert status["recorded"] == status["configured"]
+
+
+def test_memory_search_status_unrecorded_is_usable(instance):
+    _seed_memories(instance)
+    _embed_seeded(instance, None)
+    status = remote.memory_search_status(instance)
+    assert (status["usable"], status["state"]) == (True, "unknown")
+    assert status["recorded"] is None
+
+
+def test_memory_search_status_model_mismatch(instance):
+    from mait_code.tools.memory.embeddings import EmbeddingRecord
+
+    _seed_memories(instance)
+    _embed_seeded(instance, EmbeddingRecord("local", "some/other-model", 768))
+    status = remote.memory_search_status(instance)
+    assert (status["usable"], status["state"]) == (False, "model")
+    assert status["recorded"] == {
+        "provider": "local",
+        "model": "some/other-model",
+        "dim": 768,
+    }
+    assert "some/other-model" in status["reason"]
+
+
+def test_memory_search_status_dimension_mismatch(instance, monkeypatch):
+    """The host is configured for a wider model than built the vectors."""
+    from mait_code.tools.memory.embeddings import configured_record
+
+    _seed_memories(instance)
+    _embed_seeded(instance, configured_record())
+    monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
+    monkeypatch.setenv("MAIT_CODE_BEDROCK_MODEL_ID", "amazon.titan-embed-text-v2:0")
+    status = remote.memory_search_status(instance)
+    assert (status["usable"], status["state"]) == (False, "dimension")
+    assert status["configured"]["dim"] != status["recorded"]["dim"]
+
+
+def test_memory_search_status_never_loads_the_provider(instance, monkeypatch):
+    import mait_code.tools.memory.embeddings as embeddings
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("the status check must not load the provider")
+
+    monkeypatch.setattr(embeddings, "_provider", None)
+    monkeypatch.setattr(embeddings, "get_provider", forbidden)
+    monkeypatch.setattr("fastembed.TextEmbedding", forbidden)
+    _seed_memories(instance)
+    _embed_seeded(instance, None)
+    remote.memory_search_status(instance)
+    assert embeddings._provider is None
+
+
 # --- Reminders ---
 
 
@@ -576,6 +672,7 @@ def test_never_reads_agent_config_or_touches_environment(
     remote.create_card(instance, client="hermes", project="proj", title="t")
     remote.refine_card(instance, card_id, client="laptop", description="d")
     remote.search_memories(instance, "uses")
+    remote.memory_search_status(instance)
     remote.list_reminders(instance)
 
     assert embeddings._provider is not None, "the provider path did not run"

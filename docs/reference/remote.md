@@ -27,6 +27,8 @@
 
 ## Memory
 
+::: mait_code.remote.memory_search_status
+
 ::: mait_code.remote.search_memories
 
 ## Reminders

@@ -1,11 +1,11 @@
 # The remote API
 
 `mait_code.remote` is the part of a mait-code instance that another machine or
-agent may touch: read the board, raise cards, refine them, search memories and
-list reminders. It is a **Python module, not a server**. A separate service you
-run — typically one that speaks MCP to remote Claude Code sessions or other
-agents — imports it and decides who may call what. mait-code itself never opens
-a port.
+agent may touch: read the board, raise cards, refine them, search memories,
+check that memory search can use its vectors, and list reminders. It is a
+**Python module, not a server**. A separate service you run — typically one
+that speaks MCP to remote Claude Code sessions or other agents — imports it and
+decides who may call what. mait-code itself never opens a port.
 
 That split is deliberate. mait-code has no background services, so the
 listening, the authentication, the per-client scopes and the process lifecycle
@@ -22,6 +22,7 @@ next to the data model and its tests.
 | `create_card` | A new card, **always in backlog**: there is no status parameter. |
 | `refine_card` | Edit description and acceptance criteria, and move between **backlog and refined** only. |
 | `search_memories` | The same hybrid search and ranking as `mc-tool-memory search`, each result with a `score`. |
+| `memory_search_status` | Whether memory search can use the instance's vectors with the host's embedding settings, and why not. |
 | `list_reminders` | Active reminders, due time as ISO 8601, each flagged `overdue` or not. |
 
 Every function takes the instance's data directory as its first argument.
@@ -102,9 +103,33 @@ instance's (`embedding-provider`, `embedding-model` or `bedrock-model-id`). The
 local provider downloads its model on first use, so the host needs outbound
 access to fetch it once, or a pre-populated model cache.
 
-Keep the two in step by hand: `memory.db` doesn't record which model built its
-vectors, so a mismatch is only partly caught. If the vector *dimensions*
-differ, or the provider can't load, results fall back to keyword-only. A
-different model with the **same** dimension isn't detected, and vector
-similarities are then meaningless and skew the ranking. See
+`memory.db` records the provider, model and width that built its vectors. When
+the host's settings disagree — a different model, even one of the same width,
+or a different width — vector search is skipped and results are keyword-only,
+with a warning logged once per host process. An instance with no record yet
+(vectors built before 0.80.0) is trusted as before; run
+`mait-code doctor --fix` on the instance to record one.
+
+`memory_search_status` asks the same question up front, without embedding
+anything or loading the provider, so a host can surface it in a health check
+rather than discover it from degraded results:
+
+```python
+status = remote.memory_search_status(data)
+# {"usable": False, "state": "model",
+#  "reason": "vectors were built by local 'nomic-ai/nomic-embed-text-v1.5' (768d), "
+#            "configured is local 'some/other-model' (768d)",
+#  "configured": {"provider": "local", "model": "some/other-model", "dim": 768},
+#  "recorded": {"provider": "local", "model": "nomic-ai/nomic-embed-text-v1.5", "dim": 768}}
+```
+
+`state` is `match`, `unknown` (vectors but no record) or `empty` when search
+can use vectors, and `model`, `dimension` or `absent` (no vector table) when
+it can't. `usable` covers the vectors only, not whether the host's provider
+loads: a model that can't be downloaded, or missing `boto3` or AWS
+credentials, still leaves search keyword-only, so a health check should not
+read `usable` as "vector search works". Like every other call, it raises
+`FileNotFoundError` for a missing `memory.db` and `SchemaMismatch` for a
+schema it doesn't expect. The configured side comes from the host's
+environment and settings file, exactly as for `search_memories`. See
 [how memory works](memory.md) for the settings.
