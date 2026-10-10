@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.80.0] — 2026-10-10
+
 ### Added
 
 - **`memory.db` records which embedding model built its vectors.** A new
@@ -2530,7 +2532,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.79.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.80.0...HEAD
+[0.80.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.80.0
 [0.79.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.79.0
 [0.78.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.78.0
 [0.77.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.77.2
