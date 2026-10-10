@@ -63,11 +63,13 @@ it:
   does a failed model load: it degrades every later search to keyword-only
   results.
 
-The host must embed with the same provider and model the instance used. A
-mismatch in vector *dimension* degrades to keyword-only results; a different
-model of the same dimension is **not** detected and ranks on meaningless
-similarities. The ranking knobs are a second divergence: the host's, not the
-instance's, decide the order of results.
+The host must embed with the same provider and model the instance used. The
+instance's ``memory.db`` records which provider and model built its vectors;
+when the host's configuration differs (a different model, even one of the same
+dimension, or a different width), vector search is skipped and results are
+keyword-only, with a warning logged once per process. An instance with no
+record yet is trusted as before. The ranking knobs are a second divergence:
+the host's, not the instance's, decide the order of results.
 """
 
 from __future__ import annotations

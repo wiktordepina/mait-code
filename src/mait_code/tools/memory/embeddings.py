@@ -12,9 +12,12 @@ callers always receive ``None`` instead of exceptions.
 
 import json
 import logging
+import math
 import sqlite3
 import struct
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Literal
 
 from mait_code.config import (
     DEFAULT_BEDROCK_MODEL_ID,
@@ -311,26 +314,259 @@ def _parse_vec_table_dim(conn) -> int | None:
     return None
 
 
-def check_dimension_match(conn: sqlite3.Connection) -> tuple[bool, int | None, int]:
-    """Check whether the vec table dimension matches the configured provider.
+# ---------------------------------------------------------------------------
+# Embedding record — which provider/model built ``memory_vec``
+# ---------------------------------------------------------------------------
+
+#: ``memory_meta`` keys holding the embedding record.
+_RECORD_KEYS = ("embedding-provider", "embedding-model", "embedding-dim")
+
+#: Cosine similarity a re-embedded sample must reach to count as the same model.
+ADOPT_THRESHOLD = 0.99
+
+#: How many stored vectors :func:`verify_and_adopt` re-embeds.
+ADOPT_SAMPLE = 5
+
+
+@dataclass(frozen=True)
+class EmbeddingRecord:
+    """The provider, model and width an embedding was (or would be) made with."""
+
+    provider: str
+    model: str
+    dim: int
+
+    def __str__(self) -> str:
+        return f"{self.provider} '{self.model}' ({self.dim}d)"
+
+
+VectorState = Literal["absent", "empty", "unknown", "match", "dimension", "model"]
+
+
+@dataclass(frozen=True)
+class VectorStatus:
+    """Whether ``memory_vec`` can be queried and written with the configured model.
+
+    Attributes:
+        usable: ``True`` when vector search, dedup and writes may proceed.
+        state: ``"match"`` (record agrees with configuration), ``"unknown"``
+            (vectors but no record — permissive, as before the record
+            existed), ``"empty"`` (no vectors yet), ``"absent"`` (no
+            ``memory_vec`` table), ``"dimension"`` (stored or declared width
+            differs) or ``"model"`` (recorded provider/model differs).
+        reason: A one-line human explanation.
+        configured: What the current settings would embed with.
+        recorded: The stored record, or ``None`` if there is none.
+    """
+
+    usable: bool
+    state: VectorState
+    reason: str
+    configured: EmbeddingRecord
+    recorded: EmbeddingRecord | None
+
+
+def configured_record() -> EmbeddingRecord:
+    """Return the provider/model/width the current settings embed with.
+
+    Read live from configuration — never the import-time constants, and
+    never by instantiating the provider (which can load a local model).
+    """
+    return EmbeddingRecord(
+        _get_provider_name(), _get_embedding_model(), _get_embedding_dim()
+    )
+
+
+def read_embedding_record(conn: sqlite3.Connection) -> EmbeddingRecord | None:
+    """Return the record of what built ``memory_vec``, or ``None`` if unknown.
+
+    A database that predates ``memory_meta``, or one whose vectors were never
+    built under a recording release, has no record.
+    """
+    try:
+        rows = dict(
+            conn.execute(
+                "SELECT key, value FROM memory_meta WHERE key IN (?, ?, ?)",
+                _RECORD_KEYS,
+            ).fetchall()
+        )
+    except sqlite3.Error:
+        return None
+    try:
+        return EmbeddingRecord(
+            rows["embedding-provider"],
+            rows["embedding-model"],
+            int(rows["embedding-dim"]),
+        )
+    except (KeyError, ValueError):
+        return None
+
+
+def write_embedding_record(
+    conn: sqlite3.Connection, record: EmbeddingRecord | None = None
+) -> None:
+    """Record what built ``memory_vec`` — the configured model by default.
+
+    Does not commit: callers write the record in the same transaction that
+    empties the table or inserts its first vector, so the record and the
+    vectors never disagree.
+    """
+    record = record or configured_record()
+    conn.executemany(
+        "INSERT OR REPLACE INTO memory_meta(key, value) VALUES (?, ?)",
+        zip(_RECORD_KEYS, (record.provider, record.model, str(record.dim))),
+    )
+
+
+def vectors_usable(conn: sqlite3.Connection) -> VectorStatus:
+    """Check that ``memory_vec`` was built by the configured provider and model.
+
+    Vectors from different models live in different spaces, so comparing a
+    query embedded by one against vectors stored by another yields
+    meaningless similarities — even at the same width. Search, dedup and
+    writes therefore consult this before embedding anything.
+
+    An empty table is usable whatever the record says (nothing to disagree
+    with), unless its declared width differs. Vectors with no record are
+    usable too, keeping pre-record databases working; ``doctor`` nudges
+    those toward :func:`verify_and_adopt`.
 
     Args:
-        conn: Open memory database connection.
+        conn: Open memory database connection (read-only is fine).
 
     Returns:
-        A tuple ``(matches, table_dim, expected_dim)``. ``table_dim`` is
-        ``None`` if the vec table doesn't exist.
+        The :class:`VectorStatus`.
     """
-    expected = _get_embedding_dim()
+    configured = configured_record()
+    recorded = read_embedding_record(conn)
+
+    def status(usable: bool, state: VectorState, reason: str) -> VectorStatus:
+        return VectorStatus(usable, state, reason, configured, recorded)
+
     try:
         row = conn.execute("SELECT embedding FROM memory_vec LIMIT 1").fetchone()
-        if row is None:
-            # Table exists but is empty — check the declared dimension
-            table_dim = _parse_vec_table_dim(conn)
-            if table_dim is None:
-                return True, None, expected
-            return table_dim == expected, table_dim, expected
-        table_dim = len(row[0]) // 4  # 4 bytes per float32
-        return table_dim == expected, table_dim, expected
-    except Exception:
-        return True, None, expected
+    except sqlite3.Error as exc:
+        return status(False, "absent", f"memory_vec is not queryable ({exc})")
+
+    if row is None:
+        declared = _parse_vec_table_dim(conn)
+        if declared is not None and declared != configured.dim:
+            return status(
+                False,
+                "dimension",
+                f"memory_vec is declared {declared}d, "
+                f"{configured} embeds {configured.dim}d",
+            )
+        return status(True, "empty", "no vectors stored yet")
+
+    stored_dim = len(row[0]) // 4  # 4 bytes per float32
+    if stored_dim != configured.dim:
+        built_by = recorded or f"a {stored_dim}d model"
+        return status(
+            False,
+            "dimension",
+            f"vectors were built by {built_by}, configured is {configured}",
+        )
+    if recorded is None:
+        return status(True, "unknown", "no record of which model built the vectors")
+    if (recorded.provider, recorded.model) != (configured.provider, configured.model):
+        return status(
+            False,
+            "model",
+            f"vectors were built by {recorded}, configured is {configured}",
+        )
+    return status(True, "match", f"vectors built by {recorded}")
+
+
+_warned: set[str] = set()
+
+
+def warn_unusable_once(status: VectorStatus, consequence: str) -> None:
+    """Log *status* at warning level, once per process per reason.
+
+    A long-lived host would otherwise log the same mismatch on every query.
+    """
+    key = f"{status.reason}|{consequence}"
+    if key in _warned:
+        return
+    _warned.add(key)
+    logger.warning(
+        "Vectors unusable: %s — %s; run 'mc-tool-memory reindex'",
+        status.reason,
+        consequence,
+    )
+
+
+def _cosine(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    norm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))
+    return dot / norm if norm else 0.0
+
+
+def _sample_vectors(conn: sqlite3.Connection, n: int) -> list[tuple[str, bytes]]:
+    """Return ``(content, stored vector)`` for *n* vectors spread across ids.
+
+    Both ends are always included: a model switched mid-life leaves the
+    oldest vectors from one model and the newest from the other, so a spread
+    sample catches the mix that a random one could miss.
+    """
+    ids = [r[0] for r in conn.execute("SELECT rowid FROM memory_vec ORDER BY rowid")]
+    if not ids:
+        return []
+    if len(ids) > n:
+        step = (len(ids) - 1) / (n - 1)
+        ids = sorted({ids[round(i * step)] for i in range(n)})
+    rows = []
+    for entry_id in ids:
+        row = conn.execute(
+            """SELECT m.content, v.embedding
+               FROM memory_vec v JOIN memory_entries m ON m.id = v.rowid
+               WHERE v.rowid = ?""",
+            (entry_id,),
+        ).fetchone()
+        if row:
+            rows.append((row[0], row[1]))
+    return rows
+
+
+AdoptOutcome = Literal["adopted", "differs", "unavailable"]
+
+
+def verify_and_adopt(
+    conn: sqlite3.Connection,
+    *,
+    sample: int = ADOPT_SAMPLE,
+    threshold: float = ADOPT_THRESHOLD,
+) -> AdoptOutcome:
+    """Record the configured model if it demonstrably built the stored vectors.
+
+    Re-embeds a spread sample of stored entries and compares each against
+    its stored vector. The same model reproduces its vectors (cosine ~1.0);
+    a different one embeds into an unrelated space and lands nowhere near.
+    This settles an unknown record without re-embedding everything.
+
+    Commits the record on success; writes nothing otherwise.
+
+    Args:
+        conn: Open, writable memory database connection.
+        sample: How many stored vectors to re-embed.
+        threshold: Minimum cosine similarity every sampled vector must reach.
+
+    Returns:
+        ``"adopted"`` if the record was written, ``"differs"`` if any sampled
+        vector disagrees (or there is nothing to compare), ``"unavailable"``
+        if the provider could not embed.
+    """
+    rows = _sample_vectors(conn, sample)
+    if not rows:
+        return "differs"
+    vectors = embed_texts([content for content, _ in rows], prefix="search_document")
+    if vectors is None:
+        return "unavailable"
+    for (_, blob), fresh in zip(rows, vectors):
+        stored = list(struct.unpack(f"{len(blob) // 4}f", blob))
+        if len(stored) != len(fresh) or _cosine(stored, fresh) < threshold:
+            return "differs"
+    write_embedding_record(conn)
+    conn.commit()
+    return "adopted"

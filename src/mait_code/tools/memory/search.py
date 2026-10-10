@@ -7,7 +7,12 @@ import logging
 import sqlite3
 
 from mait_code.tools.memory.db import LIVE_ENTRY_SQL
-from mait_code.tools.memory.embeddings import embed_text, serialize_f32
+from mait_code.tools.memory.embeddings import (
+    embed_text,
+    serialize_f32,
+    vectors_usable,
+    warn_unusable_once,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -269,8 +274,14 @@ def vector_search_entries(
 
     Returns:
         A list of dicts with the standard fields plus a ``"similarity"``
-        key in ``[0.0, 1.0]``. Empty list if embeddings are unavailable.
+        key in ``[0.0, 1.0]``. Empty list if embeddings are unavailable or
+        the stored vectors came from a different model.
     """
+    status = vectors_usable(conn)
+    if not status.usable:
+        warn_unusable_once(status, "results are keyword-only")
+        return []
+
     vec = embed_text(query, prefix="search_query")
     if vec is None:
         return []

@@ -11,9 +11,10 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 
-from mait_code.tools.memory.embeddings import EMBEDDING_DIM, EMBEDDING_MODEL
 from mait_code.tools.memory.embeddings import (
-    _get_provider_name as _embedding_provider_name,
+    EmbeddingRecord,
+    configured_record,
+    read_embedding_record,
 )
 
 __all__ = ["MemoryStats", "collect_stats"]
@@ -34,6 +35,7 @@ class MemoryStats:
     provider: str
     model: str
     dim: int
+    recorded: EmbeddingRecord | None
     unreflected: int
     last_reflected_at: datetime | None
 
@@ -51,8 +53,9 @@ class MemoryStats:
 def collect_stats(conn: sqlite3.Connection) -> MemoryStats:
     """Collect store statistics from an open memory connection.
 
-    All counts come from SQL; provider/model/dimension come from
-    configuration. ``unreflected`` and ``last_reflected_at`` describe the
+    All counts come from SQL; provider/model/dimension come from live
+    configuration, and ``recorded`` is what actually built the stored
+    vectors (``None`` if unknown). ``unreflected`` and ``last_reflected_at`` describe the
     global reflection watermark (observation backlog and freshness).
     """
     # Imported here, not at module top: reflect.py pulls in the LLM layer.
@@ -89,6 +92,7 @@ def collect_stats(conn: sqlite3.Connection) -> MemoryStats:
         embedded = conn.execute("SELECT COUNT(*) FROM memory_vec").fetchone()[0]
     except sqlite3.Error:
         embedded = 0
+    configured = configured_record()
 
     return MemoryStats(
         total=total,
@@ -99,9 +103,10 @@ def collect_stats(conn: sqlite3.Connection) -> MemoryStats:
         superseded=superseded,
         retired=retired,
         embedded=embedded,
-        provider=_embedding_provider_name(),
-        model=EMBEDDING_MODEL,
-        dim=EMBEDDING_DIM,
+        provider=configured.provider,
+        model=configured.model,
+        dim=configured.dim,
+        recorded=read_embedding_record(conn),
         unreflected=count_unreflected(conn),
         last_reflected_at=get_last_reflected_at(conn),
     )

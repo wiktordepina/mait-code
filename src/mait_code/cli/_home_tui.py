@@ -816,6 +816,7 @@ class HomeApp(MaitApp):
                 ("provider", stats.provider),
                 ("model", stats.model),
                 ("dimensions", str(stats.dim)),
+                ("built by", str(stats.recorded) if stats.recorded else "unknown"),
             ]
         )
         widgets.append(

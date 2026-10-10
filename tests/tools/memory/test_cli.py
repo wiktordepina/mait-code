@@ -447,25 +447,29 @@ class TestCmdReindex:
             assert run_reindex() == 0
 
     @staticmethod
-    def _embed_one_entry(conn) -> None:
-        """Hand-embed the first entry so the missing set is the other two."""
-        from mait_code.tools.memory.embeddings import serialize_f32
+    def _embed_one_entry(conn, *, record: bool = True) -> None:
+        """Hand-embed the first entry so the missing set is the other two.
+
+        With ``record``, the configured model is recorded as having built it.
+        """
+        from mait_code.tools.memory.embeddings import (
+            serialize_f32,
+            write_embedding_record,
+        )
 
         first = conn.execute("SELECT id FROM memory_entries ORDER BY id").fetchone()[0]
         conn.execute(
             "INSERT INTO memory_vec(rowid, embedding) VALUES (?, ?)",
             (first, serialize_f32([0.5] * 768)),
         )
+        if record:
+            write_embedding_record(conn)
         conn.commit()
 
     @staticmethod
     def _reindex_patches():
         return (
             patch("mait_code.tools.memory.cli.is_available", return_value=True),
-            patch(
-                "mait_code.tools.memory.cli.check_dimension_match",
-                return_value=(True, 768, 768),
-            ),
             patch(
                 "mait_code.tools.memory.cli.embed_texts",
                 side_effect=lambda texts, prefix: [[0.1] * 768 for _ in texts],
@@ -476,8 +480,8 @@ class TestCmdReindex:
         from mait_code.tools.memory.cli import run_reindex
 
         self._embed_one_entry(populated_mem_db)
-        available, dim_match, embed = self._reindex_patches()
-        with available, dim_match, embed as embed_mock:
+        available, embed = self._reindex_patches()
+        with available, embed as embed_mock:
             assert run_reindex(missing_only=True) == 2
         # The pre-embedded entry was never re-sent to the model.
         sent = [t for call in embed_mock.call_args_list for t in call.args[0]]
@@ -489,8 +493,8 @@ class TestCmdReindex:
         from mait_code.tools.memory.cli import run_reindex
 
         self._embed_one_entry(populated_mem_db)
-        available, dim_match, embed = self._reindex_patches()
-        with available, dim_match, embed:
+        available, embed = self._reindex_patches()
+        with available, embed:
             assert run_reindex() == 3
 
     def test_run_reindex_missing_only_noop_when_complete(
@@ -498,11 +502,128 @@ class TestCmdReindex:
     ):
         from mait_code.tools.memory.cli import run_reindex
 
-        available, dim_match, embed = self._reindex_patches()
-        with available, dim_match, embed:
+        available, embed = self._reindex_patches()
+        with available, embed:
             assert run_reindex(missing_only=True) == 3  # first run fills the gap
             assert run_reindex(missing_only=True) == 0  # second finds nothing
         assert "Nothing to embed" in capsys.readouterr().out
+
+    def test_full_reindex_records_the_model(self, populated_mem_db):
+        from mait_code.tools.memory.cli import run_reindex
+        from mait_code.tools.memory.embeddings import (
+            configured_record,
+            read_embedding_record,
+        )
+
+        self._embed_one_entry(populated_mem_db, record=False)
+        available, embed = self._reindex_patches()
+        with available, embed:
+            run_reindex()
+        assert read_embedding_record(populated_mem_db) == configured_record()
+
+    def test_record_commits_with_the_clear(self, populated_mem_db):
+        """A reindex that dies mid-way leaves the record and table agreeing."""
+        from mait_code.tools.memory.cli import ReindexError, run_reindex
+        from mait_code.tools.memory.embeddings import (
+            EmbeddingRecord,
+            configured_record,
+            read_embedding_record,
+            write_embedding_record,
+        )
+
+        self._embed_one_entry(populated_mem_db, record=False)
+        write_embedding_record(
+            populated_mem_db, EmbeddingRecord("local", "old/model", 768)
+        )
+        populated_mem_db.commit()
+        with (
+            patch("mait_code.tools.memory.cli.is_available", return_value=True),
+            patch("mait_code.tools.memory.cli.embed_texts", return_value=None),
+            pytest.raises(ReindexError),
+        ):
+            run_reindex()
+        assert read_embedding_record(populated_mem_db) == configured_record()
+        n_vec = populated_mem_db.execute("SELECT COUNT(*) FROM memory_vec").fetchone()
+        assert n_vec[0] == 0
+
+    def test_missing_only_rebuilds_on_model_mismatch(self, populated_mem_db):
+        from mait_code.tools.memory.cli import run_reindex
+        from mait_code.tools.memory.embeddings import (
+            EmbeddingRecord,
+            configured_record,
+            read_embedding_record,
+            write_embedding_record,
+        )
+
+        self._embed_one_entry(populated_mem_db, record=False)
+        write_embedding_record(
+            populated_mem_db, EmbeddingRecord("local", "old/model", 768)
+        )
+        populated_mem_db.commit()
+        available, embed = self._reindex_patches()
+        with available, embed as embed_mock:
+            # Every entry, the pre-embedded one included, is re-embedded.
+            assert run_reindex(missing_only=True) == 3
+        sent = [t for call in embed_mock.call_args_list for t in call.args[0]]
+        assert "User prefers dark mode" in sent
+        assert read_embedding_record(populated_mem_db) == configured_record()
+
+    def test_missing_only_adopts_on_matching_sample(self, populated_mem_db):
+        from mait_code.tools.memory.cli import run_reindex
+        from mait_code.tools.memory.embeddings import (
+            configured_record,
+            read_embedding_record,
+        )
+
+        self._embed_one_entry(populated_mem_db, record=False)
+        available, embed = self._reindex_patches()
+        with (
+            available,
+            embed as embed_mock,
+            # The sample re-embeds to exactly the stored vector.
+            patch(
+                "mait_code.tools.memory.embeddings.embed_texts",
+                side_effect=lambda texts, prefix: [[0.5] * 768 for _ in texts],
+            ),
+        ):
+            assert run_reindex(missing_only=True) == 2
+        sent = [t for call in embed_mock.call_args_list for t in call.args[0]]
+        assert "User prefers dark mode" not in sent
+        assert read_embedding_record(populated_mem_db) == configured_record()
+
+    def test_missing_only_rebuilds_on_differing_sample(self, populated_mem_db):
+        from mait_code.tools.memory.cli import run_reindex
+        from mait_code.tools.memory.embeddings import (
+            configured_record,
+            read_embedding_record,
+        )
+
+        self._embed_one_entry(populated_mem_db, record=False)
+        orthogonal = [1.0, 0.0] * 384
+        available, embed = self._reindex_patches()
+        with (
+            available,
+            embed,
+            patch(
+                "mait_code.tools.memory.embeddings.embed_texts",
+                side_effect=lambda texts, prefix: [orthogonal for _ in texts],
+            ),
+        ):
+            assert run_reindex(missing_only=True) == 3
+        assert read_embedding_record(populated_mem_db) == configured_record()
+
+    def test_missing_only_raises_when_sample_cannot_embed(self, populated_mem_db):
+        from mait_code.tools.memory.cli import ReindexError, run_reindex
+
+        self._embed_one_entry(populated_mem_db, record=False)
+        available, embed = self._reindex_patches()
+        with (
+            available,
+            embed,
+            patch("mait_code.tools.memory.embeddings.embed_texts", return_value=None),
+            pytest.raises(ReindexError, match="verifying"),
+        ):
+            run_reindex(missing_only=True)
 
 
 class TestCmdRestore:
@@ -1046,21 +1167,20 @@ class TestReindexInternals:
         )
 
     def test_run_reindex_recreates_on_dimension_mismatch(self, populated_mem_db):
-        from mait_code.tools.memory.cli import run_reindex
+        from mait_code.tools.memory.cli import _recreate_vec_table, run_reindex
+        from mait_code.tools.memory.embeddings import _parse_vec_table_dim
 
         with (
             patch("mait_code.tools.memory.cli.is_available", return_value=True),
-            patch(
-                "mait_code.tools.memory.cli.check_dimension_match",
-                return_value=(False, 256, 768),
-            ),
             patch(
                 "mait_code.tools.memory.cli.embed_texts",
                 side_effect=lambda texts, prefix: [[0.1] * 768 for _ in texts],
             ),
         ):
-            # Mismatch triggers a vec-table rebuild at 768d, then embeds all 7.
-            assert run_reindex() == 3
+            _recreate_vec_table(populated_mem_db, 256)
+            # Mismatch triggers a vec-table rebuild at 768d, then embeds all 3.
+            assert run_reindex(missing_only=True) == 3
+        assert _parse_vec_table_dim(populated_mem_db) == 768
 
     def test_run_reindex_bedrock_hint(self, populated_mem_db, capsys):
         """When the unavailable provider is bedrock, the hint names boto3."""
@@ -1081,10 +1201,6 @@ class TestReindexInternals:
 
         with (
             patch("mait_code.tools.memory.cli.is_available", return_value=True),
-            patch(
-                "mait_code.tools.memory.cli.check_dimension_match",
-                return_value=(True, 768, 768),
-            ),
             patch(
                 "mait_code.tools.memory.cli.embed_texts",
                 side_effect=lambda texts, prefix: [[0.1] * 768 for _ in texts],

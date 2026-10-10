@@ -412,6 +412,20 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
         "Add reviewed_at anchor for memory review / resurfacing",
         _migrate_13_reviewed_at,
     ),
+    (
+        14,
+        # Left empty on purpose: a migration can't know which model built the
+        # existing vectors, so recording the current settings would be a guess.
+        # The record is written by reindex, verify-and-adopt, or the first
+        # vector into an empty table (see tools.memory.embeddings).
+        "Create memory_meta key/value table for the embedding record",
+        [
+            """CREATE TABLE IF NOT EXISTS memory_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )""",
+        ],
+    ),
 ]
 
 

@@ -10,10 +10,12 @@ from mait_code.logging import log_invocation, setup_logging
 
 from mait_code.tools.memory.db import connection
 from mait_code.tools.memory.embeddings import (
-    check_dimension_match,
     embed_texts,
     is_available,
     serialize_f32,
+    vectors_usable,
+    verify_and_adopt,
+    write_embedding_record,
 )
 from mait_code.tools.memory.embeddings import (
     _get_provider_name as _embedding_provider_name,
@@ -417,6 +419,7 @@ def cmd_stats(_args):
     print(f"Embedding provider: {stats.provider}")
     print(f"Embedding model: {stats.model}")
     print(f"Embedding dimension: {stats.dim}")
+    print(f"Vectors built by: {stats.recorded or 'unknown (run mait-code doctor)'}")
     print(f"Embedding model available: {available}")
 
     last = (
@@ -536,6 +539,10 @@ def _embed_missing(conn):
         print("Nothing to embed — every entry already has a vector.")
         return 0
 
+    if conn.execute("SELECT 1 FROM memory_vec LIMIT 1").fetchone() is None:
+        # First vector into an empty table: it commits with the first batch.
+        write_embedding_record(conn)
+
     batch_size = 64
     embedded = 0
     while True:
@@ -570,9 +577,12 @@ def _reindex_embeddings(conn):
     Raises:
         ReindexError: if a batch fails to embed.
     """
-    # Clear existing embeddings; every entry is then "missing".
+    # Clear existing embeddings; every entry is then "missing". The record
+    # commits with the delete, so it and the table agree even if a later
+    # batch fails.
     try:
         conn.execute("DELETE FROM memory_vec")
+        write_embedding_record(conn)
         conn.commit()
     except Exception:
         pass  # Table may not exist
@@ -593,12 +603,12 @@ def _recreate_vec_table(conn, dim: int):
              DELETE FROM memory_vec WHERE rowid = old.id;
            END"""
     )
+    write_embedding_record(conn)
     conn.commit()
 
 
 def run_reindex(db_path=None, *, missing_only=False) -> int:
-    """Recompute vector embeddings, recreating the vec table on a
-    dimension change.
+    """Recompute vector embeddings, recording the model that built them.
 
     The programmatic counterpart to :func:`cmd_reindex`: callers (the
     ``mait-code settings`` follow-up, the home hub, and ``doctor --fix``)
@@ -609,9 +619,11 @@ def run_reindex(db_path=None, *, missing_only=False) -> int:
         db_path: Override the memory database path (defaults to the
             configured ``{data_dir}/memory.db``).
         missing_only: Embed only the entries that lack a vector instead
-            of re-embedding everything. A dimension mismatch still
-            recreates (and so empties) the vec table first — at that
-            point every entry is missing and the two modes converge.
+            of re-embedding everything. When the stored vectors came from
+            another model (or width) the table is rebuilt in full anyway —
+            topping up would mix embedding spaces. With no record of the
+            model, a re-embedded sample decides: a match adopts the
+            configured model, anything else rebuilds.
 
     Returns:
         The number of embeddings written.
@@ -629,13 +641,26 @@ def run_reindex(db_path=None, *, missing_only=False) -> int:
         raise ReindexError(f"embedding model unavailable. {hint}")
 
     with connection(db_path) as conn:
-        matches, table_dim, expected_dim = check_dimension_match(conn)
-        if not matches:
-            print(
-                f"Dimension mismatch: vec table has {table_dim}d, "
-                f"provider expects {expected_dim}d. Recreating vec table..."
-            )
-            _recreate_vec_table(conn, expected_dim)
+        status = vectors_usable(conn)
+        if status.state in ("absent", "dimension"):
+            print(f"{status.reason}. Recreating vec table...")
+            _recreate_vec_table(conn, status.configured.dim)
+            return _embed_missing(conn)
+        if status.state == "model":
+            print(f"{status.reason}. Rebuilding every vector...")
+            return _reindex_embeddings(conn)
+
+        if missing_only and status.state == "unknown":
+            outcome = verify_and_adopt(conn)
+            if outcome == "unavailable":
+                raise ReindexError("embedding failed while verifying the model")
+            if outcome == "differs":
+                print(
+                    f"Stored vectors don't match {status.configured}. "
+                    "Rebuilding every vector..."
+                )
+                return _reindex_embeddings(conn)
+            print(f"Stored vectors match {status.configured}; recorded it.")
 
         if missing_only:
             return _embed_missing(conn)
