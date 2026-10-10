@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.81.0] — 2026-10-10
+
 ### Added
 
 - **`remote.memory_search_status` reports whether memory search can use the
@@ -2540,7 +2542,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.80.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.81.0...HEAD
+[0.81.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.0
 [0.80.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.80.0
 [0.79.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.79.0
 [0.78.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.78.0
