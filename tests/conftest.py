@@ -82,3 +82,28 @@ def _isolate_mait_settings(
     _logging._setup_done = False
     os.environ.clear()
     os.environ.update(saved_environ)
+
+
+class _BlockedTextEmbedding:
+    """Stands in for fastembed's model, refusing to load it."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        raise RuntimeError("the real embedding model is blocked in tests")
+
+
+@pytest.fixture(autouse=True)
+def _block_real_embedding_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep every test off the real fastembed model.
+
+    Loading it means a download from HuggingFace into the test's throwaway
+    data dir — on every run, and once per worker under xdist — and the
+    provider singleton would then leak real vectors into later tests. With
+    the model refused, the provider fails and search degrades to keyword-only,
+    which is what tests that don't stub embeddings expect. Tests of the
+    provider path patch ``fastembed.TextEmbedding`` themselves, after this.
+    """
+    import mait_code.tools.memory.embeddings as _embeddings
+
+    monkeypatch.setattr("fastembed.TextEmbedding", _BlockedTextEmbedding)
+    monkeypatch.setattr(_embeddings, "_provider", None)
+    monkeypatch.setattr(_embeddings, "_provider_failed", False)

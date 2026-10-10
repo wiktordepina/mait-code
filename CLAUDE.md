@@ -40,7 +40,7 @@ The point is a strict separation between polished, shipped artefacts (committed,
 uv run ruff check src/         # Lint
 uv run ruff format src/        # Format
 uv run pyright                 # Typecheck (standard mode, src/ only)
-uv run pytest                  # Test suite (close to two thousand tests)
+uv run pytest -n auto          # Test suite in parallel (over two thousand tests)
 ```
 
 CI runs ruff over `src/ tests/`, so narrowing the lint/format commands to `src/`
@@ -50,6 +50,12 @@ alone passes locally and fails on the PR.
 so the bedrock extra must be installed. Sync it together with the docs group —
 `uv sync --extra bedrock --group docs` — because a bare sync, or `--group docs`
 on its own, uninstalls `boto3` and re-breaks the typecheck.
+
+`-n auto` spreads the suite across every core with pytest-xdist; leave it off
+for a focused run (`uv run pytest tests/cli/`), where starting the workers
+costs more than it saves. The root conftest refuses the real fastembed model,
+so no test downloads it — a test of the provider path patches
+`fastembed.TextEmbedding` itself.
 
 Tests live under `tests/` mirroring the `src/mait_code/` layout. Tool-specific
 fixtures in `tests/<area>/conftest.py`; cross-cutting setup in the root
