@@ -2723,13 +2723,17 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>sync
 </span></code></pre></div>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w">          </span><span class="c1"># run the full suite</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-v<span class="w">       </span><span class="c1"># verbose</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-n<span class="w"> </span>auto<span class="w">  </span><span class="c1"># run the full suite in parallel</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-v<span class="w">       </span><span class="c1"># verbose, serial</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/tools/memory/<span class="w">   </span><span class="c1"># narrow to a package</span>
 </span></code></pre></div>
-<p>The suite covers every package under <code>src/mait_code/</code> (close to two thousand
-tests and growing). Fixtures live in tool-specific <code>tests/&lt;area&gt;/conftest.py</code>
-files; the root <code>tests/conftest.py</code> keeps cross-cutting setup. See the "Writing
+<p>The suite covers every package under <code>src/mait_code/</code> (over two thousand tests
+and growing). <code>-n auto</code> runs it across every core via pytest-xdist; a focused
+run is quicker without it. The root conftest refuses to load the real
+fastembed model, so tests never download it — one that exercises the provider
+path patches <code>fastembed.TextEmbedding</code> itself. Fixtures live in tool-specific
+<code>tests/&lt;area&gt;/conftest.py</code> files; the root <code>tests/conftest.py</code> keeps
+cross-cutting setup. See the "Writing
 Tests for Memory Components" section below for the established patterns.</p>
 <p><code>tests/test_imports.py</code> is the smoke test that asserts every reference-surface
 module declares a non-empty <code>__all__</code>. CI's <code>ci.yml</code> runs the full suite on every
