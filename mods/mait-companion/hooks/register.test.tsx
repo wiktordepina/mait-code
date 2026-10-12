@@ -203,9 +203,9 @@ test('the inbox shows its count on accent, and hides at zero', async ($, on) => 
 
 test('context fill is coloured by how full the window is', async ($, on) => {
   const cases = [
-    { tokens: 120_000, percent: 12, colour: PALETTE.success, text: /^ ▰▱▱▱▱▱▱▱ 12% $/ },
-    { tokens: 612_000, percent: 61, colour: PALETTE.warning, text: /^ ▰▰▰▰▰▱▱▱ 61% $/ },
-    { tokens: 1_000_000, percent: 80, colour: PALETTE.error, text: /^ ▰▰▰▰▰▰▱▱ 80% $/ },
+    { tokens: 120_000, percent: 12, colour: PALETTE.success, text: /^ 12% $/ },
+    { tokens: 612_000, percent: 61, colour: PALETTE.warning, text: /^ 61% $/ },
+    { tokens: 1_000_000, percent: 80, colour: PALETTE.error, text: /^ 80% $/ },
   ]
   const world: World = {}
   engine(on, world)
@@ -366,7 +366,7 @@ test('row 2: project and branch quietly, the model in ink, a gauge and both wind
   expect((await ui.find({ type: 'Text', text: /▣ mait-code/ }))?.props.backgroundColor).toBe(PALETTE.panel)
   expect((await ui.find({ type: 'Text', text: /^opus $/ }))?.props.color).toBe(PALETTE.accent)
   expect((await ui.find({ type: 'Text', text: /^ 142k\/1M $/ }))?.props.backgroundColor).toBe(PALETTE.surface)
-  expect((await ui.find({ type: 'Text', text: /^ ▰▱▱▱▱▱▱▱ 14% $/ }))?.props.backgroundColor).toBe(PALETTE.success)
+  expect((await ui.find({ type: 'Text', text: /^ 14% $/ }))?.props.backgroundColor).toBe(PALETTE.success)
   expect(await ui.find({ type: 'Text', text: /^ 5h·7d $/ })).toBeDefined()
   expect((await ui.find({ type: 'Text', text: /^ 63·88% $/ }))?.props.backgroundColor).toBe(PALETTE.error)
   await ui.unmount()
@@ -639,7 +639,39 @@ test('context fills an eight-cell gauge, with tokens over the window as its labe
   await start($)
   const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /^ 412k\/1M $/ })).toBeDefined()
-  expect((await ui.find({ type: 'Text', text: /^ ▰▰▰▱▱▱▱▱ 41% $/ }))?.props.backgroundColor).toBe(PALETTE.success)
+  const filled = await ui.find({ type: 'Text', text: /^ ■■■$/ })
+  expect(filled?.props.backgroundColor).toBe(PALETTE.success)
+  expect(filled?.props.color).toBe(PALETTE.background)
+  // The empty cells are the same squares, halfway from the ink to the block.
+  const empty = await ui.find({ type: 'Text', text: /^■■■■■$/ })
+  expect(empty?.props.backgroundColor).toBe(PALETTE.success)
+  expect(empty?.props.color).toBe('#4b7642')
+  expect((await ui.find({ type: 'Text', text: /^ 41% $/ }))?.props.backgroundColor).toBe(PALETTE.success)
+  await ui.unmount()
+})
+
+test('a full gauge draws no empty cells, an empty one no filled', async ($, on) => {
+  const world: World = { ...WHERE }
+  engine(on, world)
+  for (const [percent, filled, empty] of [[100, 8, 0], [3, 0, 8]] as const) {
+    world.context = { tokens: 10_000 * percent, percent }
+    await start($)
+    const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+    expect(await ui.findAll({ type: 'Text', text: /■/ })).toHaveLength(filled && empty ? 2 : 1)
+    expect(await ui.find({ type: 'Text', text: new RegExp(`^ ?■{${filled || empty}}$`) })).toBeDefined()
+    await ui.unmount()
+  }
+})
+
+test('slim draws the gauge in the fill colour on the panel, the rest faded toward it', async ($, on) => {
+  engine(on, { ...WHERE, style: 'slim', context: { tokens: 412_000, percent: 41 } })
+  await start($)
+  const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  const filled = await ui.find({ type: 'Text', text: /^ 412k\/1M ■■■$/ })
+  expect(filled?.props.backgroundColor).toBe(PALETTE.panel)
+  expect(filled?.props.color).toBe(PALETTE.success)
+  expect((await ui.find({ type: 'Text', text: /^■■■■■$/ }))?.props.color).toBe('#527e4e')
+  expect((await ui.find({ type: 'Text', text: /^ 41% $/ }))?.props.color).toBe(PALETTE.success)
   await ui.unmount()
 })
 
