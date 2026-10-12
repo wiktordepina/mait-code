@@ -10,6 +10,15 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.81.1] — 2026-10-12
+
+### Fixed
+
+- **The companion mod's context gauge renders in fonts without `▰▱`.** Those
+  glyphs fell back to another font at the wrong size and baseline. The gauge
+  is now eight `■` squares: the filled ones in the segment's ink, the rest
+  faded halfway toward the tile, so the level reads by colour.
+
 ## [0.81.0] — 2026-10-10
 
 ### Added
@@ -2542,7 +2551,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.81.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.81.1...HEAD
+[0.81.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.1
 [0.81.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.0
 [0.80.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.80.0
 [0.79.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.79.0

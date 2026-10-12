@@ -467,6 +467,8 @@ type Segment = {
   quiet?: true
   /** Drawn as these coloured runs of text in every style, never on a block. */
   ink?: readonly Ink[]
+  /** Cells of an eight-cell gauge drawn filled before the value. */
+  gauge?: number
   colour: string
 }
 
@@ -520,7 +522,7 @@ function sessionSegments(d: SessionData, c: Palette): Segment[] {
   if (d.context) {
     const { tokens, percent, window: size } = d.context
     const used = size ? `${compact(tokens)}/${compact(size)}` : compact(tokens)
-    segments.push({ side: 'right', glyph: used, label: used, value: `${gauge(percent)} ${percent}%`, colour: fill(percent, c) })
+    segments.push({ side: 'right', glyph: used, label: used, value: `${percent}%`, gauge: cells(percent), colour: fill(percent, c) })
   }
   // Both windows in one segment, in the order the label names them, coloured by the fuller.
   const windows = ([['5h', d.fiveHour], ['7d', d.sevenDay]] as const).filter(
@@ -573,10 +575,15 @@ function modelSegment(name: string, id: string | undefined, c: Palette): Segment
   }
 }
 
-/** Eight cells, filled to the nearest eighth: ▰▰▰▱▱▱▱▱. */
-function gauge(percent: number): string {
-  const filled = Math.min(8, Math.max(0, Math.round(percent / 12.5)))
-  return '▰'.repeat(filled) + '▱'.repeat(8 - filled)
+/** Eighths filled, to the nearest: 41 -> 3. */
+function cells(percent: number): number {
+  return Math.min(8, Math.max(0, Math.round(percent / 12.5)))
+}
+
+/** `a` moved `t` of the way to `b`, both `#rrggbb`. */
+function mix(a: string, b: string, t: number): string {
+  const ch = (hex: string, i: number) => parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16)
+  return `#${[0, 1, 2].map(i => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join('')}`
 }
 
 /** Agents grouped by type, in the order each type first started. */
@@ -613,6 +620,19 @@ function compact(n: number): string {
 /** `raw` text is drawn as given; any other is padded with a space either side. */
 type Chunk = { text: string; bg?: string; fg: string; bold?: boolean; dim?: boolean; href?: string; raw?: true }
 
+/**
+ * ` ■■■■■■■■ 41% `: the filled cells in `fg`, the rest halfway to `bg`, so the
+ * gauge is one solid shape whose level reads by colour, not by glyph. Square
+ * blocks because fonts that lack ▰▱ substitute them at the wrong size.
+ */
+function gaugeChunks(lead: string, filled: number, value: string, bg: string, fg: string): Chunk[] {
+  return [
+    { text: ` ${lead}${'■'.repeat(filled)}`, bg, fg, bold: true, raw: true },
+    { text: '■'.repeat(8 - filled), bg, fg: mix(fg, bg, 0.5), bold: true, raw: true },
+    { text: ` ${value} `, bg, fg, bold: true, raw: true },
+  ].filter(ch => ch.text !== '')
+}
+
 /** A key with no link is drawn as plain text on the same background. */
 function linkChunks(s: Segment, bg: string | undefined, c: Palette): Chunk[] {
   return (s.links ?? []).map(l => ({ text: l.key, bg, fg: c.foreground, href: l.href ?? undefined }))
@@ -620,7 +640,9 @@ function linkChunks(s: Segment, bg: string | undefined, c: Palette): Chunk[] {
 
 // No blocks: a coloured glyph and value, the detail in plain foreground.
 const slim = (s: Segment, c: Palette, bg: string | undefined): Chunk[] => s.ink ? inkChunks(s.ink, c, bg) : [
-  { text: s.value === undefined ? s.glyph : `${s.glyph} ${s.value}`, bg, fg: s.colour, bold: true },
+  ...(s.gauge !== undefined && s.value !== undefined
+    ? gaugeChunks(`${s.glyph} `, s.gauge, s.value, bg ?? c.panel, s.colour)
+    : [{ text: s.value === undefined ? s.glyph : `${s.glyph} ${s.value}`, bg, fg: s.colour, bold: true }]),
   ...(s.detail ? [{ text: s.detail, bg, fg: c.foreground }] : []),
   ...linkChunks(s, bg, c),
 ]
@@ -642,7 +664,9 @@ const RENDERERS: Record<BarStyle, (s: Segment, c: Palette, bg: string | undefine
         ? { text: s.label, bg: s.colour, fg: c.background, bold: true }
         : { text: s.label, bg: c.surface, fg: c.foreground }]
       : []),
-    ...(s.value !== undefined ? [{ text: s.value, bg: s.colour, fg: c.background, bold: true }] : []),
+    ...(s.value === undefined ? []
+      : s.gauge !== undefined ? gaugeChunks('', s.gauge, s.value, s.colour, c.background)
+      : [{ text: s.value, bg: s.colour, fg: c.background, bold: true }]),
     ...(s.detail ? [{ text: s.detail, bg: c.surface, fg: c.foreground, bold: true }] : []),
     ...linkChunks(s, c.surface, c),
   ],
