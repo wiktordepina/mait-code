@@ -10,11 +10,37 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.82.0] — 2026-10-16
+
+### Added
+
+- **`mc-tool-memory observe` extracts memories from prepared text.** It runs
+  the observe hook's pipeline over a file or stdin instead of a transcript,
+  with the project and branch given as arguments, for automated runs such as
+  a job runner's digest of a whole job. What it writes is capped: no
+  preferences, nothing at global scope, importance at most 7. Exit status
+  tells stored (0), nothing to extract (3), LLM failure (4) and other errors
+  (1) apart, with a reason on stderr; `--json` reports the outcome and
+  per-category counts. Run it as the instance's own user.
+- **Memories record where they came from.** A new `source` column holds the
+  trigger of an `observe` run (`job` by default); a session's own memories
+  leave it empty. `restore` carries it back from the observation logs.
+
 ### Changed
 
 - **The memory schema moves to version 15.** Hosts using `mait_code.remote`
   refuse a `memory.db` on a different schema version, so upgrade the host
   (maitre-d) together with the instance.
+
+### Fixed
+
+- **Observation extraction and reflection can no longer act on what they
+  read.** Their nested `claude -p` call ran with every built-in tool and MCP
+  server the host allowed, from the session's project directory, so a
+  transcript that read like a task could get the extractor to carry it out:
+  on one machine it wrote, committed and pushed a document and opened a pull
+  request. The call now passes `--tools ""` and `--strict-mcp-config`, loading
+  no tools and no MCP servers, and runs from the data directory.
 
 ## [0.81.1] — 2026-10-12
 
@@ -2557,7 +2583,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.81.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.82.0...HEAD
+[0.82.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.82.0
 [0.81.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.1
 [0.81.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.0
 [0.80.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.80.0
