@@ -13,7 +13,6 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Reminders | `/reminders` | Show active and overdue reminders | **Implemented** |
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
 | Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
-| Web Fetch | `/web-fetch <url>` | Fetch web page content as markdown (bypasses claude.ai proxy) | **Implemented** |
 | Pre-PR Review | `/pre-pr-review` | Independent review of the current branch, by a reviewer that has not seen the conversation | **Implemented** |
 
 ## Implemented Skills
@@ -178,30 +177,6 @@ Detect changes, generate a conventional commit message, confirm with user, and c
 3. Presents the proposed message for user confirmation or editing
 4. On approval, stages files if needed and runs `git commit`
 
-### /web-fetch
-
-Fetch web page content directly from the local machine, bypassing the claude.ai proxy. Works behind corporate firewalls and proxies.
-
-**Usage:**
-```
-/web-fetch https://example.com              # Fetch and convert to markdown
-/web-fetch https://api.example.com/data     # Fetch JSON, pretty-printed
-```
-
-**How it works:**
-
-1. Preprocesses via `mc-tool-web-fetch <url>` (injected before Claude sees the skill)
-2. Returns HTML as markdown, JSON as pretty-printed text, or raw text for other content types
-3. SSRF protection blocks private/loopback IPs by default
-
-**Options** (via Bash):
-
-- `mc-tool-web-fetch <url> --raw` — skip HTML-to-markdown conversion
-- `mc-tool-web-fetch <url> --timeout 60` — increase timeout (default 30s)
-- `mc-tool-web-fetch <url> --allow-private` — allow private/loopback IPs
-- `mc-tool-web-fetch <url> --max-size <bytes>` — cap how much of the response is downloaded
-- `mc-tool-web-fetch <url> --max-chars <N>` — cap the markdown output length; raise it if a long page came back truncated
-
 ### /pre-pr-review
 
 Review the current branch with a reviewer that has seen none of the session's
@@ -309,10 +284,8 @@ skills/
 │   └── SKILL.md     # Route the quick-capture inbox to the board or memory
 ├── commit/
 │   └── SKILL.md     # Smart commit with conventional message
-├── pre-pr-review/
-│   └── SKILL.md     # Cold second opinion on a branch before opening a PR
-└── web-fetch/
-    └── SKILL.md     # Fetch web page content (bypasses claude.ai proxy)
+└── pre-pr-review/
+    └── SKILL.md     # Cold second opinion on a branch before opening a PR
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.

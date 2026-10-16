@@ -10,6 +10,21 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Removed
+
+- **The `/web-fetch` skill and `mc-tool-web-fetch` are gone.** The local
+  fetcher saw no use that a dedicated fetch service doesn't cover better, and
+  the skill's description told agents to prefer it over WebFetch, so it
+  competed with whatever the machine is meant to read the web through. The
+  `markdownify` dependency (and with it `beautifulsoup4`) goes too.
+
+### Changed
+
+- **`install` and `update` prune dangling skill and agent links.** A link in
+  `~/.claude/skills/` or `~/.claude/agents/` that points into the source tree
+  at something no longer there is removed and named in the summary, so a
+  dropped skill doesn't linger as a broken link until `doctor --fix`.
+
 ## [0.82.0] — 2026-10-16
 
 ### Added

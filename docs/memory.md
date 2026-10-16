@@ -630,7 +630,6 @@ reveals them). See [the graph explorer guide](graph.md) for the full tour.
 | `/reflect` | Synthesise observations into insights, propose MEMORY.md updates |
 | `/remind <when> <what>` | Set a reminder |
 | `/reminders` | Show active and overdue reminders |
-| `/web-fetch <url>` | Fetch a web page as markdown (bypasses claude.ai proxy) |
 | `/commit` | Detect changes, generate conventional commit, confirm and commit |
 
 ## Multi-Machine Sync

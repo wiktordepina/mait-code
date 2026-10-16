@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders<br/>/board, /triage<br/>/commit, /pre-pr-review<br/>/web-fetch"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders<br/>/board, /triage<br/>/commit, /pre-pr-review"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -30,7 +30,6 @@ graph TD
             reminders_tool["reminders/ <i>(CLI)</i><br/>cli, db, migrate, service"]
             board_tool["board/ <i>(CLI)</i><br/>cli, db, migrate, columns, service, export"]
             inbox_tool["inbox/ <i>(CLI)</i><br/>cli, db, migrate, service"]
-            web_fetch_tool["web_fetch/ <i>(CLI)</i><br/>cli, fetch, convert"]
         end
         subgraph bridge_pkg ["bridge/ <i>(opt-in transport)</i>"]
             bridge_core["base, registry, service, config<br/>control, ntfy, loopback"]
@@ -381,21 +380,6 @@ The intended lifecycle is **capture → triage → empty**: the `/triage` skill 
 | `dismiss` | id | Dismiss a reminder by ID |
 | `check` | — | Check for overdue reminders (the session-start hook builds the same text via `tools/reminders/service.py`) |
 
-## Web Fetch CLI Tool (`mc-tool-web-fetch`)
-
-Local web fetcher that bypasses the claude.ai proxy. Works behind corporate firewalls via `truststore` SSL injection.
-
-| Argument/Flag | Default | Description |
-|----------------|---------|-------------|
-| `url` (positional) | — | URL to fetch |
-| `--timeout` | `30` | Request timeout in seconds |
-| `--max-size` | `524288` | Maximum response body in bytes (512KB) |
-| `--max-chars` | `100000` | Maximum output characters (~25K tokens) |
-| `--raw` | `false` | Skip HTML-to-markdown conversion |
-| `--allow-private` | `false` | Allow fetching private/loopback IPs |
-
-Content-type routing: HTML→markdown (via `markdownify`), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.
-
 ## Home Hub TUI (`mait-code home`)
 
 `mait-code home` — or just `mait-code` with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim **tree sidebar** (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The **detail pane** beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete `doctor` check list. A one-line install-health verdict (reusing the `doctor` checks) sits under the tree, and the installed version shows in the brand header. `r` re-reads every store (refreshing badges and the open detail), `e` embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), `j`/`k` and the arrows move the cursor, and a `Ctrl+P` palette exposes the actions.
@@ -589,5 +573,3 @@ Adding a new migration:
 | Hybrid search (FTS5 + vector) | Keywords catch exact matches, vectors catch semantic similarity; graceful degradation to FTS-only if embeddings unavailable |
 | File-based rotating logs | No stdout/stderr interference with hook JSON; configurable via env vars; `TimedRotatingFileHandler` rotates at midnight and keeps `log-backup-count` days |
 | Watermark table for reflection idempotency | Separate table over `reflected_at` column — atomic batch tracking, no feedback loops, clean separation of concerns |
-| urllib.request over httpx/requests for web fetch | Zero new HTTP dependency tree; `truststore.inject_into_ssl()` patches the stdlib SSL context that `urllib.request` uses; system proxy env vars (`HTTP_PROXY`/`HTTPS_PROXY`) respected automatically |
-| markdownify for HTML-to-markdown | Lightweight (~600 lines), single purpose, only brings `beautifulsoup4`; full readability extraction (trafilatura) is overkill — Claude can ignore boilerplate itself |

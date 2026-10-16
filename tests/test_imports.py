@@ -29,7 +29,6 @@ REFERENCE_MODULES = [
     "mait_code.tools.reminders",
     "mait_code.tools.board",
     "mait_code.tools.inbox",
-    "mait_code.tools.web_fetch",
     # TUI
     "mait_code.tui",
     # Hooks

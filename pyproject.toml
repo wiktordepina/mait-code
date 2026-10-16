@@ -13,7 +13,6 @@ dependencies = [
     "pyyaml>=6.0.3",
     "fastembed>=0.4.0",
     "truststore>=0.9",
-    "markdownify>=0.14",
     "typer>=0.12,<1",
     "textual>=0.86",
     "netext>=0.5.0",
@@ -29,7 +28,6 @@ mc-tool-memory = "mait_code.tools.memory.cli:main"
 mc-tool-reminders = "mait_code.tools.reminders.cli:main"
 mc-tool-board = "mait_code.tools.board.cli:main"
 mc-tool-inbox = "mait_code.tools.inbox.cli:main"
-mc-tool-web-fetch = "mait_code.tools.web_fetch.cli:main"
 
 [project.optional-dependencies]
 bedrock = ["boto3>=1.34"]

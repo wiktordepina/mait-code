@@ -281,6 +281,17 @@ def install_cmd(
     _render_install_summary(summary)
 
 
+def _print_pruned(*results: SymlinkResult) -> None:
+    """Name the dangling links an install or update pruned, if any."""
+    names = [link.name for result in results for link in result.pruned]
+    if names:
+        console.print(
+            f"  Pruned stale links: {', '.join(names)}",
+            markup=False,
+            soft_wrap=True,
+        )
+
+
 def _render_install_summary(summary: InstallSummary) -> None:
     """Print a short human-readable summary of an install."""
     import mait_code
@@ -313,6 +324,7 @@ def _render_install_summary(summary: InstallSummary) -> None:
         f"  Symlinks: {len(summary.skills.created) + len(summary.skills.already_linked)} skills, "
         f"{len(summary.agents.created) + len(summary.agents.already_linked)} agents"
     )
+    _print_pruned(summary.skills, summary.agents)
     console.print(
         f"  Settings merged into {summary.settings_path}",
         markup=False,
@@ -401,6 +413,7 @@ def _render_update_summary(summary: UpdateSummary) -> None:
         f"  Symlinks refreshed: {len(summary.skills.created) + len(summary.skills.updated)} new, "
         f"{len(summary.skills.already_linked)} unchanged"
     )
+    _print_pruned(summary.skills, summary.agents)
     if summary.templates_copied:
         console.print(
             f"  Templates copied: {', '.join(summary.templates_copied)}",
