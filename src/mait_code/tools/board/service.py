@@ -17,6 +17,7 @@ the caller layers on top (the CLI exits; the TUI flashes a notification).
 
 from __future__ import annotations
 
+import enum
 import sqlite3
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
@@ -58,8 +59,10 @@ __all__ = [
     "dependency_graph",
     "edit_card",
     "epic_members",
+    "epic_without_open_members",
     "get_card",
     "get_comments",
+    "get_epic",
     "list_cards",
     "list_epics",
     "list_projects",
@@ -155,6 +158,12 @@ class LinkCycle(RelationError):
         loop = " → ".join(f"#{card_id}" for card_id in path)
         super().__init__(f"#{path[0]} blocks #{path[1]} would close a loop: {loop}")
         self.path = path
+
+
+class _Unchanged(enum.Enum):
+    """Typed sentinel for "leave this field alone" where ``None`` means clear."""
+
+    KEEP = enum.auto()
 
 
 def _now() -> str:
@@ -325,6 +334,23 @@ def _attach_links(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     return cards
 
 
+def _ready_clause() -> tuple[str, list]:
+    """The SQL condition (and its params) for a *ready* card.
+
+    Ready: a refined card (not an epic), not tagged ``blocked``, and not
+    waiting on any ``blocks`` link whose blocker is unsettled.
+    """
+    settled = ", ".join("?" for _ in _SETTLED)
+    return (
+        "status = ? AND kind = ? "
+        "AND id NOT IN (SELECT card_id FROM card_tags WHERE tag = ?) "
+        "AND id NOT IN (SELECT l.to_id FROM card_links l "
+        "JOIN cards b ON b.id = l.from_id "
+        f"WHERE l.type = ? AND b.status NOT IN ({settled}))",
+        [REFINED, CARD, BLOCKED_TAG, BLOCKS, *_SETTLED],
+    )
+
+
 def _attach(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     """Attach tags, references, active sessions and relationships to each card."""
     return _attach_links(
@@ -347,6 +373,7 @@ def list_cards(
     session: str | None = None,
     kind: str | None = CARD,
     parent_id: int | None = None,
+    ready: bool = False,
 ) -> list[dict]:
     """Return cards ordered priority-then-oldest.
 
@@ -367,6 +394,8 @@ def list_cards(
             returns both.
         parent_id: Restrict to the members of this epic, or ``None`` for no
             parent filter.
+        ready: Restrict to cards :func:`next_refined` could hand out —
+            refined, not tagged ``blocked``, not waiting on a blocker.
     """
     where: list[str] = []
     params: list = []
@@ -376,6 +405,10 @@ def list_cards(
     if parent_id is not None:
         where.append("parent_id = ?")
         params.append(parent_id)
+    if ready:
+        clause, clause_params = _ready_clause()
+        where.append(f"({clause})")
+        params.extend(clause_params)
     if project is not None:
         where.append("project = ?")
         params.append(project)
@@ -499,16 +532,11 @@ def next_refined(
         raise ValueError("next_refined needs a project or an epic_id")
     else:
         scope, scope_param = "project = ?", project
-    settled = ", ".join("?" for _ in _SETTLED)
+    ready, ready_params = _ready_clause()
     row = conn.execute(
-        f"SELECT {_CARD_COLS} FROM cards "
-        f"WHERE {scope} AND status = ? AND kind = ? "
-        f"AND id NOT IN (SELECT card_id FROM card_tags WHERE tag = ?) "
-        f"AND id NOT IN (SELECT l.to_id FROM card_links l "
-        f"JOIN cards b ON b.id = l.from_id "
-        f"WHERE l.type = ? AND b.status NOT IN ({settled})) "
+        f"SELECT {_CARD_COLS} FROM cards WHERE {scope} AND {ready} "
         f"ORDER BY {_PRIORITY_ORDER}, created_at, id LIMIT 1",
-        (scope_param, REFINED, CARD, BLOCKED_TAG, BLOCKS, *_SETTLED),
+        (scope_param, *ready_params),
     ).fetchone()
     if row is None:
         return None
@@ -966,31 +994,47 @@ def add_comment(
     conn.commit()
 
 
-def edit_card(conn: sqlite3.Connection, card_id: int, **fields: str) -> None:
+def edit_card(
+    conn: sqlite3.Connection,
+    card_id: int,
+    *,
+    parent_id: int | None | _Unchanged = _Unchanged.KEEP,
+    **fields: str,
+) -> None:
     """Update arbitrary card columns, bumping ``updated_at``.
 
     Pass column names as keyword arguments (e.g. ``title=..``,
-    ``acceptance_criteria=..``). ``kind`` and ``parent_id`` aren't editable
-    here — use :func:`promote_epic` and :func:`set_parent`, which keep the
-    relationship rules. Raises :class:`CardNotFound` if the id is unknown and
-    :class:`RelationError` for one of those fields, or for a ``project`` that
-    would move a card to :data:`EPIC_PROJECT` or an epic off it; a no-op (no
-    fields) is the caller's concern.
+    ``acceptance_criteria=..``). *parent_id* moves the card into that epic,
+    or out of any with ``None``; leave it out to keep the current one. Every
+    change is checked first and written in one transaction, so a refused
+    field leaves the card exactly as it was — the parent included.
+
+    ``kind`` isn't editable here — use :func:`promote_epic`. Raises
+    :class:`CardNotFound` if the id (or *parent_id*) is unknown and
+    :class:`RelationError` for ``kind``, a *parent_id* that breaks the rules
+    of :func:`set_parent`, or a ``project`` that would move a card to
+    :data:`EPIC_PROJECT` or an epic off it; a no-op (no fields) is the
+    caller's concern.
     """
-    row = _require_row(conn, card_id)
-    for column in ("kind", "parent_id"):
-        if column in fields:
-            raise RelationError(f"{column} can't be edited directly")
-    if "project" in fields:
-        if row[_KIND] == EPIC:
-            if fields["project"] != EPIC_PROJECT:
-                raise RelationError(f"#{card_id} is an epic and has no project")
-        else:
-            _check_card_project(fields["project"])
-    fields["updated_at"] = _now()
-    cols = ", ".join(f"{key} = ?" for key in fields)
-    conn.execute(f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), card_id))
-    conn.commit()
+    with _write_lock(conn):
+        row = _require_row(conn, card_id)
+        if "kind" in fields:
+            raise RelationError("kind can't be edited directly")
+        if "project" in fields:
+            if row[_KIND] == EPIC:
+                if fields["project"] != EPIC_PROJECT:
+                    raise RelationError(f"#{card_id} is an epic and has no project")
+            else:
+                _check_card_project(fields["project"])
+        values: dict[str, object] = dict(fields)
+        if parent_id is not _Unchanged.KEEP:
+            _check_parent(conn, row, parent_id)
+            values["parent_id"] = parent_id
+        values["updated_at"] = _now()
+        cols = ", ".join(f"{key} = ?" for key in values)
+        conn.execute(
+            f"UPDATE cards SET {cols} WHERE id = ?", (*values.values(), card_id)
+        )
 
 
 def remove_card(conn: sqlite3.Connection, card_id: int) -> None:
@@ -1081,14 +1125,23 @@ def set_parent(conn: sqlite3.Connection, card_id: int, epic_id: int | None) -> N
     """
     with _write_lock(conn):
         row = _require_row(conn, card_id)
-        if row[_KIND] == EPIC:
-            raise RelationError(f"#{card_id} is an epic; epics can't have a parent")
-        if epic_id is not None:
-            _require_epic(conn, epic_id)
+        _check_parent(conn, row, epic_id)
         conn.execute(
             "UPDATE cards SET parent_id = ?, updated_at = ? WHERE id = ?",
             (epic_id, _now(), card_id),
         )
+
+
+def _check_parent(conn: sqlite3.Connection, row: Sequence, epic_id: int | None) -> None:
+    """Refuse making the card in *row* a member of *epic_id*.
+
+    An epic can't have a parent (one level only), and a parent must be an
+    epic. ``None`` — leaving any epic — is always fine for a card.
+    """
+    if row[_KIND] == EPIC:
+        raise RelationError(f"#{row[0]} is an epic; epics can't have a parent")
+    if epic_id is not None:
+        _require_epic(conn, epic_id)
 
 
 def add_link(
@@ -1199,6 +1252,44 @@ def _progress(members: list[dict]) -> dict[str, int]:
         1 for card in members if card["waiting_on"] and card["status"] != DONE
     )
     return counts
+
+
+def get_epic(conn: sqlite3.Connection, epic_id: int) -> dict:
+    """Return an epic with its non-archived ``members`` and ``progress``.
+
+    Raises :class:`CardNotFound` for an unknown id and :class:`RelationError`
+    if it isn't an epic.
+    """
+    _require_epic(conn, epic_id)
+    epic = get_card(conn, epic_id)
+    assert epic is not None  # _require_epic found the row
+    epic["members"] = list_cards(conn, parent_id=epic_id)
+    epic["progress"] = _progress(epic["members"])
+    return epic
+
+
+def epic_without_open_members(conn: sqlite3.Connection, card_id: int) -> int | None:
+    """Return *card_id*'s epic if it has no open members left, else ``None``.
+
+    Open means neither ``done`` nor ``archived``. An epic's status is set by
+    hand, so a caller that just finished or dropped a member can remind the
+    user the epic may be ready to close — it never moves the epic itself. An
+    epic that is already done or archived needs no reminder: ``None``.
+    """
+    settled = ", ".join("?" for _ in _SETTLED)
+    row = conn.execute(
+        f"SELECT e.id FROM cards c JOIN cards e ON e.id = c.parent_id "
+        f"WHERE c.id = ? AND e.status NOT IN ({settled})",
+        (card_id, *_SETTLED),
+    ).fetchone()
+    if row is None:
+        return None
+    epic_id = row[0]
+    still_open = conn.execute(
+        f"SELECT 1 FROM cards WHERE parent_id = ? AND status NOT IN ({settled})",
+        (epic_id, *_SETTLED),
+    ).fetchone()
+    return None if still_open else epic_id
 
 
 def list_epics(conn: sqlite3.Connection, *, include_done: bool = False) -> list[dict]:

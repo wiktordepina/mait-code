@@ -67,9 +67,13 @@
 
 ::: mait_code.tools.board.card_markdown
 
+::: mait_code.tools.board.epic_markdown
+
 ::: mait_code.tools.board.export_board
 
 ::: mait_code.tools.board.export_card
+
+::: mait_code.tools.board.export_epic
 
 ## Service
 
@@ -105,9 +109,13 @@
 
 ::: mait_code.tools.board.epic_members
 
+::: mait_code.tools.board.epic_without_open_members
+
 ::: mait_code.tools.board.get_card
 
 ::: mait_code.tools.board.get_comments
+
+::: mait_code.tools.board.get_epic
 
 ::: mait_code.tools.board.list_cards
 

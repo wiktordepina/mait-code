@@ -1,8 +1,8 @@
 """Render cards as portable markdown or JSON exports.
 
 The rendering layer shared by the CLI ``export`` subcommand and the board
-TUI's export binding. Two scopes — a single card or a whole board listing —
-in two formats:
+TUI's export binding. Three scopes — a single card, an epic with its members,
+or a whole board listing — in two formats:
 
 - **markdown**: a readable document. Stored markdown in ``description``,
   ``acceptance_criteria`` and ``completion_summary`` is embedded verbatim,
@@ -11,6 +11,10 @@ in two formats:
   carries its ``tags``, ``references`` and ``comments``. Live session
   bindings (``sessions``) are left out: they name running processes, which
   mean nothing once the document leaves this machine.
+
+A board listing holds cards only: epics are left out, as on the board itself,
+though a member card still names its epic under ``parent``. Export the epic
+with :func:`export_epic` to keep it.
 
 Like :mod:`~mait_code.tools.board.service`, functions here take an open
 ``sqlite3.Connection`` and raise :class:`~mait_code.tools.board.service.CardNotFound`
@@ -24,7 +28,7 @@ import sqlite3
 from collections.abc import Iterable
 
 from mait_code.tools.board import service
-from mait_code.tools.board.columns import ARCHIVED, BOARD_ORDER, label
+from mait_code.tools.board.columns import ARCHIVED, BOARD_ORDER, DONE, EPIC, label
 
 __all__ = [
     # Formats
@@ -35,8 +39,10 @@ __all__ = [
     "board_markdown",
     "card_markdown",
     # Exporters
+    "epic_markdown",
     "export_board",
     "export_card",
+    "export_epic",
 ]
 
 MARKDOWN = "markdown"
@@ -52,12 +58,24 @@ def _heading(level: int, text: str) -> str:
 
 def _meta_lines(card: dict) -> list[str]:
     """The bullet list of card metadata under the title heading."""
-    lines = [
-        f"- **Card:** #{card['id']}",
-        f"- **Project:** {card['project']}",
+    if card["kind"] == EPIC:
+        lines = [f"- **Epic:** #{card['id']}"]
+    else:
+        lines = [
+            f"- **Card:** #{card['id']}",
+            f"- **Project:** {card['project']}",
+        ]
+    lines += [
         f"- **Status:** {label(card['status'])}",
         f"- **Priority:** {card['priority']}",
     ]
+    if card["parent"]:
+        lines.append(f"- **Epic:** #{card['parent']['id']} {card['parent']['title']}")
+    waiting = [b for b in card["blocked_by"] if b["id"] in card["waiting_on"]]
+    if waiting:
+        lines.append(f"- **Waiting on:** {_related(waiting)}")
+    if card["blocks"]:
+        lines.append(f"- **Blocks:** {_related(card['blocks'])}")
     if card["tags"]:
         lines.append(f"- **Tags:** {', '.join(card['tags'])}")
     if card["created_by"]:
@@ -67,6 +85,10 @@ def _meta_lines(card: dict) -> list[str]:
     if card["completed_at"]:
         lines.append(f"- **Completed:** {card['completed_at']}")
     return lines
+
+
+def _related(cards: list[dict]) -> str:
+    return "; ".join(f"#{c['id']} {c['title']} ({label(c['status'])})" for c in cards)
 
 
 def _comment_md(comment: dict) -> str:
@@ -142,6 +164,37 @@ def board_markdown(cards: Iterable[dict], *, project: str | None = None) -> str:
     return "\n\n".join(blocks)
 
 
+def epic_markdown(epic: dict) -> str:
+    """Render an epic and its members as one markdown document.
+
+    Args:
+        epic: An epic dict as returned by
+            :func:`~mait_code.tools.board.service.get_epic` — carrying
+            ``members`` and ``progress`` — optionally with ``comments`` on it
+            and its members.
+
+    Returns:
+        The markdown document, without a trailing newline.
+    """
+    progress = epic["progress"]
+    blocks = [
+        card_markdown(epic),
+        _heading(2, f"Members — {progress[DONE]}/{progress['total']} done"),
+    ]
+    by_status: dict[str, list[dict]] = {}
+    for card in epic["members"]:
+        by_status.setdefault(card["status"], []).append(card)
+    for status in BOARD_ORDER:
+        group = by_status.get(status)
+        if not group:
+            continue
+        blocks.append(_heading(3, f"{label(status)} ({len(group)})"))
+        blocks.extend(card_markdown(card, level=4) for card in group)
+    if not epic["members"]:
+        blocks.append("No members.")
+    return "\n\n".join(blocks)
+
+
 def _attach_comments(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     for card in cards:
         card["comments"] = service.get_comments(conn, card["id"])
@@ -167,6 +220,26 @@ def export_card(conn: sqlite3.Connection, card_id: int, fmt: str = MARKDOWN) -> 
     return card_markdown(card)
 
 
+def export_epic(conn: sqlite3.Connection, epic_id: int, fmt: str = MARKDOWN) -> str:
+    """Export an epic with its non-archived members, comments included.
+
+    The JSON form is the epic in the ``epic show --json`` shape, its
+    ``members`` each carrying their own comments.
+
+    Raises:
+        service.CardNotFound: If no card has *epic_id*.
+        service.RelationError: If the card isn't an epic.
+        ValueError: If *fmt* is not one of :data:`FORMATS`.
+    """
+    if fmt not in FORMATS:
+        raise ValueError(f"unknown export format: {fmt!r}")
+    epic = service.get_epic(conn, epic_id)
+    _attach_comments(conn, [epic, *epic["members"]])
+    if fmt == JSON:
+        return json.dumps(epic, indent=2)
+    return epic_markdown(epic)
+
+
 def export_board(
     conn: sqlite3.Connection,
     *,
@@ -179,6 +252,7 @@ def export_board(
     """Export a board listing as *fmt* — a JSON array or one markdown document.
 
     Filter arguments mirror :func:`~mait_code.tools.board.service.list_cards`.
+    Epics are left out, as on the board; see :func:`export_epic`.
 
     Raises:
         ValueError: If *fmt* is not one of :data:`FORMATS`.

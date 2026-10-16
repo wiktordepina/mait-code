@@ -12,15 +12,24 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
-- **Board relationships, service layer.** A card can now be an *epic*: an
-  umbrella stored on the reserved project `@epic`, kept out of the kanban,
-  `list`, counts, the hub, the dashboard, exports and the remote API. Cards
-  can name one epic as their parent (one level only), and `blocks` links
-  record that one card must be done before another can start; a link that
-  would close a loop is refused, naming the loop. Card dicts carry `parent`,
-  `blocked_by`, `blocks`, `waiting_on` and `archived_blockers`. The service
-  API (`add_link`, `set_parent`, `promote_epic`, `list_epics`,
-  `epic_members`, `dependency_graph`) lands first; CLI verbs follow.
+- **Epics on the board.** An epic is an umbrella card for an initiative that
+  spans projects: `add "<title>" --epic` creates one, `epic promote N` turns
+  an existing card into one, and `add --parent E` / `edit N --parent E|none`
+  manage its members. `epic list` shows each epic's progress
+  (`3/7 done · 1 waiting`), `epic show E` its members by column, and
+  `list --epic E` / `next --epic E` / `export --epic E` scope to one
+  initiative across every project. Epics live on the reserved project `@epic`
+  and stay off the kanban, `list`, counts, the hub and the dashboard; finishing
+  an epic's last open member prints a reminder, never an automatic move.
+- **Card dependencies.** `link A blocks B` records that B waits on A (and
+  `unlink` removes it). `list` marks waiting cards, `show` lists what a card
+  waits on and unblocks, `list --ready` shows what can start now, and a link
+  that would close a loop is refused with the loop's path. An archived blocker
+  releases its cards but is flagged for another look.
+- **Remote reads for epics.** `mait_code.remote.list_epics` and `get_epic`
+  return epics with their members and progress; `refine_card` refuses an epic.
+  Card dicts everywhere carry `parent`, `blocked_by`, `blocks`, `waiting_on`
+  and `archived_blockers`.
 
 ### Changed
 

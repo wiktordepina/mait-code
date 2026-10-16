@@ -5,6 +5,12 @@ A single cross-project kanban board stored in ``board.db``. Cards carry a
 in_progress → in_review → done, with a hidden ``archived`` side-state. ``blocked`` is a tag
 carried in place (via ``block``/``unblock``), not a column.
 
+Cards relate to each other two ways. An *epic* (``add --epic``, ``epic …``) is
+an umbrella over member cards in any project, named by each member's
+``--parent``; epics stay off ``list`` and ``next``. ``link A blocks B`` records
+that B can't start until A is done — ``next`` and ``list --ready`` skip a card
+while it waits.
+
 Run from inside a Claude Code session, ``move N in_progress`` and
 ``next --claim`` also bind the card to that session (``bind``/``unbind`` do it
 explicitly), so parallel sessions can each tell their own card from the rest.
@@ -22,7 +28,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from mait_code.logging import log_invocation, setup_logging
 from mait_code.tools.board import export, service
@@ -30,7 +36,11 @@ from mait_code.tools.board.columns import (
     ALL_STATUSES,
     ARCHIVED,
     BOARD_ORDER,
+    DONE,
+    EPIC,
+    IN_PROGRESS,
     IN_REVIEW,
+    LINK_TYPES,
     REFINED,
     label,
 )
@@ -45,6 +55,8 @@ from mait_code.tools.board.sessions import (
 logger = logging.getLogger(__name__)
 
 PRIORITIES = ("low", "medium", "high")
+#: ``edit --parent`` value that clears a card's epic.
+NO_PARENT = "none"
 AUTHORS = ("me", "claude")
 
 
@@ -69,6 +81,73 @@ def _not_found(card_id: int) -> NoReturn:
     logger.warning("card #%d not found", card_id)
     print(f"Error: card #{card_id} not found.", file=sys.stderr)
     sys.exit(1)
+
+
+def _relation_failed(exc: Exception) -> NoReturn:
+    """Exit(1) on a refused relationship change or a missing related card.
+
+    ``CardNotFound`` here may name a card other than the one the command was
+    about (a ``--parent`` or the far end of a link), so its own id is used.
+    """
+    if isinstance(exc, service.CardNotFound):
+        _not_found(exc.card_id)
+    _fail(f"{exc}.")
+
+
+def _parent_arg(value: str) -> int | str:
+    """argparse type for ``edit --parent``: an epic id, or ``none`` to clear it."""
+    if value.strip().lower() == NO_PARENT:
+        return NO_PARENT
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"expected an epic id or 'none', got {value!r}"
+        ) from None
+
+
+def _require_epic_arg(conn, epic_id: int) -> None:
+    """Exit(1) unless *epic_id* names an epic."""
+    try:
+        service.epic_members(conn, epic_id)
+    except (service.CardNotFound, service.RelationError) as exc:
+        _relation_failed(exc)
+
+
+def _progress_text(progress: dict) -> str:
+    """``3/7 done · 1 waiting · 2 in progress`` for an epic's ``progress``."""
+    parts = [f"{progress[DONE]}/{progress['total']} done"]
+    if progress["waiting"]:
+        parts.append(f"{progress['waiting']} waiting")
+    if progress[IN_PROGRESS]:
+        parts.append(f"{progress[IN_PROGRESS]} in progress")
+    return " · ".join(parts)
+
+
+def _related(cards: list[dict]) -> str:
+    """``#76 title (Refined); #80 …`` for a list of related-card summaries."""
+    return "; ".join(f"#{c['id']} {c['title']} ({label(c['status'])})" for c in cards)
+
+
+def _remind_epic(conn, card_id: int) -> None:
+    """Note on stderr when *card_id*'s epic has no open members left.
+
+    stderr so a ``--json`` caller's stdout stays one parseable document. The
+    epic itself is never moved — its status is set by hand.
+    """
+    epic_id = service.epic_without_open_members(conn, card_id)
+    if epic_id is None:
+        return
+    # All members dropped rather than finished suggests archiving, not completing.
+    finished = any(m["status"] == DONE for m in service.epic_members(conn, epic_id))
+    verb, why = (
+        ("complete", "it's finished") if finished else ("archive", "it's dropped")
+    )
+    print(
+        f"Note: epic #{epic_id} has no open members — "
+        f"{verb} it with 'mc-tool-board {verb} {epic_id}' if {why}.",
+        file=sys.stderr,
+    )
 
 
 def _card_payload(conn, card_id: int) -> dict:
@@ -103,7 +182,14 @@ def cmd_add(args):
         print("Error: card title cannot be empty.", file=sys.stderr)
         sys.exit(1)
 
-    project = args.project or get_project()
+    if args.epic:
+        if args.project:
+            _fail("an epic belongs to no project; drop --project.")
+        if args.parent is not None:
+            _fail("an epic can't have a parent; drop --parent.")
+        project, kind, noun = None, EPIC, "Epic"
+    else:
+        project, kind, noun = args.project or get_project(), "card", "Card"
     with connection() as conn:
         try:
             card_id = service.add_card(
@@ -112,11 +198,13 @@ def cmd_add(args):
                 title=title,
                 description=args.description,
                 priority=args.priority,
+                kind=kind,
+                parent_id=args.parent,
             )
-        except service.RelationError as exc:
-            _fail(f"{exc}.")
+        except (service.CardNotFound, service.RelationError) as exc:
+            _relation_failed(exc)
         _print_card(
-            conn, args, card_id, f"Card #{card_id} added ({args.priority}): {title}"
+            conn, args, card_id, f"{noun} #{card_id} added ({args.priority}): {title}"
         )
 
 
@@ -130,9 +218,13 @@ def cmd_list(args):
                 f"--mine needs ${SESSION_ENV} and ${PID_ENV} (run inside Claude Code)."
             )
         session = current.session_id
-    # A session's cards are its cards whichever directory it was asked from.
-    project = None if (args.all or session) else get_project()
+    # A session's cards are its cards whichever directory it was asked from,
+    # and an epic's members are its members whichever project they sit in.
+    spans = bool(args.all or session or args.epic is not None)
+    project = None if spans else get_project()
     with connection() as conn:
+        if args.epic is not None:
+            _require_epic_arg(conn, args.epic)
         cards = service.list_cards(
             conn,
             project=project,
@@ -140,6 +232,8 @@ def cmd_list(args):
             include_archived=args.archived,
             search=args.search,
             session=session,
+            parent_id=args.epic,
+            ready=args.ready,
         )
 
     if args.json:
@@ -150,7 +244,17 @@ def cmd_list(args):
         print("No cards." if not args.all else "No cards on the board.")
         return
 
-    show_archived = args.archived or args.status == ARCHIVED
+    _print_grouped(
+        cards,
+        show_project=spans,
+        show_archived=args.archived or args.status == ARCHIVED,
+    )
+
+
+def _print_grouped(
+    cards: list[dict], *, show_project: bool, show_archived: bool
+) -> None:
+    """Print cards grouped by column, one row each, in board order."""
     order = list(BOARD_ORDER) + ([ARCHIVED] if show_archived else [])
     by_status: dict[str, list[dict]] = {}
     for card in cards:
@@ -162,10 +266,16 @@ def cmd_list(args):
             continue
         print(f"{label(status)} ({len(group)}):")
         for card in group:
-            project = f" [{card['project']}]" if args.all or session else ""
+            project = f" [{card['project']}]" if show_project else ""
             tags = "".join(f"  #{t}" for t in card["tags"])
+            waiting = (
+                "  waiting on " + ", ".join(f"#{i}" for i in card["waiting_on"])
+                if card["waiting_on"]
+                else ""
+            )
             print(
-                f"  [#{card['id']}] ({card['priority']}) {card['title']}{project}{tags}"
+                f"  [#{card['id']}] ({card['priority']}) {card['title']}"
+                f"{project}{tags}{waiting}"
             )
         print()
 
@@ -176,6 +286,11 @@ def cmd_show(args):
         if card is None:
             _not_found(args.id)
         comments = service.get_comments(conn, args.id)
+        progress = (
+            service.get_epic(conn, args.id)["progress"]
+            if card["kind"] == EPIC
+            else None
+        )
 
     if args.json:
         card["comments"] = comments
@@ -183,7 +298,20 @@ def cmd_show(args):
         return
 
     print(f"#{card['id']} ({card['priority']}) {card['title']}")
-    print(f"  project: {card['project']}   status: {label(card['status'])}")
+    if progress is not None:
+        print(f"  epic   status: {label(card['status'])}   {_progress_text(progress)}")
+    else:
+        print(f"  project: {card['project']}   status: {label(card['status'])}")
+    if card["parent"]:
+        print(f"  epic: #{card['parent']['id']} {card['parent']['title']}")
+    waiting = [b for b in card["blocked_by"] if b["id"] in card["waiting_on"]]
+    if waiting:
+        print(f"  waiting on: {_related(waiting)}")
+    if card["blocks"]:
+        print(f"  blocks: {_related(card['blocks'])}")
+    archived = [b for b in card["blocked_by"] if b["id"] in card["archived_blockers"]]
+    if archived:
+        print(f"  archived blockers: {_related(archived)} — worth another look")
     if card["created_by"]:
         print(f"  created by: {card['created_by']}")
     if card["tags"]:
@@ -208,8 +336,28 @@ def cmd_show(args):
 
 
 def cmd_export(args):
+    if args.id is not None and args.epic is not None:
+        _fail("pass a card id or --epic, not both.")
+    if args.epic is not None:
+        board_filters = {
+            "--all": args.all,
+            "--project": args.project,
+            "--status": args.status,
+            "--archived": args.archived,
+            "--search": args.search,
+        }
+        used = [flag for flag, value in board_filters.items() if value]
+        if used:
+            _fail(
+                f"--epic exports the whole epic; {', '.join(used)} filter a board export."
+            )
     with connection() as conn:
-        if args.id is not None:
+        if args.epic is not None:
+            try:
+                document = export.export_epic(conn, args.epic, fmt=args.format)
+            except (service.CardNotFound, service.RelationError) as exc:
+                _relation_failed(exc)
+        elif args.id is not None:
             try:
                 document = export.export_card(conn, args.id, fmt=args.format)
             except service.CardNotFound:
@@ -235,7 +383,8 @@ def cmd_export(args):
 
 
 def cmd_edit(args):
-    fields: dict[str, str] = {}
+    # Any, not str: unpacked beside parent_id=, which a str-valued dict could shadow.
+    fields: dict[str, Any] = {}
     if args.title is not None:
         fields["title"] = args.title
     if args.description is not None:
@@ -251,17 +400,22 @@ def cmd_edit(args):
             sys.exit(1)
         fields["project"] = project
 
-    if not fields:
+    set_parent = args.parent is not None
+    if not fields and not set_parent:
         print("Error: nothing to edit (pass at least one field).", file=sys.stderr)
         sys.exit(1)
 
     with connection() as conn:
-        try:
-            service.edit_card(conn, args.id, **fields)
-        except service.CardNotFound:
+        if service.get_card(conn, args.id) is None:
             _not_found(args.id)
-        except service.RelationError as exc:
-            _fail(f"{exc}.")
+        try:
+            if set_parent:
+                epic_id = None if args.parent == NO_PARENT else args.parent
+                service.edit_card(conn, args.id, parent_id=epic_id, **fields)
+            else:
+                service.edit_card(conn, args.id, **fields)
+        except (service.CardNotFound, service.RelationError) as exc:
+            _relation_failed(exc)
         _print_card(conn, args, args.id, f"Card #{args.id} updated.")
 
 
@@ -305,6 +459,7 @@ def cmd_move(args):
         except service.CardNotFound:
             _not_found(args.id)
         _print_card(conn, args, args.id, f"Card #{args.id} → {label(new_status)}.")
+        _remind_epic(conn, args.id)
 
 
 def cmd_refine(args):
@@ -318,7 +473,8 @@ def cmd_refine(args):
         )
 
         # Warn if the card lands in Refined with no acceptance criteria at all.
-        if args.acceptance is None and not had_acceptance:
+        # An epic's criteria are optional: its members carry the contracts.
+        if args.acceptance is None and not had_acceptance and card["kind"] != EPIC:
             print(
                 f"Warning: card #{args.id} has no acceptance criteria.",
                 file=sys.stderr,
@@ -327,22 +483,31 @@ def cmd_refine(args):
 
 
 def cmd_next(args):
-    """Print the next refined card; with --claim, move it to in_progress."""
-    project = args.project or get_project()
+    """Print the next ready card; with --claim, move it to in_progress."""
+    if args.epic is not None and args.project:
+        _fail("pass --project or --epic, not both.")
+    project = None if args.epic is not None else (args.project or get_project())
     with connection() as conn:
-        card = service.next_refined(
-            conn,
-            project,
-            claim=args.claim,
-            session=current_session() if args.claim else None,
-        )
+        try:
+            card = service.next_refined(
+                conn,
+                project,
+                claim=args.claim,
+                session=current_session() if args.claim else None,
+                epic_id=args.epic,
+            )
+        except (service.CardNotFound, service.RelationError) as exc:
+            _relation_failed(exc)
 
     if card is None:
         if args.json:
             print("null")
         else:
+            scope = (
+                f"in epic #{args.epic}" if args.epic is not None else f"for {project}"
+            )
             print(
-                f"No ready cards for {project} — none refined, or every refined "
+                f"No ready cards {scope} — none refined, or every refined "
                 f"card is tagged blocked or waiting on an unfinished blocker."
             )
         return
@@ -365,6 +530,7 @@ def cmd_complete(args):
         except service.CardNotFound:
             _not_found(args.id)
         _print_card(conn, args, args.id, f"Card #{args.id} completed.")
+        _remind_epic(conn, args.id)
 
 
 def cmd_review(args):
@@ -486,6 +652,7 @@ def cmd_archive(args):
         except service.CardNotFound:
             _not_found(args.id)
         _print_card(conn, args, args.id, f"Card #{args.id} → {label(ARCHIVED)}.")
+        _remind_epic(conn, args.id)
 
 
 def cmd_bind(args):
@@ -542,6 +709,91 @@ def cmd_unbind(args):
             else f"Card #{args.id} was not bound to session {session_id[:8]}."
         )
         _print_card(conn, args, args.id, message)
+
+
+# --- Relationships ---
+
+
+def cmd_link(args):
+    with connection() as conn:
+        try:
+            service.add_link(conn, args.from_id, args.to_id, args.type)
+        except (service.CardNotFound, service.RelationError) as exc:
+            _relation_failed(exc)
+        _print_card(
+            conn, args, args.to_id, f"#{args.from_id} {args.type} #{args.to_id}."
+        )
+
+
+def cmd_unlink(args):
+    with connection() as conn:
+        if not service.remove_link(conn, args.from_id, args.to_id, args.type):
+            _fail(f"#{args.from_id} doesn't {args.type.rstrip('s')} #{args.to_id}.")
+        _print_card(
+            conn,
+            args,
+            args.to_id,
+            f"#{args.from_id} no longer {args.type} #{args.to_id}.",
+        )
+
+
+def cmd_epic_list(args):
+    with connection() as conn:
+        epics = service.list_epics(conn, include_done=args.done)
+
+    if args.json:
+        print(json.dumps(epics, indent=2))
+        return
+    if not epics:
+        print("No epics.")
+        return
+    for epic in epics:
+        print(
+            f"[#{epic['id']}] ({epic['priority']}) {epic['title']} — "
+            f"{label(epic['status'])} — {_progress_text(epic['progress'])}"
+        )
+
+
+def cmd_epic_show(args):
+    with connection() as conn:
+        try:
+            epic = service.get_epic(conn, args.id)
+        except (service.CardNotFound, service.RelationError) as exc:
+            _relation_failed(exc)
+        epic["comments"] = service.get_comments(conn, args.id)
+
+    if args.json:
+        print(json.dumps(epic, indent=2))
+        return
+    print(f"#{epic['id']} ({epic['priority']}) {epic['title']}")
+    print(f"  status: {label(epic['status'])}   {_progress_text(epic['progress'])}")
+    if epic["description"]:
+        print(f"\nDescription:\n{epic['description']}")
+    print()
+    if epic["members"]:
+        _print_grouped(epic["members"], show_project=True, show_archived=False)
+    else:
+        print(
+            "No members yet — add one with 'mc-tool-board edit N --parent "
+            f"{epic['id']}'."
+        )
+
+
+def cmd_epic_promote(args):
+    with connection() as conn:
+        card = service.get_card(conn, args.id)
+        if card is None:
+            _not_found(args.id)
+        try:
+            service.promote_epic(conn, args.id)
+        except service.RelationError as exc:
+            _relation_failed(exc)
+        _print_card(
+            conn,
+            args,
+            args.id,
+            f"Card #{args.id} is now an epic (was in project {card['project']}).",
+        )
 
 
 def _brief(cards: list[dict]) -> list[dict]:
@@ -641,6 +893,10 @@ def main():
     p_add.add_argument("--description", help="Card description")
     p_add.add_argument("--priority", choices=PRIORITIES, default="medium")
     p_add.add_argument("--project", help="Project (defaults to git root or cwd)")
+    p_add.add_argument(
+        "--epic", action="store_true", help="Add an epic (spans projects; no --project)"
+    )
+    p_add.add_argument("--parent", type=int, metavar="EPIC", help="Epic the card is in")
     p_add.add_argument("title", nargs="+", help="Card title")
     p_add.add_argument("--json", action="store_true", help="Emit the new card as JSON")
     p_add.set_defaults(func=cmd_add)
@@ -661,6 +917,14 @@ def main():
     )
     p_list_session.add_argument(
         "--mine", action="store_true", help="Only cards bound to the current session"
+    )
+    p_list.add_argument(
+        "--epic", type=int, metavar="ID", help="Only this epic's members (any project)"
+    )
+    p_list.add_argument(
+        "--ready",
+        action="store_true",
+        help="Only ready cards (refined, not blocked, not waiting)",
     )
     p_list.add_argument("--json", action="store_true", help="Emit JSON")
     p_list.set_defaults(func=cmd_list)
@@ -694,6 +958,9 @@ def main():
         metavar="TEXT",
         help="Filter by title substring (board export)",
     )
+    p_export.add_argument(
+        "--epic", type=int, metavar="ID", help="Export an epic and its members"
+    )
     p_export.set_defaults(func=cmd_export)
 
     p_move = sub.add_parser("move", help="Move a card to a column")
@@ -711,8 +978,11 @@ def main():
     p_refine.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_refine.set_defaults(func=cmd_refine)
 
-    p_next = sub.add_parser("next", help="Show (or --claim) the next refined card")
+    p_next = sub.add_parser("next", help="Show (or --claim) the next ready card")
     p_next.add_argument("--project", help="Project (defaults to git root or cwd)")
+    p_next.add_argument(
+        "--epic", type=int, metavar="ID", help="Search this epic's members instead"
+    )
     p_next.add_argument("--claim", action="store_true", help="Move it to in_progress")
     p_next.add_argument("--json", action="store_true", help="Emit JSON")
     p_next.set_defaults(func=cmd_next)
@@ -823,8 +1093,50 @@ def main():
     p_edit.add_argument("--priority", choices=PRIORITIES, help="New priority")
     p_edit.add_argument("--acceptance", help="New acceptance criteria")
     p_edit.add_argument("--project", help="New project")
+    p_edit.add_argument(
+        "--parent",
+        type=_parent_arg,
+        metavar="EPIC|none",
+        help="Epic the card is in, or 'none' to clear it",
+    )
     p_edit.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_edit.set_defaults(func=cmd_edit)
+
+    p_link = sub.add_parser("link", help="Record that one card blocks another")
+    p_link.add_argument("from_id", type=int, metavar="A", help="The blocking card")
+    p_link.add_argument("type", choices=LINK_TYPES, help="Link type")
+    p_link.add_argument("to_id", type=int, metavar="B", help="The card that waits")
+    p_link.add_argument("--json", action="store_true", help="Emit card B as JSON")
+    p_link.set_defaults(func=cmd_link)
+
+    p_unlink = sub.add_parser("unlink", help="Remove a link between two cards")
+    p_unlink.add_argument("from_id", type=int, metavar="A", help="The blocking card")
+    p_unlink.add_argument("type", choices=LINK_TYPES, help="Link type")
+    p_unlink.add_argument("to_id", type=int, metavar="B", help="The card that waits")
+    p_unlink.add_argument("--json", action="store_true", help="Emit card B as JSON")
+    p_unlink.set_defaults(func=cmd_unlink)
+
+    p_epic = sub.add_parser("epic", help="List, show or promote epics")
+    epic_sub = p_epic.add_subparsers(dest="epic_command", required=True)
+
+    p_epic_list = epic_sub.add_parser("list", help="Epics with member progress")
+    p_epic_list.add_argument("--done", action="store_true", help="Include done epics")
+    p_epic_list.add_argument("--json", action="store_true", help="Emit JSON")
+    p_epic_list.set_defaults(func=cmd_epic_list)
+
+    p_epic_show = epic_sub.add_parser("show", help="An epic and its members")
+    p_epic_show.add_argument("id", type=int, help="Epic ID")
+    p_epic_show.add_argument("--json", action="store_true", help="Emit JSON")
+    p_epic_show.set_defaults(func=cmd_epic_show)
+
+    p_epic_promote = epic_sub.add_parser(
+        "promote", help="Turn an existing card into an epic"
+    )
+    p_epic_promote.add_argument("id", type=int, help="Card ID")
+    p_epic_promote.add_argument(
+        "--json", action="store_true", help="Emit the epic as JSON"
+    )
+    p_epic_promote.set_defaults(func=cmd_epic_promote)
 
     p_remove = sub.add_parser("remove", help="Delete a card permanently")
     p_remove.add_argument("id", type=int, help="Card ID")

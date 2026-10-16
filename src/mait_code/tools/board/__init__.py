@@ -43,8 +43,10 @@ from mait_code.tools.board.export import (
     MARKDOWN,
     board_markdown,
     card_markdown,
+    epic_markdown,
     export_board,
     export_card,
+    export_epic,
 )
 from mait_code.tools.board.migrate import ensure_schema
 from mait_code.tools.board.service import (
@@ -64,8 +66,10 @@ from mait_code.tools.board.service import (
     dependency_graph,
     edit_card,
     epic_members,
+    epic_without_open_members,
     get_card,
     get_comments,
+    get_epic,
     list_cards,
     list_epics,
     list_projects,
@@ -118,8 +122,10 @@ __all__ = [
     "MARKDOWN",
     "board_markdown",
     "card_markdown",
+    "epic_markdown",
     "export_board",
     "export_card",
+    "export_epic",
     # Service
     "CardNotFound",
     "LinkCycle",
@@ -137,8 +143,10 @@ __all__ = [
     "dependency_graph",
     "edit_card",
     "epic_members",
+    "epic_without_open_members",
     "get_card",
     "get_comments",
+    "get_epic",
     "list_cards",
     "list_epics",
     "list_projects",

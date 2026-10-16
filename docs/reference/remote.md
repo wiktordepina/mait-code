@@ -7,6 +7,8 @@
 
 ::: mait_code.remote.CardNotFound
 
+::: mait_code.remote.RelationError
+
 ::: mait_code.remote.RemoteError
 
 ::: mait_code.remote.SchemaMismatch
@@ -19,7 +21,11 @@
 
 ::: mait_code.remote.get_card
 
+::: mait_code.remote.get_epic
+
 ::: mait_code.remote.list_cards
+
+::: mait_code.remote.list_epics
 
 ::: mait_code.remote.list_projects
 
