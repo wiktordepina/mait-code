@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.83.0] — 2026-10-16
+
 ### Removed
 
 - **The `/web-fetch` skill and `mc-tool-web-fetch` are gone.** The local
@@ -2598,7 +2600,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.82.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.83.0...HEAD
+[0.83.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.83.0
 [0.82.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.82.0
 [0.81.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.1
 [0.81.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.0
