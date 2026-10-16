@@ -158,6 +158,13 @@ def test_edit_parent_rejects_garbage(run, mock_conn):
     assert code == 2 and "epic id or 'none'" in err
 
 
+def test_edit_refused_project_does_not_set_the_parent(run, mock_conn):
+    eid, cid = _epic(mock_conn), _card(mock_conn)
+    code, _, err = run("edit", cid, "--parent", eid, "--project", EPIC_PROJECT)
+    assert code == 1 and "reserved for epics" in err
+    assert service.get_card(mock_conn, cid)["parent_id"] is None
+
+
 def test_edit_unknown_parent_names_the_parent(run, mock_conn):
     cid = _card(mock_conn)
     code, _, err = run("edit", cid, "--parent", 999)
@@ -350,6 +357,21 @@ def test_last_open_member_reminds_about_the_epic(run, mock_conn, argv):
     assert service.get_card(mock_conn, eid)["status"] == "backlog"  # never moved
 
 
+def test_reminder_suggests_complete_when_work_finished(run, mock_conn):
+    eid = _epic(mock_conn)
+    last = _card(mock_conn, parent_id=eid)
+    err = run("complete", last)[2]
+    assert f"complete it with 'mc-tool-board complete {eid}'" in err
+
+
+def test_reminder_suggests_archive_when_every_member_was_dropped(run, mock_conn):
+    eid = _epic(mock_conn)
+    _card(mock_conn, parent_id=eid, status="archived")
+    last = _card(mock_conn, parent_id=eid)
+    err = run("archive", last)[2]
+    assert f"archive it with 'mc-tool-board archive {eid}' if it's dropped" in err
+
+
 def test_no_reminder_while_members_are_open(run, mock_conn):
     eid = _epic(mock_conn)
     first = _card(mock_conn, parent_id=eid)
@@ -393,6 +415,27 @@ def test_export_epic_markdown_and_json(run, mock_conn):
     epic = json.loads(run("export", "--epic", eid, "--format", "json")[1])
     assert epic["members"][0]["comments"][0]["body"] == "note"
     assert "sessions" not in epic and "sessions" not in epic["members"][0]
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ["--status", "done"],
+        ["--search", "x"],
+        ["--all"],
+        ["--project", "p"],
+        ["--archived"],
+    ],
+)
+def test_export_epic_refuses_board_filters(run, mock_conn, flags):
+    code, _, err = run("export", "--epic", _epic(mock_conn), *flags)
+    assert code == 1 and flags[0] in err and "filter a board export" in err
+
+
+def test_refining_an_epic_does_not_warn_about_acceptance(run, mock_conn):
+    eid = _epic(mock_conn)
+    code, _, err = run("refine", eid, "--description", "umbrella")
+    assert code == 0 and "no acceptance criteria" not in err
 
 
 def test_export_card_and_epic_together_refused(run, mock_conn):

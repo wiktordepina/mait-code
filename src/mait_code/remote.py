@@ -15,7 +15,9 @@ What is here is the whole contract:
   parameter to override.
 * **Refine** a card: edit its description and acceptance criteria, and move
   it between ``backlog`` and ``refined``. Any other column is refused, and so
-  is an epic — it is never work to be picked up.
+  is an epic — it is never work to be picked up, so a client refining one has
+  mistaken it for a card. Locally an epic can still be refined: keeping its
+  description current is the instance owner's bookkeeping.
 
 What is absent is just as deliberate: deleting or archiving, tags, links and
 parents, moves into

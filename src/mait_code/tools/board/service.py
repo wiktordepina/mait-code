@@ -17,6 +17,7 @@ the caller layers on top (the CLI exits; the TUI flashes a notification).
 
 from __future__ import annotations
 
+import enum
 import sqlite3
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
@@ -157,6 +158,12 @@ class LinkCycle(RelationError):
         loop = " → ".join(f"#{card_id}" for card_id in path)
         super().__init__(f"#{path[0]} blocks #{path[1]} would close a loop: {loop}")
         self.path = path
+
+
+class _Unchanged(enum.Enum):
+    """Typed sentinel for "leave this field alone" where ``None`` means clear."""
+
+    KEEP = enum.auto()
 
 
 def _now() -> str:
@@ -987,31 +994,47 @@ def add_comment(
     conn.commit()
 
 
-def edit_card(conn: sqlite3.Connection, card_id: int, **fields: str) -> None:
+def edit_card(
+    conn: sqlite3.Connection,
+    card_id: int,
+    *,
+    parent_id: int | None | _Unchanged = _Unchanged.KEEP,
+    **fields: str,
+) -> None:
     """Update arbitrary card columns, bumping ``updated_at``.
 
     Pass column names as keyword arguments (e.g. ``title=..``,
-    ``acceptance_criteria=..``). ``kind`` and ``parent_id`` aren't editable
-    here — use :func:`promote_epic` and :func:`set_parent`, which keep the
-    relationship rules. Raises :class:`CardNotFound` if the id is unknown and
-    :class:`RelationError` for one of those fields, or for a ``project`` that
-    would move a card to :data:`EPIC_PROJECT` or an epic off it; a no-op (no
-    fields) is the caller's concern.
+    ``acceptance_criteria=..``). *parent_id* moves the card into that epic,
+    or out of any with ``None``; leave it out to keep the current one. Every
+    change is checked first and written in one transaction, so a refused
+    field leaves the card exactly as it was — the parent included.
+
+    ``kind`` isn't editable here — use :func:`promote_epic`. Raises
+    :class:`CardNotFound` if the id (or *parent_id*) is unknown and
+    :class:`RelationError` for ``kind``, a *parent_id* that breaks the rules
+    of :func:`set_parent`, or a ``project`` that would move a card to
+    :data:`EPIC_PROJECT` or an epic off it; a no-op (no fields) is the
+    caller's concern.
     """
-    row = _require_row(conn, card_id)
-    for column in ("kind", "parent_id"):
-        if column in fields:
-            raise RelationError(f"{column} can't be edited directly")
-    if "project" in fields:
-        if row[_KIND] == EPIC:
-            if fields["project"] != EPIC_PROJECT:
-                raise RelationError(f"#{card_id} is an epic and has no project")
-        else:
-            _check_card_project(fields["project"])
-    fields["updated_at"] = _now()
-    cols = ", ".join(f"{key} = ?" for key in fields)
-    conn.execute(f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), card_id))
-    conn.commit()
+    with _write_lock(conn):
+        row = _require_row(conn, card_id)
+        if "kind" in fields:
+            raise RelationError("kind can't be edited directly")
+        if "project" in fields:
+            if row[_KIND] == EPIC:
+                if fields["project"] != EPIC_PROJECT:
+                    raise RelationError(f"#{card_id} is an epic and has no project")
+            else:
+                _check_card_project(fields["project"])
+        values: dict[str, object] = dict(fields)
+        if parent_id is not _Unchanged.KEEP:
+            _check_parent(conn, row, parent_id)
+            values["parent_id"] = parent_id
+        values["updated_at"] = _now()
+        cols = ", ".join(f"{key} = ?" for key in values)
+        conn.execute(
+            f"UPDATE cards SET {cols} WHERE id = ?", (*values.values(), card_id)
+        )
 
 
 def remove_card(conn: sqlite3.Connection, card_id: int) -> None:
@@ -1102,14 +1125,23 @@ def set_parent(conn: sqlite3.Connection, card_id: int, epic_id: int | None) -> N
     """
     with _write_lock(conn):
         row = _require_row(conn, card_id)
-        if row[_KIND] == EPIC:
-            raise RelationError(f"#{card_id} is an epic; epics can't have a parent")
-        if epic_id is not None:
-            _require_epic(conn, epic_id)
+        _check_parent(conn, row, epic_id)
         conn.execute(
             "UPDATE cards SET parent_id = ?, updated_at = ? WHERE id = ?",
             (epic_id, _now(), card_id),
         )
+
+
+def _check_parent(conn: sqlite3.Connection, row: Sequence, epic_id: int | None) -> None:
+    """Refuse making the card in *row* a member of *epic_id*.
+
+    An epic can't have a parent (one level only), and a parent must be an
+    epic. ``None`` — leaving any epic — is always fine for a card.
+    """
+    if row[_KIND] == EPIC:
+        raise RelationError(f"#{row[0]} is an epic; epics can't have a parent")
+    if epic_id is not None:
+        _require_epic(conn, epic_id)
 
 
 def add_link(

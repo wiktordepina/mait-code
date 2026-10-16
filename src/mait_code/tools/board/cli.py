@@ -28,7 +28,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from mait_code.logging import log_invocation, setup_logging
 from mait_code.tools.board import export, service
@@ -136,12 +136,18 @@ def _remind_epic(conn, card_id: int) -> None:
     epic itself is never moved — its status is set by hand.
     """
     epic_id = service.epic_without_open_members(conn, card_id)
-    if epic_id is not None:
-        print(
-            f"Note: epic #{epic_id} has no open members — "
-            f"complete it with 'mc-tool-board complete {epic_id}' if it's finished.",
-            file=sys.stderr,
-        )
+    if epic_id is None:
+        return
+    # All members dropped rather than finished suggests archiving, not completing.
+    finished = any(m["status"] == DONE for m in service.epic_members(conn, epic_id))
+    verb, why = (
+        ("complete", "it's finished") if finished else ("archive", "it's dropped")
+    )
+    print(
+        f"Note: epic #{epic_id} has no open members — "
+        f"{verb} it with 'mc-tool-board {verb} {epic_id}' if {why}.",
+        file=sys.stderr,
+    )
 
 
 def _card_payload(conn, card_id: int) -> dict:
@@ -332,6 +338,19 @@ def cmd_show(args):
 def cmd_export(args):
     if args.id is not None and args.epic is not None:
         _fail("pass a card id or --epic, not both.")
+    if args.epic is not None:
+        board_filters = {
+            "--all": args.all,
+            "--project": args.project,
+            "--status": args.status,
+            "--archived": args.archived,
+            "--search": args.search,
+        }
+        used = [flag for flag, value in board_filters.items() if value]
+        if used:
+            _fail(
+                f"--epic exports the whole epic; {', '.join(used)} filter a board export."
+            )
     with connection() as conn:
         if args.epic is not None:
             try:
@@ -364,7 +383,8 @@ def cmd_export(args):
 
 
 def cmd_edit(args):
-    fields: dict[str, str] = {}
+    # Any, not str: unpacked beside parent_id=, which a str-valued dict could shadow.
+    fields: dict[str, Any] = {}
     if args.title is not None:
         fields["title"] = args.title
     if args.description is not None:
@@ -391,8 +411,8 @@ def cmd_edit(args):
         try:
             if set_parent:
                 epic_id = None if args.parent == NO_PARENT else args.parent
-                service.set_parent(conn, args.id, epic_id)
-            if fields:
+                service.edit_card(conn, args.id, parent_id=epic_id, **fields)
+            else:
                 service.edit_card(conn, args.id, **fields)
         except (service.CardNotFound, service.RelationError) as exc:
             _relation_failed(exc)
@@ -453,7 +473,8 @@ def cmd_refine(args):
         )
 
         # Warn if the card lands in Refined with no acceptance criteria at all.
-        if args.acceptance is None and not had_acceptance:
+        # An epic's criteria are optional: its members carry the contracts.
+        if args.acceptance is None and not had_acceptance and card["kind"] != EPIC:
             print(
                 f"Warning: card #{args.id} has no acceptance criteria.",
                 file=sys.stderr,

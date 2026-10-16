@@ -90,11 +90,48 @@ def test_edit_still_retitles_an_epic(board_db):
     assert service.get_card(board_db, eid)["title"] == "renamed"
 
 
-@pytest.mark.parametrize("column", ["kind", "parent_id"])
-def test_edit_refuses_relationship_columns(board_db, column):
+def test_edit_refuses_kind(board_db):
     cid = _card(board_db)
     with pytest.raises(service.RelationError, match="can't be edited"):
-        service.edit_card(board_db, cid, **{column: "x"})
+        service.edit_card(board_db, cid, kind=EPIC)
+
+
+def test_edit_sets_parent_and_fields_together(board_db):
+    eid, cid = _epic(board_db), _card(board_db)
+    service.edit_card(board_db, cid, parent_id=eid, title="renamed")
+    card = service.get_card(board_db, cid)
+    assert (card["parent_id"], card["title"]) == (eid, "renamed")
+    service.edit_card(board_db, cid, parent_id=None)
+    assert service.get_card(board_db, cid)["parent_id"] is None
+
+
+def test_edit_leaves_parent_alone_unless_asked(board_db):
+    eid = _epic(board_db)
+    cid = _card(board_db, parent_id=eid)
+    service.edit_card(board_db, cid, title="renamed")
+    assert service.get_card(board_db, cid)["parent_id"] == eid
+
+
+def test_refused_field_leaves_the_parent_unset(board_db):
+    """A refused project must not let the parent change land on its own."""
+    eid, cid = _epic(board_db), _card(board_db)
+    with pytest.raises(service.RelationError, match="reserved for epics"):
+        service.edit_card(board_db, cid, parent_id=eid, project=EPIC_PROJECT)
+    assert service.get_card(board_db, cid)["parent_id"] is None
+    assert not board_db.in_transaction
+
+
+def test_refused_parent_leaves_the_fields_unchanged(board_db):
+    cid, other = _card(board_db, "before"), _card(board_db)
+    with pytest.raises(service.RelationError, match="isn't an epic"):
+        service.edit_card(board_db, cid, parent_id=other, title="after")
+    assert service.get_card(board_db, cid)["title"] == "before"
+
+
+def test_edit_refuses_a_parent_for_an_epic(board_db):
+    outer, inner = _epic(board_db), _epic(board_db)
+    with pytest.raises(service.RelationError, match="can't have a parent"):
+        service.edit_card(board_db, inner, parent_id=outer)
 
 
 def test_epic_never_binds_a_session(board_db):
