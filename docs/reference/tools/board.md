@@ -13,15 +13,27 @@
 
 ::: mait_code.tools.board.BLOCKED_TAG
 
+::: mait_code.tools.board.BLOCKS
+
 ::: mait_code.tools.board.BOARD_ORDER
 
+::: mait_code.tools.board.CARD
+
 ::: mait_code.tools.board.DONE
+
+::: mait_code.tools.board.EPIC
+
+::: mait_code.tools.board.EPIC_PROJECT
 
 ::: mait_code.tools.board.IN_PROGRESS
 
 ::: mait_code.tools.board.IN_REVIEW
 
+::: mait_code.tools.board.KINDS
+
 ::: mait_code.tools.board.LABELS
+
+::: mait_code.tools.board.LINK_TYPES
 
 ::: mait_code.tools.board.REFINED
 
@@ -63,11 +75,17 @@
 
 ::: mait_code.tools.board.CardNotFound
 
+::: mait_code.tools.board.LinkCycle
+
 ::: mait_code.tools.board.NotInProgress
+
+::: mait_code.tools.board.RelationError
 
 ::: mait_code.tools.board.add_card
 
 ::: mait_code.tools.board.add_comment
+
+::: mait_code.tools.board.add_link
 
 ::: mait_code.tools.board.add_tag
 
@@ -81,13 +99,19 @@
 
 ::: mait_code.tools.board.complete_card
 
+::: mait_code.tools.board.dependency_graph
+
 ::: mait_code.tools.board.edit_card
+
+::: mait_code.tools.board.epic_members
 
 ::: mait_code.tools.board.get_card
 
 ::: mait_code.tools.board.get_comments
 
 ::: mait_code.tools.board.list_cards
+
+::: mait_code.tools.board.list_epics
 
 ::: mait_code.tools.board.list_projects
 
@@ -97,13 +121,19 @@
 
 ::: mait_code.tools.board.next_refined
 
+::: mait_code.tools.board.promote_epic
+
 ::: mait_code.tools.board.refine_card
 
 ::: mait_code.tools.board.remove_card
 
+::: mait_code.tools.board.remove_link
+
 ::: mait_code.tools.board.remove_tag
 
 ::: mait_code.tools.board.review_card
+
+::: mait_code.tools.board.set_parent
 
 ::: mait_code.tools.board.summary_counts
 

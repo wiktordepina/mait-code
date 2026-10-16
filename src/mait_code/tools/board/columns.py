@@ -18,6 +18,24 @@ ARCHIVED = "archived"
 #: this tag.
 BLOCKED_TAG = "blocked"
 
+#: ``cards.kind`` values. A card is a unit of work on the kanban; an epic is an
+#: umbrella over member cards (via ``cards.parent_id``) that lives off the
+#: kanban, in the initiatives view.
+CARD = "card"
+EPIC = "epic"
+KINDS: tuple[str, ...] = (CARD, EPIC)
+
+#: The reserved project every epic carries — an initiative can span several
+#: repos, so it belongs to none of them. Never a real project: the service
+#: refuses it for a card, and ``list_projects`` leaves it out. No leading dash,
+#: so ``--project @epic`` isn't mistaken for a flag.
+EPIC_PROJECT = "@epic"
+
+#: ``card_links.type`` values. ``blocks`` (``from`` must be done before ``to``
+#: can start) is the only one, and the only one that affects ordering.
+BLOCKS = "blocks"
+LINK_TYPES: tuple[str, ...] = (BLOCKS,)
+
 #: Columns in left-to-right board order. ``archived`` is a hidden state and is
 #: deliberately excluded.
 BOARD_ORDER: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW, DONE)
@@ -51,11 +69,17 @@ __all__ = [
     "ARCHIVED",
     "BACKLOG",
     "BLOCKED_TAG",
+    "BLOCKS",
     "BOARD_ORDER",
+    "CARD",
     "DONE",
+    "EPIC",
+    "EPIC_PROJECT",
     "IN_PROGRESS",
     "IN_REVIEW",
+    "KINDS",
     "LABELS",
+    "LINK_TYPES",
     "REFINED",
     "is_valid_status",
     "label",

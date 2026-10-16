@@ -10,6 +10,36 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **Board relationships, service layer.** A card can now be an *epic*: an
+  umbrella stored on the reserved project `@epic`, kept out of the kanban,
+  `list`, counts, the hub, the dashboard, exports and the remote API. Cards
+  can name one epic as their parent (one level only), and `blocks` links
+  record that one card must be done before another can start; a link that
+  would close a loop is refused, naming the loop. Card dicts carry `parent`,
+  `blocked_by`, `blocks`, `waiting_on` and `archived_blockers`. The service
+  API (`add_link`, `set_parent`, `promote_epic`, `list_epics`,
+  `epic_members`, `dependency_graph`) lands first; CLI verbs follow.
+
+### Changed
+
+- **`next` only hands out ready cards.** It skips refined cards that are
+  tagged `blocked` — previously `next --claim` could claim one — and cards
+  waiting on an unfinished blocker, keeping priority-then-oldest order
+  otherwise. When nothing is ready it says so instead of "No refined cards".
+- **The board schema moves to version 6.** Hosts using `mait_code.remote`
+  refuse a `board.db` on a different schema version, so upgrade the host
+  (maitre-d) together with the instance.
+
+### Fixed
+
+- **Opening the board from several processes right after an upgrade no longer
+  races the migration.** The session-start hook, the CLI and the TUI could all
+  apply a pending migration at once, and the loser failed on an `ADD COLUMN`
+  that had already run. Each migration now takes the write lock and re-checks
+  the schema version first.
+
 ## [0.83.0] — 2026-10-16
 
 ### Removed

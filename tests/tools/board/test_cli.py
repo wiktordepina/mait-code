@@ -487,3 +487,34 @@ def test_main_requires_a_subcommand(monkeypatch):
 
     with pytest.raises(SystemExit):
         main()
+
+
+# --- Reserved epic project ---
+
+
+def test_add_refuses_the_reserved_epic_project(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_add
+
+    args = _ns(title=["sneaky"], project="@epic", description=None, priority="medium")
+    with pytest.raises(SystemExit) as exc:
+        cmd_add(args)
+    assert exc.value.code == 1
+    assert "reserved for epics" in capsys.readouterr().err
+
+
+def test_edit_refuses_the_reserved_epic_project(mock_conn, capsys):
+    from mait_code.tools.board.cli import cmd_edit
+
+    cid = service.add_card(mock_conn, project="p", title="c")
+    args = _ns(
+        id=cid,
+        title=None,
+        description=None,
+        priority=None,
+        acceptance=None,
+        project="@epic",
+    )
+    with pytest.raises(SystemExit) as exc:
+        cmd_edit(args)
+    assert exc.value.code == 1
+    assert "reserved for epics" in capsys.readouterr().err

@@ -20,7 +20,7 @@ Present the board above clearly, then act on what the user asks.
 
 ### Picking up work
 
-- **"pick up the next refined card"** (or similar): run `mc-tool-board next --claim --json`. This returns the highest-priority (then oldest) refined card for the current project *and* moves it to `in_progress`. Read its `acceptance_criteria`, then do the work in this session.
+- **"pick up the next refined card"** (or similar): run `mc-tool-board next --claim --json`. This returns the highest-priority (then oldest) *ready* card for the current project — refined, not tagged `blocked`, and not waiting on an unfinished card that blocks it — *and* moves it to `in_progress`. Read its `acceptance_criteria`, then do the work in this session.
 - **"pick up card N"** / **"continue card N"**: if the card isn't In Progress yet, `mc-tool-board move N in_progress`; if it already is (started in an earlier or parallel session), run `mc-tool-board bind N`. Either way this session ends up bound to it. Then read its `acceptance_criteria` and carry on.
 - Peek without claiming: `mc-tool-board next --json`.
 
