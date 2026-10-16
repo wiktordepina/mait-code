@@ -89,7 +89,7 @@ src/mait_code/
 ├── cli/             # The `mait-code` CLI + 10 Textual TUIs (home, board, settings,
 │                    # memory, review, observations, graph, logs, bridge, dashboard)
 ├── tui/             # Shared TUI layer: house theme, palette, base MaitApp
-└── tools/           # CLI tools (memory, reminders, board, inbox, web_fetch)
+└── tools/           # CLI tools (memory, reminders, board, inbox)
 config/              # CLAUDE.md and settings.json templates
 templates/           # Identity templates (soul_document, user_context)
 scripts/             # install.sh, uninstall.sh

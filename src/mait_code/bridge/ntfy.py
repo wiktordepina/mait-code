@@ -7,8 +7,7 @@ the last watermark and stops. Self-hostable as a single container, which is the
 intended deployment (a private topic on the home server).
 
 HTTP is stdlib ``urllib`` with the OS trust store injected via
-:func:`mait_code.ssl.setup_ssl` (corporate-proxy friendly, no extra deps),
-mirroring :mod:`mait_code.tools.web_fetch`.
+:func:`mait_code.ssl.setup_ssl` (corporate-proxy friendly, no extra deps).
 """
 
 from __future__ import annotations
@@ -34,7 +33,7 @@ _TIMEOUT = 15  # seconds; a poll should be quick or not block a session
 # A non-default User-Agent. ntfy servers commonly sit behind Cloudflare, whose
 # Browser Integrity Check rejects the literal ``Python-urllib/*`` UA with a 403
 # (Cloudflare error 1010) — which looks exactly like an auth failure. Any real
-# UA sails through, so send one on every request. Mirrors web_fetch.
+# UA sails through, so send one on every request.
 _USER_AGENT = "mait-code-bridge (mait-code)"
 
 

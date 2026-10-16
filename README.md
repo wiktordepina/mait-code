@@ -14,12 +14,12 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 - **Companion Identity** — Customisable soul document and user context that shape how the companion communicates and makes decisions
 - **Reactive Hooks** — `SessionStart` injects companion context, `PreCompact` and `SessionEnd` extract observations asynchronously
 - **Observation Pipeline** — Automatic extraction of facts, preferences, decisions, entities, and relationships via Claude Haiku, run with no tools so a transcript can't make it act; `mc-tool-memory observe` runs the same pipeline over prepared text, such as an automated job's digest, with its memories capped at project scope
-- **CLI Tools** — Memory, reminders, a cross-project kanban board, a quick-capture inbox, and web fetch (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-board`, `mc-tool-inbox`, `mc-tool-web-fetch`)
+- **CLI Tools** — Memory, reminders, a cross-project kanban board, and a quick-capture inbox (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-board`, `mc-tool-inbox`)
 - **TUIs** — Full-screen Textual apps sharing one house theme: the home hub (`mait-code home`, or just `mait-code` on a terminal) with a user-authored start page of widget and shell-command tiles, the kanban board (`mait-code board`), the settings editor (`mait-code settings`), the memory review queue (`mait-code review`), and the read-only memory browser (`mait-code memory`), observations browser (`mait-code observations`), knowledge-graph explorer (`mait-code graph`) and log viewer (`mait-code logs`)
 - **Memory Review** — Important-but-ageing memories resurface in a due queue; confirm, refine or retire each in place so curated memory stays true instead of quietly decaying
 - **Bridge** — An opt-in link to your phone: capture thoughts into the inbox from anywhere and get due reminders as notifications with a Done button that round-trips back. Disabled by default and makes zero network calls until you switch it on
 - **Home Hub** — A tree-navigable front door to the board, memory, reminders, inbox, identity and system health, with live status badges; press Enter to jump into any sibling TUI, plus a system prompt view showing exactly what the companion is presented with at session start
-- **Skills** — Slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), web fetch (`/web-fetch`), and workflow (`/commit`, `/pre-pr-review`)
+- **Skills** — Slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), and workflow (`/commit`, `/pre-pr-review`)
 
 ## Quick Start
 
@@ -83,7 +83,7 @@ uv sync
 mait-code/
 ├── src/mait_code/        # Python package
 │   ├── hooks/            #   Hooks: session_start, observe, auto_format
-│   ├── tools/            #   CLI tools: memory, reminders, board, inbox, web_fetch
+│   ├── tools/            #   CLI tools: memory, reminders, board, inbox
 │   ├── bridge/           #   Opt-in capture-in / notify-out transport
 │   ├── cli/              #   The mait-code CLI and its Textual TUIs
 │   └── tui/              #   Shared TUI layer: house theme, palette, base app

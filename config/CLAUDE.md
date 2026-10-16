@@ -29,4 +29,3 @@ Skills are auto-discovered from `~/.claude/skills/`. Use `/help` to see the full
 - **Memory:** `/recall`, `/remember`, `/reflect`, `memory-store` (auto-invoked)
 - **Workflow:** `/commit`
 - **Reminders:** `/remind`, `/reminders`
-- **Web:** `/web-fetch`

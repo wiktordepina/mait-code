@@ -7,7 +7,8 @@ inputs and returns a small structured summary of what it did so the
 calling command can render that to the user.
 
 The skill/agent helpers ignore the ``.gitkeep`` placeholder files used
-to keep empty directories tracked.
+to keep empty directories tracked, and prune links left dangling by a
+skill or agent the source tree no longer ships.
 """
 
 from __future__ import annotations
@@ -35,12 +36,15 @@ class SymlinkResult:
         already_linked: Links that already pointed at the correct target.
         updated: Links that existed but pointed somewhere stale, now repointed.
         backed_up: Existing non-symlink files renamed to ``<name>.backup``.
+        pruned: Dangling links into the source tree, removed because their
+            target is gone (a skill or agent dropped from the source).
     """
 
     created: list[Path] = field(default_factory=list)
     already_linked: list[Path] = field(default_factory=list)
     updated: list[Path] = field(default_factory=list)
     backed_up: list[Path] = field(default_factory=list)
+    pruned: list[Path] = field(default_factory=list)
 
 
 def _link_to(target: Path, link: Path, result: SymlinkResult) -> None:
@@ -59,6 +63,26 @@ def _link_to(target: Path, link: Path, result: SymlinkResult) -> None:
         result.backed_up.append(backup)
     link.symlink_to(target)
     result.created.append(link)
+
+
+def _prune_dangling_into(
+    target_dir: Path, source_dir: Path, result: SymlinkResult
+) -> None:
+    """Remove links in ``target_dir`` whose missing target lies under ``source_dir``.
+
+    Only dangling links are touched: a live link, a link into somewhere else
+    and a real file or directory are all left alone.
+    """
+    source_abs = source_dir.resolve()
+    for entry in sorted(target_dir.iterdir()):
+        if not entry.is_symlink() or entry.exists():
+            continue
+        try:
+            entry.resolve().relative_to(source_abs)
+        except (OSError, ValueError):
+            continue
+        entry.unlink()
+        result.pruned.append(entry)
 
 
 def symlink_claude_md(source_dir: Path, claude_dir: Path) -> SymlinkResult:
@@ -87,7 +111,7 @@ def symlink_skills(source_dir: Path, claude_dir: Path) -> SymlinkResult:
     """Symlink every ``skills/<name>/`` directory into ``<claude_dir>/skills/``.
 
     No-op if ``source_dir/skills`` is missing. ``.gitkeep`` placeholders
-    are ignored.
+    are ignored. Dangling links into the source tree are pruned.
     """
     result = SymlinkResult()
     skills_src = source_dir / "skills"
@@ -99,6 +123,7 @@ def symlink_skills(source_dir: Path, claude_dir: Path) -> SymlinkResult:
         if entry.name == ".gitkeep" or not entry.is_dir():
             continue
         _link_to(entry.resolve(), skills_dst / entry.name, result)
+    _prune_dangling_into(skills_dst, source_dir, result)
     return result
 
 
@@ -106,7 +131,8 @@ def symlink_agents(source_dir: Path, claude_dir: Path) -> SymlinkResult:
     """Symlink every ``agents/<file>`` into ``<claude_dir>/agents/``.
 
     No-op if ``source_dir/agents`` is missing. ``.gitkeep`` placeholders
-    are ignored. Agents are individual files, not directories.
+    are ignored. Agents are individual files, not directories. Dangling
+    links into the source tree are pruned.
     """
     result = SymlinkResult()
     agents_src = source_dir / "agents"
@@ -118,6 +144,7 @@ def symlink_agents(source_dir: Path, claude_dir: Path) -> SymlinkResult:
         if entry.name == ".gitkeep" or not entry.is_file():
             continue
         _link_to(entry.resolve(), agents_dst / entry.name, result)
+    _prune_dangling_into(agents_dst, source_dir, result)
     return result
 
 

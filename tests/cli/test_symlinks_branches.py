@@ -247,3 +247,56 @@ def test_remove_agent_symlinks_dangling_outside_source(tmp_path: Path) -> None:
 
     assert removed == []
     assert link.is_symlink()  # untouched
+
+
+# --- symlink_skills / symlink_agents: pruning links a dropped entry left ---
+
+
+def test_symlink_skills_prunes_link_to_dropped_skill(tmp_path: Path) -> None:
+    """A skill removed from the source leaves a dangling link; it is pruned."""
+    source = tmp_path / "src"
+    (source / "skills" / "kept").mkdir(parents=True)
+    (source / "skills" / "dropped").mkdir()
+    claude_dir = tmp_path / "claude"
+    symlink_skills(source, claude_dir)
+    (source / "skills" / "dropped").rmdir()
+
+    result = symlink_skills(source, claude_dir)
+
+    skills_dst = claude_dir / "skills"
+    assert result.pruned == [skills_dst / "dropped"]
+    assert not (skills_dst / "dropped").is_symlink()
+    assert (skills_dst / "kept").is_symlink()
+
+
+def test_symlink_skills_keeps_foreign_and_real_entries(tmp_path: Path) -> None:
+    """Dangling links outside the source, and real directories, are left alone."""
+    source = tmp_path / "src"
+    (source / "skills").mkdir(parents=True)
+    skills_dst = tmp_path / "claude" / "skills"
+    skills_dst.mkdir(parents=True)
+    foreign = skills_dst / "foreign"
+    foreign.symlink_to(tmp_path / "elsewhere" / "gone")
+    (skills_dst / "own").mkdir()
+
+    result = symlink_skills(source, tmp_path / "claude")
+
+    assert result.pruned == []
+    assert foreign.is_symlink()
+    assert (skills_dst / "own").is_dir()
+
+
+def test_symlink_agents_prunes_link_to_dropped_agent(tmp_path: Path) -> None:
+    """The agent fan-out prunes the same way as skills."""
+    source = tmp_path / "src"
+    (source / "agents").mkdir(parents=True)
+    dropped = source / "agents" / "dropped.md"
+    dropped.write_text("agent\n")
+    claude_dir = tmp_path / "claude"
+    symlink_agents(source, claude_dir)
+    dropped.unlink()
+
+    result = symlink_agents(source, claude_dir)
+
+    assert result.pruned == [claude_dir / "agents" / "dropped.md"]
+    assert not (claude_dir / "agents" / "dropped.md").is_symlink()

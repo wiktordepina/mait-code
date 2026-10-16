@@ -93,11 +93,8 @@ def test_grants_are_scoped_past_the_bare_executable(skill: str) -> None:
     """``Bash(mc-tool-board:*)`` would permit every subcommand it has.
 
     A wildcard directly on the executable name defeats the point of the
-    catalogue's prefix discipline. ``web-fetch`` is the deliberate exception:
-    the tool takes a URL, not a subcommand, so there is nothing to scope past.
+    catalogue's prefix discipline.
     """
-    if skill == "web-fetch":
-        return
     bare = [
         pattern
         for pattern in GRANTS[skill]
