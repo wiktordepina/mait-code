@@ -33,6 +33,7 @@ def write_raw_extraction(
     *,
     project: str | None = None,
     branch: str | None = None,
+    source: str | None = None,
 ) -> None:
     """Append an extraction record to the day's JSONL log file.
 
@@ -41,6 +42,8 @@ def write_raw_extraction(
         trigger: The hook trigger name (e.g. ``"precompact"``).
         project: Project identifier captured from the transcript.
         branch: Branch name captured from the transcript.
+        source: Provenance for the stored memories (see :func:`store_extraction`).
+            Recorded only when set, so ``restore`` can carry it back.
     """
     data_dir = get_data_dir()
     obs_dir = data_dir / "memory" / "observations"
@@ -56,6 +59,8 @@ def write_raw_extraction(
         "branch": branch,
         "extraction": extraction,
     }
+    if source is not None:
+        record["source"] = source
     with open(path, "a") as f:
         f.write(json.dumps(record) + "\n")
 
@@ -65,14 +70,29 @@ def store_extraction(
     *,
     project: str | None = None,
     branch: str | None = None,
-) -> None:
+    source: str | None = None,
+) -> dict[str, dict[str, int]]:
     """Store extracted facts, preferences, decisions, and bugs to ``memory.db``.
+
+    A failed write is logged and counted, never raised, so one bad item can't
+    lose the rest of the window.
 
     Args:
         extraction: Parsed extraction dict with category keys.
         project: Project identifier used to resolve scope and assign entries.
         branch: Branch name used to resolve scope and assign entries.
+        source: Provenance recorded on new entries (e.g. ``"job"``); ``None``
+            for a session's own hook.
+
+    Returns:
+        Per category in :data:`CATEGORY_TO_TYPE`, how many items were
+        ``created``, ``deduplicated`` or ``failed``. Items with blank content
+        are skipped and not counted.
     """
+    counts = {
+        category: {"created": 0, "deduplicated": 0, "failed": 0}
+        for category in CATEGORY_TO_TYPE
+    }
     with connection() as conn:
         for category, entry_type in CATEGORY_TO_TYPE.items():
             for item in extraction.get(category, []):
@@ -82,7 +102,7 @@ def store_extraction(
                 importance = item.get("importance", 5)
                 scope = resolve_scope(item, category, project, branch)
                 try:
-                    store_memory(
+                    result = store_memory(
                         conn,
                         content,
                         entry_type,
@@ -90,9 +110,13 @@ def store_extraction(
                         scope=scope,
                         project=project if scope != "global" else None,
                         branch=branch if scope == "branch" else None,
+                        source=source,
                     )
+                    counts[category][result["action"]] += 1
                 except Exception as e:
                     logger.warning("failed to store %s: %s", entry_type, e)
+                    counts[category]["failed"] += 1
+    return counts
 
 
 def store_entities_and_relationships(extraction: dict) -> None:
@@ -164,3 +188,64 @@ def store_entities_and_relationships(extraction: dict) -> None:
                 upsert_relationship(conn, source_id, target_id, rel_type, context)
             except Exception as e:
                 logger.warning("failed to upsert relationship: %s", e)
+
+
+def confine_extraction(extraction: dict) -> dict:
+    """Cap what an extraction from prepared text may write.
+
+    Text handed in by another program (a job digest) carries no user voice
+    and may carry untrusted content, so its reach is limited: the
+    ``preferences`` category is dropped, and every memory item's scope is
+    pinned to ``branch`` (when it asked for that) or ``project`` — never
+    ``global``. Pinning the scope in the dict itself, before it is logged,
+    means ``restore`` replays the same caps.
+
+    Args:
+        extraction: Parsed extraction dict returned by the LLM.
+
+    Returns:
+        A new extraction dict with the caps applied; the input is not modified.
+    """
+    confined = {k: v for k, v in extraction.items() if k != "preferences"}
+    for category in CATEGORY_TO_TYPE:
+        if category == "preferences" or category not in confined:
+            continue
+        items = []
+        for item in confined[category]:
+            asked = str(item.get("scope", "")).strip().lower()
+            items.append(
+                {**item, "scope": "branch" if asked == "branch" else "project"}
+            )
+        confined[category] = items
+    return confined
+
+
+def record_extraction(
+    extraction: dict,
+    trigger: str,
+    *,
+    project: str | None = None,
+    branch: str | None = None,
+    source: str | None = None,
+) -> dict[str, dict[str, int]]:
+    """Log an extraction and store its memories, entities and relationships.
+
+    The shared tail of every extraction path — the observe hook and
+    ``mc-tool-memory observe`` — so the two can't drift apart.
+
+    Args:
+        extraction: Parsed extraction dict returned by the LLM.
+        trigger: What ran the extraction, recorded in the raw log.
+        project: Project the memories belong to.
+        branch: Branch for branch-scoped memories.
+        source: Provenance recorded on new entries; ``None`` for the hook.
+
+    Returns:
+        The per-category counts from :func:`store_extraction`.
+    """
+    write_raw_extraction(
+        extraction, trigger, project=project, branch=branch, source=source
+    )
+    counts = store_extraction(extraction, project=project, branch=branch, source=source)
+    store_entities_and_relationships(extraction)
+    return counts

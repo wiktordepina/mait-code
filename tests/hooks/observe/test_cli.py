@@ -12,6 +12,7 @@ import pytest
 
 from mait_code.context import munge_path
 from mait_code.hooks.observe import cli as observe_cli
+from mait_code.hooks.observe import storage as observe_storage
 from mait_code.hooks.observe.cli import _find_transcript, _read_event
 from mait_code.hooks.observe.cursor import get_cursor
 
@@ -243,9 +244,11 @@ class TestRunCursorAdvance:
                 observe_cli, "format_for_extraction", return_value="conversation text"
             ),
             patch.object(observe_cli, "extract_observations", return_value=extraction),
-            patch.object(observe_cli, "write_raw_extraction") as mock_raw,
-            patch.object(observe_cli, "store_extraction") as mock_store,
-            patch.object(observe_cli, "store_entities_and_relationships") as mock_ent,
+            patch.object(observe_storage, "write_raw_extraction") as mock_raw,
+            patch.object(observe_storage, "store_extraction") as mock_store,
+            patch.object(
+                observe_storage, "store_entities_and_relationships"
+            ) as mock_ent,
         ):
             observe_cli._run()
         return mock_raw, mock_store, mock_ent

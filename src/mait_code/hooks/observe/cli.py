@@ -14,11 +14,7 @@ from pathlib import Path
 
 from mait_code.hooks.observe.cursor import get_cursor, record_failure, set_cursor
 from mait_code.hooks.observe.extractor import extract_observations
-from mait_code.hooks.observe.storage import (
-    store_entities_and_relationships,
-    store_extraction,
-    write_raw_extraction,
-)
+from mait_code.hooks.observe.storage import record_extraction
 from mait_code.context import munge_path
 from mait_code.hooks.observe.transcript import format_for_extraction, read_new_lines
 from mait_code.logging import log_invocation, setup_logging
@@ -182,7 +178,5 @@ def _run():
     # unparseable response) — either way the window is handled, so advance.
     # set_cursor also clears any recorded failure state for this transcript.
     if extraction:
-        write_raw_extraction(extraction, args.trigger, project=project, branch=branch)
-        store_extraction(extraction, project=project, branch=branch)
-        store_entities_and_relationships(extraction)
+        record_extraction(extraction, args.trigger, project=project, branch=branch)
     set_cursor(transcript_path, new_offset)

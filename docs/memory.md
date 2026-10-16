@@ -61,6 +61,54 @@ To *see* this tier — what's been captured, and what's still waiting for
 reflection — open the [observations browser](observations.md) with
 `mait-code observations`.
 
+### Extracting from prepared text
+
+`mc-tool-memory observe` runs the same extraction over a text file (or stdin)
+instead of a transcript. It is for automated runs, such as a job runner
+handing over a digest of the whole job, where per-session hooks are switched
+off (`MAIT_CODE_NESTED=1`):
+
+```bash
+mc-tool-memory observe --file digest.txt --project maitre-d --branch feat/x --json
+```
+
+- `--project` is required and resolved through the project-alias map.
+  `--branch` follows the hook's rule: `main` and `master` count as no branch.
+- Each call is one window; there is no cursor. Text longer than `--max-chars`
+  (default 60000) is refused rather than cut. The caller owns its size.
+- `--trigger` (default `job`) labels the raw-log record, and is stored in each
+  new memory's `source` column, so these memories can be found, and removed,
+  later.
+
+Prepared text has no user voice in it and may carry content nobody vetted, so
+what a run can write is capped. It stores **no preferences**, and **nothing at
+global scope**: every memory is project- or branch-scoped. The caps are applied
+before the raw log is written, so `restore` replays them too.
+
+**Exit status**, with a one-line reason on stderr for every non-zero exit:
+
+| Status | `outcome` | Meaning |
+|--------|-----------|---------|
+| 0 | `extracted` | At least one memory stored, new or deduplicated |
+| 3 | `nothing` | Empty text, or nothing worth storing came back |
+| 4 | `llm_failure` | The model call timed out or failed, or its reply couldn't be parsed |
+| 1 | `error` | Text over `--max-chars`, an unreadable file, `claude` not on `PATH`, or every write failed |
+| 2 | — | Usage error |
+
+`--json` prints `{"outcome", "counts", "reason"}` on every outcome, where
+`counts` gives created, deduplicated and failed writes per category. A
+re-run over the same text comes back as all deduplicated.
+
+**Run it as the instance's own user**, against the instance's data directory.
+It reads the instance's settings (including the `[env]` table) and writes its
+`memory.db`, so it is not something a host service should run as itself. The
+[remote API](remote.md) has no memory writes for that reason; a host hands
+over the text and lets the instance do the extracting, e.g. with `sudo -u`.
+
+**Allow for the run time.** The model call is retried twice, so a failing
+extraction can take three times the `llm-timeout` setting (about 4½ minutes at
+the 90-second default) before it exits 4.
+
 ### Deduplication
 
 Before storing a new memory, the writer checks for near-duplicates:
@@ -138,6 +186,7 @@ The core table stores every observation with metadata:
 | `reviewed_at` | When the memory was last reviewed — the anchor for [review resurfacing](#review-keeping-curated-memory-fresh) (null = never, treated as `created_at`) |
 | `superseded_by` | Id of the entry that replaced this one (null = current) |
 | `superseded_at` | When it was superseded (null = current) |
+| `source` | What wrote it when not a session's own hook, e.g. `job` from [`observe`](#extracting-from-prepared-text) (null = a session) |
 
 ### Scoping
 
@@ -497,6 +546,7 @@ launched.
 | `entities merge <source> <target>` | Fold one entity into another: repoint relationships, sum mentions, delete the source (quote multi-word names) |
 | `relationships <entity>` | Show relationships for an entity |
 | `reindex` | Recompute all vector embeddings from scratch |
+| `observe --file <path\|-> --project <name>` | [Extract from prepared text](#extracting-from-prepared-text), such as a job digest (`--branch`, `--trigger`, `--max-chars`, `--json`) |
 | `restore` | Replay observation JSONL logs into the database, then reindex |
 | `restore --dry-run` | Show what would be restored without writing |
 | `canonicalize-projects` | Rewrite stored project slugs per the project-alias map |
