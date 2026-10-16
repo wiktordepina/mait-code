@@ -18,7 +18,8 @@ the caller layers on top (the CLI exits; the TUI flashes a notification).
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 from mait_code.tools.board.columns import (
@@ -486,9 +487,16 @@ def next_refined(
     its status so a concurrent claim can't double-move it) and, given a
     *session*, bound to it. The guard re-checks the status only, not
     readiness. Returns ``None`` when nothing is ready.
+
+    Raises :class:`CardNotFound` / :class:`RelationError` for an *epic_id*
+    that is unknown or not an epic, and :class:`ValueError` when neither
+    *project* nor *epic_id* is given.
     """
     if epic_id is not None:
+        _require_epic(conn, epic_id)
         scope, scope_param = "parent_id = ?", epic_id
+    elif project is None:
+        raise ValueError("next_refined needs a project or an epic_id")
     else:
         scope, scope_param = "project = ?", project
     settled = ", ".join("?" for _ in _SETTLED)
@@ -998,6 +1006,24 @@ def remove_card(conn: sqlite3.Connection, card_id: int) -> None:
 # --- Relationships ---
 
 
+@contextmanager
+def _write_lock(conn: sqlite3.Connection) -> Iterator[None]:
+    """Run the block as one ``BEGIN IMMEDIATE`` transaction: commit or roll back.
+
+    For a mutation whose checks must hold until its write lands — a parallel
+    writer (another session, the TUI) could otherwise change what was checked
+    in between. Taking the write lock up front, rather than on the first
+    write, closes that window.
+    """
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        yield
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+
+
 def _check_card_project(project: str | None) -> None:
     """Refuse a missing project, or the epics' reserved one, for a card."""
     if not project:
@@ -1053,16 +1079,16 @@ def set_parent(conn: sqlite3.Connection, card_id: int, epic_id: int | None) -> N
     Raises :class:`CardNotFound` for an unknown id and :class:`RelationError`
     when *card_id* is an epic (one level only) or *epic_id* isn't one.
     """
-    row = _require_row(conn, card_id)
-    if row[_KIND] == EPIC:
-        raise RelationError(f"#{card_id} is an epic; epics can't have a parent")
-    if epic_id is not None:
-        _require_epic(conn, epic_id)
-    conn.execute(
-        "UPDATE cards SET parent_id = ?, updated_at = ? WHERE id = ?",
-        (epic_id, _now(), card_id),
-    )
-    conn.commit()
+    with _write_lock(conn):
+        row = _require_row(conn, card_id)
+        if row[_KIND] == EPIC:
+            raise RelationError(f"#{card_id} is an epic; epics can't have a parent")
+        if epic_id is not None:
+            _require_epic(conn, epic_id)
+        conn.execute(
+            "UPDATE cards SET parent_id = ?, updated_at = ? WHERE id = ?",
+            (epic_id, _now(), card_id),
+        )
 
 
 def add_link(
@@ -1070,7 +1096,7 @@ def add_link(
 ) -> None:
     """Record that *from_id* :data:`BLOCKS` *to_id*.
 
-    The checks and the insert share one ``BEGIN IMMEDIATE`` transaction, so a
+    The checks and the insert share one write-locked transaction, so a
     parallel writer can't slip in the edge that closes a loop between them.
 
     Raises:
@@ -1084,8 +1110,7 @@ def add_link(
         raise RelationError(f"unknown link type {link_type!r}")
     if from_id == to_id:
         raise RelationError(f"#{from_id} can't block itself")
-    conn.execute("BEGIN IMMEDIATE")
-    try:
+    with _write_lock(conn):
         for card_id in (from_id, to_id):
             if _require_row(conn, card_id)[_KIND] == EPIC:
                 raise RelationError(
@@ -1104,10 +1129,6 @@ def add_link(
             "VALUES (?, ?, ?, ?)",
             (from_id, link_type, to_id, _now()),
         )
-        conn.commit()
-    except BaseException:
-        conn.rollback()
-        raise
 
 
 def remove_link(
@@ -1131,30 +1152,30 @@ def promote_epic(conn: sqlite3.Connection, card_id: int) -> None:
     already an epic, has a parent, or has any ``blocks`` link — each of which
     an epic can't carry.
     """
-    row = _require_row(conn, card_id)
-    if row[_KIND] == EPIC:
-        raise RelationError(f"#{card_id} is already an epic")
-    if row[_PARENT] is not None:
-        raise RelationError(
-            f"#{card_id} belongs to epic #{row[_PARENT]}; clear its parent first"
+    with _write_lock(conn):
+        row = _require_row(conn, card_id)
+        if row[_KIND] == EPIC:
+            raise RelationError(f"#{card_id} is already an epic")
+        if row[_PARENT] is not None:
+            raise RelationError(
+                f"#{card_id} belongs to epic #{row[_PARENT]}; clear its parent first"
+            )
+        if conn.execute(
+            "SELECT 1 FROM card_links WHERE type = ? AND (from_id = ? OR to_id = ?)",
+            (BLOCKS, card_id, card_id),
+        ).fetchone():
+            raise RelationError(f"#{card_id} has blocks links; remove them first")
+        now = _now()
+        conn.execute(
+            "UPDATE cards SET kind = ?, project = ?, updated_at = ? WHERE id = ?",
+            (EPIC, EPIC_PROJECT, now, card_id),
         )
-    if conn.execute(
-        "SELECT 1 FROM card_links WHERE type = ? AND (from_id = ? OR to_id = ?)",
-        (BLOCKS, card_id, card_id),
-    ).fetchone():
-        raise RelationError(f"#{card_id} has blocks links; remove them first")
-    now = _now()
-    conn.execute(
-        "UPDATE cards SET kind = ?, project = ?, updated_at = ? WHERE id = ?",
-        (EPIC, EPIC_PROJECT, now, card_id),
-    )
-    conn.execute(
-        "INSERT INTO card_comments (card_id, author, body, created_at) "
-        "VALUES (?, ?, ?, ?)",
-        (card_id, "me", f"Promoted to an epic (was in project {row[1]}).", now),
-    )
-    _release_sessions(conn, card_id)
-    conn.commit()
+        conn.execute(
+            "INSERT INTO card_comments (card_id, author, body, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (card_id, "me", f"Promoted to an epic (was in project {row[1]}).", now),
+        )
+        _release_sessions(conn, card_id)
 
 
 def epic_members(

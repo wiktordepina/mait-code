@@ -113,7 +113,8 @@ The more transformative path is to drive the board *through Claude*. Just talk:
 - *"Refine card 12."* — Claude drafts a description and acceptance criteria,
   shows them to you for approval, then moves the card to **Refined**.
 - *"Pick up the next refined card."* — Claude claims the highest-priority refined
-  card, moves it to **In Progress**, reads its acceptance criteria, and gets to
+  card that's ready (not tagged `blocked`, not waiting on an unfinished card that
+  blocks it), moves it to **In Progress**, reads its acceptance criteria, and gets to
   work — all in the same session.
 - *"Continue card 12."* — in a fresh session, Claude binds itself to a card that's
   already **In Progress** (see [parallel sessions](#parallel-sessions)) and
@@ -300,7 +301,7 @@ mc-tool-board comment ID "<note>" [--author me|claude] [--json]
 
 # Flow
 mc-tool-board refine ID [--description ...] [--acceptance ...] [--json]   # → refined
-mc-tool-board next [--project ...] [--claim] [--json]                     # top refined card; --claim → in_progress
+mc-tool-board next [--project ...] [--claim] [--json]                     # top ready card; --claim → in_progress
 mc-tool-board review ID [--pr <url>] [--json]                             # → in_review; --pr adds a PR reference
 mc-tool-board complete ID --summary "<what was done>" [--json]            # → done
 mc-tool-board move ID <backlog|refined|in_progress|in_review|done|archived> [--json]
@@ -348,7 +349,7 @@ board-wide form takes the same filters as `list`.
 - **Write acceptance criteria you'd accept.** They're the contract Claude builds
   against and the bar for completion. Vague criteria, vague results.
 - **Let Claude claim the next card.** `pick up the next refined card` respects
-  priority then age, so the board decides what's most important — you don't have
+  priority then age and skips blocked cards, so the board decides what's most important — you don't have
   to.
 - **Use references, not description links.** A `PR → https://…` reference stays
   clickable and structured; the same URL pasted into the description is just text.

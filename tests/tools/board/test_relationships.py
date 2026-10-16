@@ -441,3 +441,93 @@ def test_cards_carry_kind_card_by_default(board_db):
 def test_archived_constant_is_settled(board_db):
     # Guard against _SETTLED drifting from the documented rule.
     assert set(service._SETTLED) == {DONE, ARCHIVED}
+
+
+# --- Write locking against a parallel writer ---
+
+
+class _Interleave:
+    """A connection proxy that runs *meanwhile* right after a matching query.
+
+    Simulates another process writing between a mutation's checks and its
+    write. With the mutation holding the write lock from the start, that
+    writer must be refused rather than slip in.
+    """
+
+    def __init__(self, conn, marker, meanwhile):
+        self._conn, self._marker, self._meanwhile = conn, marker, meanwhile
+        self.attempted = False
+
+    def execute(self, sql, *args):
+        cursor = self._conn.execute(sql, *args)
+        if self._marker in sql and not self.attempted:
+            self.attempted = True
+            rows = cursor.fetchall()
+            self._meanwhile()
+
+            class _Rows:
+                def fetchone(self):
+                    return rows[0] if rows else None
+
+                def fetchall(self):
+                    return rows
+
+            return _Rows()
+        return cursor
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
+@pytest.fixture
+def two_writers(tmp_path):
+    from mait_code.tools.board.db import get_connection
+
+    path = tmp_path / "shared.db"
+    first = get_connection(path)
+    second = sqlite3.connect(path, timeout=0.1)  # fail fast instead of waiting
+    second.execute("PRAGMA foreign_keys = ON")
+    yield first, second
+    first.close()
+    second.close()
+
+
+def test_promote_holds_the_lock_across_its_link_check(two_writers):
+    first, second = two_writers
+    x, y = _card(first), _card(first)
+    proxy = _Interleave(
+        first, "FROM card_links WHERE type", lambda: service.add_link(second, x, y)
+    )
+    with pytest.raises(sqlite3.OperationalError, match="locked"):
+        service.promote_epic(proxy, x)  # type: ignore[arg-type]
+    assert proxy.attempted
+    # The parallel writer was refused; promote never ran into its write either
+    # (the OperationalError surfaced inside its transaction and rolled it back).
+    assert first.execute("SELECT COUNT(*) FROM card_links").fetchone()[0] == 0
+    service.promote_epic(first, x)
+    assert service.get_card(first, x)["kind"] == EPIC
+
+
+def test_set_parent_holds_the_lock_across_its_checks(two_writers):
+    first, second = two_writers
+    eid, x = _epic(first), _card(first)
+    proxy = _Interleave(
+        first, "FROM cards WHERE id", lambda: service.promote_epic(second, x)
+    )
+    with pytest.raises(sqlite3.OperationalError, match="locked"):
+        service.set_parent(proxy, x, eid)  # type: ignore[arg-type]
+    assert service.get_card(first, x)["kind"] == CARD
+    assert not first.in_transaction
+
+
+def test_next_by_unknown_or_non_epic_id_raises(board_db):
+    cid = _card(board_db)
+    with pytest.raises(service.CardNotFound):
+        service.next_refined(board_db, None, epic_id=999)
+    with pytest.raises(service.RelationError, match="isn't an epic"):
+        service.next_refined(board_db, None, epic_id=cid)
+
+
+def test_next_needs_a_project_or_an_epic(board_db):
+    with pytest.raises(ValueError, match="project or an epic_id"):
+        service.next_refined(board_db, None)

@@ -341,7 +341,10 @@ def cmd_next(args):
         if args.json:
             print("null")
         else:
-            print(f"No refined cards for {project}.")
+            print(
+                f"No ready cards for {project} — none refined, or every refined "
+                f"card is tagged blocked or waiting on an unfinished blocker."
+            )
         return
 
     if args.json:

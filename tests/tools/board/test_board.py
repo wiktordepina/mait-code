@@ -596,7 +596,7 @@ def test_cmd_next_ignores_non_refined(mock_conn, capsys):
     from mait_code.tools.board.cli import cmd_next
 
     cmd_next(_ns(project=None, claim=False, json=False))
-    assert "No refined cards" in capsys.readouterr().out
+    assert "No ready cards" in capsys.readouterr().out
 
 
 def test_cmd_next_empty_json(mock_conn, capsys):
@@ -611,7 +611,7 @@ def test_cmd_next_project_scoped(mock_conn, capsys):
     from mait_code.tools.board.cli import cmd_next
 
     cmd_next(_ns(project=None, claim=False, json=False))
-    assert "No refined cards" in capsys.readouterr().out
+    assert "No ready cards" in capsys.readouterr().out
 
 
 # --- complete ---
@@ -974,7 +974,7 @@ def test_cmd_archive_then_excluded_from_next(mock_conn, capsys):
     row = mock_conn.execute("SELECT status FROM cards WHERE id = ?", (cid,)).fetchone()
     assert row[0] == ARCHIVED
     cmd_next(_ns(project=None, claim=False, json=False))
-    assert "No refined cards" in capsys.readouterr().out
+    assert "No ready cards" in capsys.readouterr().out
 
 
 # --- comment / edit / remove ---
