@@ -254,6 +254,7 @@ def store_memory(
     scope: str = "global",
     project: str | None = None,
     branch: str | None = None,
+    source: str | None = None,
 ) -> dict:
     """Store a memory entry, deduplicating near-identical content.
 
@@ -271,6 +272,9 @@ def store_memory(
         scope: Memory scope — ``"global"``, ``"project"``, or ``"branch"``.
         project: Project identifier (e.g. repo basename).
         branch: Branch name (for branch-scoped memories).
+        source: What wrote the entry, when not a session's own hook (e.g.
+            ``"job"``). Recorded on a new entry only; a deduplicated write
+            keeps the existing entry's source.
 
     Returns:
         A dict with keys ``action`` (``"created"`` or ``"deduplicated"``),
@@ -311,9 +315,10 @@ def store_memory(
     memory_class = MEMORY_CLASS_MAP.get(entry_type, "episodic")
     cursor = conn.execute(
         """INSERT INTO memory_entries
-           (content, entry_type, importance, memory_class, scope, project, branch)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (content, entry_type, importance, memory_class, scope, project, branch),
+           (content, entry_type, importance, memory_class, scope, project, branch,
+            source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (content, entry_type, importance, memory_class, scope, project, branch, source),
     )
     conn.commit()
 

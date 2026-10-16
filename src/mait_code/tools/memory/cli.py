@@ -1,8 +1,13 @@
 """CLI tool for memory search and storage."""
 
 import argparse
+import json
 import logging
+import re
+import shutil
 import sys
+from pathlib import Path
+from typing import NoReturn
 
 from mait_code import config
 from mait_code.context import get_context
@@ -732,6 +737,7 @@ def cmd_restore(args):
                     extraction = record.get("extraction", {})
                     rec_project = record.get("project")
                     rec_branch = record.get("branch")
+                    rec_source = record.get("source")
                     total_records += 1
                     file_records += 1
 
@@ -760,6 +766,7 @@ def cmd_restore(args):
                                         scope=scope,
                                         project=store_project,
                                         branch=store_branch,
+                                        source=rec_source,
                                     )
                                     total_memories += 1
                                 except Exception as e:
@@ -857,6 +864,147 @@ def cmd_restore(args):
             embedded = _reindex_embeddings(conn)
             if embedded:
                 print(f"Done. {embedded} embeddings stored.")
+
+
+# Exit statuses for `observe`, a contract with callers such as maitre-d's
+# runner. 2 is argparse's usage error; 1 is every other error.
+OBSERVE_EXTRACTED = 0
+OBSERVE_ERROR = 1
+OBSERVE_NOTHING = 3
+OBSERVE_LLM_FAILURE = 4
+
+_TRIGGER_SLUG = re.compile(r"[a-z0-9-]+")
+
+
+def _trigger_slug(value: str) -> str:
+    """Argparse type for ``--trigger``: a lowercase slug."""
+    if not _TRIGGER_SLUG.fullmatch(value):
+        raise argparse.ArgumentTypeError(
+            f"invalid trigger {value!r}: use lowercase letters, digits and hyphens"
+        )
+    return value
+
+
+def cmd_observe(args):
+    """Extract and store observations from prepared text, such as a job digest.
+
+    Runs the observe hook's pipeline over one window of text, with the
+    project and branch given rather than read from a transcript, and its
+    reach capped by :func:`~mait_code.hooks.observe.storage.confine_extraction`.
+    Exits with one of the ``OBSERVE_*`` statuses; every non-zero exit prints
+    a one-line reason on stderr, and ``--json`` prints the outcome and
+    per-category counts whatever happens.
+    """
+    from mait_code.context import DEFAULT_BRANCHES, canonical_project
+    from mait_code.hooks.observe.extractor import extract_observations
+    from mait_code.hooks.observe.storage import (
+        CATEGORY_TO_TYPE,
+        confine_extraction,
+        record_extraction,
+    )
+
+    counts = {
+        category: {"created": 0, "deduplicated": 0, "failed": 0}
+        for category in CATEGORY_TO_TYPE
+    }
+
+    def finish(outcome: str, status: int, reason: str | None = None) -> NoReturn:
+        if args.json:
+            doc: dict = {"outcome": outcome, "counts": counts}
+            if reason:
+                doc["reason"] = reason
+            print(json.dumps(doc))
+        if reason:
+            logger.warning("observe: %s", reason)
+            print(
+                f"Error: {reason}" if status == OBSERVE_ERROR else reason,
+                file=sys.stderr,
+            )
+        sys.exit(status)
+
+    project = canonical_project(args.project.strip())
+    if not project:
+        finish("error", OBSERVE_ERROR, "--project must not be empty")
+    branch = (args.branch or "").strip() or None
+    if branch in DEFAULT_BRANCHES:
+        branch = None
+    if args.max_chars < 1:
+        finish("error", OBSERVE_ERROR, "--max-chars must be at least 1")
+
+    try:
+        if args.file == "-":
+            # The bytes, decoded as UTF-8 like --file, not the locale's
+            # encoding (often ASCII under a service's C locale).
+            text = sys.stdin.buffer.read().decode("utf-8")
+        else:
+            text = Path(args.file).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        finish("error", OBSERVE_ERROR, f"cannot read {args.file}: {e}")
+
+    if len(text) > args.max_chars:
+        finish(
+            "error",
+            OBSERVE_ERROR,
+            f"text is {len(text)} characters, over the --max-chars limit of "
+            f"{args.max_chars}; shorten it rather than have it cut",
+        )
+    if not text.strip():
+        finish("nothing", OBSERVE_NOTHING, "nothing to extract: the text is empty")
+    if shutil.which("claude") is None:
+        finish("error", OBSERVE_ERROR, "the claude CLI is not on PATH")
+
+    extraction = extract_observations(text, project=project, branch=branch)
+    if extraction is None:
+        finish(
+            "llm_failure",
+            OBSERVE_LLM_FAILURE,
+            "the extraction call failed (timed out or exited non-zero; "
+            "see the mait-code log)",
+        )
+    if not extraction:
+        finish(
+            "llm_failure",
+            OBSERVE_LLM_FAILURE,
+            "the extraction model's reply could not be parsed",
+        )
+
+    try:
+        confined = confine_extraction(extraction, branch=branch)
+    except ValueError as e:
+        finish(
+            "llm_failure",
+            OBSERVE_LLM_FAILURE,
+            f"the extraction model's reply had an unexpected shape: {e}",
+        )
+
+    try:
+        counts.update(
+            record_extraction(
+                confined,
+                args.trigger,
+                project=project,
+                branch=branch,
+                source=args.trigger,
+            )
+        )
+    except Exception as e:  # e.g. the database can't be opened
+        finish("error", OBSERVE_ERROR, f"cannot store the extraction: {e}")
+
+    created = sum(c["created"] for c in counts.values())
+    deduplicated = sum(c["deduplicated"] for c in counts.values())
+    failed = sum(c["failed"] for c in counts.values())
+    if created + deduplicated:
+        if not args.json:
+            print(
+                f"Stored {created} new and {deduplicated} existing "
+                f"memor{'y' if created + deduplicated == 1 else 'ies'}"
+                + (f" ({failed} failed)" if failed else "")
+                + "."
+            )
+        finish("extracted", OBSERVE_EXTRACTED)
+    if failed:
+        finish("error", OBSERVE_ERROR, f"all {failed} memory writes failed")
+    finish("nothing", OBSERVE_NOTHING, "nothing worth storing came back")
 
 
 def cmd_reflect(args):
@@ -1197,6 +1345,49 @@ def main():
     )
     _add_scope_args(p_reflect)
     p_reflect.set_defaults(func=cmd_reflect)
+
+    # observe
+    p_observe = sub.add_parser(
+        "observe",
+        help="Extract and store observations from prepared text (e.g. a job digest)",
+        description=(
+            "Extract observations from prepared text and store them, like the "
+            "observe hook does for a session. Memories are capped: no "
+            "preferences, nothing at global scope, importance at most 7 "
+            "(knowledge-graph entities and relationships are stored as "
+            "extracted). Exit status: 0 stored, 3 nothing to extract, "
+            "4 LLM failure, 1 other error, 2 usage error."
+        ),
+    )
+    p_observe.add_argument(
+        "--file", required=True, help="Text file to extract from, or - for stdin"
+    )
+    p_observe.add_argument(
+        "--project", required=True, help="Project the memories belong to"
+    )
+    p_observe.add_argument(
+        "--branch",
+        default=None,
+        help="Branch for branch-scoped memories (main/master count as none)",
+    )
+    p_observe.add_argument(
+        "--trigger",
+        type=_trigger_slug,
+        default="job",
+        help="Label for the raw log and the memories' source (default: job)",
+    )
+    p_observe.add_argument(
+        "--max-chars",
+        type=int,
+        default=60_000,
+        help="Refuse text longer than this (default: 60000)",
+    )
+    p_observe.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the outcome and per-category counts as JSON",
+    )
+    p_observe.set_defaults(func=cmd_observe)
 
     # canonicalize-projects
     p_canon = sub.add_parser(

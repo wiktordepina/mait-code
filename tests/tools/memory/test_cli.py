@@ -718,6 +718,32 @@ class TestCmdRestore:
         count = mem_db.execute("SELECT COUNT(*) FROM memory_entries").fetchone()[0]
         assert count == 2
 
+    def test_restore_carries_source(self, mem_db, tmp_path, capsys):
+        import json
+
+        from mait_code.tools.memory.cli import cmd_restore
+
+        obs_dir = tmp_path / "data" / "memory" / "observations"
+        obs_dir.mkdir(parents=True)
+        records = [
+            {"trigger": "session-end", "project": "p", "extraction": {"facts": [{"content": "From a session"}]}},
+            {"trigger": "job", "source": "job", "project": "p", "extraction": {"facts": [{"content": "From a job digest", "scope": "project"}]}},
+        ]  # fmt: skip
+        (obs_dir / "2025-01-01.jsonl").write_text(
+            "".join(json.dumps(r) + "\n" for r in records)
+        )
+
+        with patch(
+            "mait_code.tools.memory.db.get_data_dir",
+            return_value=tmp_path / "data",
+        ):
+            cmd_restore(_make_args(dry_run=False))
+
+        rows = dict(
+            mem_db.execute("SELECT content, source FROM memory_entries").fetchall()
+        )
+        assert rows == {"From a session": None, "From a job digest": "job"}
+
 
 class TestCmdCanonicalizeProjects:
     def _setup(

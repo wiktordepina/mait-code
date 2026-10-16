@@ -4,7 +4,11 @@ import sqlite3
 
 import pytest
 
-from mait_code.tools.memory.migrate import _migrate_13_reviewed_at, ensure_schema
+from mait_code.tools.memory.migrate import (
+    _migrate_13_reviewed_at,
+    _migrate_15_source,
+    ensure_schema,
+)
 
 
 def test_ensure_schema_creates_tables(memory_db: sqlite3.Connection):
@@ -51,6 +55,26 @@ def test_migration_13_backfills_reviewed_at_to_created_at():
         conn.close()
 
 
+def test_migration_15_adds_source_and_reruns_cleanly():
+    """Migration 15 adds a nullable source column; re-running is a no-op."""
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.execute(
+            "CREATE TABLE memory_entries (id INTEGER PRIMARY KEY, content TEXT)"
+        )
+        conn.execute("INSERT INTO memory_entries (content) VALUES ('old row')")
+
+        _migrate_15_source(conn)
+        _migrate_15_source(conn)
+
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(memory_entries)")}
+        assert "source" in cols
+        (source,) = conn.execute("SELECT source FROM memory_entries").fetchone()
+        assert source is None
+    finally:
+        conn.close()
+
+
 def test_ensure_schema_creates_fts(memory_db: sqlite3.Connection):
     """FTS5 virtual table should exist."""
     tables = memory_db.execute(
@@ -73,7 +97,7 @@ def test_ensure_schema_idempotent(memory_db: sqlite3.Connection):
     ensure_schema(memory_db)
 
     versions = memory_db.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0]
-    assert versions == 14  # Exactly 14 migrations
+    assert versions == 15  # Exactly 15 migrations
 
 
 def test_schema_version_tracking(memory_db: sqlite3.Connection):
@@ -82,9 +106,9 @@ def test_schema_version_tracking(memory_db: sqlite3.Connection):
         "SELECT version, description FROM schema_version ORDER BY version"
     ).fetchall()
 
-    assert len(rows) == 14
+    assert len(rows) == 15
     assert rows[0][0] == 1
-    assert rows[-1][0] == 14
+    assert rows[-1][0] == 15
 
 
 def test_fts_trigger_on_insert(memory_db: sqlite3.Connection):
@@ -165,6 +189,7 @@ def test_memory_entries_columns(memory_db: sqlite3.Connection):
         "superseded_by",
         "superseded_at",
         "reviewed_at",
+        "source",
     }
     assert expected == columns
 

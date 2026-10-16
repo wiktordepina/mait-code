@@ -8,6 +8,8 @@ from unittest.mock import patch
 import pytest
 
 from mait_code.hooks.observe.storage import (
+    confine_extraction,
+    record_extraction,
     store_entities_and_relationships,
     store_extraction,
     write_raw_extraction,
@@ -441,3 +443,131 @@ def test_store_entity_coerces_unknown_type(data_dir: Path):
         assert mock_entity.call_count == 2
         assert mock_entity.call_args_list[0].args[1:] == ("board TUI", "unknown")
         assert mock_entity.call_args_list[1].args[1:] == ("Ruff", "tool")
+
+
+def test_store_extraction_returns_counts(data_dir: Path):
+    extraction = {
+        "facts": [{"content": "new"}, {"content": "seen"}, {"content": "  "}],
+        "decisions": [{"content": "broken"}],
+    }
+    actions = {"new": "created", "seen": "deduplicated"}
+
+    def fake_store(conn, content, *args, **kwargs):
+        if content == "broken":
+            raise RuntimeError("db locked")
+        return {"action": actions[content]}
+
+    with (
+        patch("mait_code.hooks.observe.storage.store_memory", side_effect=fake_store),
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        counts = store_extraction(extraction, project="p")
+
+    assert counts["facts"] == {"created": 1, "deduplicated": 1, "failed": 0}
+    assert counts["decisions"] == {"created": 0, "deduplicated": 0, "failed": 1}
+    # Every category is present, so callers get a fixed shape.
+    assert counts["procedures"] == {"created": 0, "deduplicated": 0, "failed": 0}
+
+
+def test_store_extraction_passes_source(data_dir: Path):
+    with (
+        patch("mait_code.hooks.observe.storage.store_memory") as mock_store,
+        patch("mait_code.hooks.observe.storage.connection") as mock_conn,
+    ):
+        mock_conn.return_value.__enter__ = lambda s: s
+        mock_conn.return_value.__exit__ = lambda s, *a: None
+        mock_store.return_value = {"action": "created"}
+        store_extraction({"facts": [{"content": "x"}]}, project="p", source="job")
+
+    assert mock_store.call_args.kwargs["source"] == "job"
+
+
+def test_write_raw_extraction_records_source_only_when_set(data_dir: Path):
+    write_raw_extraction({"facts": []}, "session-end")
+    write_raw_extraction({"facts": []}, "job", source="job")
+
+    (path,) = (data_dir / "memory" / "observations").glob("*.jsonl")
+    hook, job = [json.loads(line) for line in path.read_text().splitlines()]
+    assert "source" not in hook
+    assert job["source"] == "job"
+
+
+def test_confine_extraction_drops_preferences_and_pins_scope():
+    extraction = {
+        "facts": [
+            {"content": "a", "scope": "global"},
+            {"content": "b", "scope": "Branch"},
+            {"content": "c"},
+        ],
+        "preferences": [{"content": "p", "scope": "global"}],
+        "entities": [{"name": "e"}],
+    }
+
+    confined = confine_extraction(extraction, branch="feat/x")
+
+    assert "preferences" not in confined
+    assert [i["scope"] for i in confined["facts"]] == ["project", "branch", "project"]
+    assert confined["entities"] == [{"name": "e"}]
+    # The input is left alone.
+    assert extraction["facts"][0]["scope"] == "global"
+    assert "preferences" in extraction
+
+
+def test_record_extraction_runs_the_whole_tail(data_dir: Path):
+    extraction = {"facts": [{"content": "x"}]}
+    with (
+        patch("mait_code.hooks.observe.storage.write_raw_extraction") as mock_raw,
+        patch(
+            "mait_code.hooks.observe.storage.store_extraction",
+            return_value={"facts": {"created": 1}},
+        ) as mock_store,
+        patch(
+            "mait_code.hooks.observe.storage.store_entities_and_relationships"
+        ) as mock_ent,
+    ):
+        counts = record_extraction(
+            extraction, "job", project="p", branch="b", source="job"
+        )
+
+    mock_raw.assert_called_once_with(
+        extraction, "job", project="p", branch="b", source="job"
+    )
+    mock_store.assert_called_once_with(
+        extraction, project="p", branch="b", source="job"
+    )
+    mock_ent.assert_called_once_with(extraction)
+    assert counts == {"facts": {"created": 1}}
+
+
+def test_confine_extraction_without_a_branch_pins_branch_asks_to_project():
+    """A branch-scoped row with no branch is unreachable by any search."""
+    confined = confine_extraction(
+        {"facts": [{"content": "a", "scope": "branch"}]}, branch=None
+    )
+    assert confined["facts"][0]["scope"] == "project"
+
+
+def test_confine_extraction_caps_importance():
+    confined = confine_extraction(
+        {
+            "facts": [
+                {"content": "a", "importance": 10},
+                {"content": "b", "importance": 3},
+                {"content": "c", "importance": "high"},
+                {"content": "d"},
+            ]
+        },
+        branch=None,
+    )
+    assert [i["importance"] for i in confined["facts"]] == [7, 3, 5, 5]
+
+
+@pytest.mark.parametrize(
+    "extraction",
+    [{"facts": "x"}, {"decisions": [1, 2]}, {"relationships": {"a": "b"}}],
+)
+def test_confine_extraction_rejects_malformed_shapes(extraction):
+    with pytest.raises(ValueError, match="not a list of objects"):
+        confine_extraction(extraction, branch=None)

@@ -262,6 +262,21 @@ def _migrate_13_reviewed_at(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migrate_15_source(conn: sqlite3.Connection) -> None:
+    """Add the ``source`` provenance column to ``memory_entries``.
+
+    Records what wrote an entry when it came from somewhere other than a
+    session's own observe hook — ``mc-tool-memory observe`` stores its
+    ``--trigger`` (e.g. ``job``) here. Existing rows and hook writes stay NULL.
+
+    The ``ADD COLUMN`` is guarded so the body is safe to re-run (SQLite has no
+    ``ADD COLUMN IF NOT EXISTS``).
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(memory_entries)")}
+    if "source" not in cols:
+        conn.execute("ALTER TABLE memory_entries ADD COLUMN source TEXT")
+
+
 MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
     (
         1,
@@ -425,6 +440,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
                 value TEXT
             )""",
         ],
+    ),
+    (
+        15,
+        "Add source provenance column to memory_entries",
+        _migrate_15_source,
     ),
 ]
 
