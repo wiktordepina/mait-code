@@ -85,10 +85,12 @@ def test_call_claude_custom_model(mock_subprocess):
 
 
 def test_call_claude_disables_every_tool(mock_subprocess):
-    """The nested claude gets no built-in tools and no MCP servers.
+    """call_claude passes the flags that disable built-in tools and MCP servers.
 
     Prompts embed transcript windows; with tools available, a transcript that
-    reads like a task gets carried out (files written, commits pushed).
+    reads like a task gets carried out (files written, commits pushed). This
+    pins the command line only: that the flags take effect is Claude Code's
+    behaviour, measured on 2.1.301.
     """
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "ok"
