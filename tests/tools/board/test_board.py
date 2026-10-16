@@ -39,8 +39,8 @@ def test_ensure_schema_idempotent(board_db: sqlite3.Connection):
     ensure_schema(board_db)
     ensure_schema(board_db)
     versions = board_db.execute("SELECT version FROM schema_version").fetchall()
-    assert len(versions) == 5
-    assert versions[-1][0] == 5
+    assert len(versions) == 6
+    assert versions[-1][0] == 6
 
 
 def test_migration_blocked_becomes_refined_with_tag(tmp_path):
@@ -139,6 +139,8 @@ def test_cards_columns(board_db: sqlite3.Connection):
         "updated_at",
         "completed_at",
         "created_by",
+        "kind",
+        "parent_id",
     ]
 
 
@@ -1325,3 +1327,142 @@ def test_cmd_summary_all_projects(mock_conn, capsys):
     assert data["project"] is None
     assert data["counts"][REFINED] == 1
     assert data["counts"][DONE] == 1
+
+
+# --- Migration 6 and the locked runner ---
+
+
+def _board_at(tmp_path, monkeypatch, version: int, name: str = "old.db"):
+    """A board database migrated only as far as *version*, as on disk pre-upgrade."""
+    from mait_code.tools.board import migrate
+
+    path = tmp_path / name
+    with monkeypatch.context() as m:
+        m.setattr(migrate, "MIGRATIONS", migrate.MIGRATIONS[:version])
+        conn = sqlite3.connect(path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        migrate.ensure_schema(conn)
+        conn.close()
+    return path
+
+
+def test_migration_6_keeps_every_v5_row(tmp_path, monkeypatch):
+    """Adding kind/parent_id/card_links leaves cards and their child rows intact."""
+    path = _board_at(tmp_path, monkeypatch, 5)
+    conn = sqlite3.connect(path)
+    conn.execute("PRAGMA foreign_keys = ON")
+    cid = _insert_card(conn, "survivor")
+    conn.execute(
+        "INSERT INTO card_comments (card_id, body, created_at) VALUES (?, 'c', 'x')",
+        (cid,),
+    )
+    conn.execute("INSERT INTO card_tags (card_id, tag) VALUES (?, 'tui')", (cid,))
+    conn.execute(
+        "INSERT INTO card_references (card_id, position, label, value) "
+        "VALUES (?, 1, 'PR', 'u')",
+        (cid,),
+    )
+    conn.execute(
+        "INSERT INTO card_sessions (card_id, session_id, pid, bound_at) "
+        "VALUES (?, 's', 1, 'x')",
+        (cid,),
+    )
+    conn.commit()
+    tables = ("cards", "card_comments", "card_tags", "card_references", "card_sessions")
+
+    def counts():
+        return {
+            t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in tables
+        }
+
+    before = counts()
+    ensure_schema(conn)
+    assert counts() == before
+    assert conn.execute("SELECT kind, parent_id FROM cards").fetchall() == [
+        ("card", None)
+    ]
+    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 6
+    conn.close()
+
+
+def test_ensure_schema_survives_a_stale_version_read(tmp_path, monkeypatch):
+    """Two processes both read v5, one migrates first: the other must skip, not fail.
+
+    This is the interleaving after an upgrade when the session-start hook, the
+    CLI and the TUI open the board together — ``ADD COLUMN`` run twice would
+    raise ``duplicate column``.
+    """
+    from mait_code.tools.board import migrate
+
+    path = _board_at(tmp_path, monkeypatch, 5)
+    first = sqlite3.connect(path)
+    second = sqlite3.connect(path)
+    try:
+        migrate.ensure_schema(first)
+        # The second connection's unlocked read happened before the first
+        # committed, so it still believes the schema is at v5.
+        monkeypatch.setattr(migrate, "_current_version", lambda conn: 5)
+        migrate.ensure_schema(second)
+        rows = second.execute(
+            "SELECT COUNT(*) FROM schema_version WHERE version = 6"
+        ).fetchone()[0]
+        assert rows == 1
+    finally:
+        first.close()
+        second.close()
+
+
+def test_ensure_schema_from_two_threads_at_once(tmp_path, monkeypatch):
+    """Real concurrency: two connections migrate the same v5 file together."""
+    import threading
+
+    path = _board_at(tmp_path, monkeypatch, 5)
+    barrier = threading.Barrier(2)
+    errors: list[BaseException] = []
+
+    def migrate_once() -> None:
+        conn = sqlite3.connect(path, timeout=10)
+        try:
+            barrier.wait()
+            ensure_schema(conn)
+        except BaseException as exc:  # noqa: BLE001 — surfaced by the assert
+            errors.append(exc)
+        finally:
+            conn.close()
+
+    threads = [threading.Thread(target=migrate_once) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert errors == []
+    conn = sqlite3.connect(path)
+    assert (
+        conn.execute(
+            "SELECT COUNT(*) FROM schema_version WHERE version = 6"
+        ).fetchone()[0]
+        == 1
+    )
+    conn.close()
+
+
+def test_failed_migration_rolls_back_and_records_nothing(tmp_path, monkeypatch):
+    from mait_code.tools.board import migrate
+
+    def _boom(conn: sqlite3.Connection) -> None:
+        conn.execute("CREATE TABLE half_done (id INTEGER)")
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(migrate, "MIGRATIONS", [*migrate.MIGRATIONS, (999, "x", _boom)])
+    conn = sqlite3.connect(tmp_path / "boom.db")
+    try:
+        with pytest.raises(RuntimeError):
+            migrate.ensure_schema(conn)
+        assert not conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'half_done'"
+        ).fetchone()
+        assert (
+            conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 6
+        )
+    finally:
+        conn.close()

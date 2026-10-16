@@ -392,6 +392,7 @@ def _tile_health() -> list[TileLine]:
 
 def _tile_velocity() -> list[TileLine]:
     """Creation velocity: memories and cards, this week vs the one before."""
+    from mait_code.tools.board.columns import CARD
     from mait_code.tools.board.db import get_connection as board_connection
     from mait_code.tools.memory.db import get_connection as memory_connection
 
@@ -420,7 +421,13 @@ def _tile_velocity() -> list[TileLine]:
         conn.close()
     conn = board_connection()
     try:
-        card_stamps = [row[0] for row in conn.execute("SELECT created_at FROM cards")]
+        # Epics are bookkeeping, not work: velocity counts cards only.
+        card_stamps = [
+            row[0]
+            for row in conn.execute(
+                "SELECT created_at FROM cards WHERE kind = ?", (CARD,)
+            )
+        ]
     finally:
         conn.close()
 

@@ -105,13 +105,16 @@ def cmd_add(args):
 
     project = args.project or get_project()
     with connection() as conn:
-        card_id = service.add_card(
-            conn,
-            project=project,
-            title=title,
-            description=args.description,
-            priority=args.priority,
-        )
+        try:
+            card_id = service.add_card(
+                conn,
+                project=project,
+                title=title,
+                description=args.description,
+                priority=args.priority,
+            )
+        except service.RelationError as exc:
+            _fail(f"{exc}.")
         _print_card(
             conn, args, card_id, f"Card #{card_id} added ({args.priority}): {title}"
         )
@@ -257,6 +260,8 @@ def cmd_edit(args):
             service.edit_card(conn, args.id, **fields)
         except service.CardNotFound:
             _not_found(args.id)
+        except service.RelationError as exc:
+            _fail(f"{exc}.")
         _print_card(conn, args, args.id, f"Card #{args.id} updated.")
 
 
@@ -506,6 +511,8 @@ def cmd_bind(args):
             _fail(
                 f"card #{args.id} is {label(exc.status)}; only In Progress cards bind."
             )
+        except service.RelationError as exc:
+            _fail(f"{exc}.")
         _print_card(
             conn, args, args.id, f"Card #{args.id} bound to session {session_id[:8]}."
         )
