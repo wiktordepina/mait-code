@@ -1112,6 +1112,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#extracting-from-prepared-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extracting from prepared text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#deduplication" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1233,6 +1244,17 @@
     <span class="md-ellipsis">
       
         How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-embedding-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The embedding record
       
     </span>
   </a>
@@ -2049,8 +2071,6 @@
       
         
       
-        
-      
     
     
     
@@ -2195,34 +2215,6 @@
     
   
     Inbox
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/web_fetch/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web fetch
   
 
     
@@ -2615,6 +2607,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#extracting-from-prepared-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extracting from prepared text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#deduplication" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2736,6 +2739,17 @@
     <span class="md-ellipsis">
       
         How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-embedding-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The embedding record
       
     </span>
   </a>
@@ -3109,6 +3123,82 @@ steps); a <strong>decision</strong> answers <em>"what did we pick?"</em> (a choi
 <p>To <em>see</em> this tier — what's been captured, and what's still waiting for
 reflection — open the <a href="../observations/">observations browser</a> with
 <code>mait-code observations</code>.</p>
+<h3 id="extracting-from-prepared-text">Extracting from prepared text<a class="headerlink" href="#extracting-from-prepared-text" title="Permanent link">&para;</a></h3>
+<p><code>mc-tool-memory observe</code> runs the same extraction over a text file (or stdin)
+instead of a transcript. It is for automated runs, such as a job runner
+handing over a digest of the whole job, where per-session hooks are switched
+off (<code>MAIT_CODE_NESTED=1</code>):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mc-tool-memory<span class="w"> </span>observe<span class="w"> </span>--file<span class="w"> </span>digest.txt<span class="w"> </span>--project<span class="w"> </span>maitre-d<span class="w"> </span>--branch<span class="w"> </span>feat/x<span class="w"> </span>--json
+</span></code></pre></div>
+<ul>
+<li><code>--project</code> is required and resolved through the project-alias map.
+  <code>--branch</code> follows the hook's rule: <code>main</code> and <code>master</code> count as no branch.</li>
+<li>Each call is one window; there is no cursor. Text longer than <code>--max-chars</code>
+  (default 60000) is refused rather than cut. The caller owns its size.</li>
+<li><code>--trigger</code> (default <code>job</code>) labels the raw-log record, and is stored in each
+  new memory's <code>source</code> column, so these memories can be told apart from a
+  session's (there is no <code>source</code> filter on the CLI yet; query the column).</li>
+</ul>
+<p>Prepared text has no user voice in it and may carry content nobody vetted, so
+the memories a run writes are capped:</p>
+<ul>
+<li><strong>No preferences.</strong> That category is dropped.</li>
+<li><strong>Nothing at global scope.</strong> Every memory is project-scoped, or
+  branch-scoped when the model asks for it and a branch was given.</li>
+<li><strong>Importance at most 7</strong>, so the text can't mint top-ranked memories, or
+  raise an existing one past what a session gave it through deduplication.</li>
+</ul>
+<p>The caps are applied before the raw log is written, so <code>restore</code> replays them
+too. <strong>Entities and relationships are not capped</strong>: they go into the knowledge
+graph as extracted, and the graph has no scope.</p>
+<p><strong>Exit status</strong>, with a one-line reason on stderr for every non-zero exit:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th><code>outcome</code></th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>extracted</code></td>
+<td>At least one memory stored, new or deduplicated</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>nothing</code></td>
+<td>Empty text, or nothing worth storing came back</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>llm_failure</code></td>
+<td>The model call timed out or failed, or its reply couldn't be parsed</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>error</code></td>
+<td>Text over <code>--max-chars</code>, an unreadable file, <code>claude</code> not on <code>PATH</code>, or every write failed</td>
+</tr>
+<tr>
+<td>2</td>
+<td>—</td>
+<td>Usage error</td>
+</tr>
+</tbody>
+</table>
+<p><code>--json</code> prints <code>{"outcome", "counts", "reason"}</code> on every outcome, where
+<code>counts</code> gives created, deduplicated and failed writes per category. A
+re-run over the same text comes back as all deduplicated.</p>
+<p><strong>Run it as the instance's own user</strong>, against the instance's data directory.
+It reads the instance's settings (including the <code>[env]</code> table) and writes its
+<code>memory.db</code>, so it is not something a host service should run as itself. The
+<a href="../remote/">remote API</a> has no memory writes for that reason; a host hands
+over the text and lets the instance do the extracting, e.g. with <code>sudo -u</code>.</p>
+<p><strong>Allow for the run time.</strong> The model call is retried twice, so a failing
+extraction can take three times the <code>llm-timeout</code> setting (about 4½ minutes at
+the 90-second default) before it exits 4.</p>
 <h3 id="deduplication">Deduplication<a class="headerlink" href="#deduplication" title="Permanent link">&para;</a></h3>
 <p>Before storing a new memory, the writer checks for near-duplicates:</p>
 <ol>
@@ -3125,24 +3215,24 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <li>The new entry is still stored — the write is never blocked. <code>store_memory</code> returns the conflicting entries under <code>potential_conflicts</code>, and <code>mc-tool-memory store</code> prints a <code>⚠ This may contradict …</code> notice.</li>
 </ul>
 <p>When a fact has genuinely changed, replace the stale entry rather than letting two coexist:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mc-tool-memory<span class="w"> </span>supersede<span class="w"> </span>&lt;old_id&gt;<span class="w"> </span><span class="s2">&quot;&lt;new, current content&gt;&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mc-tool-memory<span class="w"> </span>supersede<span class="w"> </span>&lt;old_id&gt;<span class="w"> </span><span class="s2">&quot;&lt;new, current content&gt;&quot;</span>
 </span></code></pre></div>
 <p>This inserts the new content as a fresh entry (inheriting the old one's type, scope, memory class and importance — pass <code>--importance</code> to override), then marks the old entry <strong>superseded</strong> — recording <code>superseded_by</code> (the new id) and <code>superseded_at</code> (the timestamp). The old row is kept for auditability but hidden from all default search, listing, and dedup. To see superseded entries:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mc-tool-memory<span class="w"> </span>list<span class="w"> </span>--include-superseded
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mc-tool-memory<span class="w"> </span>list<span class="w"> </span>--include-superseded
 </span></code></pre></div>
 <p>Supersede is one of three consolidation moves that leave a row in place but drop it from the live set:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mc-tool-memory<span class="w"> </span>supersede<span class="w"> </span>&lt;old_id&gt;<span class="w"> </span><span class="s2">&quot;&lt;new content&gt;&quot;</span><span class="w">        </span><span class="c1"># replace one entry</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mc-tool-memory<span class="w"> </span>merge<span class="w"> </span>&lt;id1&gt;<span class="w"> </span>&lt;id2&gt;<span class="w"> </span>…<span class="w"> </span>--into<span class="w"> </span><span class="s2">&quot;&lt;consolidated&gt;&quot;</span><span class="w">  </span><span class="c1"># fold several into one</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>mc-tool-memory<span class="w"> </span>retire<span class="w"> </span>&lt;id&gt;<span class="w">                                </span><span class="c1"># drop a stale entry, no replacement</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mc-tool-memory<span class="w"> </span>supersede<span class="w"> </span>&lt;old_id&gt;<span class="w"> </span><span class="s2">&quot;&lt;new content&gt;&quot;</span><span class="w">        </span><span class="c1"># replace one entry</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mc-tool-memory<span class="w"> </span>merge<span class="w"> </span>&lt;id1&gt;<span class="w"> </span>&lt;id2&gt;<span class="w"> </span>…<span class="w"> </span>--into<span class="w"> </span><span class="s2">&quot;&lt;consolidated&gt;&quot;</span><span class="w">  </span><span class="c1"># fold several into one</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mc-tool-memory<span class="w"> </span>retire<span class="w"> </span>&lt;id&gt;<span class="w">                                </span><span class="c1"># drop a stale entry, no replacement</span>
 </span></code></pre></div>
 <p><strong>Merge</strong> is the N→1 counterpart to supersede: it inserts one consolidated entry (inheriting type/scope from the first row that actually exists — missing ids are skipped and reported — with importance promoted to the max of the sources, or <code>--importance</code> if given) and points every merged row's <code>superseded_by</code> at it. <strong>Retire</strong> drops a fact that has no successor — it stamps <code>superseded_at</code> while leaving <code>superseded_by</code> null. A row is <strong>live</strong> (surfaced by default) only when <em>both</em> are null; superseded and retired rows are hidden from all default search, listing, and dedup but kept for audit.</p>
 <p>This is manually-driven: the companion <em>suggests</em> these moves — during <a href="#tier-2-reflections">reflection</a>, or when it spots a conflict — and you decide. Nothing is replaced automatically.</p>
 <h3 id="review-keeping-curated-memory-fresh">Review: keeping curated memory fresh<a class="headerlink" href="#review-keeping-curated-memory-fresh" title="Permanent link">&para;</a></h3>
 <p>Left alone, an important fact can quietly go stale — still stored, never re-checked. <strong>Review resurfacing</strong> surfaces important-but-ageing memories for a quick "still true? refine? promote? retire?" pass.</p>
 <p>It reuses the same per-class exponential decay that ranks retrieval (see <a href="#recency">Recency</a>), but measured from a memory's <code>reviewed_at</code> anchor rather than <code>created_at</code>. A memory is <strong>due for review</strong> when its recall probability has fallen below <code>review-threshold</code> (default <code>0.5</code> — one half-life since it was last reviewed) <em>and</em> its <code>importance</code> is at least <code>review-min-importance</code> (default <code>5</code>, so trivia decays without nagging).</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mc-tool-memory<span class="w"> </span>review<span class="w">                 </span><span class="c1"># list memories due for review, most-decayed first</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>mc-tool-memory<span class="w"> </span>review<span class="w"> </span>--json<span class="w">          </span><span class="c1"># same, as structured JSON</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>mc-tool-memory<span class="w"> </span>reviewed<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># mark one reviewed — stamps reviewed_at = now, resetting its curve</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mc-tool-memory<span class="w"> </span>review<span class="w">                 </span><span class="c1"># list memories due for review, most-decayed first</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mc-tool-memory<span class="w"> </span>review<span class="w"> </span>--json<span class="w">          </span><span class="c1"># same, as structured JSON</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mc-tool-memory<span class="w"> </span>reviewed<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># mark one reviewed — stamps reviewed_at = now, resetting its curve</span>
 </span></code></pre></div>
 <p>Confirming or refining an entry resets its decay curve so it drops out of the due set until a fresh half-life passes; retiring it drops it from the live set altogether, so it never returns. The home hub (<code>mait-code</code>) shows a <strong>Due for review</strong> count under Memory, and <a href="../review/"><code>mait-code review</code></a> is the interactive way to work the batch — confirm, refine, or retire each in place, without reaching for the CLI. This is a nudge, not an alarm: nothing is changed for you.</p>
 <h2 id="storage-the-memory-database">Storage: The Memory Database<a class="headerlink" href="#storage-the-memory-database" title="Permanent link">&para;</a></h2>
@@ -3200,6 +3290,10 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <tr>
 <td><code>superseded_at</code></td>
 <td>When it was superseded (null = current)</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>What wrote it when not a session's own hook, e.g. <code>job</code> from <a href="#extracting-from-prepared-text"><code>observe</code></a> (null = a session)</td>
 </tr>
 </tbody>
 </table>
@@ -3323,7 +3417,7 @@ reflection — open the <a href="../observations/">observations browser</a> with
 </tr>
 </tbody>
 </table>
-<p><strong>Important:</strong> The embedding dimension is a deployment-time decision. Once you commit to a provider and start storing embeddings, switching providers requires re-embedding, which detects the dimension mismatch and recreates the vec table. The simplest path is <code>mait-code settings set embedding-provider bedrock --reindex</code> (a migration key requires an explicit <code>--reindex</code>/<code>--no-reindex</code>), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run <code>mc-tool-memory reindex</code> yourself. <code>mait-code settings list</code> shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at <code>reindex</code>.</p>
+<p><strong>Important:</strong> The embedding provider and model are a deployment-time decision. Once you start storing embeddings, switching provider <em>or</em> model requires re-embedding (a change of width also recreates the vec table) — see <a href="#the-embedding-record">The embedding record</a> for what happens if you don't. The simplest path is <code>mait-code settings set embedding-provider bedrock --reindex</code> (a migration key requires an explicit <code>--reindex</code>/<code>--no-reindex</code>), which re-embeds in one step; the interactive editor offers the same as an inline confirmation. You can still set the env var by hand and run <code>mc-tool-memory reindex</code> yourself. <code>mait-code settings list</code> shows the active provider and whether it still matches the one recorded at install time — it flags drift and points you at <code>reindex</code>.</p>
 <h4 id="advanced-settings">Advanced settings<a class="headerlink" href="#advanced-settings" title="Permanent link">&para;</a></h4>
 <p>The settings file also carries an <strong>Advanced</strong> section of operational knobs, written <strong>commented-out</strong> so the built-in default stays in effect until you opt in — either with <code>mait-code settings set &lt;key&gt; &lt;value&gt;</code> (which writes the line active) or by uncommenting it by hand. They never need touching for normal use; bad values fall back to the default and are flagged by <code>mait-code doctor</code>.</p>
 <table>
@@ -3395,12 +3489,48 @@ reflection — open the <a href="../observations/">observations browser</a> with
 <li><strong>Graceful degradation:</strong> if the provider fails to load (missing <code>fastembed</code> or <code>boto3</code>), everything falls back to keyword-only search. Memory storage is never blocked by embedding failures.</li>
 <li><strong>Corporate proxy support:</strong> the <code>truststore</code> package injects the OS trust store into Python's <code>ssl</code> module, so model downloads and API calls work behind corporate proxies (e.g. Netskope) without manual certificate management.</li>
 </ul>
+<h4 id="the-embedding-record">The embedding record<a class="headerlink" href="#the-embedding-record" title="Permanent link">&para;</a></h4>
+<p>Vectors from different models live in different spaces: comparing a query embedded by one model against vectors stored by another gives meaningless similarities, even when both models produce vectors of the same width. So <code>memory.db</code> records which provider, model and width built its vectors, in a small <code>memory_meta</code> table, and every vector path checks that record against your configuration before embedding anything.</p>
+<p>The record is written when the tools know what built the vectors: by <code>mc-tool-memory reindex</code>, and by the first vector stored into an empty table. Schema migrations never write it.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>What the tools do</th>
+<th><code>mait-code doctor</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Record matches configuration</td>
+<td>Normal hybrid search, semantic dedup, embedding on store</td>
+<td>ok</td>
+</tr>
+<tr>
+<td>No vectors yet</td>
+<td>Normal; the first one stored records the model</td>
+<td>ok</td>
+</tr>
+<tr>
+<td>No record (a database from before the record existed)</td>
+<td>Normal, as before — but a model change would go undetected</td>
+<td>warn</td>
+</tr>
+<tr>
+<td>Record names another provider or model, or the width differs</td>
+<td>Vector search returns nothing (results are keyword-only), dedup falls back to string similarity, and new entries are stored without a vector</td>
+<td>fail</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Changing the model now requires a reindex.</strong> Until you run <code>mc-tool-memory reindex</code> (or <code>mait-code settings set ... --reindex</code>), memory search is keyword-only. A warning is logged once per process.</p>
+<p><strong>Settling an unknown record</strong> doesn't need a full re-embed. <code>mait-code doctor --fix</code> re-embeds a small sample of stored entries, spread from the oldest to the newest, and compares each against its stored vector. The same model reproduces its vectors almost exactly, so if every sampled vector is a near-perfect match (cosine ≥ 0.99), the configured model is recorded as is and only entries missing a vector are embedded. Anything else triggers a full rebuild. It is a spot check, not a proof: it reliably catches a model switched once (the oldest and newest vectors disagree), but a short stretch under another model between two sample points can slip through. If you know the model changed, run <code>mc-tool-memory reindex</code> instead. <code>doctor --fix</code> also rebuilds on a mismatch.</p>
 <h4 id="corporate-setup-bedrock">Corporate setup (Bedrock)<a class="headerlink" href="#corporate-setup-bedrock" title="Permanent link">&para;</a></h4>
 <p>If HuggingFace is blocked on your corporate network, use the Bedrock provider:</p>
 <ol>
 <li>Install with the bedrock extra, so <code>boto3</code> is actually present:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">MAIT_CODE_EMBEDDING_PROVIDER</span><span class="o">=</span>bedrock<span class="w"> </span>./scripts/install.sh
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">MAIT_CODE_EMBEDDING_PROVIDER</span><span class="o">=</span>bedrock<span class="w"> </span>./scripts/install.sh
 </span></code></pre></div>
 <p>The shell installer is what resolves the extra (<code>uv tool install '&lt;source&gt;[bedrock]'</code>).
    <code>mait-code install --embedding-provider bedrock</code> only records the choice in
@@ -3410,8 +3540,8 @@ reflection — open the <a href="../observations/">observations browser</a> with
    If you authenticate via a named profile, declare it once in the <code>[env]</code>
    table of <code>settings.toml</code> so every tool picks it up — inside and outside
    Claude Code sessions:</p>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">[env]</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">[env]</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
 </span></code></pre></div>
 <p>See <a href="../settings/#custom-environment-variables-the-env-table">Custom environment variables</a>.
 3. If you have existing local embeddings, run <code>mc-tool-memory reindex</code> to migrate</p>
@@ -3455,7 +3585,7 @@ edge), mention counts are summed, the seen window widens to span both, and
 the source entity is deleted.</p>
 <h2 id="scoring-how-results-are-ranked">Scoring: How Results Are Ranked<a class="headerlink" href="#scoring-how-results-are-ranked" title="Permanent link">&para;</a></h2>
 <p>Search results are ranked by a composite score:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>score = (0.3 × recency + 0.3 × importance + 0.4 × relevance) × scope_boost
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>score = (0.3 × recency + 0.3 × importance + 0.4 × relevance) × scope_boost
 </span></code></pre></div>
 <p>The scope boost multiplies the whole weighted base, not the relevance term alone.
 It is <code>1.0</code> for a branch match and <code>0.85</code> for a project match — both fixed — and
@@ -3647,11 +3777,11 @@ It is <code>1.0</code> for a branch match and <code>0.85</code> for a project ma
 <li><strong>Batching:</strong> Processes entries in configurable batches (default 50), oldest first</li>
 </ul>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/reflect                                    # Standard reflection
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>/reflect                                    # Standard reflection
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>mc-tool-memory reflect --days 14            # Bootstrap window for first reflection
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>mc-tool-memory reflect --min-new 0          # Force reflection (skip novelty gate)
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>mc-tool-memory reflect --drain              # Process all unreflected entries in batches
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>mc-tool-memory reflect --batch-size 20      # Limit entries per batch
 </span></code></pre></div>
 <h3 id="how-it-works_1">How it works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
 <ol>
@@ -3824,6 +3954,10 @@ launched.</p>
 <td>Recompute all vector embeddings from scratch</td>
 </tr>
 <tr>
+<td><code>observe --file &lt;path\|-&gt; --project &lt;name&gt;</code></td>
+<td><a href="#extracting-from-prepared-text">Extract from prepared text</a>, such as a job digest (<code>--branch</code>, <code>--trigger</code>, <code>--max-chars</code>, <code>--json</code>)</td>
+</tr>
+<tr>
 <td><code>restore</code></td>
 <td>Replay observation JSONL logs into the database, then reindex</td>
 </tr>
@@ -3894,7 +4028,7 @@ launched.</p>
 </table>
 <h3 id="memory-browser-mait-code-memory">Memory browser (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-mait-code-memory" title="Permanent link">&para;</a></h3>
 <p>Open the interactive, read-only memory browser with:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mait-code<span class="w"> </span>memory
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mait-code<span class="w"> </span>memory
 </span></code></pre></div>
 <p>This is a full-screen <a href="https://textual.textualize.io/">Textual</a> app over the
 same store: a tree of memories grouped by entry type on the left (newest
@@ -3955,10 +4089,6 @@ reveals them). See <a href="../graph/">the graph explorer guide</a> for the full
 <tr>
 <td><code>/reminders</code></td>
 <td>Show active and overdue reminders</td>
-</tr>
-<tr>
-<td><code>/web-fetch &lt;url&gt;</code></td>
-<td>Fetch a web page as markdown (bypasses claude.ai proxy)</td>
 </tr>
 <tr>
 <td><code>/commit</code></td>

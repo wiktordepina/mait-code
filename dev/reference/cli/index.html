@@ -2145,8 +2145,6 @@
       
         
       
-        
-      
     
     
     
@@ -2291,34 +2289,6 @@
     
   
     Inbox
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tools/web_fetch/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web fetch
   
 
     
@@ -4370,7 +4340,8 @@ doesn't understand.</p>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">already_linked</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="pathlib.Path">Path</span></span><span class="p">]</span> <span class="o">=</span> <span class="n"><span title="list">list</span></span><span class="p">(),</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">updated</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="pathlib.Path">Path</span></span><span class="p">]</span> <span class="o">=</span> <span class="n"><span title="list">list</span></span><span class="p">(),</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">backed_up</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="pathlib.Path">Path</span></span><span class="p">]</span> <span class="o">=</span> <span class="n"><span title="list">list</span></span><span class="p">(),</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">pruned</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="pathlib.Path">Path</span></span><span class="p">]</span> <span class="o">=</span> <span class="n"><span title="list">list</span></span><span class="p">(),</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4435,6 +4406,21 @@ doesn't understand.</p>
             <td class="doc-attribute-details">
               <div class="doc-md-description">
                 <p>Existing non-symlink files renamed to <code>&lt;name&gt;.backup</code>.</p>
+              </div>
+              <p>
+                  <span class="doc-attribute-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="list">list</span>[<span title="pathlib.Path">Path</span>]</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="mait_code.cli.SymlinkResult.pruned">pruned</span></code></td>
+            <td class="doc-attribute-details">
+              <div class="doc-md-description">
+                <p>Dangling links into the source tree, removed because their
+target is gone (a skill or agent dropped from the source).</p>
               </div>
               <p>
                   <span class="doc-attribute-annotation">
@@ -4591,7 +4577,8 @@ points into <code>source_dir</code>. Returns the list of paths removed.</p>
 
         <p>Symlink every <code>agents/&lt;file&gt;</code> into <code>&lt;claude_dir&gt;/agents/</code>.</p>
 <p>No-op if <code>source_dir/agents</code> is missing. <code>.gitkeep</code> placeholders
-are ignored. Agents are individual files, not directories.</p>
+are ignored. Agents are individual files, not directories. Dangling
+links into the source tree are pruned.</p>
 
 
     </div>
@@ -4727,7 +4714,7 @@ pre-existing config).</p>
 
         <p>Symlink every <code>skills/&lt;name&gt;/</code> directory into <code>&lt;claude_dir&gt;/skills/</code>.</p>
 <p>No-op if <code>source_dir/skills</code> is missing. <code>.gitkeep</code> placeholders
-are ignored.</p>
+are ignored. Dangling links into the source tree are pruned.</p>
 
 
     </div>

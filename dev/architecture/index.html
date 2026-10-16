@@ -1384,17 +1384,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#web-fetch-cli-tool-mc-tool-web-fetch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Web Fetch CLI Tool (mc-tool-web-fetch)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#home-hub-tui-mait-code-home" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1975,8 +1964,6 @@
       
         
       
-        
-      
     
     
     
@@ -2121,34 +2108,6 @@
     
   
     Inbox
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/web_fetch/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web fetch
   
 
     
@@ -2722,17 +2681,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#web-fetch-cli-tool-mc-tool-web-fetch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Web Fetch CLI Tool (mc-tool-web-fetch)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#home-hub-tui-mait-code-home" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2893,7 +2841,7 @@
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md&lt;br/&gt;&lt;i&gt;identity + rules&lt;/i&gt;&lt;br/&gt;@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks&lt;br/&gt;SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills&lt;br/&gt;/recall, /remember, /reflect, memory-store&lt;br/&gt;/remind, /reminders&lt;br/&gt;/board, /triage&lt;br/&gt;/commit, /pre-pr-review&lt;br/&gt;/web-fetch"]
+        SKILLS["Skills&lt;br/&gt;/recall, /remember, /reflect, memory-store&lt;br/&gt;/remind, /reminders&lt;br/&gt;/board, /triage&lt;br/&gt;/commit, /pre-pr-review"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -2907,7 +2855,6 @@
             reminders_tool["reminders/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, service"]
             board_tool["board/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, columns, service, export"]
             inbox_tool["inbox/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, service"]
-            web_fetch_tool["web_fetch/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, fetch, convert"]
         end
         subgraph bridge_pkg ["bridge/ &lt;i&gt;(opt-in transport)&lt;/i&gt;"]
             bridge_core["base, registry, service, config&lt;br/&gt;control, ntfy, loopback"]
@@ -3626,50 +3573,6 @@ new entry's project) using two complementary measures:</p>
 </tr>
 </tbody>
 </table>
-<h2 id="web-fetch-cli-tool-mc-tool-web-fetch">Web Fetch CLI Tool (<code>mc-tool-web-fetch</code>)<a class="headerlink" href="#web-fetch-cli-tool-mc-tool-web-fetch" title="Permanent link">&para;</a></h2>
-<p>Local web fetcher that bypasses the claude.ai proxy. Works behind corporate firewalls via <code>truststore</code> SSL injection.</p>
-<table>
-<thead>
-<tr>
-<th>Argument/Flag</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>url</code> (positional)</td>
-<td>—</td>
-<td>URL to fetch</td>
-</tr>
-<tr>
-<td><code>--timeout</code></td>
-<td><code>30</code></td>
-<td>Request timeout in seconds</td>
-</tr>
-<tr>
-<td><code>--max-size</code></td>
-<td><code>524288</code></td>
-<td>Maximum response body in bytes (512KB)</td>
-</tr>
-<tr>
-<td><code>--max-chars</code></td>
-<td><code>100000</code></td>
-<td>Maximum output characters (~25K tokens)</td>
-</tr>
-<tr>
-<td><code>--raw</code></td>
-<td><code>false</code></td>
-<td>Skip HTML-to-markdown conversion</td>
-</tr>
-<tr>
-<td><code>--allow-private</code></td>
-<td><code>false</code></td>
-<td>Allow fetching private/loopback IPs</td>
-</tr>
-</tbody>
-</table>
-<p>Content-type routing: HTML→markdown (via <code>markdownify</code>), JSON→pretty-printed, text→passthrough, binary→descriptive message. SSRF protection blocks private/loopback/link-local IPs by default.</p>
 <h2 id="home-hub-tui-mait-code-home">Home Hub TUI (<code>mait-code home</code>)<a class="headerlink" href="#home-hub-tui-mait-code-home" title="Permanent link">&para;</a></h2>
 <p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>e</code> embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
 <p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with, less the per-session section naming the cards a session is bound to (the hub has no session).</p>
@@ -3987,14 +3890,6 @@ and what to leave behind.</p>
 <tr>
 <td>Watermark table for reflection idempotency</td>
 <td>Separate table over <code>reflected_at</code> column — atomic batch tracking, no feedback loops, clean separation of concerns</td>
-</tr>
-<tr>
-<td>urllib.request over httpx/requests for web fetch</td>
-<td>Zero new HTTP dependency tree; <code>truststore.inject_into_ssl()</code> patches the stdlib SSL context that <code>urllib.request</code> uses; system proxy env vars (<code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code>) respected automatically</td>
-</tr>
-<tr>
-<td>markdownify for HTML-to-markdown</td>
-<td>Lightweight (~600 lines), single purpose, only brings <code>beautifulsoup4</code>; full readability extraction (trafilatura) is overkill — Claude can ignore boilerplate itself</td>
 </tr>
 </tbody>
 </table>

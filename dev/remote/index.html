@@ -1661,8 +1661,6 @@
       
         
       
-        
-      
     
     
     
@@ -1807,34 +1805,6 @@
     
   
     Inbox
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/tools/web_fetch/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web fetch
   
 
     
@@ -2252,11 +2222,11 @@
 
 <h1 id="the-remote-api">The remote API<a class="headerlink" href="#the-remote-api" title="Permanent link">&para;</a></h1>
 <p><code>mait_code.remote</code> is the part of a mait-code instance that another machine or
-agent may touch: read the board, raise cards, refine them, search memories and
-list reminders. It is a <strong>Python module, not a server</strong>. A separate service you
-run — typically one that speaks MCP to remote Claude Code sessions or other
-agents — imports it and decides who may call what. mait-code itself never opens
-a port.</p>
+agent may touch: read the board, raise cards, refine them, search memories,
+check that memory search can use its vectors, and list reminders. It is a
+<strong>Python module, not a server</strong>. A separate service you run — typically one
+that speaks MCP to remote Claude Code sessions or other agents — imports it and
+decides who may call what. mait-code itself never opens a port.</p>
 <p>That split is deliberate. mait-code has no background services, so the
 listening, the authentication, the per-client scopes and the process lifecycle
 live in the host. The rules about <em>what may happen to the instance</em> live here,
@@ -2293,6 +2263,10 @@ next to the data model and its tests.</p>
 <tr>
 <td><code>search_memories</code></td>
 <td>The same hybrid search and ranking as <code>mc-tool-memory search</code>, each result with a <code>score</code>.</td>
+</tr>
+<tr>
+<td><code>memory_search_status</code></td>
+<td>Whether memory search can use the instance's vectors with the host's embedding settings, and why not.</td>
 </tr>
 <tr>
 <td><code>list_reminders</code></td>
@@ -2367,11 +2341,31 @@ query with the provider in the <strong>host's</strong> settings, which must matc
 instance's (<code>embedding-provider</code>, <code>embedding-model</code> or <code>bedrock-model-id</code>). The
 local provider downloads its model on first use, so the host needs outbound
 access to fetch it once, or a pre-populated model cache.</p>
-<p>Keep the two in step by hand: <code>memory.db</code> doesn't record which model built its
-vectors, so a mismatch is only partly caught. If the vector <em>dimensions</em>
-differ, or the provider can't load, results fall back to keyword-only. A
-different model with the <strong>same</strong> dimension isn't detected, and vector
-similarities are then meaningless and skew the ranking. See
+<p><code>memory.db</code> records the provider, model and width that built its vectors. When
+the host's settings disagree — a different model, even one of the same width,
+or a different width — vector search is skipped and results are keyword-only,
+with a warning logged once per host process. An instance with no record yet
+(vectors built before 0.80.0) is trusted as before; run
+<code>mait-code doctor --fix</code> on the instance to record one.</p>
+<p><code>memory_search_status</code> asks the same question up front, without embedding
+anything or loading the provider, so a host can surface it in a health check
+rather than discover it from degraded results:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">status</span> <span class="o">=</span> <span class="n">remote</span><span class="o">.</span><span class="n">memory_search_status</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># {&quot;usable&quot;: False, &quot;state&quot;: &quot;model&quot;,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1">#  &quot;reason&quot;: &quot;vectors were built by local &#39;nomic-ai/nomic-embed-text-v1.5&#39; (768d), &quot;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1">#            &quot;configured is local &#39;some/other-model&#39; (768d)&quot;,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1">#  &quot;configured&quot;: {&quot;provider&quot;: &quot;local&quot;, &quot;model&quot;: &quot;some/other-model&quot;, &quot;dim&quot;: 768},</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1">#  &quot;recorded&quot;: {&quot;provider&quot;: &quot;local&quot;, &quot;model&quot;: &quot;nomic-ai/nomic-embed-text-v1.5&quot;, &quot;dim&quot;: 768}}</span>
+</span></code></pre></div>
+<p><code>state</code> is <code>match</code>, <code>unknown</code> (vectors but no record) or <code>empty</code> when search
+can use vectors, and <code>model</code>, <code>dimension</code> or <code>absent</code> (no vector table) when
+it can't. <code>usable</code> covers the vectors only, not whether the host's provider
+loads: a model that can't be downloaded, or missing <code>boto3</code> or AWS
+credentials, still leaves search keyword-only, so a health check should not
+read <code>usable</code> as "vector search works". Like every other call, it raises
+<code>FileNotFoundError</code> for a missing <code>memory.db</code> and <code>SchemaMismatch</code> for a
+schema it doesn't expect. The configured side comes from the host's
+environment and settings file, exactly as for <code>search_memories</code>. See
 <a href="../memory/">how memory works</a> for the settings.</p>
 
 

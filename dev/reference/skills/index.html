@@ -1353,17 +1353,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#web-fetch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        /web-fetch
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pre-pr-review" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1803,8 +1792,6 @@
       
         
       
-        
-      
     
     
     
@@ -1949,34 +1936,6 @@
     
   
     Inbox
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tools/web_fetch/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Web fetch
   
 
     
@@ -2424,17 +2383,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#web-fetch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        /web-fetch
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pre-pr-review" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2598,12 +2546,6 @@
 <td><strong>Implemented</strong></td>
 </tr>
 <tr>
-<td>Web Fetch</td>
-<td><code>/web-fetch &lt;url&gt;</code></td>
-<td>Fetch web page content as markdown (bypasses claude.ai proxy)</td>
-<td><strong>Implemented</strong></td>
-</tr>
-<tr>
 <td>Pre-PR Review</td>
 <td><code>/pre-pr-review</code></td>
 <td>Independent review of the current branch, by a reviewer that has not seen the conversation</td>
@@ -2736,31 +2678,11 @@ so the two don't drift and double-spend context.</p>
 <li>Presents the proposed message for user confirmation or editing</li>
 <li>On approval, stages files if needed and runs <code>git commit</code></li>
 </ol>
-<h3 id="web-fetch">/web-fetch<a class="headerlink" href="#web-fetch" title="Permanent link">&para;</a></h3>
-<p>Fetch web page content directly from the local machine, bypassing the claude.ai proxy. Works behind corporate firewalls and proxies.</p>
-<p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>/web-fetch https://example.com              # Fetch and convert to markdown
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>/web-fetch https://api.example.com/data     # Fetch JSON, pretty-printed
-</span></code></pre></div></p>
-<p><strong>How it works:</strong></p>
-<ol>
-<li>Preprocesses via <code>mc-tool-web-fetch &lt;url&gt;</code> (injected before Claude sees the skill)</li>
-<li>Returns HTML as markdown, JSON as pretty-printed text, or raw text for other content types</li>
-<li>SSRF protection blocks private/loopback IPs by default</li>
-</ol>
-<p><strong>Options</strong> (via Bash):</p>
-<ul>
-<li><code>mc-tool-web-fetch &lt;url&gt; --raw</code> — skip HTML-to-markdown conversion</li>
-<li><code>mc-tool-web-fetch &lt;url&gt; --timeout 60</code> — increase timeout (default 30s)</li>
-<li><code>mc-tool-web-fetch &lt;url&gt; --allow-private</code> — allow private/loopback IPs</li>
-<li><code>mc-tool-web-fetch &lt;url&gt; --max-size &lt;bytes&gt;</code> — cap how much of the response is downloaded</li>
-<li><code>mc-tool-web-fetch &lt;url&gt; --max-chars &lt;N&gt;</code> — cap the markdown output length; raise it if a long page came back truncated</li>
-</ul>
 <h3 id="pre-pr-review">/pre-pr-review<a class="headerlink" href="#pre-pr-review" title="Permanent link">&para;</a></h3>
 <p>Review the current branch with a reviewer that has seen none of the session's
 conversation.</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>/pre-pr-review                   # Review origin/HEAD...HEAD before opening a PR
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>/pre-pr-review                   # Review origin/HEAD...HEAD before opening a PR
 </span></code></pre></div></p>
 <p><strong>Why it exists:</strong></p>
 <p>You cannot review your own work in the session that produced it. Knowing why every
@@ -2827,42 +2749,40 @@ repository at all so nothing it does can surface in <code>git status</code>. A w
 own directory is expected; a write anywhere else is a bug in the review.</p>
 <h2 id="skill-architecture">Skill Architecture<a class="headerlink" href="#skill-architecture" title="Permanent link">&para;</a></h2>
 <p>Each skill is a directory in <code>skills/</code> containing:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>skills/
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>├── recall/
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>│   └── SKILL.md     # Search memory
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>├── remember/
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>│   └── SKILL.md     # Store memory (manual)
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>├── memory-store/
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>│   └── SKILL.md     # Store memory (auto-invoked by Claude)
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>├── reflect/
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>│   └── SKILL.md     # Synthesise observations into insights
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>├── remind/
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>│   └── SKILL.md     # Set a reminder
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>├── reminders/
-</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>│   └── SKILL.md     # Show reminders
-</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>├── board/
-</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>│   └── SKILL.md     # View and drive the kanban board
-</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>├── triage/
-</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>│   └── SKILL.md     # Route the quick-capture inbox to the board or memory
-</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>├── commit/
-</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>│   └── SKILL.md     # Smart commit with conventional message
-</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>├── pre-pr-review/
-</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>│   └── SKILL.md     # Cold second opinion on a branch before opening a PR
-</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>└── web-fetch/
-</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>    └── SKILL.md     # Fetch web page content (bypasses claude.ai proxy)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>skills/
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── recall/
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>│   └── SKILL.md     # Search memory
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>├── remember/
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>│   └── SKILL.md     # Store memory (manual)
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>├── memory-store/
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>│   └── SKILL.md     # Store memory (auto-invoked by Claude)
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>├── reflect/
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>│   └── SKILL.md     # Synthesise observations into insights
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>├── remind/
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>│   └── SKILL.md     # Set a reminder
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>├── reminders/
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>│   └── SKILL.md     # Show reminders
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>├── board/
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>│   └── SKILL.md     # View and drive the kanban board
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>├── triage/
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>│   └── SKILL.md     # Route the quick-capture inbox to the board or memory
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>├── commit/
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>│   └── SKILL.md     # Smart commit with conventional message
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>└── pre-pr-review/
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    └── SKILL.md     # Cold second opinion on a branch before opening a PR
 </span></code></pre></div>
 <p>Skills are symlinked into <code>~/.claude/skills/</code> by <code>install.sh</code> and loaded by Claude Code automatically.</p>
 <h3 id="skill-definition-format">Skill Definition Format<a class="headerlink" href="#skill-definition-format" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nn">---</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skill-name</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What the skill does, and when it should be used</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nt">argument-hint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;args&gt;&quot;</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nt">allowed-tools</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bash(mc-tool-example show), Bash(mc-tool-example show:*), Read</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="nn">---</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="c1"># /skill-name</span>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="l l-Scalar l-Scalar-Plain">Instructions for Claude when this skill is invoked.</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nn">---</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skill-name</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What the skill does, and when it should be used</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nt">argument-hint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;args&gt;&quot;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="nt">allowed-tools</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bash(mc-tool-example show), Bash(mc-tool-example show:*), Read</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="nn">---</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># /skill-name</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="l l-Scalar l-Scalar-Plain">Instructions for Claude when this skill is invoked.</span>
 </span></code></pre></div>
 <p>Key fields:</p>
 <ul>
