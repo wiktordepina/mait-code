@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.84.0] — 2026-10-16
+
 ### Added
 
 - **Epics on the board.** An epic is an umbrella card for an initiative that
@@ -2639,7 +2641,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.83.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.84.0...HEAD
+[0.84.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.84.0
 [0.83.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.83.0
 [0.82.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.82.0
 [0.81.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.81.1
