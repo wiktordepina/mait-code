@@ -2086,6 +2086,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.epic_markdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;epic_markdown
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.export_board" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2101,6 +2112,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;export_card
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.export_epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;export_epic
       
     </span>
   </a>
@@ -2295,6 +2317,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.epic_without_open_members" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;epic_without_open_members
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.get_card" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2310,6 +2343,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_comments
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.get_epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_epic
       
     </span>
   </a>
@@ -3259,6 +3303,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.epic_markdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;epic_markdown
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.export_board" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3274,6 +3329,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;export_card
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.export_epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;export_epic
       
     </span>
   </a>
@@ -3468,6 +3534,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.epic_without_open_members" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;epic_without_open_members
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.get_card" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3483,6 +3560,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_comments
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.get_epic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_epic
       
     </span>
   </a>
@@ -4726,6 +4814,81 @@ optionally carrying a <code>comments</code> list.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="mait_code.tools.board.epic_markdown" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">epic_markdown</span>
+
+
+<a href="#mait_code.tools.board.epic_markdown" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">epic_markdown</span><span class="p">(</span><span class="n">epic</span><span class="p">:</span> <span class="n"><span title="dict">dict</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Render an epic and its members as one markdown document.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>epic</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>An epic dict as returned by
+:func:<code>~mait_code.tools.board.service.get_epic</code> — carrying
+<code>members</code> and <code>progress</code> — optionally with <code>comments</code> on it
+and its members.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="dict">dict</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="str">str</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>The markdown document, without a trailing newline.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="mait_code.tools.board.export_board" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">export_board</span>
 
@@ -4750,7 +4913,8 @@ optionally carrying a <code>comments</code> list.</p>
     <div class="doc doc-contents first">
 
         <p>Export a board listing as <em>fmt</em> — a JSON array or one markdown document.</p>
-<p>Filter arguments mirror :func:<code>~mait_code.tools.board.service.list_cards</code>.</p>
+<p>Filter arguments mirror :func:<code>~mait_code.tools.board.service.list_cards</code>.
+Epics are left out, as on the board; see :func:<code>export_epic</code>.</p>
 
 
 <table>
@@ -4821,6 +4985,83 @@ optionally carrying a <code>comments</code> list.</p>
             <td class="doc-raises-details">
               <div class="doc-md-description">
                 <p>If no card has <em>card_id</em>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code><span title="ValueError">ValueError</span></code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If <em>fmt</em> is not one of :data:<code>FORMATS</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.board.export_epic" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">export_epic</span>
+
+
+<a href="#mait_code.tools.board.export_epic" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">export_epic</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">epic_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span> <span class="n">fmt</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">=</span> <span class="n"><a class="autorefs autorefs-internal" title="            MARKDOWN
+
+
+  
+      module-attribute
+   (mait_code.tools.board.export.MARKDOWN)" href="#mait_code.tools.board.MARKDOWN">MARKDOWN</a></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Export an epic with its non-archived members, comments included.</p>
+<p>The JSON form is the epic in the <code>epic show --json</code> shape, its
+<code>members</code> each carrying their own comments.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RAISES</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code><a class="autorefs autorefs-internal" title="            CardNotFound (mait_code.tools.board.service.CardNotFound)" href="#mait_code.tools.board.CardNotFound">CardNotFound</a></code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If no card has <em>epic_id</em>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code><a class="autorefs autorefs-internal" title="            RelationError (mait_code.tools.board.service.RelationError)" href="#mait_code.tools.board.RelationError">RelationError</a></code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If the card isn't an epic.</p>
               </div>
             </td>
           </tr>
@@ -5385,20 +5626,28 @@ that is unknown or not an epic.</p>
 
 <a href="#mait_code.tools.board.edit_card" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">edit_card</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">card_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span> <span class="o">**</span><span class="n">fields</span><span class="p">:</span> <span class="n"><span title="str">str</span></span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">card_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">parent_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">|</span> <span class="n"><span title="mait_code.tools.board.service._Unchanged">_Unchanged</span></span> <span class="o">=</span> <span class="n"><span title="mait_code.tools.board.service._Unchanged.KEEP">KEEP</span></span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="o">**</span><span class="n">fields</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
         <p>Update arbitrary card columns, bumping <code>updated_at</code>.</p>
 <p>Pass column names as keyword arguments (e.g. <code>title=..</code>,
-<code>acceptance_criteria=..</code>). <code>kind</code> and <code>parent_id</code> aren't editable
-here — use :func:<code>promote_epic</code> and :func:<code>set_parent</code>, which keep the
-relationship rules. Raises :class:<code>CardNotFound</code> if the id is unknown and
-:class:<code>RelationError</code> for one of those fields, or for a <code>project</code> that
-would move a card to :data:<code>EPIC_PROJECT</code> or an epic off it; a no-op (no
-fields) is the caller's concern.</p>
+<code>acceptance_criteria=..</code>). <em>parent_id</em> moves the card into that epic,
+or out of any with <code>None</code>; leave it out to keep the current one. Every
+change is checked first and written in one transaction, so a refused
+field leaves the card exactly as it was — the parent included.</p>
+<p><code>kind</code> isn't editable here — use :func:<code>promote_epic</code>. Raises
+:class:<code>CardNotFound</code> if the id (or <em>parent_id</em>) is unknown and
+:class:<code>RelationError</code> for <code>kind</code>, a <em>parent_id</em> that breaks the rules
+of :func:<code>set_parent</code>, or a <code>project</code> that would move a card to
+:data:<code>EPIC_PROJECT</code> or an epic off it; a no-op (no fields) is the
+caller's concern.</p>
 
 
     </div>
@@ -5426,6 +5675,32 @@ fields) is the caller's concern.</p>
         <p>Return an epic's member cards, ordered priority-then-oldest.</p>
 <p>Raises :class:<code>CardNotFound</code> for an unknown id and :class:<code>RelationError</code>
 if it isn't an epic.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.board.epic_without_open_members" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">epic_without_open_members</span>
+
+
+<a href="#mait_code.tools.board.epic_without_open_members" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">epic_without_open_members</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">card_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Return <em>card_id</em>'s epic if it has no open members left, else <code>None</code>.</p>
+<p>Open means neither <code>done</code> nor <code>archived</code>. An epic's status is set by
+hand, so a caller that just finished or dropped a member can remind the
+user the epic may be ready to close — it never moves the epic itself. An
+epic that is already done or archived needs no reminder: <code>None</code>.</p>
 
 
     </div>
@@ -5475,6 +5750,28 @@ if it isn't an epic.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="mait_code.tools.board.get_epic" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_epic</span>
+
+
+<a href="#mait_code.tools.board.get_epic" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_epic</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">epic_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="dict">dict</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Return an epic with its non-archived <code>members</code> and <code>progress</code>.</p>
+<p>Raises :class:<code>CardNotFound</code> for an unknown id and :class:<code>RelationError</code>
+if it isn't an epic.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="mait_code.tools.board.list_cards" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">list_cards</span>
 
@@ -5496,7 +5793,8 @@ if it isn't an epic.</p>
       module-attribute
    (mait_code.tools.board.columns.CARD)" href="#mait_code.tools.board.CARD">CARD</a></span><span class="p">,</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">parent_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">ready</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5696,6 +5994,27 @@ parent filter.</p>
                   <span class="doc-param-default">
                     <b>DEFAULT:</b>
                       <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ready</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Restrict to cards :func:<code>next_refined</code> could hand out —
+refined, not tagged <code>blocked</code>, not waiting on a blocker.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="bool">bool</span></code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>False</code>
                   </span>
               </p>
             </td>
