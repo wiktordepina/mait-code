@@ -4,6 +4,7 @@ These drive ``main()`` end to end against a temp data directory: only the
 LLM call and the ``claude`` PATH lookup are patched.
 """
 
+import io
 import json
 import sys
 from pathlib import Path
@@ -50,6 +51,11 @@ def _run(monkeypatch, *argv: str, extraction=None, claude: str | None = "/bin/cl
     ):
         memory_cli.main()
     return exc.value.code, mock_extract
+
+
+def _stdin(text: str, encoding: str = "utf-8") -> io.TextIOWrapper:
+    """A stdin whose bytes are UTF-8 but whose text layer uses ``encoding``."""
+    return io.TextIOWrapper(io.BytesIO(text.encode("utf-8")), encoding=encoding)
 
 
 def _rows() -> list[tuple]:
@@ -140,9 +146,10 @@ def test_default_branch_is_normalised(data_dir, digest, monkeypatch):
         extraction={"facts": [{"content": "A fact", "scope": "branch"}]},
     )  # fmt: skip
 
-    # `main` counts as no branch, so a branch-scoped ask has no branch to carry.
+    # `main` counts as no branch, and a branch-scoped ask with no branch would
+    # be stored where no search reaches it, so it lands at project scope.
     (row,) = _rows()
-    assert row[4] is None
+    assert (row[2], row[4]) == ("project", None)
 
 
 def test_project_is_canonicalised(data_dir, digest, monkeypatch):
@@ -162,7 +169,7 @@ def test_project_is_canonicalised(data_dir, digest, monkeypatch):
 
 
 def test_reads_stdin(data_dir, monkeypatch):
-    monkeypatch.setattr(sys, "stdin", __import__("io").StringIO("digest via stdin"))
+    monkeypatch.setattr(sys, "stdin", _stdin("digest via stdin"))
     status, mock_extract = _run(
         monkeypatch,
         "--file", "-", "--project", "maitre-d",
@@ -304,3 +311,45 @@ def test_blank_project_is_an_error(data_dir, digest, monkeypatch, capsys):
 
     assert status == memory_cli.OBSERVE_ERROR
     assert "--project" in capsys.readouterr().err
+
+
+def test_stdin_is_read_as_utf8_whatever_the_locale(data_dir, monkeypatch):
+    monkeypatch.setattr(sys, "stdin", _stdin("Café — naïve résumé", encoding="ascii"))
+    status, mock_extract = _run(
+        monkeypatch,
+        "--file", "-", "--project", "maitre-d",
+        extraction={"facts": [{"content": "A fact"}]},
+    )  # fmt: skip
+
+    assert status == memory_cli.OBSERVE_EXTRACTED
+    assert mock_extract.call_args.args == ("Café — naïve résumé",)
+
+
+def test_importance_is_capped(data_dir, digest, monkeypatch):
+    _run(
+        monkeypatch,
+        "--file", str(digest), "--project", "maitre-d",
+        extraction={"facts": [{"content": "Loud fact", "importance": 10}]},
+    )  # fmt: skip
+
+    with connection() as conn:
+        (importance,) = conn.execute("SELECT importance FROM memory_entries").fetchone()
+    assert importance == 7
+
+
+@pytest.mark.parametrize(
+    "extraction",
+    [{"facts": "not a list"}, {"facts": ["not an object"]}, {"entities": "e"}],
+    ids=["string-category", "string-items", "string-entities"],
+)
+def test_malformed_reply_is_an_llm_failure(
+    data_dir, digest, monkeypatch, capsys, extraction
+):
+    status, _ = _run(
+        monkeypatch, "--file", str(digest), "--project", "maitre-d",
+        extraction=extraction,
+    )  # fmt: skip
+
+    assert status == memory_cli.OBSERVE_LLM_FAILURE
+    assert "unexpected shape" in capsys.readouterr().err
+    assert _rows() == []

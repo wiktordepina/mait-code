@@ -77,13 +77,21 @@ mc-tool-memory observe --file digest.txt --project maitre-d --branch feat/x --js
 - Each call is one window; there is no cursor. Text longer than `--max-chars`
   (default 60000) is refused rather than cut. The caller owns its size.
 - `--trigger` (default `job`) labels the raw-log record, and is stored in each
-  new memory's `source` column, so these memories can be found, and removed,
-  later.
+  new memory's `source` column, so these memories can be told apart from a
+  session's (there is no `source` filter on the CLI yet; query the column).
 
 Prepared text has no user voice in it and may carry content nobody vetted, so
-what a run can write is capped. It stores **no preferences**, and **nothing at
-global scope**: every memory is project- or branch-scoped. The caps are applied
-before the raw log is written, so `restore` replays them too.
+the memories a run writes are capped:
+
+- **No preferences.** That category is dropped.
+- **Nothing at global scope.** Every memory is project-scoped, or
+  branch-scoped when the model asks for it and a branch was given.
+- **Importance at most 7**, so the text can't mint top-ranked memories, or
+  raise an existing one past what a session gave it through deduplication.
+
+The caps are applied before the raw log is written, so `restore` replays them
+too. **Entities and relationships are not capped**: they go into the knowledge
+graph as extracted, and the graph has no scope.
 
 **Exit status**, with a one-line reason on stderr for every non-zero exit:
 

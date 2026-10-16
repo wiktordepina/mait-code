@@ -933,7 +933,9 @@ def cmd_observe(args):
 
     try:
         if args.file == "-":
-            text = sys.stdin.read()
+            # The bytes, decoded as UTF-8 like --file, not the locale's
+            # encoding (often ASCII under a service's C locale).
+            text = sys.stdin.buffer.read().decode("utf-8")
         else:
             text = Path(args.file).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as e:
@@ -967,9 +969,18 @@ def cmd_observe(args):
         )
 
     try:
+        confined = confine_extraction(extraction, branch=branch)
+    except ValueError as e:
+        finish(
+            "llm_failure",
+            OBSERVE_LLM_FAILURE,
+            f"the extraction model's reply had an unexpected shape: {e}",
+        )
+
+    try:
         counts.update(
             record_extraction(
-                confine_extraction(extraction),
+                confined,
                 args.trigger,
                 project=project,
                 branch=branch,
@@ -1341,8 +1352,10 @@ def main():
         help="Extract and store observations from prepared text (e.g. a job digest)",
         description=(
             "Extract observations from prepared text and store them, like the "
-            "observe hook does for a session. Stores no preferences and nothing "
-            "at global scope. Exit status: 0 stored, 3 nothing to extract, "
+            "observe hook does for a session. Memories are capped: no "
+            "preferences, nothing at global scope, importance at most 7 "
+            "(knowledge-graph entities and relationships are stored as "
+            "extracted). Exit status: 0 stored, 3 nothing to extract, "
             "4 LLM failure, 1 other error, 2 usage error."
         ),
     )

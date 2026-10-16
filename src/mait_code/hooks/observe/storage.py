@@ -190,22 +190,44 @@ def store_entities_and_relationships(extraction: dict) -> None:
                 logger.warning("failed to upsert relationship: %s", e)
 
 
-def confine_extraction(extraction: dict) -> dict:
+# The highest importance a memory extracted from prepared text may carry, so
+# untrusted text can't mint top-ranked memories or, through dedup, raise an
+# existing one past what a session gave it.
+MAX_CONFINED_IMPORTANCE = 7
+
+
+def confine_extraction(extraction: dict, *, branch: str | None) -> dict:
     """Cap what an extraction from prepared text may write.
 
     Text handed in by another program (a job digest) carries no user voice
-    and may carry untrusted content, so its reach is limited: the
-    ``preferences`` category is dropped, and every memory item's scope is
-    pinned to ``branch`` (when it asked for that) or ``project`` — never
-    ``global``. Pinning the scope in the dict itself, before it is logged,
-    means ``restore`` replays the same caps.
+    and may carry untrusted content, so its reach is limited:
+
+    - the ``preferences`` category is dropped;
+    - every memory item's scope is pinned to ``branch`` (when it asked for
+      that and there is a branch) or ``project`` — never ``global``;
+    - importance is capped at :data:`MAX_CONFINED_IMPORTANCE`.
+
+    Entities and relationships pass through: the knowledge graph has no scope
+    to cap. Applying the caps to the dict itself, before it is logged, means
+    ``restore`` replays them.
 
     Args:
         extraction: Parsed extraction dict returned by the LLM.
+        branch: The branch the memories would carry. Without one, a
+            branch-scoped item would be stored where no search can reach it,
+            so it is pinned to ``project`` instead.
 
     Returns:
         A new extraction dict with the caps applied; the input is not modified.
+
+    Raises:
+        ValueError: If a category is not a list of objects — a malformed
+            reply from the model.
     """
+    for key, value in extraction.items():
+        if not isinstance(value, list) or not all(isinstance(i, dict) for i in value):
+            raise ValueError(f"{key!r} is not a list of objects")
+
     confined = {k: v for k, v in extraction.items() if k != "preferences"}
     for category in CATEGORY_TO_TYPE:
         if category == "preferences" or category not in confined:
@@ -213,8 +235,17 @@ def confine_extraction(extraction: dict) -> dict:
         items = []
         for item in confined[category]:
             asked = str(item.get("scope", "")).strip().lower()
+            scope = "branch" if asked == "branch" and branch else "project"
+            try:
+                importance = int(item.get("importance", 5))
+            except (TypeError, ValueError):
+                importance = 5
             items.append(
-                {**item, "scope": "branch" if asked == "branch" else "project"}
+                {
+                    **item,
+                    "scope": scope,
+                    "importance": min(importance, MAX_CONFINED_IMPORTANCE),
+                }
             )
         confined[category] = items
     return confined

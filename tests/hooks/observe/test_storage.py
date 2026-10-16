@@ -505,7 +505,7 @@ def test_confine_extraction_drops_preferences_and_pins_scope():
         "entities": [{"name": "e"}],
     }
 
-    confined = confine_extraction(extraction)
+    confined = confine_extraction(extraction, branch="feat/x")
 
     assert "preferences" not in confined
     assert [i["scope"] for i in confined["facts"]] == ["project", "branch", "project"]
@@ -539,3 +539,35 @@ def test_record_extraction_runs_the_whole_tail(data_dir: Path):
     )
     mock_ent.assert_called_once_with(extraction)
     assert counts == {"facts": {"created": 1}}
+
+
+def test_confine_extraction_without_a_branch_pins_branch_asks_to_project():
+    """A branch-scoped row with no branch is unreachable by any search."""
+    confined = confine_extraction(
+        {"facts": [{"content": "a", "scope": "branch"}]}, branch=None
+    )
+    assert confined["facts"][0]["scope"] == "project"
+
+
+def test_confine_extraction_caps_importance():
+    confined = confine_extraction(
+        {
+            "facts": [
+                {"content": "a", "importance": 10},
+                {"content": "b", "importance": 3},
+                {"content": "c", "importance": "high"},
+                {"content": "d"},
+            ]
+        },
+        branch=None,
+    )
+    assert [i["importance"] for i in confined["facts"]] == [7, 3, 5, 5]
+
+
+@pytest.mark.parametrize(
+    "extraction",
+    [{"facts": "x"}, {"decisions": [1, 2]}, {"relationships": {"a": "b"}}],
+)
+def test_confine_extraction_rejects_malformed_shapes(extraction):
+    with pytest.raises(ValueError, match="not a list of objects"):
+        confine_extraction(extraction, branch=None)

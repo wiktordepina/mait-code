@@ -10,6 +10,12 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Changed
+
+- **The memory schema moves to version 15.** Hosts using `mait_code.remote`
+  refuse a `memory.db` on a different schema version, so upgrade the host
+  (maitre-d) together with the instance.
+
 ## [0.81.1] — 2026-10-12
 
 ### Fixed
