@@ -2,12 +2,18 @@
 
 Wraps the ``claude`` CLI for subprocess-based LLM calls. Used by both the
 observe hook (extraction) and the reflect tool (synthesis).
+
+Every call is text in, text out, so the nested claude runs with no built-in
+tools and no MCP servers, from the data directory rather than the caller's
+cwd. The prompts embed transcript windows and memories; a transcript that
+reads like a task must not be able to get the model to carry it out.
 """
 
 import logging
 import os
 import subprocess
 import time
+from pathlib import Path
 
 __all__ = ["call_claude"]
 
@@ -46,12 +52,24 @@ def call_claude(
     if system_prompt:
         full_prompt = f"[System instruction]: {system_prompt}\n\n{prompt}"
 
-    cmd = ["claude", "-p", "--model", model, "--no-session-persistence"]
+    cmd = [
+        "claude",
+        "-p",
+        "--model",
+        model,
+        "--no-session-persistence",
+        # No built-in tools ("" disables them all) and, with no --mcp-config
+        # alongside, no MCP servers either.
+        "--tools",
+        "",
+        "--strict-mcp-config",
+    ]
 
     # Clear CLAUDECODE env var to allow nested claude invocations from hooks.
     # Set MAIT_CODE_NESTED to prevent hooks from recursing.
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
     env["MAIT_CODE_NESTED"] = "1"
+    cwd = _neutral_cwd()
 
     for attempt in range(1 + retries):
         try:
@@ -62,6 +80,7 @@ def call_claude(
                 text=True,
                 timeout=timeout,
                 env=env,
+                cwd=cwd,
             )
             if result.returncode != 0:
                 logger.warning(
@@ -93,3 +112,17 @@ def call_claude(
             return None
 
     return None
+
+
+def _neutral_cwd() -> Path:
+    """Return a working directory for the nested claude away from any project.
+
+    The data directory is user-owned and holds no project CLAUDE.md, so the
+    call neither loads a repo's instructions nor lands file writes in it. A
+    shared temp dir would not do: anyone can plant a ``CLAUDE.md`` there.
+    Falls back to ``$HOME`` when the data directory does not exist yet.
+    """
+    from mait_code.config import data_dir
+
+    path = data_dir()
+    return path if path.is_dir() else Path.home()

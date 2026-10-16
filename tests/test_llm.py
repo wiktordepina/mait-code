@@ -38,6 +38,9 @@ def test_call_claude_basic(mock_subprocess):
         "--model",
         "haiku",
         "--no-session-persistence",
+        "--tools",
+        "",
+        "--strict-mcp-config",
     ]
     assert args[1]["input"] == "test prompt"
     # Default timeout follows the llm-timeout setting (90 by default).
@@ -74,8 +77,59 @@ def test_call_claude_custom_model(mock_subprocess):
         "--model",
         "sonnet",
         "--no-session-persistence",
+        "--tools",
+        "",
+        "--strict-mcp-config",
     ]
     assert args[1]["timeout"] == 30
+
+
+def test_call_claude_disables_every_tool(mock_subprocess):
+    """The nested claude gets no built-in tools and no MCP servers.
+
+    Prompts embed transcript windows; with tools available, a transcript that
+    reads like a task gets carried out (files written, commits pushed).
+    """
+    mock_subprocess.return_value.returncode = 0
+    mock_subprocess.return_value.stdout = "ok"
+    mock_subprocess.return_value.stderr = ""
+
+    call_claude("prompt")
+
+    cmd = mock_subprocess.call_args[0][0]
+    tools_at = cmd.index("--tools")
+    assert cmd[tools_at + 1] == ""
+    assert "--strict-mcp-config" in cmd
+    assert "--mcp-config" not in cmd
+    assert not any(a.startswith("--allowed") for a in cmd)
+
+
+def test_call_claude_runs_from_data_dir(mock_subprocess, monkeypatch, tmp_path):
+    data = tmp_path / "data"
+    data.mkdir()
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(data))
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    mock_subprocess.return_value.returncode = 0
+    mock_subprocess.return_value.stdout = "ok"
+    mock_subprocess.return_value.stderr = ""
+
+    call_claude("prompt")
+
+    assert mock_subprocess.call_args[1]["cwd"] == data
+
+
+def test_call_claude_cwd_falls_back_to_home(mock_subprocess, monkeypatch, tmp_path):
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path / "missing"))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    mock_subprocess.return_value.returncode = 0
+    mock_subprocess.return_value.stdout = "ok"
+    mock_subprocess.return_value.stderr = ""
+
+    call_claude("prompt")
+
+    assert mock_subprocess.call_args[1]["cwd"] == tmp_path
 
 
 def test_call_claude_with_system_prompt(mock_subprocess):
