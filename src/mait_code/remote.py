@@ -7,15 +7,18 @@ authentication, scopes and process lifecycle all belong to the host.
 
 What is here is the whole contract:
 
-* **Read** the board, a card with its comments, the project list, memories
+* **Read** the board, a card with its comments, the project list, epics with
+  their members and progress, memories
   (ranked like ``mc-tool-memory search``), whether memory search can use its
   vectors, and active reminders.
 * **Create** a card. It always lands in ``backlog`` — there is no status
   parameter to override.
 * **Refine** a card: edit its description and acceptance criteria, and move
-  it between ``backlog`` and ``refined``. Any other column is refused.
+  it between ``backlog`` and ``refined``. Any other column is refused, and so
+  is an epic — it is never work to be picked up.
 
-What is absent is just as deliberate: deleting or archiving, tags, moves into
+What is absent is just as deliberate: deleting or archiving, tags, links and
+parents, moves into
 ``in_progress`` / ``in_review`` / ``done``, memory writes, reflections and
 reminder changes. Those are decisions for whoever hosts the instance, so the
 functions do not exist here rather than refusing at runtime. A test pins
@@ -86,23 +89,27 @@ from mait_code.tools.board import migrate as _board_migrate
 from mait_code.tools.board import service as _board
 from mait_code.tools.board.columns import (
     BACKLOG,
+    EPIC,
     REFINED,
     is_valid_status,
 )
-from mait_code.tools.board.service import CardNotFound
+from mait_code.tools.board.service import CardNotFound, RelationError
 from mait_code.tools.reminders import migrate as _reminders_migrate
 from mait_code.tools.reminders import service as _reminders
 
 __all__ = [
     # Errors
     "CardNotFound",
+    "RelationError",
     "RemoteError",
     "SchemaMismatch",
     "TransitionRefused",
     # Board
     "create_card",
     "get_card",
+    "get_epic",
     "list_cards",
+    "list_epics",
     "list_projects",
     "refine_card",
     # Memory
@@ -392,6 +399,7 @@ def refine_card(
 
     Raises:
         CardNotFound: If no card has that id.
+        RelationError: If the card is an epic.
         TransitionRefused: If the card is outside backlog/refined, or *to*
             is any other column.
         ValueError: If *client* is blank or too long, or the call would change
@@ -410,11 +418,13 @@ def refine_card(
         conn.execute("BEGIN IMMEDIATE")
         try:
             row = conn.execute(
-                "SELECT status FROM cards WHERE id = ?", (card_id,)
+                "SELECT status, kind FROM cards WHERE id = ?", (card_id,)
             ).fetchone()
             if row is None:
                 raise CardNotFound(card_id)
-            current = row[0]
+            current, kind = row
+            if kind == EPIC:
+                raise RelationError(f"#{card_id} is an epic; it can't be refined")
             if current not in _REFINABLE:
                 raise TransitionRefused(card_id, current)
             changed = [
@@ -453,6 +463,50 @@ def refine_card(
             raise
         conn.commit()
         return _card_with_comments(conn, card_id)
+    finally:
+        conn.close()
+
+
+def list_epics(data_dir: Path, *, include_done: bool = False) -> list[dict]:
+    """Return epics with their member progress, priority-then-oldest.
+
+    Args:
+        data_dir: The instance's data directory.
+        include_done: Also return finished epics (archived ones never are).
+
+    Returns:
+        Epic dicts in the ``mc-tool-board epic list --json`` shape: a card
+        dict plus ``progress`` (member counts per column, ``total`` and
+        ``waiting``).
+    """
+    conn = _board_conn(data_dir, readonly=True)
+    try:
+        return _board.list_epics(conn, include_done=include_done)
+    finally:
+        conn.close()
+
+
+def get_epic(data_dir: Path, epic_id: int) -> dict:
+    """Return one epic with its members, progress and comments.
+
+    Args:
+        data_dir: The instance's data directory.
+        epic_id: The epic's id.
+
+    Returns:
+        The epic in the ``mc-tool-board epic show --json`` shape: a card dict
+        plus ``members`` (its non-archived member cards), ``progress`` and
+        ``comments``.
+
+    Raises:
+        CardNotFound: If no card has that id.
+        RelationError: If the card isn't an epic.
+    """
+    conn = _board_conn(data_dir, readonly=True)
+    try:
+        epic = _board.get_epic(conn, epic_id)
+        epic["comments"] = _board.get_comments(conn, epic_id)
+        return epic
     finally:
         conn.close()
 

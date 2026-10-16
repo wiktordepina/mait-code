@@ -202,6 +202,10 @@ def _insert_card(
 
 def _ns(**kwargs):
     kwargs.setdefault("json", False)  # parsers define --json on every subcommand
+    # Relationship flags every handler now reads: --epic, --parent, --ready.
+    kwargs.setdefault("epic", None)
+    kwargs.setdefault("parent", None)
+    kwargs.setdefault("ready", False)
     return argparse.Namespace(**kwargs)
 
 

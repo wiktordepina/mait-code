@@ -84,14 +84,18 @@ def test_dashboard_tiles(seeded):
 
 
 def test_export_board(seeded):
-    from mait_code.tools.board.export import export_board
+    import json
+
+    from mait_code.tools.board.export import JSON, export_board
 
     conn = get_connection()
     try:
-        out = export_board(conn)
+        cards = json.loads(export_board(conn, fmt=JSON))
     finally:
         conn.close()
-    assert CARD_TITLE in out and EPIC_TITLE not in out
+    # The member still names its epic; the epic itself isn't exported as a card.
+    assert [c["id"] for c in cards] == [seeded["card"]]
+    assert cards[0]["parent"]["id"] == seeded["epic"]
 
 
 def test_remote_reads(seeded):

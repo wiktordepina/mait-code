@@ -39,12 +39,15 @@ from mait_code.tools.reminders.db import get_connection as reminders_connection
 #: remote client may do to an instance — keep executive actions out.
 ALLOWED = {
     "CardNotFound",
+    "RelationError",
     "RemoteError",
     "SchemaMismatch",
     "TransitionRefused",
     "create_card",
     "get_card",
+    "get_epic",
     "list_cards",
+    "list_epics",
     "list_projects",
     "refine_card",
     "memory_search_status",
@@ -680,3 +683,66 @@ def test_never_reads_agent_config_or_touches_environment(
     assert not marker.exists()
     assert not (instance / "models").exists()
     assert (Path(os.environ["MAIT_CODE_DATA_DIR"]) / "models").is_dir()
+
+
+# --- Epics ---
+
+
+def _add_epic(data: Path, title: str = "Umbrella") -> int:
+    conn = board_connection(data / "board.db")
+    try:
+        return board_service.add_card(conn, project=None, title=title, kind="epic")
+    finally:
+        conn.close()
+
+
+def _set_parent(data: Path, card_id: int, epic_id: int) -> None:
+    conn = board_connection(data / "board.db")
+    try:
+        board_service.set_parent(conn, card_id, epic_id)
+    finally:
+        conn.close()
+
+
+def test_refine_refuses_an_epic(instance):
+    epic = _add_epic(instance)
+    with pytest.raises(remote.RelationError, match="is an epic"):
+        remote.refine_card(instance, epic, client="phone", description="d")
+    assert remote.get_card(instance, epic)["comments"] == []
+
+
+def test_create_card_refuses_the_reserved_epic_project(instance):
+    with pytest.raises(ValueError, match="reserved for epics"):
+        remote.create_card(instance, client="phone", project="@epic", title="t")
+
+
+def test_list_epics_matches_the_cli_shape(instance):
+    epic = _add_epic(instance)
+    member = _add(instance, "member")
+    _set_parent(instance, member, epic)
+    conn = board_connection(instance / "board.db")
+    try:
+        expected = board_service.list_epics(conn)
+    finally:
+        conn.close()
+    epics = remote.list_epics(instance)
+    assert epics == expected
+    assert epics[0]["progress"]["total"] == 1
+
+
+def test_get_epic_carries_members_progress_and_comments(instance):
+    epic = _add_epic(instance)
+    member = _add(instance, "member")
+    _set_parent(instance, member, epic)
+    found = remote.get_epic(instance, epic)
+    assert [m["id"] for m in found["members"]] == [member]
+    assert found["progress"]["total"] == 1
+    assert found["comments"] == []
+
+
+def test_get_epic_refuses_a_plain_card(instance):
+    card = _add(instance, "plain")
+    with pytest.raises(remote.RelationError):
+        remote.get_epic(instance, card)
+    with pytest.raises(remote.CardNotFound):
+        remote.get_epic(instance, 999)

@@ -23,6 +23,7 @@ def _ns(**kwargs):
         status=None,
         archived=False,
         search=None,
+        epic=None,
     )
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)

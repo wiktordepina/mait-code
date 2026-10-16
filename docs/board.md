@@ -175,6 +175,63 @@ Bindings rely on the `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PID` variables Claude
 Code exports to its tools and hooks. Outside Claude Code, nothing binds and the
 board behaves exactly as before.
 
+## Epics and dependencies
+
+Columns say where each card stands; they don't say how cards relate. Two
+relationships fill that gap, and both cross projects freely — the board is one
+store, so a homelab card can wait on a mait-code card.
+
+### Epics
+
+An **epic** is an umbrella card for an initiative — a roadmap, say, whose work
+spreads across several repos. Member cards name it as their parent, and the
+epic tracks their progress:
+
+```bash
+mc-tool-board add "Voice assistant" --epic          # a new epic
+mc-tool-board epic promote 170                      # …or promote an existing umbrella card
+mc-tool-board add "Wake-word daemon" --parent 170   # a member
+mc-tool-board edit 141 --parent 170                 # join an existing card (--parent none leaves)
+mc-tool-board epic list                             # 170 Voice assistant — In Progress — 3/7 done · 1 waiting
+mc-tool-board epic show 170                         # its members, column by column
+```
+
+- **Epics stay off the board.** An epic belongs to no project — it carries the
+  reserved project `@epic` — so it never shows in a project's columns, in
+  `list`, in the counts or in `next`. It is never worked directly; its members
+  are.
+- **One level, one epic.** A card has at most one epic, and epics have no
+  parent. If a card seems to belong to two initiatives, it is two cards.
+- **Status by hand.** Move or complete an epic like any card. When finishing
+  or archiving its last open member, the CLI notes *"epic #170 has no open
+  members"* — a reminder, never an automatic move.
+
+### Dependencies
+
+`link A blocks B` records that **B can't start until A is done**:
+
+```bash
+mc-tool-board link 141 blocks 147
+mc-tool-board show 147        # waiting on: #141 Wake-word daemon (Refined)
+mc-tool-board unlink 141 blocks 147
+```
+
+- **`next` respects it.** `next` (and `next --claim`) hands out only *ready*
+  cards: refined, not tagged `blocked`, and not waiting on an unfinished
+  blocker. `list --ready` lists them all; `next --epic 170` picks the top ready
+  member of one initiative, whichever project it sits in.
+- **Waiting shows up where you look.** `list` rows end `waiting on #141`;
+  `show` lists what a card waits on and what it unblocks.
+- **Done or dropped both release.** A blocker that reaches **Done** frees the
+  cards behind it. So does one that's **archived** — the work was dropped — but
+  `show` flags it as an archived blocker, since the waiting card probably needs
+  another look.
+- **No loops.** A link that would close a cycle is refused, naming it:
+  `#41 blocks #47 would close a loop: #41 → #47 → #52 → #41`.
+- **Links or the tag?** Link when the blocker is another card. Keep the
+  `blocked` tag for blockers outside the board — an upstream fix, a person, a
+  decision.
+
 ## Anatomy of a card
 
 ![A fully-populated card in detail view: title, tags, description, acceptance criteria, references, and a comment thread.](assets/board/card-detail.png)
@@ -196,6 +253,8 @@ Every card carries:
 | **References** | An ordered list of `label → value` links — a PR, a ticket, a file, a spec. Kept out of the description so they stay tidy and clickable. |
 | **Tags** | Free-form labels that ride alongside status (`blocked`, `urgent`, …). |
 | **Comments** | A threaded log — your notes and Claude's, each timestamped. |
+| **Epic** | The [epic](#epics) the card belongs to, if any — shown as `epic:` in `show`. |
+| **Blocked by / blocks** | Its [dependency links](#dependencies) in each direction; `show` and `list` mark the blockers it's still waiting on. |
 | **Sessions** | Only on **In Progress** cards: the live Claude Code sessions working on it (see [parallel sessions](#parallel-sessions)). Listed by `show` and in `--json` output; left out of exports. |
 | **Created by** | Only on cards raised through the [remote API](remote.md): the client that created it, shown as *via &lt;client&gt;* on the meta line and as `created by:` in `show`. Locally created cards have none. |
 | **Completion summary** | The handoff note recorded when the card reaches **Done**. Renders [markdown](#markdown-in-the-body). |
@@ -290,18 +349,18 @@ can call directly. The same store backs both.
 
 ```bash
 # View
-mc-tool-board list [--all] [--status STATUS] [--archived] [--search TEXT] [--mine | --session ID] [--json]
+mc-tool-board list [--all] [--status STATUS] [--archived] [--search TEXT] [--mine | --session ID] [--epic ID] [--ready] [--json]
 mc-tool-board show ID [--json]
 mc-tool-board summary [--all] [--project PROJECT] [--json [--session ID]]   # --session adds bound/in-review cards + inbox count
 
 # Create & edit
-mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ...] [--json]
-mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...] [--json]
+mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ... | --epic] [--parent EPIC] [--json]
+mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...] [--parent EPIC|none] [--json]
 mc-tool-board comment ID "<note>" [--author me|claude] [--json]
 
 # Flow
 mc-tool-board refine ID [--description ...] [--acceptance ...] [--json]   # → refined
-mc-tool-board next [--project ...] [--claim] [--json]                     # top ready card; --claim → in_progress
+mc-tool-board next [--project ... | --epic ID] [--claim] [--json]         # top ready card; --claim → in_progress
 mc-tool-board review ID [--pr <url>] [--json]                             # → in_review; --pr adds a PR reference
 mc-tool-board complete ID --summary "<what was done>" [--json]            # → done
 mc-tool-board move ID <backlog|refined|in_progress|in_review|done|archived> [--json]
@@ -316,6 +375,12 @@ mc-tool-board unbind ID [--session ID] [--json]                           # drop
 mc-tool-board tag ID <tag> [--json]      /  mc-tool-board untag ID <tag> [--json]
 mc-tool-board block ID "<reason>" [--json]  /  mc-tool-board unblock ID [--json]
 
+# Epics & dependencies
+mc-tool-board epic list [--done] [--json]                                 # epics with member progress
+mc-tool-board epic show ID [--json]                                       # an epic and its members
+mc-tool-board epic promote ID [--json]                                    # turn a card into an epic
+mc-tool-board link A blocks B [--json]   /  mc-tool-board unlink A blocks B [--json]
+
 # References
 mc-tool-board ref add ID <label> <value> [--json]
 mc-tool-board ref remove ID <position> [--json]
@@ -323,6 +388,7 @@ mc-tool-board ref list ID [--json]
 
 # Export
 mc-tool-board export ID [--format markdown|json] [--out FILE]    # one card, full fidelity
+mc-tool-board export --epic ID [--format ...] [--out FILE]       # an epic and its members
 mc-tool-board export [--format ...] [--out FILE] \
     [--all | --project ...] [--status STATUS] [--archived] [--search TEXT]   # whole board
 ```
@@ -339,7 +405,8 @@ portable document. Markdown embeds the stored description, acceptance criteria
 and completion summary verbatim, so what you wrote round-trips unchanged; JSON
 is full fidelity (tags, references and comments included, matching the
 `show --json` shape, minus live session bindings). Output goes to stdout unless `--out FILE` is given. The
-board-wide form takes the same filters as `list`.
+board-wide form takes the same filters as `list` and, like the board, leaves
+epics out — `export --epic ID` exports one with all its members.
 
 ## Tips for getting the most from it
 
