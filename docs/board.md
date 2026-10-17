@@ -342,7 +342,8 @@ rest of Refined and Backlog, Done last. Archived members are left out.
 | <kbd>R</kbd> | Show only ready members — exactly what `next --epic N` would choose from (table only) |
 | <kbd>d</kbd> | Include done epics |
 | <kbd>r</kbd> | Reload (it also follows changes made elsewhere, like the board) |
-| <kbd>i</kbd> / <kbd>Esc</kbd> | Back to the kanban |
+| <kbd>i</kbd> | Back to the kanban |
+| <kbd>Esc</kbd> | Leave the board (opened from the hub, back to the hub) |
 
 The **dependency diagram** (<kbd>g</kbd>) draws the epic's `blocks` links top-down,
 blockers above the cards they hold up. Each box reads `#id` and the title,

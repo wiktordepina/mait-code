@@ -84,19 +84,24 @@ class TestSwitching:
 
         assert _run(scenario) == (True, 1)
 
-    def test_escape_returns_to_the_kanban_not_quit(self, board_path: Path) -> None:
-        """Opened straight on Initiatives, escape still lands on the kanban."""
+    @pytest.mark.parametrize("initial_view", [INITIATIVES, None])
+    def test_escape_leaves_the_board(self, board_path: Path, initial_view) -> None:
+        """Escape quits from Initiatives however it was reached — from the hub
+        that lands back on the hub; ``i`` is the way to the kanban."""
 
         async def scenario():
-            app = BoardApp(db_path=board_path, initial_view=INITIATIVES)
+            app = BoardApp(db_path=board_path, initial_view=initial_view)
             async with app.run_test(size=(120, 40)) as pilot:
                 await pilot.pause()
+                if initial_view is None:
+                    await pilot.press("i")
+                    await pilot.pause()
                 started = isinstance(app.screen, InitiativesScreen)
                 await pilot.press("escape")
                 await pilot.pause()
-                return started, len(app.screen_stack), app.is_running
+                return started, app.is_running
 
-        assert _run(scenario) == (True, 1, True)
+        assert _run(scenario) == (True, False)
 
     def test_i_does_nothing_inside_the_card_screen(self, board_path: Path) -> None:
         conn = _connect(board_path)
@@ -763,6 +768,54 @@ class TestDiagram:
             return hidden, screen._graph_applied, extra in screen._graph_data[0]
 
         assert _initiatives(board_path, steps) == (False, True, True)
+
+    def test_epic_after_a_linkless_one_draws_without_hanging(
+        self, board_path: Path
+    ) -> None:
+        """Graph view, linked epic → linkless (diagram hidden) → linked again.
+
+        The re-shown view starts unsized; it must draw once laid out, not spin
+        retrying before the layout pass that would size it.
+        """
+        conn = _connect(board_path)
+        linked = []
+        for title in ("Alpha", "Bare", "Gamma"):
+            eid = _epic(conn, title)
+            a = _card(conn, f"{title} one", parent_id=eid)
+            b = _card(conn, f"{title} two", parent_id=eid)
+            if title != "Bare":
+                service.add_link(conn, a, b)
+                linked.append((eid, {a, b}))
+        conn.close()
+        (_, _), (gamma, gamma_nodes) = linked
+
+        async def steps(app, pilot, screen):
+            # A retry that re-arms itself livelocks the loop, so no timeout
+            # could fire: cap the re-arms instead, failing rather than hanging.
+            arm = screen.call_after_refresh
+            armed = []
+
+            def capped(callback, *args, **kwargs):
+                armed.append(callback)
+                if len(armed) > 20:
+                    raise RuntimeError("call_after_refresh re-armed in a loop")
+                return arm(callback, *args, **kwargs)
+
+            screen.call_after_refresh = capped
+            await pilot.press("g")
+            await pilot.pause()
+            for _ in range(2):
+                await pilot.press("down")
+                await pilot.pause()
+            await pilot.pause()
+            view = screen.query_one("#deps")
+            drawn = set(view._graph_nodes or {})
+            # node_properties() reads netext's built graph: it raises if
+            # set_graph() was dropped against an unsized view.
+            built = all(view.node_properties(n) is not None for n in drawn)
+            return screen._epic_id, screen._graph_applied, drawn, built
+
+        assert _initiatives(board_path, steps) == (gamma, True, gamma_nodes, True)
 
     def test_empty_states(self, board_path: Path) -> None:
         conn = _connect(board_path)

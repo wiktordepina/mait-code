@@ -284,10 +284,9 @@ class GraphApp(MaitApp):
         """Push the held graph into the GraphView, once it can take it.
 
         ``set_graph()`` against a zero-sized widget builds nothing and a later
-        resize only re-measures the old (empty) graph, so calls made before
-        first layout or while the table hides the view must be retried —
-        ``call_after_refresh`` lands after the next layout pass, when the
-        widget has its real size.
+        resize only re-measures the old (empty) graph, so a call made before
+        first layout or while the table hides the view waits: the view's
+        :class:`~mait_code.tui.graph.ThemedGraphView.Sized` brings it back.
         """
         if self._graph_data is None:
             return
@@ -297,8 +296,10 @@ class GraphApp(MaitApp):
             self._graph_applied = True
         else:
             self._graph_applied = False
-            if self._view == "graph":
-                self.call_after_refresh(self._apply_graph)
+
+    def on_themed_graph_view_sized(self, event: ThemedGraphView.Sized) -> None:
+        if self._view == "graph" and not self._graph_applied:
+            self._apply_graph()
 
     def _netext_graph(
         self, ego: dict
@@ -545,7 +546,8 @@ class GraphApp(MaitApp):
         self.query_one("#centre", ContentSwitcher).current = "graph"
         if not self._graph_applied:
             # A re-centre issued from the table view hit a hidden, zero-sized
-            # GraphView; apply it now the view is coming back.
+            # GraphView; apply it after this layout pass (or on Sized, if the
+            # view is still unsized then). One shot: never re-armed.
             self.call_after_refresh(self._apply_graph)
         self.refresh_bindings()
 
