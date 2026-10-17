@@ -478,6 +478,7 @@ unknown key, invalid value, or a missing required follow-up flag.
 
 ```
 mait-code board                             # interactive kanban (TTY) / text render (piped)
+mait-code board --initiatives               # open on the Initiatives view (epics) / epic list (piped)
 ```
 
 **Description**
@@ -520,6 +521,7 @@ highlighted card; the rest open detail, annotate, tag, or change what's shown.
 | `p` | Filter by project (dropdown picker) |
 | `a` | Toggle visibility of archived cards |
 | `r` | Reload the board from the database |
+| `i` | Switch to the Initiatives view — epics with progress and their members |
 | `q` | Quit |
 
 ### The non-TTY render

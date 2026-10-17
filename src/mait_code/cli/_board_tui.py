@@ -158,7 +158,8 @@ def _card_box(
     active theme so the box recolours on a ``Ctrl+P`` switch.
     """
     tags = card.get("tags", [])
-    waiting = card.get("waiting_on", [])
+    # A finished card isn't waiting on anything, whatever its links say.
+    waiting = card.get("waiting_on", []) if card.get("status") != DONE else []
     blocked = BLOCKED_TAG in tags or bool(waiting)
 
     # Header line: #id (left) and the project (right, muted) when unfiltered.
@@ -1065,7 +1066,7 @@ class LinkScreen(ModalScreen[tuple[str, int, int] | None]):
             self.dismiss(None)
 
     def _submit(self) -> None:
-        raw = self.query_one("#link-target", Input).value.strip().lstrip("#")
+        raw = self.query_one("#link-target", Input).value.strip()
         if not raw.isdigit():
             self.notify("Enter the other card's id", severity="warning")
             return
@@ -1898,8 +1899,11 @@ class BoardApp(MaitApp):
             await self._refresh_open_card(screen)
         elif on_board and not (selected is not None and self._select_card(selected)):
             self._focus_current()
-        elif (initiatives := self._initiatives_screen()) is screen and initiatives:
-            initiatives.refresh_data()
+        else:
+            from mait_code.cli._initiatives_tui import InitiativesScreen
+
+            if isinstance(screen, InitiativesScreen):
+                screen.refresh_data()
 
     async def _refresh_open_card(self, screen: CardScreen) -> None:
         """Re-render an open card-detail view from the latest stored state.
@@ -1934,8 +1938,16 @@ class BoardApp(MaitApp):
         return None
 
     def action_toggle_initiatives(self) -> None:
-        """``i`` switches between the kanban and the Initiatives view."""
+        """``i`` switches between the kanban and the Initiatives view.
+
+        A no-op while a modal (the card screen, a prompt) is open, so the
+        palette command can't stack the view on top of one — the ``i`` key is
+        already out of reach there.
+        """
         from mait_code.cli._initiatives_tui import InitiativesScreen
+
+        if isinstance(self.screen, ModalScreen):
+            return
 
         if self._initiatives_screen() is None:
             self.push_screen(InitiativesScreen())

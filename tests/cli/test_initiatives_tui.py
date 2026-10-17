@@ -477,7 +477,7 @@ class TestCardRelationships:
             return toasts, screen.is_editing, service.get_card(app.conn, cid)["project"]
 
         toasts, editing, project = _open_card(board_path, cid, steps)
-        assert any("@epic" in t or "epic" in t for t in toasts)
+        assert "'@epic' is reserved for epics" in toasts
         assert editing and project == "demo"
 
 
@@ -566,15 +566,35 @@ def test_waiting_card_box_carries_the_marker_and_reason() -> None:
 
     from rich.console import Console
 
-    card = {
-        "id": 5,
-        "project": "demo",
-        "title": "waits",
-        "priority": "medium",
-        "tags": ["blocked"],
-        "waiting_on": [3, 4],
-    }
-    console = Console(file=io.StringIO(), width=40, record=True)
-    console.print(_card_box(card, show_project=False))
-    text = console.export_text()
+    def render(**overrides) -> str:
+        card = {
+            "id": 5,
+            "project": "demo",
+            "title": "waits",
+            "priority": "medium",
+            "status": "refined",
+            "tags": ["blocked"],
+            "waiting_on": [3, 4],
+            **overrides,
+        }
+        console = Console(file=io.StringIO(), width=40, record=True)
+        console.print(_card_box(card, show_project=False))
+        return console.export_text()
+
+    text = render()
     assert "⊘" in text and "waiting on #3, #4" in text and "#blocked" in text
+    done = render(status="done", tags=[])
+    assert "⊘" not in done and "waiting on" not in done
+
+
+def test_palette_toggle_is_inert_over_a_modal(board_path: Path) -> None:
+    conn = _connect(board_path)
+    cid = _card(conn, "a")
+    conn.close()
+
+    async def steps(app, pilot, screen):
+        app.action_toggle_initiatives()
+        await pilot.pause()
+        return type(app.screen).__name__, len(app.screen_stack)
+
+    assert _open_card(board_path, cid, steps) == ("CardScreen", 2)
