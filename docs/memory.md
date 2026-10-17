@@ -102,10 +102,18 @@ too. They also hold after the write:
 - **Deduplication:** when a session writes a fact a job already stored, the
   session has confirmed it, so the entry stops being job-sourced (and the
   session may raise its importance). A job repeating a session's fact leaves
-  that entry as it was.
+  that entry as it was. Session extraction skips tool results, so reading a
+  job's output doesn't count; the fact has to come up in the conversation
+  itself.
 
-Retiring is recorded in `memory.db` only, so a `restore` brings retired job
-memories back; retire them again afterwards. **Entities and relationships are not capped**: they go into the knowledge
+Insights a project reflection draws from job memories carry the job's
+`source` too, so `retire --source job` sweeps them along with the memories.
+A merge that took in a job memory is job-sourced as a whole, so bulk retire
+hides it even where a session fact went into it. Retiring is recorded in
+`memory.db` only, so a `restore` brings retired job memories back; retire
+them again afterwards.
+
+**Entities and relationships are not capped**: they go into the knowledge
 graph as extracted, and the graph has no scope.
 
 **Exit status**, with a one-line reason on stderr for every non-zero exit:

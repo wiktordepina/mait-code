@@ -1379,6 +1379,7 @@ def test_project_reflection_fails_closed_on_ops(memory_db):
         "MEMORY_ADD: Uncited new fact\n"
         f"MEMORY_ADD: Job-backed fact [entries: #{job}]\n"
         f"MEMORY_ADD: Mixed fact [entries: #{session}, #{elsewhere}]\n"
+        f"MEMORY_ADD: Invented fact [entries: #{session}, #99999]\n"
         f"MEMORY_ADD: Vetted fact [entries: #{session}]"
     )
     with patch(
@@ -1393,19 +1394,29 @@ def test_project_reflection_fails_closed_on_ops(memory_db):
         ("Uncited new fact", "cites no entries"),
         ("Job-backed fact", f"cites job-sourced #{job}"),
         ("Mixed fact", f"cites job-sourced #{elsewhere}"),
+        ("Invented fact", "cites unknown #99999"),
     ]
     assert "Uncited" not in result["memory_diff"]
-    # Insights stay project-scoped, as before.
+    # Insights stay project-scoped, and carry the job's source so retiring
+    # the job's memories sweeps them too.
     assert result["stored"] == 1
+    insight = memory_db.execute(
+        "SELECT scope, project, source FROM memory_entries WHERE entry_type = 'insight'"
+    ).fetchone()
+    assert insight == ("project", "svc", "job")
 
 
 def test_reflection_without_job_entries_keeps_uncited_ops(memory_db):
     _insert(memory_db, "Session fact", scope="project", project="svc")
     with patch(
         "mait_code.tools.memory.reflect.call_claude",
-        return_value="MEMORY_ADD: Uncited new fact",
+        return_value="INSIGHT: Steady progress\nMEMORY_ADD: Uncited new fact",
     ):
         result = reflect(memory_db, min_new=0, project="svc")
 
     assert [op["new"] for op in result["ops"]] == ["Uncited new fact"]
     assert result["dropped_ops"] == []
+    sources = memory_db.execute(
+        "SELECT source FROM memory_entries WHERE entry_type = 'insight'"
+    ).fetchall()
+    assert sources == [(None,)]

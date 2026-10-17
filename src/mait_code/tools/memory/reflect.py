@@ -634,6 +634,7 @@ def store_insights(
     insights: list[str],
     *,
     project: str | None = None,
+    source: str | None = None,
 ) -> int:
     """Store insights in the memory database with fixed ``importance=6``.
 
@@ -642,6 +643,8 @@ def store_insights(
         insights: Insight strings to store.
         project: Project identifier; when set, insights are project-scoped,
             otherwise they are stored globally.
+        source: Recorded on each insight, so ones drawn from job-sourced
+            entries can be found and retired along with them.
 
     Returns:
         The number of insights stored.
@@ -656,22 +659,24 @@ def store_insights(
             importance=6,
             scope=scope,
             project=project,
+            source=source,
         )
         stored += 1
     return stored
 
 
-def _sourced_ids(conn: sqlite3.Connection, ids: list[int] | set[int]) -> set[int]:
-    """Return the subset of ``ids`` whose entries carry a ``source``."""
+def _entry_sources(
+    conn: sqlite3.Connection, ids: list[int] | set[int]
+) -> dict[int, str | None]:
+    """Map each of ``ids`` that exists to its entry's ``source``."""
     if not ids:
-        return set()
+        return {}
     placeholders = ",".join("?" * len(ids))
     rows = conn.execute(
-        f"""SELECT id FROM memory_entries
-            WHERE id IN ({placeholders}) AND source IS NOT NULL""",
+        f"SELECT id, source FROM memory_entries WHERE id IN ({placeholders})",
         tuple(ids),
     ).fetchall()
-    return {row[0] for row in rows}
+    return {row[0]: row[1] for row in rows}
 
 
 def filter_unvetted_ops(
@@ -680,10 +685,11 @@ def filter_unvetted_ops(
     """Split ops into those MEMORY.md may take and those it must not.
 
     Called when the reflected batch held job-sourced entries, and fails closed:
-    an op survives only if it cites backing entries and none of them is
-    job-sourced. Cited ids are checked against the database, not the batch,
-    because the model can cite any id it has seen. An uncited op is dropped
-    since nothing shows it wasn't drawn from a job entry.
+    an op survives only if it cites backing entries and every one of them
+    exists and is not job-sourced. Cited ids are checked against the
+    database, not the batch, because the model can cite any id it has seen.
+    An uncited op, or one citing an id that doesn't exist, is dropped since
+    nothing shows it wasn't drawn from a job entry.
 
     Args:
         conn: Open memory database connection.
@@ -692,19 +698,27 @@ def filter_unvetted_ops(
     Returns:
         ``(kept, dropped)``. Each dropped op carries a ``reason``.
     """
-    sourced = _sourced_ids(conn, {i for op in ops for i in op["entry_ids"]})
+    sources = _entry_sources(conn, {i for op in ops for i in op["entry_ids"]})
     kept: list[dict] = []
     dropped: list[dict] = []
     for op in ops:
-        cited_jobs = [i for i in op["entry_ids"] if i in sourced]
-        if not op["entry_ids"]:
+        ids = op["entry_ids"]
+        cited_jobs = [i for i in ids if sources.get(i) is not None]
+        unknown = [i for i in ids if i not in sources]
+        if not ids:
             dropped.append({**op, "reason": "cites no entries"})
         elif cited_jobs:
-            tags = ", ".join(f"#{i}" for i in cited_jobs)
-            dropped.append({**op, "reason": f"cites job-sourced {tags}"})
+            dropped.append({**op, "reason": f"cites job-sourced {_ids(cited_jobs)}"})
+        elif unknown:
+            dropped.append({**op, "reason": f"cites unknown {_ids(unknown)}"})
         else:
             kept.append(op)
     return kept, dropped
+
+
+def _ids(ids: list[int]) -> str:
+    """Render ids as ``#1, #2``."""
+    return ", ".join(f"#{i}" for i in ids)
 
 
 def read_memory_md() -> str | None:
@@ -855,7 +869,8 @@ def reflect(
         }
 
     # Build prompt; job-sourced entries only reach a project reflection
-    job_ids = _sourced_ids(conn, [e[0] for e in entries])
+    sources = _entry_sources(conn, [e[0] for e in entries])
+    job_ids = {i for i, source in sources.items() if source is not None}
     entries_text = format_entries_text(entries, job_ids)
 
     prompt_parts = []
@@ -902,7 +917,14 @@ def reflect(
         ops, dropped_ops = filter_unvetted_ops(conn, ops)
 
     # Store insights
-    stored = store_insights(conn, insights, project=project) if insights else 0
+    # Insights drawn from a batch holding job entries carry the first one's
+    # source, so retiring a job's memories sweeps them too.
+    insight_source = sources[min(job_ids)] if job_ids else None
+    stored = (
+        store_insights(conn, insights, project=project, source=insight_source)
+        if insights
+        else 0
+    )
 
     # Update watermark to highest entry ID processed
     new_watermark = max(e[0] for e in entries)
