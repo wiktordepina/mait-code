@@ -336,7 +336,7 @@ rest of Refined and Backlog, Done last. Archived members are left out.
 | Key | Action |
 |-----|--------|
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Move through the epics or members |
-| <kbd>←</kbd> / <kbd>→</kbd> | Focus the epics / the members |
+| <kbd>←</kbd> / <kbd>→</kbd> | Focus the epics / the members (or the diagram, whose arrow keys then scroll it) |
 | <kbd>Enter</kbd> | Open the highlighted epic or member in the card detail screen |
 | <kbd>g</kbd> | Swap the member table for the epic's dependency diagram, and back |
 | <kbd>R</kbd> | Show only ready members — exactly what `next --epic N` would choose from (table only) |

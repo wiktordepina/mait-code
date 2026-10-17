@@ -472,12 +472,12 @@ class InitiativesScreen(Screen[None]):
     # -- actions ------------------------------------------------------------
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        """Gate ``g`` to the view it leaves, and the table-only keys to the table."""
+        """Gate ``g`` to the view it leaves, and ready-only to the table."""
         if action == "show_graph":
             return self._view == _TABLE_PANE
         if action == "show_table":
             return self._view == _GRAPH_PANE
-        if action in ("focus_members", "toggle_ready"):
+        if action == "toggle_ready":
             return self._view == _TABLE_PANE
         return True
 
@@ -500,7 +500,12 @@ class InitiativesScreen(Screen[None]):
         self.query_one("#epics", OptionList).focus()
 
     def action_focus_members(self) -> None:
-        self.query_one("#members", DataTable).focus()
+        """``→`` focuses the right pane: the table, or the diagram (whose arrow
+        keys then scroll a graph bigger than the pane)."""
+        if self._view == _GRAPH_PANE:
+            self.query_one("#deps", ThemedGraphView).focus()
+        else:
+            self.query_one("#members", DataTable).focus()
 
     def action_toggle_ready(self) -> None:
         self._ready_only = not self._ready_only

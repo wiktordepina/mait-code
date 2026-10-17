@@ -638,7 +638,9 @@ def _initiatives(board_path: Path, steps, *, size=(130, 44)):
 
 
 class TestDiagram:
-    def test_g_toggles_and_gates_table_keys(self, board_path: Path) -> None:
+    def test_g_toggles_gates_ready_only_and_right_focuses_the_diagram(
+        self, board_path: Path
+    ) -> None:
         _diagram_seed(board_path)
 
         async def steps(app, pilot, screen):
@@ -648,14 +650,16 @@ class TestDiagram:
             await pilot.pause()
             gates = {
                 a: screen.check_action(a, ())
-                for a in ("show_graph", "show_table", "focus_members", "toggle_ready")
+                for a in ("show_graph", "show_table", "toggle_ready")
             }
+            await pilot.press("right")
+            focused = app.focused.id if app.focused else None
             during = switcher.current
             await pilot.press("g")
             await pilot.pause()
-            return before, during, gates, switcher.current
+            return before, during, gates, focused, switcher.current
 
-        before, during, gates, after = _initiatives(board_path, steps)
+        before, during, gates, focused, after = _initiatives(board_path, steps)
         assert (before, during, after) == (
             "members-table-pane",
             "members-graph-pane",
@@ -664,9 +668,9 @@ class TestDiagram:
         assert gates == {
             "show_graph": False,
             "show_table": True,
-            "focus_members": False,
             "toggle_ready": False,
         }
+        assert focused == "deps"  # → reaches the diagram, so its arrows scroll
 
     def test_draws_linked_members_and_stubs_and_counts_the_rest(
         self, board_path: Path
