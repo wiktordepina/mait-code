@@ -856,6 +856,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#initiatives-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initiatives view
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#card-detail-screen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2526,6 +2537,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#initiatives-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initiatives view
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#card-detail-screen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2685,13 +2707,15 @@ one show up in the other.</p>
 <h3 id="the-tui">The TUI<a class="headerlink" href="#the-tui" title="Permanent link">&para;</a></h3>
 <p>Open the interactive board with:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mait-code<span class="w"> </span>board
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>mait-code<span class="w"> </span>board<span class="w"> </span>--initiatives<span class="w">   </span><span class="c1"># open on the Initiatives view instead</span>
 </span></code></pre></div>
 <p>This is a full-screen <a href="https://textual.textualize.io/">Textual</a> app: arrow keys
 to move around, single-key shortcuts to act on cards, <code>Ctrl+P</code> for the command
 palette, and live theming. It's the best way to <em>see</em> the state of your work at a
 glance and to do bulk triage by hand.</p>
 <p>When you're not on a terminal that supports it (e.g. piping output, or in CI),
-<code>mait-code board</code> falls back to a read-only text render of every project's board.</p>
+<code>mait-code board</code> falls back to a read-only text render of every project's board
+(with <code>--initiatives</code>, the open epics and their progress).</p>
 <h3 id="the-conversation">The conversation<a class="headerlink" href="#the-conversation" title="Permanent link">&para;</a></h3>
 <p>The more transformative path is to drive the board <em>through Claude</em>. Just talk:</p>
 <ul>
@@ -2778,6 +2802,9 @@ epic tracks their progress:</p>
   are.</li>
 <li><strong>One level, one epic.</strong> A card has at most one epic, and epics have no
   parent. If a card seems to belong to two initiatives, it is two cards.</li>
+<li><strong>They live in the Initiatives view.</strong> In the TUI, <kbd>i</kbd> swaps the
+  kanban for every open epic with its progress, beside a table of the
+  highlighted epic's members — see <a href="#initiatives-view">Initiatives view</a>.</li>
 <li><strong>Status by hand.</strong> Move or complete an epic like any card. When finishing
   or archiving its last open member, the CLI notes <em>"epic #170 has no open
   members"</em> — a reminder, never an automatic move.</li>
@@ -2785,7 +2812,7 @@ epic tracks their progress:</p>
 <h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h3>
 <p><code>link A blocks B</code> records that <strong>B can't start until A is done</strong>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>mc-tool-board<span class="w"> </span>link<span class="w"> </span><span class="m">141</span><span class="w"> </span>blocks<span class="w"> </span><span class="m">147</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mc-tool-board<span class="w"> </span>show<span class="w"> </span><span class="m">147</span><span class="w">        </span><span class="c1"># waiting on: #141 Wake-word daemon (Refined)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>mc-tool-board<span class="w"> </span>show<span class="w"> </span><span class="m">147</span><span class="w">        </span><span class="c1"># blocked by: #141 Wake-word daemon (Refined)</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>mc-tool-board<span class="w"> </span>unlink<span class="w"> </span><span class="m">141</span><span class="w"> </span>blocks<span class="w"> </span><span class="m">147</span>
 </span></code></pre></div>
 <ul>
@@ -2793,12 +2820,13 @@ epic tracks their progress:</p>
   cards: refined, not tagged <code>blocked</code>, and not waiting on an unfinished
   blocker. <code>list --ready</code> lists them all; <code>next --epic 170</code> picks the top ready
   member of one initiative, whichever project it sits in.</li>
-<li><strong>Waiting shows up where you look.</strong> <code>list</code> rows end <code>waiting on #141</code>;
-  <code>show</code> lists what a card waits on and what it unblocks.</li>
+<li><strong>Waiting shows up where you look.</strong> <code>list</code> rows end <code>waiting on #141</code>, and
+  on the TUI's kanban a waiting card wears the blocked border with a
+  <code>waiting on #141</code> line. <code>show</code> lists every blocker with its status — finished
+  ones too, so a link never silently disappears — and what the card unblocks.</li>
 <li><strong>Done or dropped both release.</strong> A blocker that reaches <strong>Done</strong> frees the
   cards behind it. So does one that's <strong>archived</strong> — the work was dropped — but
-  <code>show</code> flags it as an archived blocker, since the waiting card probably needs
-  another look.</li>
+  <code>show</code> adds a nudge to look again, since the waiting card probably needs it.</li>
 <li><strong>No loops.</strong> A link that would close a cycle is refused, naming it:
   <code>#41 blocks #47 would close a loop: #41 → #47 → #52 → #41</code>.</li>
 <li><strong>Links or the tag?</strong> Link when the blocker is another card. Keep the
@@ -2974,6 +3002,10 @@ type is what's stored; the formatting only appears in the view.</p>
 <td>Reload the board from disk (it also reloads on its own when the store changes underneath it)</td>
 </tr>
 <tr>
+<td><kbd>i</kbd></td>
+<td>Switch to the <a href="#initiatives-view">Initiatives view</a></td>
+</tr>
+<tr>
 <td><kbd>Ctrl</kbd>+<kbd>P</kbd></td>
 <td>Command palette (incl. theme switching)</td>
 </tr>
@@ -2984,6 +3016,54 @@ type is what's stored; the formatting only appears in the view.</p>
 <tr>
 <td><kbd>q</kbd> / <kbd>Esc</kbd></td>
 <td>Quit</td>
+</tr>
+</tbody>
+</table>
+<p>A card that can't start yet wears a red border and a leading <code>⊘</code>, whichever the
+reason: a <code>#blocked</code> tag, or a <code>waiting on #N</code> line naming the unfinished cards
+it <a href="#dependencies">depends on</a>. A card that is both shows both.</p>
+<h3 id="initiatives-view">Initiatives view<a class="headerlink" href="#initiatives-view" title="Permanent link">&para;</a></h3>
+<p>Every open <a href="#epics">epic</a> on the left, with its progress
+(<code>3/7 done · 1 waiting · 2 in progress</code>); on the right, the highlighted epic's
+members from every project — the board's project and search filters don't apply
+here. Members sort by what can move: <strong>ready</strong> (<code>●</code>) first, then In Progress
+and In Review, then anything held up (<code>◼</code>, with what it's waiting on), then the
+rest of Refined and Backlog, Done last. Archived members are left out.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><kbd>↑</kbd> / <kbd>↓</kbd></td>
+<td>Move through the epics or members</td>
+</tr>
+<tr>
+<td><kbd>←</kbd> / <kbd>→</kbd></td>
+<td>Focus the epics / the members</td>
+</tr>
+<tr>
+<td><kbd>Enter</kbd></td>
+<td>Open the highlighted epic or member in the card detail screen</td>
+</tr>
+<tr>
+<td><kbd>R</kbd></td>
+<td>Show only ready members — exactly what <code>next --epic N</code> would choose from</td>
+</tr>
+<tr>
+<td><kbd>d</kbd></td>
+<td>Include done epics</td>
+</tr>
+<tr>
+<td><kbd>r</kbd></td>
+<td>Reload (it also follows changes made elsewhere, like the board)</td>
+</tr>
+<tr>
+<td><kbd>i</kbd> / <kbd>Esc</kbd></td>
+<td>Back to the kanban</td>
 </tr>
 </tbody>
 </table>
@@ -3021,8 +3101,16 @@ type is what's stored; the formatting only appears in the view.</p>
 <td>Block / unblock</td>
 </tr>
 <tr>
+<td><kbd>l</kbd></td>
+<td>Add a <code>blocks</code> link (this card blocks another, or is blocked by one) or remove an existing one</td>
+</tr>
+<tr>
+<td><kbd>P</kbd></td>
+<td>Set or clear the card's epic</td>
+</tr>
+<tr>
 <td><kbd>x</kbd></td>
-<td>Export the card to markdown (prompts for the path, pre-filled with <code>card-N.md</code> in your home directory, then in whichever directory you last exported to)</td>
+<td>Export the card to markdown (prompts for the path, pre-filled with <code>card-N.md</code> in your home directory, then in whichever directory you last exported to); an epic exports with its members</td>
 </tr>
 </tbody>
 </table>
@@ -3036,11 +3124,20 @@ with a toast naming where it went. Tags, references and status are a working cop
 discards every pending change. Block / unblock stay outside the form (they carry
 a reason comment a plain tag can't), so the form's tag editor leaves the
 <code>blocked</code> tag alone.</p>
-<p>!!! tip "Theming"ee4bf0f2-4c30-466e-beb1-3f25a4712432
-    The board ships several house themes (<code>mait-dark</code>, <code>mait-ember</code>,
-    <code>mait-aurora</code>, <code>mait-bubblegum</code>, <code>mait-syntax</code>) plus Textual's built-ins.
-    Switch via <kbd>Ctrl</kbd>+<kbd>P</kbd> → search <em>theme</em>. Your choice
-    persists across sessions.</p>
+<p>A <strong>Relationships</strong> section lists the card's epic, every card it's blocked by
+(each marked <em>waiting</em>, <em>done</em> or <em>⚠ archived</em>) and the cards it unblocks;
+it's left out when there are none. A link that would close a loop, or any other
+refused change, shows as an error toast naming the reason and changes nothing.
+Opened on an <strong>epic</strong>, the screen shows its progress where a card's project
+would be; its project is fixed, and linking, the epic picker, block / unblock
+and tags don't apply.</p>
+<div class="admonition tip">
+<p class="admonition-title">Theming</p>
+<p>The board ships several house themes (<code>mait-dark</code>, <code>mait-ember</code>,
+<code>mait-aurora</code>, <code>mait-bubblegum</code>, <code>mait-syntax</code>) plus Textual's built-ins.
+Switch via <kbd>Ctrl</kbd>+<kbd>P</kbd> → search <em>theme</em>. Your choice
+persists across sessions.</p>
+</div>
 <h2 id="cli-reference">CLI reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
 <p>The TUI is a front-end over the <code>mc-tool-board</code> command, which you (or Claude)
 can call directly. The same store backs both.</p>
