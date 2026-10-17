@@ -1644,11 +1644,11 @@ class TestTheming:
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                default = app._chip_colours()
+                default = app.chip_colours()
                 # Switch to a built-in theme with a different palette.
                 app.theme = "nord"
                 await pilot.pause()
-                switched = app._chip_colours()
+                switched = app.chip_colours()
                 return default, switched, app.current_theme
 
         default, switched, theme = _run(scenario)
@@ -1673,7 +1673,7 @@ class TestTheming:
                 before = screen._chip_colours
                 app.theme = "nord"
                 await pilot.pause()
-                return before, screen._chip_colours, app._chip_colours()
+                return before, screen._chip_colours, app.chip_colours()
 
         before, after, expected = _run(scenario)
         # The open card screen picked up the new theme's chip palette.
@@ -1697,7 +1697,7 @@ class TestTheming:
                 app._focus_status(REFINED)
                 await pilot.press("enter")  # open the card screen — the crash site
                 await pilot.pause()
-                return type(app.screen).__name__, app._chip_colours(), app._exception
+                return type(app.screen).__name__, app.chip_colours(), app._exception
 
         screen, colours, exc = _run(scenario)
         assert exc is None  # the card screen painted without MissingStyle

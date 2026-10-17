@@ -74,6 +74,7 @@ class HomeTarget(enum.Enum):
     """
 
     BOARD = "board"
+    INITIATIVES = "initiatives"
     MEMORY = "memory"
     REVIEW = "review"
     OBSERVATIONS = "observations"
@@ -383,6 +384,11 @@ class HomeApp(MaitApp):
             f"{b.board_live} active" if b.board_live else "",
         )
         launch_leaf(board, "Open board", NodeSpec("board", HomeTarget.BOARD))
+        launch_leaf(
+            board,
+            "Open initiatives",
+            NodeSpec("board:initiatives", HomeTarget.INITIATIVES),
+        )
         leaf(board, "In progress", NodeSpec("board:in_progress"))
         leaf(board, "In review", NodeSpec("board:in_review"))
         leaf(board, "Next up", NodeSpec("board:refined"))
@@ -465,6 +471,7 @@ class HomeApp(MaitApp):
         return {
             "home": self._detail_home,
             "board": self._detail_board,
+            "board:initiatives": self._detail_board_initiatives,
             "board:in_progress": self._detail_board_in_progress,
             "board:in_review": self._detail_board_in_review,
             "board:refined": self._detail_board_refined,
@@ -658,6 +665,30 @@ class HomeApp(MaitApp):
             if group:
                 widgets.append(Label(head, classes="subhead"))
                 widgets += [_card_line(c) for c in group]
+        return widgets
+
+    def _detail_board_initiatives(self) -> list[Widget]:
+        from mait_code.tools.board import export, service
+        from mait_code.tools.board.db import get_connection
+
+        conn = get_connection()
+        try:
+            epics = service.list_epics(conn)
+        finally:
+            conn.close()
+        if not epics:
+            return [Label(empty_state("No initiatives yet."))]
+        widgets: list[Widget] = [
+            Label("Initiatives", classes="title"),
+            Label(
+                "Press Enter on “↗ Open initiatives” for epics and their members.",
+                classes="hint",
+            ),
+        ]
+        for epic in epics:
+            line = Text(f"#{epic['id']} {_clip(epic['title'])}  ")
+            line.append(export.progress_text(epic["progress"]), style="dim")
+            widgets.append(Label(line))
         return widgets
 
     def _detail_board_in_progress(self) -> list[Widget]:
@@ -1352,6 +1383,11 @@ class HomeApp(MaitApp):
             "Open board",
             "Jump to the board TUI",
             lambda: self.action_launch(HomeTarget.BOARD),
+        )
+        yield SystemCommand(
+            "Open initiatives",
+            "Jump to the board's epics view",
+            lambda: self.action_launch(HomeTarget.INITIATIVES),
         )
         yield SystemCommand(
             "Open memory",

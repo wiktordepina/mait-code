@@ -822,14 +822,45 @@ def settings_unset(key: str) -> None:
 
 
 @app.command("board")
-def board() -> None:
+def board(
+    initiatives: Annotated[
+        bool,
+        typer.Option(
+            "--initiatives", help="Open on the Initiatives view (epics and members)."
+        ),
+    ] = False,
+) -> None:
     """Open the interactive kanban board (read-only render when not on a TTY)."""
     if _tui_available():
-        from mait_code.cli._board_tui import run_board_tui
+        from mait_code.cli._board_tui import INITIATIVES, run_board_tui
 
-        run_board_tui()
+        if initiatives:
+            run_board_tui(initial_view=INITIATIVES)
+        else:
+            run_board_tui()
+    elif initiatives:
+        _initiatives_render()
     else:
         _board_render()
+
+
+def _initiatives_render() -> None:
+    """Print the open epics with their progress (the non-TTY fallback)."""
+    from mait_code.tools.board import export, service
+    from mait_code.tools.board.columns import label as col_label
+    from mait_code.tools.board.db import connection
+
+    with connection() as conn:
+        epics = service.list_epics(conn)
+
+    if not epics:
+        typer.echo("No initiatives.")
+        return
+    for epic in epics:
+        typer.echo(
+            f"[#{epic['id']}] ({epic['priority']}) {epic['title']} — "
+            f"{col_label(epic['status'])} — {export.progress_text(epic['progress'])}"
+        )
 
 
 def _board_render() -> None:
@@ -891,6 +922,10 @@ def _run_home_loop() -> None:
             from mait_code.cli._board_tui import run_board_tui
 
             run_board_tui()
+        elif target is HomeTarget.INITIATIVES:
+            from mait_code.cli._board_tui import INITIATIVES, run_board_tui
+
+            run_board_tui(initial_view=INITIATIVES)
         elif target is HomeTarget.MEMORY:
             from mait_code.cli._memory_tui import run_memory_tui
 

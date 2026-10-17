@@ -233,3 +233,53 @@
     color: $text;
     background: $error 30%;
 }
+
+/* Initiatives view (cli/_initiatives_tui.py): a screen of the board app, so its
+ * layout lives in the board's sheet. Epics on a narrow left rail, members on
+ * the right; both panes carry the same focus border as the kanban columns. */
+#initiatives-body {
+    height: 1fr;
+}
+
+#initiatives-epics {
+    width: 38;
+    height: 100%;
+}
+
+#initiatives-members {
+    width: 1fr;
+    height: 100%;
+}
+
+#epics, #members {
+    height: 1fr;
+    border: round $border-blurred;
+}
+
+#epics:focus, #members:focus {
+    border: round $border;
+}
+
+#epics > .option-list--option {
+    padding: 0 1;
+}
+
+/* The kanban's tinted selection, not the solid cyan block cursor. */
+#epics > .option-list--option-highlighted {
+    background: $primary 12%;
+    color: $foreground;
+}
+
+#epics:focus > .option-list--option-highlighted {
+    background: $primary 25%;
+    color: $foreground;
+}
+
+#members-empty {
+    padding: 1 2;
+}
+
+/* Card screen: the relationship grid sits like the reference lines. */
+.relations {
+    margin-bottom: 1;
+}

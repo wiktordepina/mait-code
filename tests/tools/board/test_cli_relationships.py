@@ -327,9 +327,21 @@ def test_show_relationship_lines(run, mock_conn):
     service.archive_card(mock_conn, dropped)
     out = run("show", card)[1]
     assert f"epic: #{eid} Voice" in out
-    assert f"waiting on: #{blocker} blocker (Backlog)" in out
+    assert (
+        f"blocked by: #{blocker} blocker (Backlog); #{dropped} dropped (Archived)"
+        " — archived ones are worth another look"
+    ) in out
     assert f"blocks: #{downstream} downstream (Backlog)" in out
-    assert f"archived blockers: #{dropped} dropped (Archived)" in out
+
+
+def test_show_keeps_a_done_blocker(run, mock_conn):
+    blocker = _card(mock_conn, "blocker")
+    card = _card(mock_conn, "card")
+    service.add_link(mock_conn, blocker, card)
+    service.complete_card(mock_conn, blocker)
+    out = run("show", card)[1]
+    assert f"blocked by: #{blocker} blocker (Done)" in out
+    assert "worth another look" not in out
 
 
 def test_show_epic_has_progress_not_project(run, mock_conn):
@@ -396,7 +408,7 @@ def test_export_card_markdown_has_relationship_lines(run, mock_conn):
     service.add_link(mock_conn, blocker, card)
     out = run("export", card)[1]
     assert f"- **Epic:** #{eid} Voice" in out
-    assert f"- **Waiting on:** #{blocker} blocker (Backlog)" in out
+    assert f"- **Blocked by:** #{blocker} blocker (Backlog)" in out
     assert f"- **Blocks:** #{card} card (Backlog)" in run("export", blocker)[1]
 
 

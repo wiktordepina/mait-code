@@ -28,7 +28,14 @@ import sqlite3
 from collections.abc import Iterable
 
 from mait_code.tools.board import service
-from mait_code.tools.board.columns import ARCHIVED, BOARD_ORDER, DONE, EPIC, label
+from mait_code.tools.board.columns import (
+    ARCHIVED,
+    BOARD_ORDER,
+    DONE,
+    EPIC,
+    IN_PROGRESS,
+    label,
+)
 
 __all__ = [
     # Formats
@@ -43,6 +50,9 @@ __all__ = [
     "export_board",
     "export_card",
     "export_epic",
+    # Formatting
+    "progress_text",
+    "related_text",
 ]
 
 MARKDOWN = "markdown"
@@ -71,11 +81,10 @@ def _meta_lines(card: dict) -> list[str]:
     ]
     if card["parent"]:
         lines.append(f"- **Epic:** #{card['parent']['id']} {card['parent']['title']}")
-    waiting = [b for b in card["blocked_by"] if b["id"] in card["waiting_on"]]
-    if waiting:
-        lines.append(f"- **Waiting on:** {_related(waiting)}")
+    if card["blocked_by"]:
+        lines.append(f"- **Blocked by:** {related_text(card['blocked_by'])}")
     if card["blocks"]:
-        lines.append(f"- **Blocks:** {_related(card['blocks'])}")
+        lines.append(f"- **Blocks:** {related_text(card['blocks'])}")
     if card["tags"]:
         lines.append(f"- **Tags:** {', '.join(card['tags'])}")
     if card["created_by"]:
@@ -87,8 +96,23 @@ def _meta_lines(card: dict) -> list[str]:
     return lines
 
 
-def _related(cards: list[dict]) -> str:
+def related_text(cards: list[dict]) -> str:
+    """``#76 title (Refined); #80 …`` for a list of related-card summaries.
+
+    Each card's status rides along, so a blocker list reads as which are
+    still open and which are done or archived.
+    """
     return "; ".join(f"#{c['id']} {c['title']} ({label(c['status'])})" for c in cards)
+
+
+def progress_text(progress: dict) -> str:
+    """``3/7 done · 1 waiting · 2 in progress`` for an epic's ``progress``."""
+    parts = [f"{progress[DONE]}/{progress['total']} done"]
+    if progress["waiting"]:
+        parts.append(f"{progress['waiting']} waiting")
+    if progress[IN_PROGRESS]:
+        parts.append(f"{progress[IN_PROGRESS]} in progress")
+    return " · ".join(parts)
 
 
 def _comment_md(comment: dict) -> str:
