@@ -3136,8 +3136,9 @@ off (<code>MAIT_CODE_NESTED=1</code>):</p>
 <li>Each call is one window; there is no cursor. Text longer than <code>--max-chars</code>
   (default 60000) is refused rather than cut. The caller owns its size.</li>
 <li><code>--trigger</code> (default <code>job</code>) labels the raw-log record, and is stored in each
-  new memory's <code>source</code> column, so these memories can be told apart from a
-  session's (there is no <code>source</code> filter on the CLI yet; query the column).</li>
+  new memory's <code>source</code> column, so these memories can be found, and removed,
+  later. Job memories can be listed with <code>list --source job</code> and retired in
+  bulk with <code>retire --source job</code>.</li>
 </ul>
 <p>Prepared text has no user voice in it and may carry content nobody vetted, so
 the memories a run writes are capped:</p>
@@ -3149,7 +3150,28 @@ the memories a run writes are capped:</p>
   raise an existing one past what a session gave it through deduplication.</li>
 </ul>
 <p>The caps are applied before the raw log is written, so <code>restore</code> replays them
-too. <strong>Entities and relationships are not capped</strong>: they go into the knowledge
+too. They also hold after the write:</p>
+<ul>
+<li><strong>Reflection</strong> with no project never reads job memories, so they can't
+  become global insights. A project reflection does read them, marked
+  <code>[job]</code>, but then keeps only the MEMORY.md changes that cite the vetted
+  entries behind them; the rest are reported as withheld.</li>
+<li><strong><code>supersede</code> and <code>merge</code></strong> carry <code>source</code> to the new entry, and a merge
+  that takes in a job memory is never global.</li>
+<li><strong>Deduplication:</strong> when a session writes a fact a job already stored, the
+  session has confirmed it, so the entry stops being job-sourced (and the
+  session may raise its importance). A job repeating a session's fact leaves
+  that entry as it was. Session extraction skips tool results, so reading a
+  job's output doesn't count; the fact has to come up in the conversation
+  itself.</li>
+</ul>
+<p>Insights a project reflection draws from job memories carry the job's
+<code>source</code> too, so <code>retire --source job</code> sweeps them along with the memories.
+A merge that took in a job memory is job-sourced as a whole, so bulk retire
+hides it even where a session fact went into it. Retiring is recorded in
+<code>memory.db</code> only, so a <code>restore</code> brings retired job memories back; retire
+them again afterwards.</p>
+<p><strong>Entities and relationships are not capped</strong>: they go into the knowledge
 graph as extracted, and the graph has no scope.</p>
 <p><strong>Exit status</strong>, with a one-line reason on stderr for every non-zero exit:</p>
 <table>
@@ -3774,6 +3796,7 @@ It is <code>1.0</code> for a branch match and <code>0.85</code> for a project ma
 <li><strong>MEMORY.md proposals:</strong> High-confidence facts are proposed as additions for user approval</li>
 <li><strong>Idempotent:</strong> A per-project watermark tracks the last reflected entry ID. Each observation is only reflected on once.</li>
 <li><strong>Novelty gate:</strong> Skips reflection if fewer than 3 unreflected entries exist</li>
+<li><strong>Job memories:</strong> Global reflection skips <a href="#extracting-from-prepared-text">job-sourced entries</a>; a project reflection reads them but won't let them back a MEMORY.md change</li>
 <li><strong>Batching:</strong> Processes entries in configurable batches (default 50), oldest first</li>
 </ul>
 <h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
@@ -3902,6 +3925,10 @@ launched.</p>
 <td>Drop a stale entry with no replacement (kept for audit, hidden from recall)</td>
 </tr>
 <tr>
+<td><code>retire --source job</code></td>
+<td>List every live entry a job wrote; add <code>--yes</code> to retire them (<code>--project</code> narrows, <code>--json</code> for structured output)</td>
+</tr>
+<tr>
 <td><code>list</code></td>
 <td>Recent entries by creation time</td>
 </tr>
@@ -3916,6 +3943,10 @@ launched.</p>
 <tr>
 <td><code>list --include-superseded</code></td>
 <td>Include superseded entries (hidden by default)</td>
+</tr>
+<tr>
+<td><code>list --source job</code></td>
+<td>Only entries written by a source, such as <code>observe</code>'s jobs</td>
 </tr>
 <tr>
 <td><code>review</code></td>

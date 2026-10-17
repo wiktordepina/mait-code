@@ -2278,6 +2278,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.retire_by_source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;retire_by_source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.memory.retire_memory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2439,6 +2450,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.reflect.reflection_scope_sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;reflection_scope_sql
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#mait_code.tools.memory.reflect.count_unreflected" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2564,6 +2586,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;store_insights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.reflect.filter_unvetted_ops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;filter_unvetted_ops
       
     </span>
   </a>
@@ -3712,6 +3745,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.retire_by_source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;retire_by_source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.memory.retire_memory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3873,6 +3917,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.reflect.reflection_scope_sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;reflection_scope_sql
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#mait_code.tools.memory.reflect.count_unreflected" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3998,6 +4053,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;store_insights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mait_code.tools.memory.reflect.filter_unvetted_ops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;filter_unvetted_ops
       
     </span>
   </a>
@@ -5750,7 +5816,8 @@ score suitable for <code>composite_score()</code>:</p>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">branch</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">scope</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">include_superseded</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">source</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5920,6 +5987,26 @@ score suitable for <code>composite_score()</code>:</p>
                   <span class="doc-param-default">
                     <b>DEFAULT:</b>
                       <code>False</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Only entries written by this source (e.g. <code>"job"</code>).</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
                   </span>
               </p>
             </td>
@@ -8483,7 +8570,9 @@ finds two or more overlapping facts that should read as one.</p>
 first <em>existing</em> row in <code>old_ids</code>. Its importance defaults to the highest
 importance among the merged rows — a merge promotes, it does not dilute —
 unless overridden. Ids that don't exist are skipped and reported back in
-<code>not_found</code>; the merge proceeds on whatever remains.</p>
+<code>not_found</code>; the merge proceeds on whatever remains. If any merged row
+is job-sourced, the new entry takes the first such row's <code>source</code>, and
+a global scope is narrowed to that row's project.</p>
 
 
 <table>
@@ -8621,6 +8710,154 @@ Defaults to the maximum importance among the merged rows.</p>
             <td class="doc-returns-details">
               <div class="doc-md-description">
                 <p>none of <code>old_ids</code> exist, <code>{"action": "not_found", "old_ids": ...}</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.memory.retire_by_source" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">retire_by_source</span>
+
+
+<a href="#mait_code.tools.memory.retire_by_source" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">retire_by_source</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">source</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">project</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">apply</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Find, and optionally retire, every live entry written by <code>source</code>.</p>
+<p>The bulk counterpart to :func:<code>retire_memory</code>, for clearing out what an
+automated run (<code>source="job"</code>) wrote. Retired rows are kept for audit.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>conn</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Open memory database connection.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="sqlite3.Connection">Connection</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>The <code>source</code> value to match exactly.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>project</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Only match entries of this project; <code>None</code> for all.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>apply</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Retire the matches. Without it, nothing is written.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="bool">bool</span></code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>False</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="list">list</span>[<span title="dict">dict</span>]</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>The matching entries, oldest first, as <code>{"id", "content", "project"}</code></p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="list">list</span>[<span title="dict">dict</span>]</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>dicts — the ones retired when <code>apply</code> is set.</p>
               </div>
             </td>
           </tr>
@@ -8939,8 +9176,9 @@ reflection output. Invalid values fall back to <code>fact</code>.</p>
             <td class="doc-param-details">
               <div class="doc-md-description">
                 <p>What wrote the entry, when not a session's own hook (e.g.
-<code>"job"</code>). Recorded on a new entry only; a deduplicated write
-keeps the existing entry's source.</p>
+<code>"job"</code>). Recorded on a new entry. A deduplicated write with
+no source (a session's) clears the existing entry's, since the
+session has now confirmed it; one with a source leaves it alone.</p>
               </div>
               <p>
                   <span class="doc-param-annotation">
@@ -9082,7 +9320,8 @@ keeps the existing entry's source.</p>
 class, and scope (project/branch), then marks the old entry superseded —
 pointing <code>superseded_by</code> at the new id and stamping <code>superseded_at</code>.
 The old row is kept for auditability but hidden from default surfacing.
-This is the explicit, manually-driven counterpart to dedup: it is called
+The new entry keeps the old one's <code>source</code> too, so a job-sourced fact
+stays one. This is the explicit, manually-driven counterpart to dedup: it is called
 when a fact has genuinely changed rather than merely been repeated.</p>
 
 
@@ -9774,6 +10013,90 @@ updates to <code>MEMORY.md</code>.</p>
 <div class="doc doc-object doc-function">
 
 
+<h3 id="mait_code.tools.memory.reflect.reflection_scope_sql" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">reflection_scope_sql</span>
+
+
+<a href="#mait_code.tools.memory.reflect.reflection_scope_sql" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">reflection_scope_sql</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">project</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="tuple">tuple</span></span><span class="p">[</span><span class="n"><span title="str">str</span></span><span class="p">,</span> <span class="n"><span title="list">list</span></span><span class="p">]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the SQL condition for the entries a reflection may read.</p>
+<p>The one predicate shared by the novelty gate, the entry batch and the
+observations browser, so they never disagree about what is pending. A
+project reflection reads global plus that project's entries. A global
+reflection reads every scope except job-sourced rows (<code>source</code> set):
+insights it stores are global, which would launder past the project-only
+cap a job's memories were written under.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>project</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Project identifier, or <code>None</code> for a global reflection.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="tuple">tuple</span>[<span title="str">str</span>, <span title="list">list</span>]</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p><code>(condition, params)</code>, the condition carrying no leading <code>AND</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="mait_code.tools.memory.reflect.count_unreflected" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">count_unreflected</span>
 
@@ -10151,7 +10474,8 @@ exists and <code>days</code> is provided, uses <code>days</code> as a bootstrap 
             <td class="doc-param-details">
               <div class="doc-md-description">
                 <p>Project identifier; when set, includes global plus
-project-scoped entries.</p>
+project-scoped entries. When <code>None</code>, job-sourced entries are
+left out (see :func:<code>reflection_scope_sql</code>).</p>
               </div>
               <p>
                   <span class="doc-param-annotation">
@@ -10744,7 +11068,10 @@ reflection prompt.</p>
 
 
 <a href="#mait_code.tools.memory.reflect.format_entries_text" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">format_entries_text</span><span class="p">(</span><span class="n">entries</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="tuple">tuple</span></span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">format_entries_text</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">entries</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="tuple">tuple</span></span><span class="p">],</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">job_ids</span><span class="p">:</span> <span class="n"><span title="frozenset">frozenset</span></span><span class="p">[</span><span class="n"><span title="int">int</span></span><span class="p">]</span> <span class="o">|</span> <span class="n"><span title="set">set</span></span><span class="p">[</span><span class="n"><span title="int">int</span></span><span class="p">]</span> <span class="o">=</span> <span class="n"><span title="frozenset">frozenset</span></span><span class="p">(),</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="str">str</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10775,6 +11102,27 @@ reflection prompt.</p>
                   <span class="doc-param-annotation">
                     <b>TYPE:</b>
                       <code><span title="list">list</span>[<span title="tuple">tuple</span>]</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>job_ids</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Ids of job-sourced entries, marked <code>[job]</code> so the model
+knows they can't back a memory operation.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="frozenset">frozenset</span>[<span title="int">int</span>] | <span title="set">set</span>[<span title="int">int</span>]</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code><span title="frozenset">frozenset</span>()</code>
                   </span>
               </p>
             </td>
@@ -10902,7 +11250,8 @@ Unrecognised or malformed lines are ignored, not fatal.</p>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">insights</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="str">str</span></span><span class="p">],</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">project</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">source</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10971,6 +11320,27 @@ otherwise they are stored globally.</p>
               </p>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Recorded on each insight, so ones drawn from job-sourced
+entries can be found and retired along with them.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -10992,6 +11362,102 @@ otherwise they are stored globally.</p>
             <td class="doc-returns-details">
               <div class="doc-md-description">
                 <p>The number of insights stored.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mait_code.tools.memory.reflect.filter_unvetted_ops" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">filter_unvetted_ops</span>
+
+
+<a href="#mait_code.tools.memory.reflect.filter_unvetted_ops" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">filter_unvetted_ops</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="n">ops</span><span class="p">:</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="tuple">tuple</span></span><span class="p">[</span><span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">],</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]]</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Split ops into those MEMORY.md may take and those it must not.</p>
+<p>Called when the reflected batch held job-sourced entries, and fails closed:
+an op survives only if it cites backing entries and every one of them
+exists and is not job-sourced. Cited ids are checked against the
+database, not the batch, because the model can cite any id it has seen.
+An uncited op, or one citing an id that doesn't exist, is dropped since
+nothing shows it wasn't drawn from a job entry.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>conn</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Open memory database connection.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="sqlite3.Connection">Connection</span></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ops</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Structured ops from :func:<code>parse_reflection_response</code>.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="list">list</span>[<span title="dict">dict</span>]</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="tuple">tuple</span>[<span title="list">list</span>[<span title="dict">dict</span>], <span title="list">list</span>[<span title="dict">dict</span>]]</code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p><code>(kept, dropped)</code>. Each dropped op carries a <code>reason</code>.</p>
               </div>
             </td>
           </tr>
@@ -11123,7 +11589,10 @@ source rows of a merge; falls back to an inline id tag when absent.</p>
         <p>Run the main reflection orchestrator.</p>
 <p>Uses a watermark to track which entries have been reflected on, ensuring
 idempotent operation. Processes entries in batches. When <code>project</code> is
-provided, reflects only on global plus project-scoped entries.</p>
+provided, reflects only on global plus project-scoped entries; without it,
+job-sourced entries are left out. A project batch holding job-sourced
+entries marks them in the prompt and fails closed on the MEMORY.md ops it
+gets back (see :func:<code>filter_unvetted_ops</code>).</p>
 
 
 <table>
@@ -11294,7 +11763,31 @@ provided, reflects only on global plus project-scoped entries.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>func:<code>parse_reflection_response</code>), <code>stored</code>, <code>memory_diff</code>, and</p>
+                <p>func:<code>parse_reflection_response</code>), <code>dropped_ops</code> (ops withheld by</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>func:<code>filter_unvetted_ops</code>, each with a <code>reason</code>), <code>stored</code>,</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><span title="dict">dict</span></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p><code>memory_diff</code>, and</p>
               </div>
             </td>
           </tr>
@@ -11466,7 +11959,9 @@ observations), each carrying the standard entry fields plus <code>reflected</cod
 whether the entry sits at or below the relevant reflection watermark — the
 project's own when <code>project</code> is given, the global one otherwise, matching
 :func:<code>~mait_code.tools.memory.reflect.count_unreflected</code>. With no
-watermark for the scope, nothing has been reflected yet.</p>
+watermark for the scope, nothing has been reflected yet. An entry the
+scope's reflection never reads (a job-sourced one, seen globally) is not
+pending either, so it counts as <code>reflected</code> too.</p>
 
 
 <table>
