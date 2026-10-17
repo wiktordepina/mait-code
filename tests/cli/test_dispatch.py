@@ -201,6 +201,17 @@ class TestTuiLaunchRouting:
         cli.board()
         assert called == ["board"]
 
+    def test_board_initiatives_opens_on_initiatives(
+        self, monkeypatch: pytest.MonkeyPatch, force_tty: None
+    ) -> None:
+        called: list[str] = []
+        monkeypatch.setattr(
+            "mait_code.cli._board_tui.run_board_tui",
+            lambda *, initial_view: called.append(initial_view),
+        )
+        cli.board(initiatives=True)
+        assert called == ["initiatives"]
+
     def test_memory_command_launches_memory_tui(
         self, monkeypatch: pytest.MonkeyPatch, force_tty: None
     ) -> None:
@@ -299,6 +310,7 @@ class TestHomeLoopTargets:
                 HomeTarget.OBSERVATIONS,
                 HomeTarget.GRAPH,
                 HomeTarget.LOGS,
+                HomeTarget.INITIATIVES,
                 None,
             ]
         )
@@ -323,10 +335,14 @@ class TestHomeLoopTargets:
             "mait_code.cli._logs_tui.run_logs_tui",
             lambda: launched.append("logs"),
         )
+        monkeypatch.setattr(
+            "mait_code.cli._board_tui.run_board_tui",
+            lambda *, initial_view: launched.append(initial_view),
+        )
 
         cli._run_home_loop()
 
-        assert launched == ["memory", "observations", "graph", "logs"]
+        assert launched == ["memory", "observations", "graph", "logs", "initiatives"]
 
     def test_quits_immediately_when_home_returns_none(
         self, monkeypatch: pytest.MonkeyPatch
@@ -491,6 +507,23 @@ class TestBoardFallback:
         result = runner.invoke(app, ["board"])
         assert result.exit_code == 0
         assert "No cards on the board." in result.output
+
+    def test_initiatives_render(self, isolated_data_dir: None) -> None:
+        from mait_code.tools.board import service
+        from mait_code.tools.board.db import get_connection
+
+        assert (
+            "No initiatives." in runner.invoke(app, ["board", "--initiatives"]).output
+        )
+        conn = get_connection()
+        try:
+            eid = service.add_card(conn, project=None, title="Voice", kind="epic")
+            service.add_card(conn, project="demo", title="member", parent_id=eid)
+        finally:
+            conn.close()
+        result = runner.invoke(app, ["board", "--initiatives"])
+        assert result.exit_code == 0
+        assert f"[#{eid}] (medium) Voice — Backlog — 0/1 done" in result.output
 
     def test_grouped_render(self, isolated_data_dir: None) -> None:
         from mait_code.tools.board import service

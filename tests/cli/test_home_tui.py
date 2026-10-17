@@ -509,6 +509,23 @@ def test_selecting_a_launch_leaf_sets_the_target() -> None:
     assert _run(scenario) is HomeTarget.BOARD
 
 
+def test_initiatives_leaf_sets_its_target() -> None:
+    from textual.widgets import Tree
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            board = tree.root.children[1]
+            leaf = board.children[1]  # "↗ Open initiatives", after "Open board"
+            app.on_tree_node_selected(Tree.NodeSelected(leaf))
+            await pilot.pause()
+            return app.target
+
+    assert _run(scenario) is HomeTarget.INITIATIVES
+
+
 def test_selecting_a_category_toggles_without_launching() -> None:
     from textual.widgets import Tree
 

@@ -38,7 +38,6 @@ from mait_code.tools.board.columns import (
     BOARD_ORDER,
     DONE,
     EPIC,
-    IN_PROGRESS,
     IN_REVIEW,
     LINK_TYPES,
     REFINED,
@@ -112,21 +111,6 @@ def _require_epic_arg(conn, epic_id: int) -> None:
         service.epic_members(conn, epic_id)
     except (service.CardNotFound, service.RelationError) as exc:
         _relation_failed(exc)
-
-
-def _progress_text(progress: dict) -> str:
-    """``3/7 done · 1 waiting · 2 in progress`` for an epic's ``progress``."""
-    parts = [f"{progress[DONE]}/{progress['total']} done"]
-    if progress["waiting"]:
-        parts.append(f"{progress['waiting']} waiting")
-    if progress[IN_PROGRESS]:
-        parts.append(f"{progress[IN_PROGRESS]} in progress")
-    return " · ".join(parts)
-
-
-def _related(cards: list[dict]) -> str:
-    """``#76 title (Refined); #80 …`` for a list of related-card summaries."""
-    return "; ".join(f"#{c['id']} {c['title']} ({label(c['status'])})" for c in cards)
 
 
 def _remind_epic(conn, card_id: int) -> None:
@@ -299,19 +283,24 @@ def cmd_show(args):
 
     print(f"#{card['id']} ({card['priority']}) {card['title']}")
     if progress is not None:
-        print(f"  epic   status: {label(card['status'])}   {_progress_text(progress)}")
+        print(
+            f"  epic   status: {label(card['status'])}   {export.progress_text(progress)}"
+        )
     else:
         print(f"  project: {card['project']}   status: {label(card['status'])}")
     if card["parent"]:
         print(f"  epic: #{card['parent']['id']} {card['parent']['title']}")
-    waiting = [b for b in card["blocked_by"] if b["id"] in card["waiting_on"]]
-    if waiting:
-        print(f"  waiting on: {_related(waiting)}")
+    if card["blocked_by"]:
+        # Every blocker, each with its status, so a link to a finished one
+        # stays visible; an archived one gets a nudge to look again.
+        nudge = (
+            " — archived ones are worth another look"
+            if card["archived_blockers"]
+            else ""
+        )
+        print(f"  blocked by: {export.related_text(card['blocked_by'])}{nudge}")
     if card["blocks"]:
-        print(f"  blocks: {_related(card['blocks'])}")
-    archived = [b for b in card["blocked_by"] if b["id"] in card["archived_blockers"]]
-    if archived:
-        print(f"  archived blockers: {_related(archived)} — worth another look")
+        print(f"  blocks: {export.related_text(card['blocks'])}")
     if card["created_by"]:
         print(f"  created by: {card['created_by']}")
     if card["tags"]:
@@ -750,7 +739,7 @@ def cmd_epic_list(args):
     for epic in epics:
         print(
             f"[#{epic['id']}] ({epic['priority']}) {epic['title']} — "
-            f"{label(epic['status'])} — {_progress_text(epic['progress'])}"
+            f"{label(epic['status'])} — {export.progress_text(epic['progress'])}"
         )
 
 
@@ -766,7 +755,9 @@ def cmd_epic_show(args):
         print(json.dumps(epic, indent=2))
         return
     print(f"#{epic['id']} ({epic['priority']}) {epic['title']}")
-    print(f"  status: {label(epic['status'])}   {_progress_text(epic['progress'])}")
+    print(
+        f"  status: {label(epic['status'])}   {export.progress_text(epic['progress'])}"
+    )
     if epic["description"]:
         print(f"\nDescription:\n{epic['description']}")
     print()

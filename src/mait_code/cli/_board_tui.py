@@ -17,9 +17,11 @@ one, falling back to a read-only render otherwise.
 from __future__ import annotations
 
 import re
+import sqlite3
 from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import rich.box
 from rich.console import Group, RenderableType
@@ -59,6 +61,8 @@ from mait_code.tools.board.columns import (
     BLOCKED_TAG,
     BOARD_ORDER,
     DONE,
+    EPIC,
+    EPIC_PROJECT,
     IN_PROGRESS,
     IN_REVIEW,
     REFINED,
@@ -77,6 +81,9 @@ from mait_code.tui.render import (
     priority_chip,
     tag_badge,
 )
+
+if TYPE_CHECKING:
+    from mait_code.cli._initiatives_tui import InitiativesScreen
 
 __all__ = ["BoardApp", "run_board_tui"]
 
@@ -100,9 +107,18 @@ _EMPTY_HINTS: dict[str, str] = {
 }
 
 
-def run_board_tui(db_path: Path | None = None) -> None:
-    """Launch the Textual board (blocks until the user quits)."""
-    BoardApp(db_path=db_path).run()
+#: The views :func:`run_board_tui` can open on.
+KANBAN = "kanban"
+INITIATIVES = "initiatives"
+
+
+def run_board_tui(db_path: Path | None = None, *, initial_view: str = KANBAN) -> None:
+    """Launch the Textual board (blocks until the user quits).
+
+    *initial_view* is :data:`KANBAN` or :data:`INITIATIVES`; either way the
+    other is a keypress (``i``) away.
+    """
+    BoardApp(db_path=db_path, initial_view=initial_view).run()
 
 
 #: Leading glyph that marks a blocked card. A blocked box already carries a red
@@ -131,15 +147,19 @@ def _card_box(
     The box is a rounded :class:`~rich.panel.Panel` whose body stacks three
     parts: a header grid (``#id`` left, project right), the priority chip plus
     the full title (wraps to the column width, so the box grows in height), and a
-    right-justified tag line. A blocked card gets a border in the ``blocked`` hue,
-    keeps the leading :data:`_BLOCKED_MARK`, and its ``#blocked`` badge stands out.
+    right-justified tag line. A blocked card — tagged ``blocked``, or waiting on
+    an unfinished blocker — gets a border in the ``blocked`` hue and the leading
+    :data:`_BLOCKED_MARK`. The reason rides below the title: the ``#blocked``
+    badge stands out for the tag, and a ``waiting on #76, #80`` line names the
+    blockers; a card that is both shows both.
 
     ``colours`` is the chip bundle and ``ident`` the ``#id`` mark's hue; both
     default to the canonical palette. The board passes a bundle derived from the
     active theme so the box recolours on a ``Ctrl+P`` switch.
     """
     tags = card.get("tags", [])
-    blocked = BLOCKED_TAG in tags
+    waiting = card.get("waiting_on", [])
+    blocked = BLOCKED_TAG in tags or bool(waiting)
 
     # Header line: #id (left) and the project (right, muted) when unfiltered.
     header = Table.grid(expand=True)
@@ -158,6 +178,14 @@ def _card_box(
     title.append(f" {card['title']}")
 
     parts: list[RenderableType] = [header, title]
+
+    if waiting:
+        parts.append(
+            Text(
+                "waiting on " + ", ".join(f"#{i}" for i in waiting),
+                style=colours.blocked,
+            )
+        )
 
     # Tag line: right-justified badges, omitted when the card carries no tags.
     if tags:
@@ -212,6 +240,7 @@ class BoardColumn(OptionList):
         Binding("d", "app.toggle_done", "Done"),
         Binding("a", "app.toggle_archived", "Archived"),
         Binding("r", "app.reload_board", "Reload"),
+        Binding("i", "app.toggle_initiatives", "Initiatives"),
     ]
 
 
@@ -226,8 +255,14 @@ _VIEW_ACTIONS: frozenset[str] = frozenset(
         "block",
         "unblock",
         "export",
+        "link",
+        "set_epic",
     }
 )
+
+#: View actions that don't apply to an epic: it takes no ``blocks`` links, has
+#: no parent of its own, and a ``blocked`` tag on an initiative means nothing.
+_CARD_ONLY_ACTIONS: frozenset[str] = frozenset({"link", "set_epic", "block", "unblock"})
 
 #: A reference value is rendered as a clickable link when it carries a URI
 #: scheme (``https://``, ``file://``, …). Bare IDs like ``WIKTOR-2342`` have no
@@ -267,6 +302,12 @@ class CardScreen(ModalScreen[None]):
     comment a plain tag can't — so the form's tag editor leaves the ``blocked``
     tag alone, carrying it through a save untouched.
 
+    Relationships get their own gestures for the same reason: ``l`` adds or
+    removes a ``blocks`` link and ``P`` sets or clears the card's epic, each
+    through a small modal. An epic takes neither — nor block/unblock or tags —
+    and its project is fixed, so for an epic those are hidden and the meta line
+    carries its progress instead of a project.
+
     The footer is contextual: :meth:`check_action` gates the bindings to the
     active mode and the card's tag state, so the binding bar advertises only what
     you can do right now.
@@ -303,14 +344,16 @@ class CardScreen(ModalScreen[None]):
         """Posted to ask the app to apply an in-place action, then refresh.
 
         Covers the view-mode actions that stay outside the edit form — comment,
-        block/unblock and complete. Like :class:`Saved`, the screen never writes
+        block/unblock, complete, and the relationship edits. Like :class:`Saved`, the screen never writes
         to the DB itself: it posts the intent (with any gathered input), the app
         persists via the service layer and feeds the refreshed card back through
         :meth:`show_card`, so the action lands in place without bouncing to the
         board.
 
         ``op`` is the action name; ``value`` carries its payload — the comment
-        body or the completion summary — and is ``None`` for block/unblock.
+        body, the completion summary, a ``(from_id, to_id)`` pair for
+        ``link_add`` / ``link_remove``, or the epic id (``None`` to clear) for
+        ``set_parent`` — and is ``None`` for block/unblock.
         """
 
         def __init__(self, card_id: int, op: str, value: object = None) -> None:
@@ -326,6 +369,8 @@ class CardScreen(ModalScreen[None]):
         Binding("C", "complete", "Complete"),
         Binding("b", "block", "Block"),
         Binding("u", "unblock", "Unblock"),
+        Binding("l", "link", "Link"),
+        Binding("P", "set_epic", "Epic"),
         Binding("x", "export", "Export"),
         Binding("escape", "close", "Close"),
     ]
@@ -374,10 +419,13 @@ class CardScreen(ModalScreen[None]):
                     yield Label("Title", classes="field-label")
                     yield Input(value=card["title"], id="edit-title")
                     yield Label("Project", classes="field-label")
+                    # An epic's project is the reserved @epic, never a repo, so
+                    # the field shows it but can't change it.
                     yield Input(
                         value=card["project"],
                         placeholder="project",
                         suggester=SuggestFromList(self._projects),
+                        disabled=self.is_epic,
                         id="edit-project",
                     )
                     yield Label("Priority", classes="field-label")
@@ -395,9 +443,10 @@ class CardScreen(ModalScreen[None]):
                         allow_blank=False,
                         id="edit-status",
                     )
-                    yield Label("Tags", classes="field-label")
-                    yield Input(placeholder="add a tag…", id="edit-tag-input")
-                    yield Horizontal(id="edit-tag-chips", classes="chip-row")
+                    if not self.is_epic:
+                        yield Label("Tags", classes="field-label")
+                        yield Input(placeholder="add a tag…", id="edit-tag-input")
+                        yield Horizontal(id="edit-tag-chips", classes="chip-row")
                     yield Label("References", classes="field-label")
                     with Horizontal(id="edit-ref-add", classes="edit-add-row"):
                         yield Input(placeholder="label", id="edit-ref-label")
@@ -424,6 +473,11 @@ class CardScreen(ModalScreen[None]):
     def card_id(self) -> int:
         """The id of the card currently on screen."""
         return self._card["id"]
+
+    @property
+    def is_epic(self) -> bool:
+        """True when the card on screen is an epic."""
+        return self._card.get("kind") == EPIC
 
     @property
     def is_editing(self) -> bool:
@@ -474,6 +528,11 @@ class CardScreen(ModalScreen[None]):
                 widgets.append(
                     Markdown(body, parser_factory=md_parser, open_links=False)
                 )
+        relations = self._relations(card)
+        if relations is not None:
+            widgets.append(Static("Relationships", classes="section-head"))
+            widgets.append(Rule())
+            widgets.append(Static(relations, classes="relations"))
         references = card.get("references", [])
         if references:
             widgets.append(
@@ -571,7 +630,8 @@ class CardScreen(ModalScreen[None]):
             return
         app = self.app
         last_dir = app.last_export_dir if isinstance(app, BoardApp) else None
-        suggestion = (last_dir or Path.home()) / f"card-{self._card['id']}.md"
+        stem = "epic" if self.is_epic else "card"
+        suggestion = (last_dir or Path.home()) / f"{stem}-{self._card['id']}.md"
         raw = await self.app.push_screen_wait(
             ExportScreen(self._card["id"], suggestion)
         )
@@ -579,9 +639,11 @@ class CardScreen(ModalScreen[None]):
             return
         card = dict(self._card)
         card["comments"] = self._comments
+        # An epic exports with its members (the app loads it via get_epic).
+        render = export.epic_markdown if "members" in card else export.card_markdown
         path = Path(raw).expanduser()
         try:
-            path.write_text(export.card_markdown(card) + "\n", encoding="utf-8")
+            path.write_text(render(card) + "\n", encoding="utf-8")
         except OSError as exc:
             self.notify(f"Export failed: {exc}", severity="error")
             return
@@ -599,6 +661,33 @@ class CardScreen(ModalScreen[None]):
         if self._mode == "view":
             self.post_message(self.Mutate(self._card["id"], "unblock"))
 
+    @work
+    async def action_link(self) -> None:
+        """``l`` opens the link modal: add a ``blocks`` link either way, or
+        remove an existing one."""
+        if self._mode != "view" or self.is_epic:
+            return
+        result = await self.app.push_screen_wait(LinkScreen(self._card))
+        if result:
+            op, from_id, to_id = result
+            self.post_message(self.Mutate(self._card["id"], op, (from_id, to_id)))
+
+    @work
+    async def action_set_epic(self) -> None:
+        """``P`` picks the card's epic from the open ones, or clears it."""
+        if self._mode != "view" or self.is_epic:
+            return
+        app = self.app
+        epics = app.epic_choices() if isinstance(app, BoardApp) else []
+        result = await self.app.push_screen_wait(
+            EpicScreen(self._card["id"], epics, self._card.get("parent"))
+        )
+        if result is None:
+            return
+        epic_id = None if result == _NO_EPIC else result
+        if epic_id != self._card.get("parent_id"):
+            self.post_message(self.Mutate(self._card["id"], "set_parent", epic_id))
+
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         """Gate the footer/bindings to the active mode and card state.
 
@@ -614,6 +703,8 @@ class CardScreen(ModalScreen[None]):
             return editing
         if action in _VIEW_ACTIONS:
             if editing:
+                return False
+            if self.is_epic and action in _CARD_ONLY_ACTIONS:
                 return False
             if action == "block":
                 return BLOCKED_TAG not in self._card.get("tags", [])
@@ -671,10 +762,11 @@ class CardScreen(ModalScreen[None]):
         )
         self._edit_tags = list(card.get("tags", []))
         self._edit_refs = [dict(r) for r in card.get("references", [])]
-        self.query_one("#edit-tag-input", Input).value = ""
         self.query_one("#edit-ref-label", Input).value = ""
         self.query_one("#edit-ref-value", Input).value = ""
-        await self._render_tag_chips()
+        if not self.is_epic:  # an epic's form has no tag editor
+            self.query_one("#edit-tag-input", Input).value = ""
+            await self._render_tag_chips()
         await self._render_ref_rows()
 
     async def _render_tag_chips(self) -> None:
@@ -813,7 +905,8 @@ class CardScreen(ModalScreen[None]):
         """One line of fields, each set off by the same dim middot:
         ``project · status · priority · via client · #tag #tag``. The
         ``via`` field only appears on cards raised through
-        :mod:`mait_code.remote`.
+        :mod:`mait_code.remote`. An epic reads ``epic · status · progress ·
+        priority …`` — its project is always ``@epic``, which says nothing.
 
         The uniform separator gives priority and the tags the same rhythm as
         project/status, instead of trailing off space-separated. Tags read as
@@ -822,9 +915,15 @@ class CardScreen(ModalScreen[None]):
         """
         sep = "  ·  "
         meta = Text()
-        meta.append(card["project"], style="dim")
+        progress = card.get("progress")
+        meta.append(
+            "epic" if card.get("kind") == EPIC else card["project"], style="dim"
+        )
         meta.append(sep, style="dim")
         meta.append(col_label(card["status"]))
+        if progress is not None:
+            meta.append(sep, style="dim")
+            meta.append(export.progress_text(progress))
         meta.append(sep, style="dim")
         meta.append_text(priority_chip(card["priority"], self._chip_colours))
         if card.get("created_by"):
@@ -842,6 +941,43 @@ class CardScreen(ModalScreen[None]):
                     )
                 )
         return meta
+
+    @staticmethod
+    def _relations(card: dict) -> Table | None:
+        """The Epic / Blocked by / Unblocks rows, or ``None`` when there are none.
+
+        One row per related card, labelled on its first. Every blocker shows
+        with its state — *waiting* while unfinished, *done*, or *archived* with
+        a warning (the work was dropped, so the card may want another look) —
+        so a link to finished work stays visible rather than vanishing.
+        """
+        rows: list[tuple[str, Text]] = []
+        parent = card.get("parent")
+        if parent:
+            rows.append(("Epic", Text(f"#{parent['id']} {parent['title']}")))
+        waiting = set(card.get("waiting_on", []))
+        archived = set(card.get("archived_blockers", []))
+        for i, blocker in enumerate(card.get("blocked_by", [])):
+            line = Text(f"#{blocker['id']} {blocker['title']}  ")
+            if blocker["id"] in waiting:
+                line.append("waiting", style="bold")
+            elif blocker["id"] in archived:
+                line.append("⚠ archived", style="bold")
+            else:
+                line.append("done", style="dim")
+            rows.append(("Blocked by" if i == 0 else "", line))
+        for i, blocked in enumerate(card.get("blocks", [])):
+            line = Text(f"#{blocked['id']} {blocked['title']}  ")
+            line.append(col_label(blocked["status"]), style="dim")
+            rows.append(("Unblocks" if i == 0 else "", line))
+        if not rows:
+            return None
+        grid = Table.grid(padding=(0, 2))
+        grid.add_column(style="bold", no_wrap=True)
+        grid.add_column()
+        for label, value in rows:
+            grid.add_row(label, value)
+        return grid
 
     @staticmethod
     def _reference_line(position: int, ref: dict) -> Text:
@@ -862,6 +998,136 @@ class CardScreen(ModalScreen[None]):
             # Trim the stored ISO timestamp to a readable "YYYY-MM-DD HH:MM".
             head.append(f"  ·  {created[:16].replace('T', ' ')}", style="dim")
         return head
+
+
+class LinkScreen(ModalScreen[tuple[str, int, int] | None]):
+    """Add a ``blocks`` link either way, or remove one of the card's links.
+
+    Resolves to ``("link_add" | "link_remove", from_id, to_id)``, or ``None``
+    on cancel. Adding takes a direction — *this card blocks…* or *this card is
+    blocked by…* — and the other card's id; each existing link is a ``✕``
+    button that resolves to its removal, as the tag modal's chips do.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(self, card: dict) -> None:
+        super().__init__()
+        self._card = card
+
+    def compose(self) -> ComposeResult:
+        cid = self._card["id"]
+        blocked_by = self._card.get("blocked_by", [])
+        blocks = self._card.get("blocks", [])
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Links for card #{cid}", classes="modal-title")
+            yield RadioSet(
+                RadioButton("This card blocks…", value=True, id="link-dir-blocks"),
+                RadioButton("This card is blocked by…", id="link-dir-blocked-by"),
+                id="link-direction",
+            )
+            yield Input(placeholder="other card's id", type="integer", id="link-target")
+            if blocked_by or blocks:
+                yield Label("Current links (select to remove):", classes="field-label")
+                with Vertical(id="link-current"):
+                    for other in blocked_by:
+                        yield Button(
+                            f"✕ #{other['id']} blocks this",
+                            id=f"link-rm-in-{other['id']}",
+                            classes="tag-remove",
+                        )
+                    for other in blocks:
+                        yield Button(
+                            f"✕ this blocks #{other['id']}",
+                            id=f"link-rm-out-{other['id']}",
+                            classes="tag-remove",
+                        )
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Add", id="link-add", variant="primary")
+                yield Button("Cancel", id="link-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#link-target", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._submit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        button_id = event.button.id or ""
+        cid = self._card["id"]
+        if button_id == "link-add":
+            self._submit()
+        elif button_id.startswith("link-rm-in-"):
+            self.dismiss(("link_remove", int(button_id.rsplit("-", 1)[1]), cid))
+        elif button_id.startswith("link-rm-out-"):
+            self.dismiss(("link_remove", cid, int(button_id.rsplit("-", 1)[1])))
+        else:
+            self.dismiss(None)
+
+    def _submit(self) -> None:
+        raw = self.query_one("#link-target", Input).value.strip().lstrip("#")
+        if not raw.isdigit():
+            self.notify("Enter the other card's id", severity="warning")
+            return
+        other = int(raw)
+        cid = self._card["id"]
+        blocks = self.query_one("#link-direction", RadioSet).pressed_index != 1
+        self.dismiss(("link_add", cid, other) if blocks else ("link_add", other, cid))
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+#: :class:`EpicScreen`'s choice for "no epic" — distinct from the ``None``
+#: that cancel resolves to.
+_NO_EPIC = "none"
+
+
+class EpicScreen(ModalScreen[int | str | None]):
+    """Pick a card's epic from the open ones, or clear it.
+
+    Resolves to the chosen epic's id, :data:`_NO_EPIC` to leave every epic, or
+    ``None`` on cancel. The card's current epic is offered even when it is
+    done, so opening and saving never moves a card out of a finished epic.
+    """
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+
+    def __init__(
+        self, card_id: int, epics: Sequence[dict], current: dict | None
+    ) -> None:
+        super().__init__()
+        self._card_id = card_id
+        self._options: list[tuple[str, int | str]] = [("No epic", _NO_EPIC)]
+        self._options += [(f"#{e['id']} {e['title']}", e["id"]) for e in epics]
+        if current is not None and current["id"] not in {e["id"] for e in epics}:
+            self._options.append(
+                (f"#{current['id']} {current['title']}", current["id"])
+            )
+        self._current: int | str = current["id"] if current else _NO_EPIC
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-dialog"):
+            yield Label(f"Epic for card #{self._card_id}", classes="modal-title")
+            yield Select(
+                self._options, value=self._current, allow_blank=False, id="epic-select"
+            )
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Set", id="epic-set", variant="primary")
+                yield Button("Cancel", id="epic-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#epic-select", Select).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "epic-set":
+            value = self.query_one("#epic-select", Select).value
+            self.dismiss(value if isinstance(value, (int, str)) else None)
+        else:
+            self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
 
 
 class CommentScreen(ModalScreen[str | None]):
@@ -1165,9 +1431,12 @@ class BoardApp(MaitApp):
     #: is a header read, not a query, so a tight interval stays cheap.
     _REFRESH_INTERVAL = 1.0
 
-    def __init__(self, db_path: Path | None = None) -> None:
+    def __init__(
+        self, db_path: Path | None = None, *, initial_view: str = KANBAN
+    ) -> None:
         super().__init__()
         self._conn = get_connection(db_path)  # one connection for the app's life
+        self._initial_view = initial_view
         self._project_filter: str | None = None  # None == all projects
         self._search: str | None = None  # None == no title filter
         self._projects: list[str] = []
@@ -1212,14 +1481,21 @@ class BoardApp(MaitApp):
         # CLI, skills) and reload underneath the user so they don't need `r`.
         self._data_version = self._read_data_version()
         self.set_interval(self._REFRESH_INTERVAL, self._poll_external_changes)
+        if self._initial_view == INITIATIVES:
+            self.action_toggle_initiatives()
 
     def on_unmount(self) -> None:
         super().on_unmount()  # persists the active theme (MaitApp)
         self._conn.close()
 
+    @property
+    def conn(self) -> sqlite3.Connection:
+        """The board connection, shared with the screens the app pushes."""
+        return self._conn
+
     # -- theming -----------------------------------------------------------
 
-    def _chip_colours(self, theme: Theme | None = None) -> ChipColours:
+    def chip_colours(self, theme: Theme | None = None) -> ChipColours:
         """The chip palette for the active (or given) theme.
 
         Tags take the theme's *secondary* hue so they read distinct from the
@@ -1252,7 +1528,10 @@ class BoardApp(MaitApp):
         """Repaint chips on a theme switch (board columns + any open card)."""
         self._reload()
         if isinstance(self.screen, CardScreen):
-            self.screen.set_chip_colours(self._chip_colours(theme))
+            self.screen.set_chip_colours(self.chip_colours(theme))
+        initiatives = self._initiatives_screen()
+        if initiatives is not None:
+            initiatives.refresh_data()
 
     # -- layout helpers ----------------------------------------------------
 
@@ -1300,7 +1579,7 @@ class BoardApp(MaitApp):
             by_status.setdefault(card["status"], []).append(card)
         self._sync_review_pane(IN_REVIEW in by_status, focused)
         show_project = self._project_filter is None
-        colours = self._chip_colours()
+        colours = self.chip_colours()
         # #id uses the theme primary, but falls back to hex under a non-hex
         # (ANSI) theme to match the chip bundle and stay a valid Rich style.
         primary = self.current_theme.primary
@@ -1435,6 +1714,11 @@ class BoardApp(MaitApp):
             "Search cards",
             "Filter cards by a title substring",
             self.action_search,
+        )
+        yield SystemCommand(
+            "Initiatives",
+            "Switch between the kanban and the epics view",
+            self.action_toggle_initiatives,
         )
         yield SystemCommand(
             "Reload board", "Re-read the board from disk", self.action_reload_board
@@ -1614,6 +1898,8 @@ class BoardApp(MaitApp):
             await self._refresh_open_card(screen)
         elif on_board and not (selected is not None and self._select_card(selected)):
             self._focus_current()
+        elif (initiatives := self._initiatives_screen()) is screen and initiatives:
+            initiatives.refresh_data()
 
     async def _refresh_open_card(self, screen: CardScreen) -> None:
         """Re-render an open card-detail view from the latest stored state.
@@ -1625,7 +1911,7 @@ class BoardApp(MaitApp):
         """
         if screen.is_editing:
             return
-        card = service.get_card(self._conn, screen.card_id)
+        card = self._screen_card(screen.card_id)
         if card is None:
             return
         comments = service.get_comments(self._conn, screen.card_id)
@@ -1635,22 +1921,72 @@ class BoardApp(MaitApp):
 
     # -- detail / comment --------------------------------------------------
 
+    # -- initiatives -------------------------------------------------------
+
+    def _initiatives_screen(self) -> InitiativesScreen | None:
+        """The Initiatives screen if it's on the stack, else ``None``."""
+        # Imported here, not at the top: that module imports this one.
+        from mait_code.cli._initiatives_tui import InitiativesScreen
+
+        for screen in self.screen_stack:
+            if isinstance(screen, InitiativesScreen):
+                return screen
+        return None
+
+    def action_toggle_initiatives(self) -> None:
+        """``i`` switches between the kanban and the Initiatives view."""
+        from mait_code.cli._initiatives_tui import InitiativesScreen
+
+        if self._initiatives_screen() is None:
+            self.push_screen(InitiativesScreen())
+        else:
+            self.show_kanban()
+
+    def show_kanban(self) -> None:
+        """Leave the Initiatives view for the kanban, re-read underneath."""
+        while self._initiatives_screen() is not None:
+            self.pop_screen()
+        self._reload()
+        self._focus_current()
+
+    def epic_choices(self) -> list[dict]:
+        """The open epics, for the card screen's epic picker."""
+        return service.list_epics(self._conn)
+
+    # -- detail / comment --------------------------------------------------
+
+    def _screen_card(self, card_id: int) -> dict | None:
+        """A card as the card screen shows it: an epic carries its ``members``
+        and ``progress`` too (for the meta line and the export)."""
+        card = service.get_card(self._conn, card_id)
+        if card is not None and card["kind"] == EPIC:
+            card = service.get_epic(self._conn, card_id)
+        return card
+
     @work
     async def action_detail(self) -> None:
         await self._open_card("view")
 
     async def _open_card(self, mode: str) -> None:
-        """Open the focused card in the unified view/edit screen.
-
-        Stays open across an in-place save (handled by ``on_card_screen_saved``);
-        on close, re-reads the board and refollows the (possibly edited) card.
-        """
+        """Open the focused card, then refollow it on the board once closed."""
         card_id = self._selected_card_id()
         if card_id is None:
             return
-        card = service.get_card(self._conn, card_id)
+        if await self.open_card(card_id, mode):
+            self._reload()
+            self._select_card(card_id)
+
+    async def open_card(self, card_id: int, mode: str = "view") -> bool:
+        """Open *card_id* in the unified view/edit screen; wait for it to close.
+
+        Any screen can call this from a worker — the kanban and the
+        Initiatives view both do — and then refresh its own panes. Stays open
+        across an in-place save (handled by ``on_card_screen_saved``). Returns
+        ``False`` if the card is gone.
+        """
+        card = self._screen_card(card_id)
         if card is None:
-            return
+            return False
         comments = service.get_comments(self._conn, card_id)
         self._projects = service.list_projects(self._conn)
         await self.push_screen_wait(
@@ -1658,12 +1994,11 @@ class BoardApp(MaitApp):
                 card,
                 comments,
                 mode=mode,
-                chip_colours=self._chip_colours(),
+                chip_colours=self.chip_colours(),
                 projects=self._projects,
             )
         )
-        self._reload()
-        self._select_card(card_id)
+        return True
 
     async def on_card_screen_saved(self, message: CardScreen.Saved) -> None:
         """Persist an in-place edit, then refresh the still-open card screen.
@@ -1676,19 +2011,29 @@ class BoardApp(MaitApp):
         existing = service.get_card(self._conn, message.card_id)
         if existing is None:
             return
-        service.edit_card(self._conn, message.card_id, **message.fields)
-        service.set_tags(self._conn, message.card_id, message.tags)
-        service.set_references(self._conn, message.card_id, message.references)
-        if message.status != existing["status"]:
-            service.move_card(self._conn, message.card_id, message.status)
+        try:
+            service.edit_card(self._conn, message.card_id, **message.fields)
+            service.set_tags(self._conn, message.card_id, message.tags)
+            service.set_references(self._conn, message.card_id, message.references)
+            if message.status != existing["status"]:
+                service.move_card(self._conn, message.card_id, message.status)
+        except (service.RelationError, service.CardNotFound) as exc:
+            # A refused edit (e.g. a card's project set to @epic): say why and
+            # leave the form up, so the fix is one keystroke away.
+            self.notify(str(exc), severity="error")
+            return
         self._projects = service.list_projects(self._conn)
         self._reload()
-        card = service.get_card(self._conn, message.card_id)
+        card = self._screen_card(message.card_id)
         comments = service.get_comments(self._conn, message.card_id)
         if card is not None and isinstance(self.screen, CardScreen):
             await self.screen.show_card(card, comments, self._projects)
         project = message.fields.get("project", existing["project"])
-        if self._project_filter is not None and project != self._project_filter:
+        if (
+            self._project_filter is not None
+            and project != self._project_filter
+            and project != EPIC_PROJECT  # epics are never on the kanban anyway
+        ):
             # The card has left the filtered view; say where it went, since it
             # won't be on the board when the card screen closes.
             self.notify(
@@ -1710,9 +2055,23 @@ class BoardApp(MaitApp):
         card = service.get_card(self._conn, cid)
         if card is None:
             return
-        op = message.op
+        try:
+            self._apply_mutation(cid, message.op, message.value)
+        except (service.RelationError, service.CardNotFound) as exc:
+            # A refused link or epic change (a loop, an epic on either end, an
+            # unknown id) changes nothing; the service's message says why.
+            self.notify(str(exc), severity="error")
+            return
+        self._reload()
+        refreshed = self._screen_card(cid)
+        comments = service.get_comments(self._conn, cid)
+        if refreshed is not None and isinstance(self.screen, CardScreen):
+            await self.screen.show_card(refreshed, comments)
+
+    def _apply_mutation(self, cid: int, op: str, value: object) -> None:
+        """Persist one :class:`CardScreen.Mutate` and say what happened."""
         if op == "comment":
-            service.add_comment(self._conn, cid, str(message.value))
+            service.add_comment(self._conn, cid, str(value))
         elif op == "block":
             service.block_card(self._conn, cid)
             self.notify(f"Card #{cid} blocked", severity="warning")
@@ -1720,13 +2079,26 @@ class BoardApp(MaitApp):
             service.unblock_card(self._conn, cid)
             self.notify(f"Card #{cid} unblocked")
         elif op == "complete":
-            service.complete_card(self._conn, cid, summary=str(message.value))
+            service.complete_card(self._conn, cid, summary=str(value))
             self.notify(f"Card #{cid} completed")
-        self._reload()
-        refreshed = service.get_card(self._conn, cid)
-        comments = service.get_comments(self._conn, cid)
-        if refreshed is not None and isinstance(self.screen, CardScreen):
-            await self.screen.show_card(refreshed, comments)
+        elif op == "link_add":
+            from_id, to_id = value  # type: ignore[misc]
+            service.add_link(self._conn, from_id, to_id)
+            self.notify(f"#{from_id} now blocks #{to_id}")
+        elif op == "link_remove":
+            from_id, to_id = value  # type: ignore[misc]
+            if service.remove_link(self._conn, from_id, to_id):
+                self.notify(f"#{from_id} no longer blocks #{to_id}")
+            else:
+                self.notify(f"#{from_id} doesn't block #{to_id}", severity="warning")
+        elif op == "set_parent":
+            epic_id = value if isinstance(value, int) else None
+            service.set_parent(self._conn, cid, epic_id)
+            self.notify(
+                f"Card #{cid} → epic #{epic_id}"
+                if epic_id
+                else f"Card #{cid} has no epic"
+            )
 
     @work
     async def action_comment(self) -> None:

@@ -95,6 +95,7 @@ Open the interactive board with:
 
 ```bash
 mait-code board
+mait-code board --initiatives   # open on the Initiatives view instead
 ```
 
 This is a full-screen [Textual](https://textual.textualize.io/) app: arrow keys
@@ -103,7 +104,8 @@ palette, and live theming. It's the best way to *see* the state of your work at 
 glance and to do bulk triage by hand.
 
 When you're not on a terminal that supports it (e.g. piping output, or in CI),
-`mait-code board` falls back to a read-only text render of every project's board.
+`mait-code board` falls back to a read-only text render of every project's board
+(with `--initiatives`, the open epics and their progress).
 
 ### The conversation
 
@@ -202,6 +204,9 @@ mc-tool-board epic show 170                         # its members, column by col
   are.
 - **One level, one epic.** A card has at most one epic, and epics have no
   parent. If a card seems to belong to two initiatives, it is two cards.
+- **They live in the Initiatives view.** In the TUI, <kbd>i</kbd> swaps the
+  kanban for every open epic with its progress, beside a table of the
+  highlighted epic's members — see [Initiatives view](#initiatives-view).
 - **Status by hand.** Move or complete an epic like any card. When finishing
   or archiving its last open member, the CLI notes *"epic #170 has no open
   members"* — a reminder, never an automatic move.
@@ -212,7 +217,7 @@ mc-tool-board epic show 170                         # its members, column by col
 
 ```bash
 mc-tool-board link 141 blocks 147
-mc-tool-board show 147        # waiting on: #141 Wake-word daemon (Refined)
+mc-tool-board show 147        # blocked by: #141 Wake-word daemon (Refined)
 mc-tool-board unlink 141 blocks 147
 ```
 
@@ -220,12 +225,13 @@ mc-tool-board unlink 141 blocks 147
   cards: refined, not tagged `blocked`, and not waiting on an unfinished
   blocker. `list --ready` lists them all; `next --epic 170` picks the top ready
   member of one initiative, whichever project it sits in.
-- **Waiting shows up where you look.** `list` rows end `waiting on #141`;
-  `show` lists what a card waits on and what it unblocks.
+- **Waiting shows up where you look.** `list` rows end `waiting on #141`, and
+  on the TUI's kanban a waiting card wears the blocked border with a
+  `waiting on #141` line. `show` lists every blocker with its status — finished
+  ones too, so a link never silently disappears — and what the card unblocks.
 - **Done or dropped both release.** A blocker that reaches **Done** frees the
   cards behind it. So does one that's **archived** — the work was dropped — but
-  `show` flags it as an archived blocker, since the waiting card probably needs
-  another look.
+  `show` adds a nudge to look again, since the waiting card probably needs it.
 - **No loops.** A link that would close a cycle is refused, naming it:
   `#41 blocks #47 would close a loop: #41 → #47 → #52 → #41`.
 - **Links or the tag?** Link when the blocker is another card. Keep the
@@ -309,9 +315,33 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 | <kbd>d</kbd> | Toggle the **Done** column |
 | <kbd>a</kbd> | Toggle the **Archived** pane |
 | <kbd>r</kbd> | Reload the board from disk (it also reloads on its own when the store changes underneath it) |
+| <kbd>i</kbd> | Switch to the [Initiatives view](#initiatives-view) |
 | <kbd>Ctrl</kbd>+<kbd>P</kbd> | Command palette (incl. theme switching) |
 | <kbd>?</kbd> | Key cheat-sheet |
 | <kbd>q</kbd> / <kbd>Esc</kbd> | Quit |
+
+A card that can't start yet wears a red border and a leading `⊘`, whichever the
+reason: a `#blocked` tag, or a `waiting on #N` line naming the unfinished cards
+it [depends on](#dependencies). A card that is both shows both.
+
+### Initiatives view
+
+Every open [epic](#epics) on the left, with its progress
+(`3/7 done · 1 waiting · 2 in progress`); on the right, the highlighted epic's
+members from every project — the board's project and search filters don't apply
+here. Members sort by what can move: **ready** (`●`) first, then In Progress
+and In Review, then anything held up (`◼`, with what it's waiting on), then the
+rest of Refined and Backlog, Done last. Archived members are left out.
+
+| Key | Action |
+|-----|--------|
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Move through the epics or members |
+| <kbd>←</kbd> / <kbd>→</kbd> | Focus the epics / the members |
+| <kbd>Enter</kbd> | Open the highlighted epic or member in the card detail screen |
+| <kbd>R</kbd> | Show only ready members — exactly what `next --epic N` would choose from |
+| <kbd>d</kbd> | Include done epics |
+| <kbd>r</kbd> | Reload (it also follows changes made elsewhere, like the board) |
+| <kbd>i</kbd> / <kbd>Esc</kbd> | Back to the kanban |
 
 ### Card detail screen
 
@@ -323,7 +353,9 @@ Links in the body (`[label](url)`) render as styled text but aren't clickable �
 | <kbd>c</kbd> | Add a comment |
 | <kbd>C</kbd> | Complete the card |
 | <kbd>b</kbd> / <kbd>u</kbd> | Block / unblock |
-| <kbd>x</kbd> | Export the card to markdown (prompts for the path, pre-filled with `card-N.md` in your home directory, then in whichever directory you last exported to) |
+| <kbd>l</kbd> | Add a `blocks` link (this card blocks another, or is blocked by one) or remove an existing one |
+| <kbd>P</kbd> | Set or clear the card's epic |
+| <kbd>x</kbd> | Export the card to markdown (prompts for the path, pre-filled with `card-N.md` in your home directory, then in whichever directory you last exported to); an epic exports with its members |
 
 The edit form (<kbd>e</kbd>) is the single place a card is changed: title,
 **project**, priority, **status**, **tags**, **references**, description and
@@ -336,7 +368,15 @@ discards every pending change. Block / unblock stay outside the form (they carry
 a reason comment a plain tag can't), so the form's tag editor leaves the
 `blocked` tag alone.
 
-!!! tip "Theming"ee4bf0f2-4c30-466e-beb1-3f25a4712432
+A **Relationships** section lists the card's epic, every card it's blocked by
+(each marked *waiting*, *done* or *⚠ archived*) and the cards it unblocks;
+it's left out when there are none. A link that would close a loop, or any other
+refused change, shows as an error toast naming the reason and changes nothing.
+Opened on an **epic**, the screen shows its progress where a card's project
+would be; its project is fixed, and linking, the epic picker, block / unblock
+and tags don't apply.
+
+!!! tip "Theming"
     The board ships several house themes (`mait-dark`, `mait-ember`,
     `mait-aurora`, `mait-bubblegum`, `mait-syntax`) plus Textual's built-ins.
     Switch via <kbd>Ctrl</kbd>+<kbd>P</kbd> → search *theme*. Your choice
