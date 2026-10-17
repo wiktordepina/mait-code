@@ -44,6 +44,7 @@ from mait_code.tools.memory.review import due_for_review
 from mait_code.tools.memory.writer import VALID_ENTRY_TYPES
 from mait_code.tools.memory.writer import mark_reviewed as _mark_reviewed
 from mait_code.tools.memory.writer import merge_memories as _merge_memories
+from mait_code.tools.memory.writer import retire_by_source as _retire_by_source
 from mait_code.tools.memory.writer import retire_memory as _retire_memory
 from mait_code.tools.memory.writer import store_memory as _store_memory
 from mait_code.tools.memory.writer import supersede_memory as _supersede_memory
@@ -233,6 +234,21 @@ def cmd_supersede(args):
 
 
 def cmd_retire(args):
+    source = getattr(args, "source", None)
+    if (args.id is None) == (source is None):
+        print("Error: give either an entry id or --source.", file=sys.stderr)
+        sys.exit(2)
+    if source is not None:
+        _retire_source(
+            source,
+            project=getattr(args, "project", None),
+            apply=getattr(args, "yes", False),
+            as_json=getattr(args, "json", False),
+        )
+        return
+    if any(getattr(args, flag, None) for flag in ("project", "yes", "json")):
+        print("Error: --project, --yes and --json go with --source.", file=sys.stderr)
+        sys.exit(2)
     with connection() as conn:
         result = _retire_memory(conn, args.id)
         action = result["action"]
@@ -245,6 +261,40 @@ def cmd_retire(args):
             print(f"Memory #{args.id} is already {state}; nothing to do.")
             return
         print(f"Memory #{args.id} retired (kept for audit, hidden from surfacing).")
+
+
+def _retire_source(
+    source: str, *, project: str | None, apply: bool, as_json: bool
+) -> None:
+    """Retire every live entry from one source, or only list them."""
+    import json
+
+    with connection() as conn:
+        entries = _retire_by_source(conn, source, project=project, apply=apply)
+    if as_json:
+        print(
+            json.dumps(
+                {
+                    "source": source,
+                    "project": project,
+                    "retired": apply,
+                    "entries": entries,
+                },
+                indent=2,
+            )
+        )
+        return
+    where = f" in {project}" if project else ""
+    if not entries:
+        print(f"No live memories from source '{source}'{where}.")
+        return
+    verb = "Retired" if apply else "Would retire"
+    noun = "memory" if len(entries) == 1 else "memories"
+    print(f"{verb} {len(entries)} {noun} from source '{source}'{where}:\n")
+    for e in entries:
+        print(f"[#{e['id']}] ({e['project'] or 'global'}) {e['content'][:120]}")
+    if not apply:
+        print("\nRe-run with --yes to retire them (kept for audit).")
 
 
 def cmd_merge(args):
@@ -286,9 +336,11 @@ def cmd_list(args):
             branch=ctx["branch"],
             scope=ctx["scope_filter"],
             include_superseded=getattr(args, "include_superseded", False),
+            source=getattr(args, "source", None),
         )
         if not results:
-            print("No memories found." if args.since else "No memories stored yet.")
+            filtered = args.since or getattr(args, "source", None)
+            print("No memories found." if filtered else "No memories stored yet.")
             return
 
         header = f"Recent {len(results)} memories"
@@ -1017,6 +1069,7 @@ def cmd_reflect(args):
     ctx = _resolve_context(args)
     total_insights = []
     total_ops: list[dict] = []
+    total_dropped: list[dict] = []
     total_stored = 0
     last_memory_diff = None
     skip_reason = None
@@ -1042,6 +1095,7 @@ def cmd_reflect(args):
 
             total_insights.extend(result["insights"])
             total_ops.extend(result.get("ops", []))
+            total_dropped.extend(result.get("dropped_ops", []))
             total_stored += result["stored"]
             if result["memory_diff"]:
                 last_memory_diff = result["memory_diff"]
@@ -1066,6 +1120,7 @@ def cmd_reflect(args):
                     "reason": skip_reason,
                     "insights": total_insights,
                     "ops": total_ops,
+                    "dropped_ops": total_dropped,
                     "stored": total_stored,
                 },
                 indent=2,
@@ -1077,7 +1132,7 @@ def cmd_reflect(args):
         print(f"Reflection skipped — {skip_reason}.")
         return
 
-    if not total_insights and not total_ops:
+    if not total_insights and not total_ops and not total_dropped:
         if iterations > 1:
             print("Drain complete — no more unreflected entries.")
         return
@@ -1091,6 +1146,15 @@ def cmd_reflect(args):
     if last_memory_diff:
         print(f"\n{last_memory_diff}")
         print("\nReview and apply these changes manually or approve when prompted.")
+
+    if total_dropped:
+        print(
+            f"\nWithheld {len(total_dropped)} MEMORY.md "
+            f"change{'s' if len(total_dropped) != 1 else ''} "
+            "(the batch held job-sourced entries):"
+        )
+        for op in total_dropped:
+            print(f"  {op['op']}: {op['new'] or op['old']}  — {op['reason']}")
 
 
 @log_invocation(name="mc-tool-memory")
@@ -1194,6 +1258,11 @@ def main():
         action="store_true",
         help="Include superseded entries (hidden by default)",
     )
+    p_list.add_argument(
+        "--source",
+        default=None,
+        help="Only entries written by this source (e.g. job from observe)",
+    )
     _add_scope_args(p_list)
     p_list.set_defaults(func=cmd_list)
 
@@ -1240,7 +1309,27 @@ def main():
         "retire",
         help="Drop a stale entry with no replacement (keeps it for audit)",
     )
-    p_retire.add_argument("id", type=int, help="ID of the entry to retire")
+    p_retire.add_argument(
+        "id", type=int, nargs="?", default=None, help="ID of the entry to retire"
+    )
+    p_retire.add_argument(
+        "--source",
+        default=None,
+        help="Retire every live entry from this source (e.g. job) instead of one id",
+    )
+    p_retire.add_argument(
+        "--project",
+        default=None,
+        help="With --source: only this project (default: all projects)",
+    )
+    p_retire.add_argument(
+        "--yes",
+        action="store_true",
+        help="With --source: retire the matches (default: only list them)",
+    )
+    p_retire.add_argument(
+        "--json", action="store_true", help="With --source: output as JSON"
+    )
     p_retire.set_defaults(func=cmd_retire)
 
     # merge

@@ -167,6 +167,7 @@ def list_entries(
     branch: str | None = None,
     scope: str | None = None,
     include_superseded: bool = False,
+    source: str | None = None,
 ) -> list[dict]:
     """List recent memory entries, optionally filtered by type, time, and scope.
 
@@ -181,6 +182,7 @@ def list_entries(
             ``"branch"``); overrides project-based filtering when set.
         include_superseded: Include entries that have been superseded
             (hidden by default).
+        source: Only entries written by this source (e.g. ``"job"``).
 
     Returns:
         A list of dicts with the standard memory entry fields, ordered by
@@ -195,6 +197,10 @@ def list_entries(
     if entry_type:
         conditions.append("m.entry_type = ?")
         params.append(entry_type)
+
+    if source:
+        conditions.append("m.source = ?")
+        params.append(source)
 
     if since:
         modifier = _parse_since(since)

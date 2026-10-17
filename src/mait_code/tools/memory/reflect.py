@@ -60,6 +60,10 @@ Rules:
   (shown as #N in the entries above) that back the fact, so the underlying
   store can be consolidated too. Include ids only when you can point to specific
   entries above; omit the suffix otherwise.
+- Entries marked [job] were written by an automated run that nobody vetted.
+  They may inform insights, but must never back a memory operation: do not
+  cite them in "[entries: ...]". When any [job] entry is present, every
+  operation must cite the unmarked entries that back it, or it is discarded.
 
 Omit this section entirely if nothing warrants changing.\
 """
@@ -118,6 +122,27 @@ def update_watermark(
     conn.commit()
 
 
+def reflection_scope_sql(project: str | None = None) -> tuple[str, list]:
+    """Return the SQL condition for the entries a reflection may read.
+
+    The one predicate shared by the novelty gate, the entry batch and the
+    observations browser, so they never disagree about what is pending. A
+    project reflection reads global plus that project's entries. A global
+    reflection reads every scope except job-sourced rows (``source`` set):
+    insights it stores are global, which would launder past the project-only
+    cap a job's memories were written under.
+
+    Args:
+        project: Project identifier, or ``None`` for a global reflection.
+
+    Returns:
+        ``(condition, params)``, the condition carrying no leading ``AND``.
+    """
+    if project is not None:
+        return "(scope = 'global' OR project = ?)", [project]
+    return "source IS NULL", []
+
+
 # ---------------------------------------------------------------------------
 # Novelty gate (watermark-based)
 # ---------------------------------------------------------------------------
@@ -147,9 +172,9 @@ def count_unreflected(
         conditions.append("id > ?")
         params.append(watermark)
 
-    if project is not None:
-        conditions.append("(scope = 'global' OR project = ?)")
-        params.append(project)
+    scope_cond, scope_params = reflection_scope_sql(project)
+    conditions.append(scope_cond)
+    params.extend(scope_params)
 
     query = f"SELECT COUNT(*) FROM memory_entries WHERE {' AND '.join(conditions)}"
     return conn.execute(query, params).fetchone()[0]
@@ -224,7 +249,8 @@ def get_unreflected_entries(
         days: Bootstrap window in days when no watermark exists.
         exclude_types: Entry types to exclude (e.g. ``"insight"``).
         project: Project identifier; when set, includes global plus
-            project-scoped entries.
+            project-scoped entries. When ``None``, job-sourced entries are
+            left out (see :func:`reflection_scope_sql`).
         watermark: High-water-mark entry ID; only entries above this are
             returned.
 
@@ -246,11 +272,11 @@ def get_unreflected_entries(
         conditions.append(f"entry_type NOT IN ({placeholders})")
         params.extend(exclude_types)
 
-    if project is not None:
-        conditions.append("(scope = 'global' OR project = ?)")
-        params.append(project)
+    scope_cond, scope_params = reflection_scope_sql(project)
+    conditions.append(scope_cond)
+    params.extend(scope_params)
 
-    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    where = f"WHERE {' AND '.join(conditions)}"
     params.append(batch_size)
 
     query = f"""SELECT id, content, entry_type, importance, created_at
@@ -486,7 +512,9 @@ def _format_extraction(extraction: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
-def format_entries_text(entries: list[tuple]) -> str:
+def format_entries_text(
+    entries: list[tuple], job_ids: frozenset[int] | set[int] = frozenset()
+) -> str:
     """Format DB entries as text for the reflection prompt.
 
     Accepts both 4-tuples (legacy:
@@ -495,6 +523,8 @@ def format_entries_text(entries: list[tuple]) -> str:
 
     Args:
         entries: Rows fetched from ``memory_entries``.
+        job_ids: Ids of job-sourced entries, marked ``[job]`` so the model
+            knows they can't back a memory operation.
 
     Returns:
         A newline-joined string of formatted entries.
@@ -503,7 +533,7 @@ def format_entries_text(entries: list[tuple]) -> str:
     for entry in entries:
         if len(entry) == 5:
             entry_id, content, entry_type, importance, created_at = entry
-            prefix = f"#{entry_id} "
+            prefix = f"#{entry_id} " + ("[job] " if entry_id in job_ids else "")
         else:
             content, entry_type, importance, created_at = entry
             prefix = ""
@@ -604,6 +634,7 @@ def store_insights(
     insights: list[str],
     *,
     project: str | None = None,
+    source: str | None = None,
 ) -> int:
     """Store insights in the memory database with fixed ``importance=6``.
 
@@ -612,6 +643,8 @@ def store_insights(
         insights: Insight strings to store.
         project: Project identifier; when set, insights are project-scoped,
             otherwise they are stored globally.
+        source: Recorded on each insight, so ones drawn from job-sourced
+            entries can be found and retired along with them.
 
     Returns:
         The number of insights stored.
@@ -626,9 +659,66 @@ def store_insights(
             importance=6,
             scope=scope,
             project=project,
+            source=source,
         )
         stored += 1
     return stored
+
+
+def _entry_sources(
+    conn: sqlite3.Connection, ids: list[int] | set[int]
+) -> dict[int, str | None]:
+    """Map each of ``ids`` that exists to its entry's ``source``."""
+    if not ids:
+        return {}
+    placeholders = ",".join("?" * len(ids))
+    rows = conn.execute(
+        f"SELECT id, source FROM memory_entries WHERE id IN ({placeholders})",
+        tuple(ids),
+    ).fetchall()
+    return {row[0]: row[1] for row in rows}
+
+
+def filter_unvetted_ops(
+    conn: sqlite3.Connection, ops: list[dict]
+) -> tuple[list[dict], list[dict]]:
+    """Split ops into those MEMORY.md may take and those it must not.
+
+    Called when the reflected batch held job-sourced entries, and fails closed:
+    an op survives only if it cites backing entries and every one of them
+    exists and is not job-sourced. Cited ids are checked against the
+    database, not the batch, because the model can cite any id it has seen.
+    An uncited op, or one citing an id that doesn't exist, is dropped since
+    nothing shows it wasn't drawn from a job entry.
+
+    Args:
+        conn: Open memory database connection.
+        ops: Structured ops from :func:`parse_reflection_response`.
+
+    Returns:
+        ``(kept, dropped)``. Each dropped op carries a ``reason``.
+    """
+    sources = _entry_sources(conn, {i for op in ops for i in op["entry_ids"]})
+    kept: list[dict] = []
+    dropped: list[dict] = []
+    for op in ops:
+        ids = op["entry_ids"]
+        cited_jobs = [i for i in ids if sources.get(i) is not None]
+        unknown = [i for i in ids if i not in sources]
+        if not ids:
+            dropped.append({**op, "reason": "cites no entries"})
+        elif cited_jobs:
+            dropped.append({**op, "reason": f"cites job-sourced {_ids(cited_jobs)}"})
+        elif unknown:
+            dropped.append({**op, "reason": f"cites unknown {_ids(unknown)}"})
+        else:
+            kept.append(op)
+    return kept, dropped
+
+
+def _ids(ids: list[int]) -> str:
+    """Render ids as ``#1, #2``."""
+    return ", ".join(f"#{i}" for i in ids)
 
 
 def read_memory_md() -> str | None:
@@ -721,7 +811,10 @@ def reflect(
 
     Uses a watermark to track which entries have been reflected on, ensuring
     idempotent operation. Processes entries in batches. When ``project`` is
-    provided, reflects only on global plus project-scoped entries.
+    provided, reflects only on global plus project-scoped entries; without it,
+    job-sourced entries are left out. A project batch holding job-sourced
+    entries marks them in the prompt and fails closed on the MEMORY.md ops it
+    gets back (see :func:`filter_unvetted_ops`).
 
     Args:
         conn: Open memory database connection.
@@ -734,7 +827,9 @@ def reflect(
     Returns:
         A dict with keys ``skipped``, ``reason``, ``insights``, ``ops`` (the
         structured MEMORY.md operations proposed — see
-        :func:`parse_reflection_response`), ``stored``, ``memory_diff``, and
+        :func:`parse_reflection_response`), ``dropped_ops`` (ops withheld by
+        :func:`filter_unvetted_ops`, each with a ``reason``), ``stored``,
+        ``memory_diff``, and
         ``batch_info`` (the last containing ``processed`` and ``watermark``
         counts, or ``None`` when skipped).
     """
@@ -745,6 +840,7 @@ def reflect(
             "reason": "not enough new observations since last reflection",
             "insights": [],
             "ops": [],
+            "dropped_ops": [],
             "stored": 0,
             "memory_diff": None,
             "batch_info": None,
@@ -766,13 +862,16 @@ def reflect(
             "reason": "no unreflected entries found",
             "insights": [],
             "ops": [],
+            "dropped_ops": [],
             "stored": 0,
             "memory_diff": None,
             "batch_info": None,
         }
 
-    # Build prompt
-    entries_text = format_entries_text(entries)
+    # Build prompt; job-sourced entries only reach a project reflection
+    sources = _entry_sources(conn, [e[0] for e in entries])
+    job_ids = {i for i, source in sources.items() if source is not None}
+    entries_text = format_entries_text(entries, job_ids)
 
     prompt_parts = []
     if entries_text:
@@ -803,6 +902,7 @@ def reflect(
             "reason": "LLM call failed",
             "insights": [],
             "ops": [],
+            "dropped_ops": [],
             "stored": 0,
             "memory_diff": None,
             "batch_info": None,
@@ -812,9 +912,19 @@ def reflect(
     parsed = parse_reflection_response(response)
     insights = parsed["insights"]
     ops = parsed["ops"]
+    dropped_ops: list[dict] = []
+    if job_ids:
+        ops, dropped_ops = filter_unvetted_ops(conn, ops)
 
     # Store insights
-    stored = store_insights(conn, insights, project=project) if insights else 0
+    # Insights drawn from a batch holding job entries carry the first one's
+    # source, so retiring a job's memories sweeps them too.
+    insight_source = sources[min(job_ids)] if job_ids else None
+    stored = (
+        store_insights(conn, insights, project=project, source=insight_source)
+        if insights
+        else 0
+    )
 
     # Update watermark to highest entry ID processed
     new_watermark = max(e[0] for e in entries)
@@ -830,6 +940,7 @@ def reflect(
         "reason": None,
         "insights": insights,
         "ops": ops,
+        "dropped_ops": dropped_ops,
         "stored": stored,
         "memory_diff": memory_diff,
         "batch_info": {"processed": len(entries), "watermark": new_watermark},

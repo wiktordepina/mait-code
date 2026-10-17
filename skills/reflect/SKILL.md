@@ -15,7 +15,7 @@ only after the user approves it.
 
 1. Run `mc-tool-memory reflect --json` via Bash (scoped to current project by
    default). Insights are generated and stored automatically; the JSON payload
-   is `{skipped, reason, insights, ops, stored}`.
+   is `{skipped, reason, insights, ops, dropped_ops, stored}`.
 2. If `skipped` is true, tell the user there isn't enough new data since the
    last reflection and suggest trying again later. Stop here.
 3. Present the `insights` list.
@@ -25,6 +25,9 @@ only after the user approves it.
    - **rewrite** → the old text replaced by the new (`~ old → new`)
    - **merge** → several existing facts folded into one
    - **retire** → a stale/contradicted fact dropped (`-`)
+   If `dropped_ops` is non-empty, list them separately as **withheld**, each
+   with its `reason`: the batch held job-sourced entries, and these changes
+   couldn't show they weren't drawn from them. Don't offer to apply them.
 5. **Ask the user to approve or reject each operation** (offer approve-all /
    reject-all / pick as a convenience). Never apply an op the user hasn't
    approved — MEMORY.md stays human-approved.

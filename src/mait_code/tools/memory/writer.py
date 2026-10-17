@@ -273,8 +273,9 @@ def store_memory(
         project: Project identifier (e.g. repo basename).
         branch: Branch name (for branch-scoped memories).
         source: What wrote the entry, when not a session's own hook (e.g.
-            ``"job"``). Recorded on a new entry only; a deduplicated write
-            keeps the existing entry's source.
+            ``"job"``). Recorded on a new entry. A deduplicated write with
+            no source (a session's) clears the existing entry's, since the
+            session has now confirmed it; one with a source leaves it alone.
 
     Returns:
         A dict with keys ``action`` (``"created"`` or ``"deduplicated"``),
@@ -294,12 +295,15 @@ def store_memory(
 
     dup_id, conflicts = _assess_candidates(conn, content, entry_type, project=project)
     if dup_id is not None:
+        # A session repeating a job's fact vets it, so the row stops being
+        # job-sourced; a job repeating a session's fact leaves it as it was.
         conn.execute(
             """UPDATE memory_entries
                SET created_at = CURRENT_TIMESTAMP,
-                   importance = MAX(importance, ?)
+                   importance = MAX(importance, ?),
+                   source = CASE WHEN ? IS NULL THEN NULL ELSE source END
                WHERE id = ?""",
-            (importance, dup_id),
+            (importance, source, dup_id),
         )
         conn.commit()
         return {
@@ -353,7 +357,8 @@ def supersede_memory(
     class, and scope (project/branch), then marks the old entry superseded —
     pointing ``superseded_by`` at the new id and stamping ``superseded_at``.
     The old row is kept for auditability but hidden from default surfacing.
-    This is the explicit, manually-driven counterpart to dedup: it is called
+    The new entry keeps the old one's ``source`` too, so a job-sourced fact
+    stays one. This is the explicit, manually-driven counterpart to dedup: it is called
     when a fact has genuinely changed rather than merely been repeated.
 
     Args:
@@ -369,23 +374,34 @@ def supersede_memory(
         ``old_id`` does not exist, ``{"action": "not_found", "old_id": old_id}``.
     """
     row = conn.execute(
-        """SELECT entry_type, importance, memory_class, scope, project, branch
+        """SELECT entry_type, importance, memory_class, scope, project, branch,
+                  source
            FROM memory_entries WHERE id = ?""",
         (old_id,),
     ).fetchone()
     if row is None:
         return {"action": "not_found", "old_id": old_id}
 
-    entry_type, old_importance, memory_class, scope, project, branch = row
+    entry_type, old_importance, memory_class, scope, project, branch, source = row
     new_importance = (
         old_importance if importance is None else max(1, min(10, importance))
     )
 
     cursor = conn.execute(
         """INSERT INTO memory_entries
-           (content, entry_type, importance, memory_class, scope, project, branch)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (content, entry_type, new_importance, memory_class, scope, project, branch),
+           (content, entry_type, importance, memory_class, scope, project, branch,
+            source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            content,
+            entry_type,
+            new_importance,
+            memory_class,
+            scope,
+            project,
+            branch,
+            source,
+        ),
     )
     new_id = cursor.lastrowid
     assert new_id is not None  # lastrowid is populated after a successful INSERT
@@ -427,7 +443,9 @@ def merge_memories(
     first *existing* row in ``old_ids``. Its importance defaults to the highest
     importance among the merged rows — a merge promotes, it does not dilute —
     unless overridden. Ids that don't exist are skipped and reported back in
-    ``not_found``; the merge proceeds on whatever remains.
+    ``not_found``; the merge proceeds on whatever remains. If any merged row
+    is job-sourced, the new entry takes the first such row's ``source``, and
+    a global scope is narrowed to that row's project.
 
     Args:
         conn: Open memory database connection.
@@ -446,7 +464,8 @@ def merge_memories(
     rows: dict[int, tuple] = {}
     for old_id in dict.fromkeys(old_ids):  # de-dup, preserve caller order
         row = conn.execute(
-            """SELECT entry_type, importance, memory_class, scope, project, branch
+            """SELECT entry_type, importance, memory_class, scope, project, branch,
+                      source
                FROM memory_entries WHERE id = ?""",
             (old_id,),
         ).fetchone()
@@ -458,7 +477,13 @@ def merge_memories(
     if not merged_ids:
         return {"action": "not_found", "old_ids": old_ids}
 
-    entry_type, _, memory_class, scope, project, branch = rows[merged_ids[0]]
+    entry_type, _, memory_class, scope, project, branch, _ = rows[merged_ids[0]]
+    # A job-sourced row keeps its caps through a merge: the new row stays
+    # sourced, and never global, or merging would launder it.
+    sourced = [rows[i] for i in merged_ids if rows[i][6] is not None]
+    source = sourced[0][6] if sourced else None
+    if sourced and scope == "global":
+        scope, project, branch = "project", sourced[0][4], None
     if importance is None:
         new_importance = max(rows[i][1] for i in merged_ids)
     else:
@@ -466,9 +491,19 @@ def merge_memories(
 
     cursor = conn.execute(
         """INSERT INTO memory_entries
-           (content, entry_type, importance, memory_class, scope, project, branch)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (content, entry_type, new_importance, memory_class, scope, project, branch),
+           (content, entry_type, importance, memory_class, scope, project, branch,
+            source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            content,
+            entry_type,
+            new_importance,
+            memory_class,
+            scope,
+            project,
+            branch,
+            source,
+        ),
     )
     new_id = cursor.lastrowid
     assert new_id is not None  # lastrowid is populated after a successful INSERT
@@ -530,6 +565,48 @@ def retire_memory(conn: sqlite3.Connection, entry_id: int) -> dict:
     )
     conn.commit()
     return {"action": "retired", "id": entry_id}
+
+
+def retire_by_source(
+    conn: sqlite3.Connection,
+    source: str,
+    *,
+    project: str | None = None,
+    apply: bool = False,
+) -> list[dict]:
+    """Find, and optionally retire, every live entry written by ``source``.
+
+    The bulk counterpart to :func:`retire_memory`, for clearing out what an
+    automated run (``source="job"``) wrote. Retired rows are kept for audit.
+
+    Args:
+        conn: Open memory database connection.
+        source: The ``source`` value to match exactly.
+        project: Only match entries of this project; ``None`` for all.
+        apply: Retire the matches. Without it, nothing is written.
+
+    Returns:
+        The matching entries, oldest first, as ``{"id", "content", "project"}``
+        dicts — the ones retired when ``apply`` is set.
+    """
+    conditions = ["m.source = ?", LIVE_ENTRY_SQL]
+    params: list = [source]
+    if project is not None:
+        conditions.append("m.project = ?")
+        params.append(canonical_project(project))
+    rows = conn.execute(
+        f"""SELECT m.id, m.content, m.project FROM memory_entries m
+            WHERE {" AND ".join(conditions)}
+            ORDER BY m.id""",
+        params,
+    ).fetchall()
+    if apply and rows:
+        conn.executemany(
+            "UPDATE memory_entries SET superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [(row[0],) for row in rows],
+        )
+        conn.commit()
+    return [{"id": r[0], "content": r[1], "project": r[2]} for r in rows]
 
 
 def mark_reviewed(conn: sqlite3.Connection, entry_id: int) -> dict:

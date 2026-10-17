@@ -105,6 +105,8 @@
 
 ::: mait_code.tools.memory.merge_memories
 
+::: mait_code.tools.memory.retire_by_source
+
 ::: mait_code.tools.memory.retire_memory
 
 ::: mait_code.tools.memory.store_memory

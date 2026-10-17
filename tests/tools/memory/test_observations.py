@@ -89,6 +89,23 @@ def test_project_filter_includes_global_and_uses_project_watermark(
     assert all(e["reflected"] for e in list_observations(memory_db, project="alpha"))
 
 
+def test_global_listing_counts_job_entries_as_not_pending(memory_db) -> None:
+    """Global reflection never reads a job's rows, so they aren't pending."""
+    _seed(memory_db, [("session fact", "fact", "global", None)])
+    memory_db.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, scope, project, source)
+           VALUES ('job fact', 'fact', 5, 'episodic', 'project', 'svc', 'job')"""
+    )
+    memory_db.commit()
+
+    by_content = {e["content"]: e["reflected"] for e in list_observations(memory_db)}
+    assert by_content == {"session fact": False, "job fact": True}
+    # A project reflection does read them, so there they are pending.
+    entries = list_observations(memory_db, project="svc")
+    assert {e["content"]: e["reflected"] for e in entries}["job fact"] is False
+
+
 # -- observation_projects ---------------------------------------------------------
 
 
