@@ -283,3 +283,17 @@
 .relations {
     margin-bottom: 1;
 }
+
+/* The member pane's two views (table / dependency diagram) share its height. */
+#members-switcher, #members-table-pane, #members-graph-pane {
+    height: 1fr;
+}
+
+#deps {
+    height: 1fr;
+    border: round $border-blurred;
+}
+
+#deps-note {
+    padding: 0 2;
+}

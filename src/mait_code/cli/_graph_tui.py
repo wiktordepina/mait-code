@@ -33,7 +33,6 @@ from textual.app import ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.strip import Strip
 from textual.timer import Timer
 from textual.widgets import (
     ContentSwitcher,
@@ -51,6 +50,7 @@ from mait_code.tools.memory.entities import get_ego_graph, list_graph_entities
 from mait_code.tui.app import SHARED_TCSS, MaitApp
 from mait_code.tui.banner import BrandBanner
 from mait_code.tui.brand import empty_state
+from mait_code.tui.graph import ThemedGraphView
 
 __all__ = ["GraphApp", "run_graph_tui"]
 
@@ -97,21 +97,6 @@ def _clip(text: str, width: int = _CONTEXT_WIDTH) -> str:
     if len(first_line) > width:
         return first_line[: width - 1] + "…"
     return first_line
-
-
-class _ThemedGraphView(GraphView):
-    """A GraphView whose canvas wears the theme background.
-
-    netext emits its strips (and blank filler rows) with no background
-    colour, and rendered lines bypass the CSS compositor — unstyled cells
-    fall through to the *terminal's* default background instead of the
-    theme's, leaving mismatched rectangles around the rendered graph.
-    Laying the widget's resolved background under every line closes the gap.
-    """
-
-    def render_line(self, y: int) -> Strip:
-        base = Style(bgcolor=self.rich_style.bgcolor)
-        return super().render_line(y).apply_style(base)
 
 
 class GraphApp(MaitApp):
@@ -175,7 +160,7 @@ class GraphApp(MaitApp):
                 yield Input(placeholder="filter entities…", id="filter")
                 yield OptionList(id="entities")
             with ContentSwitcher(initial="graph", id="centre"):
-                yield _ThemedGraphView(
+                yield ThemedGraphView(
                     id="graph",
                     zoom=1.0 if self._deterministic else AutoZoom.FIT,
                     layout_engine=(
