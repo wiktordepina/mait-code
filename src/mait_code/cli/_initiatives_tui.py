@@ -129,8 +129,8 @@ class InitiativesScreen(Screen[None]):
 
     Selecting an epic or a member (``enter`` or a click) opens the board's card
     screen on it; anything changed there — or by the CLI underneath, through
-    the board's live poll — re-reads both panes. ``i`` or ``escape`` returns to
-    the kanban.
+    the board's live poll — re-reads both panes. ``i`` returns to the kanban;
+    ``escape`` leaves the board app, which from the hub lands back there.
 
     ``g`` swaps the member table for a read-only dependency diagram: the
     epic's linked members and the cards one link outside it (dimmed stubs),
@@ -149,8 +149,8 @@ class InitiativesScreen(Screen[None]):
         Binding("R", "toggle_ready", "Ready only"),
         Binding("d", "toggle_done", "Done epics"),
         Binding("r", "reload", "Reload"),
+        # No escape binding: the app's own (quit) applies, as on the kanban.
         Binding("i", "kanban", "Board"),
-        Binding("escape", "kanban", "Board", show=False),
     ]
 
     def __init__(self) -> None:
@@ -431,8 +431,8 @@ class InitiativesScreen(Screen[None]):
         """Push the held diagram into the graph view, once it can take it.
 
         ``set_graph()`` against a hidden or zero-sized widget builds nothing,
-        so a call made before layout (or while the table is showing) is
-        retried after the next refresh, when the view has its real size.
+        so until the view has its real size this waits: the view's
+        :class:`~mait_code.tui.graph.ThemedGraphView.Sized` brings it back.
         """
         if self._graph_data is None or self._graph_applied:
             return
@@ -440,8 +440,10 @@ class InitiativesScreen(Screen[None]):
         if view.size.width and view.size.height:
             view.set_graph(*self._graph_data)
             self._graph_applied = True
-        elif self._view == _GRAPH_PANE:
-            self.call_after_refresh(self._apply_graph)
+
+    def on_themed_graph_view_sized(self, event: ThemedGraphView.Sized) -> None:
+        if self._view == _GRAPH_PANE:
+            self._apply_graph()
 
     # -- events -------------------------------------------------------------
 
@@ -485,6 +487,8 @@ class InitiativesScreen(Screen[None]):
         self._switch(_GRAPH_PANE)
         # The table's cursor is out of sight; arrow through epics instead.
         self.query_one("#epics", OptionList).focus()
+        # After this layout pass, so a size left from before the switch isn't
+        # mistaken for the shown view's; Sized covers a view still unsized.
         self.call_after_refresh(self._apply_graph)
 
     def action_show_table(self) -> None:

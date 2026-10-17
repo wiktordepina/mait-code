@@ -10,6 +10,37 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.86.0] — 2026-10-18
+
+### Added
+
+- **`list --source` and `retire --source`.** `mc-tool-memory list --source job`
+  shows the memories an automated `observe` run wrote. `retire --source job`
+  lists every live one across all projects and retires them with `--yes`;
+  `--project` narrows it and `--json` gives structured output.
+
+### Changed
+
+- **Job memories stay out of global memory.** Reflection with no project no
+  longer reads job-sourced entries, so they can't become global insights. A
+  project reflection still reads them, marked `[job]`, but keeps only the
+  MEMORY.md changes that cite vetted entries; the rest come back as
+  `dropped_ops` and `/reflect` lists them as withheld. Insights drawn from job
+  entries carry the job's `source`, so `retire --source` sweeps them too.
+- **`supersede` and `merge` keep `source`.** A merge that takes in a job
+  memory stays job-sourced and is never global.
+- **A session confirming a job's fact vets it.** When a session writes a fact
+  a job already stored, the entry stops being job-sourced.
+- **Esc leaves the Initiatives view.** It now quits the board app, landing
+  back on the hub when opened from there; `i` still switches to the kanban.
+
+### Fixed
+
+- **Dependency diagram freeze.** In graph view, moving from an epic with links
+  through one without to another with links froze the board. The diagram now
+  draws once it is laid out instead of retrying in a loop that kept the layout
+  from ever running. `mait-code graph` had the same retry and gets the same fix.
+
 ## [0.85.0] — 2026-10-17
 
 ### Added
@@ -2680,7 +2711,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.85.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.86.0...HEAD
+[0.86.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.86.0
 [0.85.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.85.0
 [0.84.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.84.0
 [0.83.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.83.0
