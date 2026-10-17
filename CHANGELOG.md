@@ -10,6 +10,45 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.85.0] — 2026-10-17
+
+### Added
+
+- **Initiatives view in the board TUI.** `i` swaps the kanban for every open
+  epic with its progress, beside a table of the highlighted epic's members
+  from every project, sorted so ready work comes first. `R` shows only ready
+  members (what `next --epic N` would choose from), `d` adds done epics, and
+  `Enter` opens an epic or member in the card screen. Open it directly with
+  `mait-code board --initiatives` (off a TTY, that prints the epic list) or
+  from the hub's new **↗ Open initiatives** leaf.
+- **Dependency diagram.** `g` in the Initiatives view draws the epic's
+  `blocks` links top-down, blockers above what they hold up, each box
+  coloured by state. Cards one link outside the epic show as dimmed stubs with
+  their project; members without links are counted rather than drawn. A
+  diagram bigger than the pane scrolls (`→` focuses it).
+- **Relationships in the card screen.** A Relationships section lists the
+  card's epic, every card it's blocked by (marked waiting, done or archived)
+  and what it unblocks. `l` adds or removes a `blocks` link either way, and `P`
+  sets or clears the card's epic. Opened on an epic, the screen shows its
+  progress, locks its project and exports it with its members.
+
+### Changed
+
+- **Waiting cards look blocked on the kanban.** A card waiting on an
+  unfinished blocker gets the same red border and `⊘` as a card tagged
+  `blocked`, with a `waiting on #N` line naming the blockers.
+- **`show` and exports list every blocker.** `mc-tool-board show` prints one
+  `blocked by` line with each blocker's status, finished ones included, in
+  place of the separate `waiting on` and `archived blockers` lines; markdown
+  exports say **Blocked by** instead of **Waiting on**. The JSON shapes are
+  unchanged.
+
+### Fixed
+
+- **The board no longer crashes on a refused edit.** Typing `@epic` into a
+  card's project, or adding a link that would close a loop, now shows an
+  error toast naming the reason and changes nothing.
+
 ## [0.84.0] — 2026-10-16
 
 ### Added
@@ -2641,7 +2680,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.84.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.85.0...HEAD
+[0.85.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.85.0
 [0.84.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.84.0
 [0.83.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.83.0
 [0.82.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.82.0
