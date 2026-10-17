@@ -3043,15 +3043,19 @@ rest of Refined and Backlog, Done last. Archived members are left out.</p>
 </tr>
 <tr>
 <td><kbd>←</kbd> / <kbd>→</kbd></td>
-<td>Focus the epics / the members</td>
+<td>Focus the epics / the members (or the diagram, whose arrow keys then scroll it)</td>
 </tr>
 <tr>
 <td><kbd>Enter</kbd></td>
 <td>Open the highlighted epic or member in the card detail screen</td>
 </tr>
 <tr>
+<td><kbd>g</kbd></td>
+<td>Swap the member table for the epic's dependency diagram, and back</td>
+</tr>
+<tr>
 <td><kbd>R</kbd></td>
-<td>Show only ready members — exactly what <code>next --epic N</code> would choose from</td>
+<td>Show only ready members — exactly what <code>next --epic N</code> would choose from (table only)</td>
 </tr>
 <tr>
 <td><kbd>d</kbd></td>
@@ -3067,6 +3071,14 @@ rest of Refined and Backlog, Done last. Archived members are left out.</p>
 </tr>
 </tbody>
 </table>
+<p>The <strong>dependency diagram</strong> (<kbd>g</kbd>) draws the epic's <code>blocks</code> links top-down,
+blockers above the cards they hold up. Each box reads <code>#id</code> and the title,
+coloured by state: green when ready, red while blocked or waiting, the accent
+hue in progress or review, dimmed once done. Cards outside the epic that a
+member links to appear as dimmed stubs labelled with their project. Members
+with no links aren't drawn — a line under the diagram counts them — and a
+diagram taller or wider than the pane scrolls. It's read-only: open cards from
+the table.</p>
 <h3 id="card-detail-screen">Card detail screen<a class="headerlink" href="#card-detail-screen" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
