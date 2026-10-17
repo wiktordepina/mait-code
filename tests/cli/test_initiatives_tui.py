@@ -13,7 +13,7 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from textual.widgets import DataTable, Input, Label, OptionList, Select
+from textual.widgets import ContentSwitcher, DataTable, Input, Label, OptionList, Select
 
 from mait_code.cli._board_tui import (
     INITIATIVES,
@@ -598,3 +598,201 @@ def test_palette_toggle_is_inert_over_a_modal(board_path: Path) -> None:
         return type(app.screen).__name__, len(app.screen_stack)
 
     assert _open_card(board_path, cid, steps) == ("CardScreen", 2)
+
+
+# --- dependency diagram (g) ---
+
+
+def _diagram_seed(board_path: Path) -> dict[str, int]:
+    """An epic with a chain, a done blocker, a stub outside it and loose cards."""
+    conn = _connect(board_path)
+    eid = _epic(conn)
+    ready = _card(conn, "ready", parent_id=eid, status=REFINED)
+    waiting = _card(conn, "waiting", parent_id=eid)
+    flight = _card(conn, "flight", parent_id=eid, status=IN_PROGRESS)
+    done = _card(conn, "done", parent_id=eid, status=DONE)
+    loose = _card(conn, "loose", parent_id=eid)
+    stub = _card(conn, "stub", project="elsewhere")
+    for a, b in ((ready, waiting), (flight, waiting), (done, ready), (stub, waiting)):
+        service.add_link(conn, a, b)
+    conn.close()
+    return {
+        "epic": eid,
+        "ready": ready,
+        "waiting": waiting,
+        "flight": flight,
+        "done": done,
+        "loose": loose,
+        "stub": stub,
+    }
+
+
+def _initiatives(board_path: Path, steps, *, size=(130, 44)):
+    async def scenario():
+        app = BoardApp(db_path=board_path, initial_view=INITIATIVES)
+        async with app.run_test(size=size) as pilot:
+            await pilot.pause()
+            return await steps(app, pilot, app.screen)
+
+    return _run(scenario)
+
+
+class TestDiagram:
+    def test_g_toggles_and_gates_table_keys(self, board_path: Path) -> None:
+        _diagram_seed(board_path)
+
+        async def steps(app, pilot, screen):
+            switcher = screen.query_one("#members-switcher", ContentSwitcher)
+            before = switcher.current
+            await pilot.press("g")
+            await pilot.pause()
+            gates = {
+                a: screen.check_action(a, ())
+                for a in ("show_graph", "show_table", "focus_members", "toggle_ready")
+            }
+            during = switcher.current
+            await pilot.press("g")
+            await pilot.pause()
+            return before, during, gates, switcher.current
+
+        before, during, gates, after = _initiatives(board_path, steps)
+        assert (before, during, after) == (
+            "members-table-pane",
+            "members-graph-pane",
+            "members-table-pane",
+        )
+        assert gates == {
+            "show_graph": False,
+            "show_table": True,
+            "focus_members": False,
+            "toggle_ready": False,
+        }
+
+    def test_draws_linked_members_and_stubs_and_counts_the_rest(
+        self, board_path: Path
+    ) -> None:
+        ids = _diagram_seed(board_path)
+
+        async def steps(app, pilot, screen):
+            await pilot.press("g")
+            await pilot.pause()
+            nodes, edges = screen._graph_data
+            note = str(screen.query_one("#deps-note", Label).render())
+            return nodes, edges, note
+
+        nodes, edges, note = _initiatives(board_path, steps)
+        assert set(nodes) == {
+            ids[k] for k in ("ready", "waiting", "flight", "done", "stub")
+        }
+        assert (
+            nodes[ids["stub"]]["stub"] and nodes[ids["stub"]]["project"] == "elsewhere"
+        )
+        assert (ids["ready"], ids["waiting"]) in {(a, b) for a, b, _ in edges}
+        assert "1 member without links" in note
+
+    def test_node_colours_follow_state(self, board_path: Path) -> None:
+        ids = _diagram_seed(board_path)
+
+        async def steps(app, pilot, screen):
+            await pilot.press("g")
+            await pilot.pause()
+            nodes, _ = screen._graph_data
+            theme = app.current_theme
+            return {
+                "done": nodes[ids["done"]]["$style"].dim,
+                "stub": nodes[ids["stub"]]["$style"].dim,
+                "waiting": nodes[ids["waiting"]]["$style"].color.name
+                == app.chip_colours().blocked.lower(),
+                "ready": nodes[ids["ready"]]["$style"].color.name
+                == theme.success.lower(),
+                "flight": nodes[ids["flight"]]["$style"].color.name
+                == theme.primary.lower(),
+            }
+
+        assert _initiatives(board_path, steps) == dict.fromkeys(
+            ("done", "stub", "waiting", "ready", "flight"), True
+        )
+
+    def test_ansi_theme_falls_back_without_crashing(self, board_path: Path) -> None:
+        _diagram_seed(board_path)
+
+        async def steps(app, pilot, screen):
+            app.theme = "ansi-dark"
+            await pilot.pause()
+            await pilot.press("g")
+            await pilot.pause()
+            await pilot.pause()
+            return screen._graph_applied, app._exception
+
+        applied, exc = _initiatives(board_path, steps)
+        assert applied and exc is None
+
+    def test_refresh_never_unhides_the_table(self, board_path: Path) -> None:
+        _diagram_seed(board_path)
+
+        async def steps(app, pilot, screen):
+            await pilot.press("g")
+            await pilot.pause()
+            screen.refresh_data()
+            await pilot.pause()
+            return (
+                screen.query_one("#members-table-pane").display,
+                screen.query_one("#members-graph-pane").display,
+            )
+
+        assert _initiatives(board_path, steps) == (False, True)
+
+    def test_data_set_while_hidden_applies_on_g(self, board_path: Path) -> None:
+        ids = _diagram_seed(board_path)
+
+        async def steps(app, pilot, screen):
+            conn = _connect(board_path)
+            extra = _card(conn, "extra", parent_id=ids["epic"])
+            service.add_link(conn, ids["flight"], extra)
+            conn.close()
+            await app._poll_external_changes()
+            await pilot.pause()
+            hidden = screen._graph_applied
+            await pilot.press("g")
+            await pilot.pause()
+            await pilot.pause()
+            return hidden, screen._graph_applied, extra in screen._graph_data[0]
+
+        assert _initiatives(board_path, steps) == (False, True, True)
+
+    def test_empty_states(self, board_path: Path) -> None:
+        conn = _connect(board_path)
+        eid = _epic(conn)
+        conn.close()
+
+        async def note_for(app, pilot, screen):
+            await pilot.press("g")
+            await pilot.pause()
+            label = screen.query_one("#deps-note", Label)
+            return screen.query_one("#deps").display, str(label.render())
+
+        shown, note = _initiatives(board_path, note_for)
+        assert not shown and "No members yet" in note
+
+        conn = _connect(board_path)
+        a = _card(conn, "a", parent_id=eid)
+        gone = _card(conn, "gone")
+        service.add_link(conn, gone, a)
+        service.archive_card(conn, gone)  # a link only to an archived card
+        conn.close()
+        shown, note = _initiatives(board_path, note_for)
+        assert not shown and "press l on a card" in note
+
+
+def test_node_content_wraps_and_clips_the_title() -> None:
+    from rich.style import Style as RichStyle
+
+    from mait_code.cli._initiatives_tui import _node_content
+
+    title = "a fairly long card title that keeps on going well past two lines"
+    text = _node_content("7", {"title": title, "stub": False}, RichStyle())
+    lines = text.plain.split("\n")
+    assert lines[0] == "#7" and len(lines) == 3
+    assert all(len(line) <= 24 for line in lines[1:]) and lines[2].endswith("…")
+    stub = _node_content("9", {"title": "t", "stub": True, "project": "x"}, RichStyle())
+    assert stub.plain.split("\n")[0] == "#9 · x"

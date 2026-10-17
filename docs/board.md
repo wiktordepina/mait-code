@@ -338,10 +338,20 @@ rest of Refined and Backlog, Done last. Archived members are left out.
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Move through the epics or members |
 | <kbd>←</kbd> / <kbd>→</kbd> | Focus the epics / the members |
 | <kbd>Enter</kbd> | Open the highlighted epic or member in the card detail screen |
-| <kbd>R</kbd> | Show only ready members — exactly what `next --epic N` would choose from |
+| <kbd>g</kbd> | Swap the member table for the epic's dependency diagram, and back |
+| <kbd>R</kbd> | Show only ready members — exactly what `next --epic N` would choose from (table only) |
 | <kbd>d</kbd> | Include done epics |
 | <kbd>r</kbd> | Reload (it also follows changes made elsewhere, like the board) |
 | <kbd>i</kbd> / <kbd>Esc</kbd> | Back to the kanban |
+
+The **dependency diagram** (<kbd>g</kbd>) draws the epic's `blocks` links top-down,
+blockers above the cards they hold up. Each box reads `#id` and the title,
+coloured by state: green when ready, red while blocked or waiting, the accent
+hue in progress or review, dimmed once done. Cards outside the epic that a
+member links to appear as dimmed stubs labelled with their project. Members
+with no links aren't drawn — a line under the diagram counts them — and a
+diagram taller or wider than the pane scrolls. It's read-only: open cards from
+the table.
 
 ### Card detail screen
 

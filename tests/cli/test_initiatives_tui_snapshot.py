@@ -100,3 +100,58 @@ def test_kanban_waiting_marker_snapshot(snap_compare, tmp_path: Path) -> None:
     db_path = tmp_path / "board.db"
     _seed(db_path)
     assert snap_compare(BoardApp(db_path=db_path), terminal_size=(130, 40))
+
+
+def test_diagram_snapshot(snap_compare, tmp_path: Path) -> None:
+    """The dependency diagram (g): a chain with a done blocker and a stub."""
+    db_path = tmp_path / "board.db"
+    ids = _seed(db_path)
+    conn = get_connection(db_path)
+    try:
+        stub = service.add_card(conn, project="maitre-d", title="Remote API facade")
+        service.add_link(conn, stub, ids["router"])
+    finally:
+        conn.close()
+    assert snap_compare(
+        BoardApp(db_path=db_path, initial_view=INITIATIVES),
+        press=["g"],
+        terminal_size=(130, 44),
+    )
+
+
+def test_diagram_long_chain_snapshot(snap_compare, tmp_path: Path) -> None:
+    """A chain longer than the pane scrolls rather than squashing the boxes."""
+    db_path = tmp_path / "board.db"
+    conn = get_connection(db_path)
+    try:
+        eid = service.add_card(conn, project=None, title="Long chain", kind="epic")
+        prev = None
+        for n in range(7):
+            cid = service.add_card(
+                conn, project="demo", title=f"Step {n}", parent_id=eid
+            )
+            if prev is not None:
+                service.add_link(conn, prev, cid)
+            prev = cid
+    finally:
+        conn.close()
+    assert snap_compare(
+        BoardApp(db_path=db_path, initial_view=INITIATIVES),
+        press=["g"],
+        terminal_size=(130, 44),
+    )
+
+
+def test_diagram_no_links_snapshot(snap_compare, tmp_path: Path) -> None:
+    db_path = tmp_path / "board.db"
+    conn = get_connection(db_path)
+    try:
+        eid = service.add_card(conn, project=None, title="Unlinked", kind="epic")
+        service.add_card(conn, project="demo", title="Loose", parent_id=eid)
+    finally:
+        conn.close()
+    assert snap_compare(
+        BoardApp(db_path=db_path, initial_view=INITIATIVES),
+        press=["g"],
+        terminal_size=(130, 44),
+    )
