@@ -228,3 +228,51 @@ def test_reflect_subparser_args():
     assert args.min_new == 3
     assert args.batch_size == 50
     assert args.drain is False
+
+
+def _run_reflect_with_dropped_op(capsys, *, as_json: bool) -> str:
+    from mait_code.tools.memory.cli import cmd_reflect
+
+    class Args:
+        days = 7
+        min_new = 3
+        batch_size = 50
+        drain = False
+        json = as_json
+
+    dropped = {
+        "op": "add",
+        "old": None,
+        "new": "Uncited fact",
+        "entry_ids": [],
+        "reason": "cites no entries",
+    }
+    mock_result = {
+        "skipped": False,
+        "reason": None,
+        "insights": [],
+        "ops": [],
+        "dropped_ops": [dropped],
+        "stored": 0,
+        "memory_diff": None,
+        "batch_info": {"processed": 5, "watermark": 10},
+    }
+    with (
+        patch("mait_code.tools.memory.cli.connection"),
+        patch("mait_code.tools.memory.reflect.reflect", return_value=mock_result),
+    ):
+        cmd_reflect(Args())
+    return capsys.readouterr().out
+
+
+def test_cmd_reflect_reports_dropped_ops_as_json(capsys):
+    import json
+
+    payload = json.loads(_run_reflect_with_dropped_op(capsys, as_json=True))
+    assert [op["reason"] for op in payload["dropped_ops"]] == ["cites no entries"]
+
+
+def test_cmd_reflect_reports_dropped_ops_as_text(capsys):
+    output = _run_reflect_with_dropped_op(capsys, as_json=False)
+    assert "Withheld 1 MEMORY.md change" in output
+    assert "Uncited fact" in output and "cites no entries" in output

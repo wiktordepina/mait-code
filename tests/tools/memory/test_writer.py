@@ -15,6 +15,7 @@ from mait_code.tools.memory.writer import (
     find_duplicate,
     mark_reviewed,
     merge_memories,
+    retire_by_source,
     retire_memory,
     store_memory,
     supersede_memory,
@@ -871,3 +872,112 @@ class TestMarkReviewed:
         ).fetchone()
         assert content_after == content
         assert created_after == created_at
+
+
+class TestJobSource:
+    """Job-sourced rows keep their caps through every write path."""
+
+    @staticmethod
+    def _job(conn, content="Job fact", *, project="svc", scope="project"):
+        result = store_memory(
+            conn, content, "fact", 5, scope=scope, project=project, source="job"
+        )
+        return result["id"]
+
+    @staticmethod
+    def _source(conn, entry_id):
+        return conn.execute(
+            "SELECT source FROM memory_entries WHERE id = ?", (entry_id,)
+        ).fetchone()[0]
+
+    def test_session_dedup_clears_source(self, memory_db: sqlite3.Connection):
+        job = self._job(memory_db)
+        result = store_memory(
+            memory_db, "Job fact", "fact", 9, scope="project", project="svc"
+        )
+        assert (result["action"], result["id"]) == ("deduplicated", job)
+        assert self._source(memory_db, job) is None
+
+    def test_job_dedup_keeps_existing_source(self, memory_db: sqlite3.Connection):
+        session = store_memory(
+            memory_db, "Session fact", "fact", 5, scope="project", project="svc"
+        )["id"]
+        self._job(memory_db, "Session fact")
+        assert self._source(memory_db, session) is None
+
+        job = self._job(memory_db, "Job fact")
+        self._job(memory_db, "Job fact")
+        assert self._source(memory_db, job) == "job"
+
+    def test_supersede_carries_source(self, memory_db: sqlite3.Connection):
+        job = self._job(memory_db)
+        new = supersede_memory(memory_db, job, "Job fact, revised")["id"]
+        assert self._source(memory_db, new) == "job"
+
+    def test_merge_with_job_row_stays_sourced_and_off_global(
+        self, memory_db: sqlite3.Connection
+    ):
+        session = store_memory(memory_db, "Global fact", "fact", 8)["id"]
+        job = self._job(memory_db)
+        result = merge_memories(memory_db, [session, job], "Both facts")
+
+        assert self._source(memory_db, result["id"]) == "job"
+        assert (result["scope"], result["project"], result["branch"]) == (
+            "project",
+            "svc",
+            None,
+        )
+        row = memory_db.execute(
+            "SELECT scope, project FROM memory_entries WHERE id = ?",
+            (result["id"],),
+        ).fetchone()
+        assert row == ("project", "svc")
+
+    def test_merge_of_session_rows_stays_unsourced(self, memory_db: sqlite3.Connection):
+        a = store_memory(memory_db, "First global fact", "fact", 5)["id"]
+        b = store_memory(memory_db, "Second unrelated thing", "fact", 5)["id"]
+        result = merge_memories(memory_db, [a, b], "Combined")
+        assert result["scope"] == "global"
+        assert self._source(memory_db, result["id"]) is None
+
+
+class TestRetireBySource:
+    def _seed(self, conn):
+        ids = {}
+        for content, project, source in [
+            ("Job fact in svc", "svc", "job"),
+            ("Job fact in other", "other", "job"),
+            ("Session fact in svc", "svc", None),
+        ]:
+            ids[content] = store_memory(
+                conn,
+                content,
+                "fact",
+                5,
+                scope="project",
+                project=project,
+                source=source,
+            )["id"]
+        return ids
+
+    def test_lists_without_applying(self, memory_db: sqlite3.Connection):
+        ids = self._seed(memory_db)
+        found = retire_by_source(memory_db, "job")
+        assert [e["id"] for e in found] == [
+            ids["Job fact in svc"],
+            ids["Job fact in other"],
+        ]
+        live = memory_db.execute(
+            "SELECT COUNT(*) FROM memory_entries WHERE superseded_at IS NULL"
+        ).fetchone()[0]
+        assert live == 3
+
+    def test_applies_and_narrows_by_project(self, memory_db: sqlite3.Connection):
+        ids = self._seed(memory_db)
+        retired = retire_by_source(memory_db, "job", project="svc", apply=True)
+        assert [e["id"] for e in retired] == [ids["Job fact in svc"]]
+        assert retire_memory(memory_db, ids["Job fact in svc"])["action"] == (
+            "already_retired"
+        )
+        # Already-retired rows aren't matched again.
+        assert retire_by_source(memory_db, "job", project="svc") == []

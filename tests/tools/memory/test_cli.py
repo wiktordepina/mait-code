@@ -5,6 +5,7 @@ Embeddings are mocked to avoid model loading overhead and to ensure
 deterministic FTS-only behaviour in CLI tests.
 """
 
+import json
 from contextlib import contextmanager
 from unittest.mock import patch
 
@@ -312,6 +313,78 @@ class TestCmdRetire:
         cmd_retire(_make_args(id=entry_id))
         out = capsys.readouterr().out
         assert "already retired" in out.lower()
+
+
+def _seed_job_rows(conn) -> list[int]:
+    """Two live job-sourced rows in different projects, plus their ids."""
+    ids = []
+    for content, project in [
+        ("Job fact in svc", "svc"),
+        ("Job fact in other", "other"),
+    ]:
+        ids.append(
+            db_store(
+                conn,
+                content,
+                "fact",
+                5,
+                scope="project",
+                project=project,
+                source="job",
+            )["id"]
+        )
+    return ids
+
+
+class TestJobSourceCli:
+    def test_list_filters_by_source(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_list
+
+        _seed_job_rows(populated_mem_db)
+        cmd_list(_make_args(limit=10, type=None, since=None, scope="all", source="job"))
+        out = capsys.readouterr().out
+        assert "Job fact in svc" in out and "Job fact in other" in out
+        assert "dark mode" not in out
+
+    def test_retire_source_lists_until_yes(self, populated_mem_db, capsys):
+        from mait_code.tools.memory.cli import cmd_retire
+
+        svc, other = _seed_job_rows(populated_mem_db)
+        cmd_retire(_make_args(id=None, source="job"))
+        out = capsys.readouterr().out
+        assert "Would retire 2 memories" in out and "--yes" in out
+        live = populated_mem_db.execute(
+            "SELECT COUNT(*) FROM memory_entries WHERE source = 'job' "
+            "AND superseded_at IS NULL"
+        ).fetchone()[0]
+        assert live == 2
+
+        cmd_retire(
+            _make_args(id=None, source="job", project="svc", yes=True, json=True)
+        )
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["retired"] is True
+        assert [e["id"] for e in payload["entries"]] == [svc]
+        state = populated_mem_db.execute(
+            "SELECT id FROM memory_entries WHERE source = 'job' "
+            "AND superseded_at IS NULL"
+        ).fetchall()
+        assert state == [(other,)]
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"id": None},
+            {"id": 1, "source": "job"},
+            {"id": 1, "yes": True},
+        ],
+    )
+    def test_retire_rejects_mixed_or_missing_target(self, mem_db, kwargs):
+        from mait_code.tools.memory.cli import cmd_retire
+
+        with pytest.raises(SystemExit) as exc:
+            cmd_retire(_make_args(**kwargs))
+        assert exc.value.code == 2
 
 
 class TestCmdMerge:

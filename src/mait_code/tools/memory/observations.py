@@ -59,7 +59,9 @@ def list_observations(
     whether the entry sits at or below the relevant reflection watermark — the
     project's own when ``project`` is given, the global one otherwise, matching
     :func:`~mait_code.tools.memory.reflect.count_unreflected`. With no
-    watermark for the scope, nothing has been reflected yet.
+    watermark for the scope, nothing has been reflected yet. An entry the
+    scope's reflection never reads (a job-sourced one, seen globally) is not
+    pending either, so it counts as ``reflected`` too.
 
     Args:
         conn: Open memory database connection.
@@ -71,10 +73,13 @@ def list_observations(
         A list of dicts ordered by entry ID descending (newest first).
     """
     # Imported here, not at module top: reflect.py pulls in the LLM layer.
-    from mait_code.tools.memory.reflect import get_watermark
+    from mait_code.tools.memory.reflect import get_watermark, reflection_scope_sql
 
+    # Every entry is listed; the reflection predicate only decides which of
+    # them a reflection would read, so pending agrees with count_unreflected.
+    reads_cond, reads_params = reflection_scope_sql(project)
     conditions = ["entry_type != 'insight'"]
-    params: list = []
+    params: list = list(reads_params)
     if project is not None:
         conditions.append("(scope = 'global' OR project = ?)")
         params.append(project)
@@ -82,7 +87,7 @@ def list_observations(
 
     rows = conn.execute(
         f"""SELECT id, content, entry_type, importance, memory_class,
-                   scope, project, branch, created_at
+                   scope, project, branch, created_at, ({reads_cond})
             FROM memory_entries
             WHERE {" AND ".join(conditions)}
             ORDER BY id DESC
@@ -102,7 +107,7 @@ def list_observations(
             "project": row[6],
             "branch": row[7],
             "created_at": row[8],
-            "reflected": watermark is not None and row[0] <= watermark,
+            "reflected": not row[9] or (watermark is not None and row[0] <= watermark),
         }
         for row in rows
     ]

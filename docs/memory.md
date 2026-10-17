@@ -77,8 +77,9 @@ mc-tool-memory observe --file digest.txt --project maitre-d --branch feat/x --js
 - Each call is one window; there is no cursor. Text longer than `--max-chars`
   (default 60000) is refused rather than cut. The caller owns its size.
 - `--trigger` (default `job`) labels the raw-log record, and is stored in each
-  new memory's `source` column, so these memories can be told apart from a
-  session's (there is no `source` filter on the CLI yet; query the column).
+  new memory's `source` column, so these memories can be found, and removed,
+  later. Job memories can be listed with `list --source job` and retired in
+  bulk with `retire --source job`.
 
 Prepared text has no user voice in it and may carry content nobody vetted, so
 the memories a run writes are capped:
@@ -90,7 +91,21 @@ the memories a run writes are capped:
   raise an existing one past what a session gave it through deduplication.
 
 The caps are applied before the raw log is written, so `restore` replays them
-too. **Entities and relationships are not capped**: they go into the knowledge
+too. They also hold after the write:
+
+- **Reflection** with no project never reads job memories, so they can't
+  become global insights. A project reflection does read them, marked
+  `[job]`, but then keeps only the MEMORY.md changes that cite the vetted
+  entries behind them; the rest are reported as withheld.
+- **`supersede` and `merge`** carry `source` to the new entry, and a merge
+  that takes in a job memory is never global.
+- **Deduplication:** when a session writes a fact a job already stored, the
+  session has confirmed it, so the entry stops being job-sourced (and the
+  session may raise its importance). A job repeating a session's fact leaves
+  that entry as it was.
+
+Retiring is recorded in `memory.db` only, so a `restore` brings retired job
+memories back; retire them again afterwards. **Entities and relationships are not capped**: they go into the knowledge
 graph as extracted, and the graph has no scope.
 
 **Exit status**, with a one-line reason on stderr for every non-zero exit:
@@ -450,6 +465,7 @@ The reflection system synthesises recent observations into higher-level insights
 - **MEMORY.md proposals:** High-confidence facts are proposed as additions for user approval
 - **Idempotent:** A per-project watermark tracks the last reflected entry ID. Each observation is only reflected on once.
 - **Novelty gate:** Skips reflection if fewer than 3 unreflected entries exist
+- **Job memories:** Global reflection skips [job-sourced entries](#extracting-from-prepared-text); a project reflection reads them but won't let them back a MEMORY.md change
 - **Batching:** Processes entries in configurable batches (default 50), oldest first
 
 ### Usage
@@ -541,10 +557,12 @@ launched.
 | `supersede <old_id> <content>` | Replace an entry with an evolved version; the old one is kept for audit but hidden from recall |
 | `merge <ids…> --into <content>` | Fold several entries into one consolidated entry (importance promoted to the max among them); the sources are kept for audit but hidden |
 | `retire <id>` | Drop a stale entry with no replacement (kept for audit, hidden from recall) |
+| `retire --source job` | List every live entry a job wrote; add `--yes` to retire them (`--project` narrows, `--json` for structured output) |
 | `list` | Recent entries by creation time |
 | `list --since 24h` | Filter by time period (`24h`, `7d`, `1w`, etc.) |
 | `list --type event` | Filter by type |
 | `list --include-superseded` | Include superseded entries (hidden by default) |
+| `list --source job` | Only entries written by a source, such as `observe`'s jobs |
 | `review` | List memories [due for review](#review-keeping-curated-memory-fresh) — recall decayed since last review, most-decayed first |
 | `review --json` | Same, as structured JSON |
 | `reviewed <id>` | Mark a memory reviewed, resetting its resurfacing decay curve |

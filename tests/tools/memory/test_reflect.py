@@ -14,6 +14,7 @@ from mait_code.tools.memory.reflect import (
     check_novelty_gate,
     check_novelty_gate_v2,
     count_entries_since,
+    count_unreflected,
     format_entries_text,
     generate_memory_diff,
     get_last_reflection_date,
@@ -1297,3 +1298,114 @@ def test_read_observation_logs_unreadable_file_skipped(tmp_path, monkeypatch):
 
     # The unreadable file contributes nothing; no exception escapes.
     assert text == ""
+
+
+# ---------------------------------------------------------------------------
+# Job-sourced entries
+# ---------------------------------------------------------------------------
+
+
+def _insert(
+    conn: sqlite3.Connection,
+    content: str,
+    *,
+    scope: str = "global",
+    project: str | None = None,
+    source: str | None = None,
+) -> int:
+    """Insert a fact row directly and return its id."""
+    cursor = conn.execute(
+        """INSERT INTO memory_entries
+           (content, entry_type, importance, memory_class, scope, project, source)
+           VALUES (?, 'fact', 5, 'semantic', ?, ?, ?)""",
+        (content, scope, project, source),
+    )
+    conn.commit()
+    return cursor.lastrowid
+
+
+def test_global_reflection_skips_job_sourced_entries(memory_db):
+    """Gate and batch agree: a global reflection never reads a job's rows."""
+    session = _insert(memory_db, "Session fact")
+    _insert(memory_db, "Job fact", scope="project", project="svc", source="job")
+
+    assert count_unreflected(memory_db) == 1
+    rows = get_unreflected_entries(memory_db, days=None)
+    assert [r[0] for r in rows] == [session]
+
+
+def test_global_reflection_with_only_job_entries_skips_at_the_gate(memory_db):
+    """A job-only backlog never opens the gate, so no empty batch runs."""
+    for i in range(3):
+        _insert(
+            memory_db, f"Job fact {i}", scope="project", project="svc", source="job"
+        )
+
+    with patch("mait_code.tools.memory.reflect.call_claude") as llm:
+        result = reflect(memory_db, min_new=1)
+
+    assert result["reason"] == "not enough new observations since last reflection"
+    llm.assert_not_called()
+
+
+def test_project_reflection_reads_job_sourced_entries(memory_db):
+    job = _insert(memory_db, "Job fact", scope="project", project="svc", source="job")
+
+    assert count_unreflected(memory_db, project="svc") == 1
+    rows = get_unreflected_entries(memory_db, days=None, project="svc")
+    assert [r[0] for r in rows] == [job]
+
+
+def test_format_entries_text_marks_job_entries():
+    entries = [
+        (1, "Session fact", "fact", 5, "2026-10-17 10:00:00"),
+        (2, "Job fact", "fact", 5, "2026-10-17 10:00:00"),
+    ]
+    text = format_entries_text(entries, {2})
+    assert "#1 [2026" in text
+    assert "#2 [job] [2026" in text
+
+
+def test_project_reflection_fails_closed_on_ops(memory_db):
+    """With a job row in the batch, only ops citing vetted entries survive."""
+    session = _insert(memory_db, "Session fact", scope="project", project="svc")
+    job = _insert(memory_db, "Job fact", scope="project", project="svc", source="job")
+    # A job row outside this project's batch: citing it must still drop the op.
+    elsewhere = _insert(
+        memory_db, "Other job fact", scope="project", project="other", source="job"
+    )
+    llm_response = (
+        "INSIGHT: The service is settling down\n"
+        "MEMORY_ADD: Uncited new fact\n"
+        f"MEMORY_ADD: Job-backed fact [entries: #{job}]\n"
+        f"MEMORY_ADD: Mixed fact [entries: #{session}, #{elsewhere}]\n"
+        f"MEMORY_ADD: Vetted fact [entries: #{session}]"
+    )
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude", return_value=llm_response
+    ) as llm:
+        result = reflect(memory_db, min_new=0, project="svc")
+
+    assert f"#{job} [job]" in llm.call_args.args[0]
+    assert f"#{session} [job]" not in llm.call_args.args[0]
+    assert [op["new"] for op in result["ops"]] == ["Vetted fact"]
+    assert [(op["new"], op["reason"]) for op in result["dropped_ops"]] == [
+        ("Uncited new fact", "cites no entries"),
+        ("Job-backed fact", f"cites job-sourced #{job}"),
+        ("Mixed fact", f"cites job-sourced #{elsewhere}"),
+    ]
+    assert "Uncited" not in result["memory_diff"]
+    # Insights stay project-scoped, as before.
+    assert result["stored"] == 1
+
+
+def test_reflection_without_job_entries_keeps_uncited_ops(memory_db):
+    _insert(memory_db, "Session fact", scope="project", project="svc")
+    with patch(
+        "mait_code.tools.memory.reflect.call_claude",
+        return_value="MEMORY_ADD: Uncited new fact",
+    ):
+        result = reflect(memory_db, min_new=0, project="svc")
+
+    assert [op["new"] for op in result["ops"]] == ["Uncited new fact"]
+    assert result["dropped_ops"] == []
