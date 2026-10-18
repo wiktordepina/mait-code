@@ -251,8 +251,71 @@ def test_a_failed_origin_reference_leaves_no_card(board_db):
 
 def test_an_epic_is_no_origin(board_db):
     eid = _epic(board_db)
-    with pytest.raises(service.RelationError, match="use it as the parent"):
+    with pytest.raises(service.EpicOrigin, match="use it as the parent") as exc:
         service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=eid)
+    assert isinstance(exc.value, service.RelationError)
+    assert exc.value.card_id == eid
+
+
+@pytest.mark.parametrize("status", [DONE, ARCHIVED])
+def test_a_closed_inherited_epic_is_joined_by_default(board_db, status):
+    eid = _epic(board_db)
+    origin = _card(board_db, parent_id=eid)
+    service.move_card(board_db, eid, status)
+    cid = service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=origin)
+    assert service.get_card(board_db, cid)["parent_id"] == eid
+
+
+@pytest.mark.parametrize("status", [DONE, ARCHIVED])
+def test_refuse_closed_epic_refuses_and_adds_nothing(board_db, status):
+    eid = _epic(board_db)
+    origin = _card(board_db, parent_id=eid)
+    service.move_card(board_db, eid, status)
+    with pytest.raises(service.InheritedEpicClosed) as exc:
+        service.add_card(
+            board_db,
+            project=TEST_PROJECT,
+            title="f",
+            origin_id=origin,
+            refuse_closed_epic=True,
+        )
+    assert isinstance(exc.value, service.RelationError)
+    assert (exc.value.origin_id, exc.value.epic_id, exc.value.status) == (
+        origin,
+        eid,
+        status,
+    )
+    assert board_db.execute("SELECT COUNT(*) FROM cards").fetchone()[0] == 2
+
+
+def test_refuse_closed_epic_spares_an_open_epic(board_db):
+    eid = _epic(board_db)
+    origin = _card(board_db, parent_id=eid)
+    cid = service.add_card(
+        board_db,
+        project=TEST_PROJECT,
+        title="f",
+        origin_id=origin,
+        refuse_closed_epic=True,
+    )
+    assert service.get_card(board_db, cid)["parent_id"] == eid
+
+
+def test_refuse_closed_epic_spares_an_explicit_parent(board_db):
+    inherited, closed = _epic(board_db), _epic(board_db)
+    service.move_card(board_db, inherited, DONE)
+    service.move_card(board_db, closed, DONE)
+    origin = _card(board_db, parent_id=inherited)
+    for parent_id in (closed, None):
+        cid = service.add_card(
+            board_db,
+            project=TEST_PROJECT,
+            title="f",
+            origin_id=origin,
+            parent_id=parent_id,
+            refuse_closed_epic=True,
+        )
+        assert service.get_card(board_db, cid)["parent_id"] == parent_id
 
 
 def test_an_epic_has_no_origin(board_db):

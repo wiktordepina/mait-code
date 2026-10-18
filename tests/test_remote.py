@@ -740,6 +740,119 @@ def test_get_epic_carries_members_progress_and_comments(instance):
     assert found["comments"] == []
 
 
+# --- Create from an origin ---
+
+
+def _board_count(data: Path) -> int:
+    conn = board_connection(data / "board.db")
+    try:
+        return conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _origin_in_epic(data: Path, epic_status: str = BACKLOG) -> tuple[int, int]:
+    """Return (origin, epic): a card under an epic left in *epic_status*."""
+    epic = _add_epic(data)
+    origin = _add(data, "origin")
+    _set_parent(data, origin, epic)
+    if epic_status != BACKLOG:
+        conn = board_connection(data / "board.db")
+        try:
+            board_service.move_card(conn, epic, epic_status)
+        finally:
+            conn.close()
+    return origin, epic
+
+
+def test_create_card_from_an_origin_joins_its_epic(instance):
+    origin, epic = _origin_in_epic(instance)
+    card = remote.create_card(
+        instance, client="phone", project="other", title="t", origin_id=origin
+    )
+    assert card["parent"]["id"] == epic
+    assert card["references"] == [{"label": "from", "value": f"#{origin}"}]
+    assert card["project"] == "other"
+    assert card["created_by"] == "phone"
+
+
+def test_create_card_from_an_origin_without_an_epic(instance):
+    origin = _add(instance, "origin")
+    card = remote.create_card(
+        instance, client="phone", project="proj", title="t", origin_id=origin
+    )
+    assert card["parent"] is None
+    assert card["references"] == [{"label": "from", "value": f"#{origin}"}]
+
+
+def test_create_card_can_drop_the_inherited_epic(instance):
+    origin, _ = _origin_in_epic(instance)
+    card = remote.create_card(
+        instance,
+        client="phone",
+        project="proj",
+        title="t",
+        origin_id=origin,
+        inherit_epic=False,
+    )
+    assert card["parent"] is None
+    assert card["references"] == [{"label": "from", "value": f"#{origin}"}]
+
+
+@pytest.mark.parametrize("status", [DONE, ARCHIVED])
+def test_create_card_refuses_a_closed_inherited_epic(instance, status):
+    origin, epic = _origin_in_epic(instance, status)
+    before = _board_count(instance)
+    with pytest.raises(remote.RelationError, match="inherit_epic=False") as exc:
+        remote.create_card(
+            instance, client="phone", project="proj", title="t", origin_id=origin
+        )
+    assert f"#{epic} is {status}" in str(exc.value)
+    assert _board_count(instance) == before
+
+
+@pytest.mark.parametrize("status", [DONE, ARCHIVED])
+def test_create_card_opting_out_skips_the_closed_epic(instance, status):
+    origin, _ = _origin_in_epic(instance, status)
+    card = remote.create_card(
+        instance,
+        client="phone",
+        project="proj",
+        title="t",
+        origin_id=origin,
+        inherit_epic=False,
+    )
+    assert card["parent"] is None
+
+
+def test_create_card_refuses_an_epic_origin(instance):
+    epic = _add_epic(instance)
+    before = _board_count(instance)
+    with pytest.raises(remote.RelationError) as exc:
+        remote.create_card(
+            instance, client="phone", project="proj", title="t", origin_id=epic
+        )
+    assert str(exc.value) == f"#{epic} is an epic; an origin must be a card"
+    assert "parent" not in str(exc.value)
+    assert _board_count(instance) == before
+
+
+def test_create_card_refuses_an_unknown_origin(instance):
+    with pytest.raises(remote.CardNotFound):
+        remote.create_card(
+            instance, client="phone", project="proj", title="t", origin_id=999
+        )
+    assert _board_count(instance) == 0
+
+
+def test_create_card_opting_out_needs_an_origin(tmp_path):
+    # Refused before any database is opened, so no instance is needed.
+    with pytest.raises(ValueError, match="needs an origin_id"):
+        remote.create_card(
+            tmp_path, client="phone", project="proj", title="t", inherit_epic=False
+        )
+
+
 def test_get_epic_refuses_a_plain_card(instance):
     card = _add(instance, "plain")
     with pytest.raises(remote.RelationError):

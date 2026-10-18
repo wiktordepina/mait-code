@@ -19,7 +19,7 @@ next to the data model and its tests.
 | `list_cards` | Cards ordered priority-then-oldest; filter by project, status, tag or title. Archived cards are left out unless asked for by status. |
 | `get_card` | One card with its comments, in the `mc-tool-board show --json` shape. |
 | `list_projects` | The projects that have cards. |
-| `create_card` | A new card, **always in backlog**: there is no status parameter. |
+| `create_card` | A new card, **always in backlog**: there is no status parameter. With `origin_id`, it joins that card's epic and records a `from` reference; `inherit_epic=False` keeps the reference and joins no epic. |
 | `refine_card` | Edit description and acceptance criteria, and move between **backlog and refined** only. |
 | `search_memories` | The same hybrid search and ranking as `mc-tool-memory search`, each result with a `score`. |
 | `memory_search_status` | Whether memory search can use the instance's vectors with the host's embedding settings, and why not. |
@@ -40,13 +40,20 @@ card = remote.create_card(
 remote.refine_card(
     data, card["id"], client="laptop", acceptance="- token rotated\n- runbook updated"
 )
+follow_up = remote.create_card(
+    data,
+    client="hermes",
+    project="homelab",
+    title="Alert before the forge token expires",
+    origin_id=card["id"],  # joins its epic, records `from` → #<id>
+)
 ```
 
 ## What it deliberately can't
 
-Deleting or archiving cards, tags, moving a card into In Progress, In Review or
-Done, writing or retiring memories, applying reflections, and changing
-reminders. These are decisions for whoever owns the instance, so the functions
+Deleting or archiving cards, tags, links, setting a card's epic, moving a card
+into In Progress, In Review or Done, writing or retiring memories, applying
+reflections, and changing reminders. These are decisions for whoever owns the instance, so the functions
 **don't exist** on this surface; they aren't refused at runtime. A test pins
 the module's public names to an allowlist, so adding one is a visible change to
 this contract, not a quiet addition.
@@ -55,6 +62,13 @@ A refine of a card outside backlog/refined, or towards any other column, raises
 `TransitionRefused` and changes nothing. The status check and the write happen
 in one transaction, so a card the instance moves on concurrently can't be
 pulled back.
+
+A card created with `origin_id` reaches an epic only through its origin. Since
+any card can be an origin, a client can reach any epic that has a member; the
+`from` reference and `created_by` show how the card got there. An origin's epic
+that is done or archived is refused with `RelationError`, not joined, because
+nothing would surface the card under it. Pass `inherit_epic=False` to keep the
+reference without the epic.
 
 ## Provenance
 

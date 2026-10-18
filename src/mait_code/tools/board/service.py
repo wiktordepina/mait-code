@@ -44,6 +44,8 @@ from mait_code.tools.board.sessions import SessionRef, pid_alive
 
 __all__ = [
     "CardNotFound",
+    "EpicOrigin",
+    "InheritedEpicClosed",
     "LinkCycle",
     "NotInProgress",
     "RelationError",
@@ -159,6 +161,36 @@ class LinkCycle(RelationError):
         loop = " → ".join(f"#{card_id}" for card_id in path)
         super().__init__(f"#{path[0]} blocks #{path[1]} would close a loop: {loop}")
         self.path = path
+
+
+class EpicOrigin(RelationError):
+    """Raised when a new card names an epic as the card it came from.
+
+    Attributes:
+        card_id: The epic named as the origin.
+    """
+
+    def __init__(self, card_id: int) -> None:
+        super().__init__(f"#{card_id} is an epic; use it as the parent instead")
+        self.card_id = card_id
+
+
+class InheritedEpicClosed(RelationError):
+    """Raised when a new card would inherit an epic that is done or archived.
+
+    Only :func:`add_card` with ``refuse_closed_epic=True`` raises it.
+
+    Attributes:
+        origin_id: The card the epic would have been inherited from.
+        epic_id: The closed epic.
+        status: The epic's status, ``done`` or ``archived``.
+    """
+
+    def __init__(self, origin_id: int, epic_id: int, status: str) -> None:
+        super().__init__(f"#{origin_id}'s epic #{epic_id} is {status}")
+        self.origin_id = origin_id
+        self.epic_id = epic_id
+        self.status = status
 
 
 class _Unchanged(enum.Enum):
@@ -786,6 +818,7 @@ def add_card(
     kind: str = CARD,
     parent_id: int | None | _Unchanged = _Unchanged.KEEP,
     origin_id: int | None = None,
+    refuse_closed_epic: bool = False,
 ) -> int:
     """Insert a backlog card and return its new id.
 
@@ -803,7 +836,11 @@ def add_card(
     :data:`ORIGIN_LABEL` reference to ``#<origin_id>`` in the same
     transaction, which holds the write lock from the checks on, so a
     parallel writer can't change the origin or epic in between. Epics
-    neither have an origin nor serve as one.
+    neither have an origin nor serve as one (:class:`EpicOrigin`).
+
+    *refuse_closed_epic* refuses to inherit an epic that is done or archived
+    (:class:`InheritedEpicClosed`), for a caller that can't warn about one
+    afterwards. An explicit *parent_id* is never refused for its status.
 
     Raises :class:`RelationError` when the combination breaks those rules,
     and :class:`CardNotFound` for an unknown *parent_id* or *origin_id*.
@@ -824,11 +861,16 @@ def add_card(
             if origin_id is not None:
                 origin = _require_row(conn, origin_id)
                 if origin[_KIND] == EPIC:
-                    raise RelationError(
-                        f"#{origin_id} is an epic; use it as the parent instead"
-                    )
+                    raise EpicOrigin(origin_id)
                 if parent_id is _Unchanged.KEEP:
-                    parent_id = origin[_PARENT]
+                    inherited = origin[_PARENT]
+                    if refuse_closed_epic and inherited is not None:
+                        epic = _require_row(conn, inherited)
+                        if epic[_STATUS] in _SETTLED:
+                            raise InheritedEpicClosed(
+                                origin_id, inherited, epic[_STATUS]
+                            )
+                    parent_id = inherited
             if parent_id is _Unchanged.KEEP:
                 parent_id = None
             if parent_id is not None:

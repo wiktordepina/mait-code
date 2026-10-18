@@ -52,6 +52,8 @@ from mait_code.tools.board.export import (
 from mait_code.tools.board.migrate import ensure_schema
 from mait_code.tools.board.service import (
     CardNotFound,
+    EpicOrigin,
+    InheritedEpicClosed,
     LinkCycle,
     NotInProgress,
     RelationError,
@@ -130,6 +132,8 @@ __all__ = [
     "export_epic",
     # Service
     "CardNotFound",
+    "EpicOrigin",
+    "InheritedEpicClosed",
     "LinkCycle",
     "NotInProgress",
     "RelationError",
