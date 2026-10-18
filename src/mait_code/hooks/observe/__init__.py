@@ -22,6 +22,7 @@ from mait_code.hooks.observe.extractor import (
     call_haiku,
     extract_observations,
     parse_extraction,
+    user_name,
 )
 from mait_code.hooks.observe.scope import resolve_scope
 from mait_code.hooks.observe.storage import (
@@ -50,6 +51,7 @@ __all__ = [
     "call_haiku",
     "extract_observations",
     "parse_extraction",
+    "user_name",
     # Scope
     "resolve_scope",
     # Storage

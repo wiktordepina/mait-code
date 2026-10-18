@@ -10,6 +10,37 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **`mait-code doctor` checks that observe and reflect can actually run.**
+  The new `nested-llm` check makes one small real nested `claude -p` call and
+  fails if it is refused, or if any tool or MCP server reaches it. It also
+  fails on a Claude Code older than 2.1.257. `--no-llm` skips it, and the hub
+  and dashboard never run it.
+
+### Fixed
+
+- **LLM calls work again on hosts with a managed MCP config.** Claude Code
+  refuses `--strict-mcp-config` outright when a managed `managed-mcp.json` is
+  present, so on such a host every observe, extraction and reflect call
+  failed. The nested call now runs with `--tools "" --disallowedTools
+  "mcp__*" --safe-mode`. This corrects 0.82.0's claim: `--tools ""` covers
+  built-in tools only, and `--strict-mcp-config` did not hold everywhere.
+  `--safe-mode` starts no MCP servers, managed ones included, and the
+  `mcp__*` deny backs it up.
+- **A refused command line is no longer retried.** Claude Code rejecting the
+  flags fails the same way every time, so the call now gives up at once and
+  logs the full stderr at error level, instead of three attempts each logged
+  as a truncated warning.
+
+### Changed
+
+- **Nested LLM calls no longer load CLAUDE.md.** Safe mode also skips
+  CLAUDE.md, skills, plugins and user hooks, so extraction and reflection
+  stop carrying the whole companion identity stack. The extraction prompt
+  now passes the user's name from `user_context.md` itself, so memories and
+  entities still name the user.
+
 ## [0.88.0] — 2026-10-18
 
 ### Added

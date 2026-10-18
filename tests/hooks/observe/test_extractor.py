@@ -3,11 +3,14 @@
 import json
 from unittest.mock import patch
 
+import pytest
+
 from mait_code.hooks.observe.extractor import (
     EXPECTED_KEYS,
     build_extraction_prompt,
     extract_observations,
     parse_extraction,
+    user_name,
 )
 
 
@@ -30,6 +33,34 @@ def test_build_extraction_prompt_project_without_branch():
     prompt = build_extraction_prompt("USER: hi", project="mait-code")
     assert "Project: mait-code" in prompt
     assert "(default branch)" in prompt
+
+
+def test_build_extraction_prompt_with_user():
+    """A known user name goes into the prompt; none leaves the header out."""
+    assert "The user's name is Ada." in build_extraction_prompt("hi", user="Ada")
+    assert "USER CONTEXT" not in build_extraction_prompt("hi")
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ('**Name:** Wiktor (pronounced like "Victor")', "Wiktor"),
+        ("**Name:** Ada Lovelace", "Ada Lovelace"),
+        ("**Name:** <!-- Your name or preferred alias -->", None),
+        ("**Name:**", None),
+    ],
+)
+def test_user_name_reads_user_context(tmp_path, monkeypatch, line, expected):
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+    (tmp_path / "user_context.md").write_text(
+        f"# User Context\n\n{line}\n**Role:** x\n"
+    )
+    assert user_name() == expected
+
+
+def test_user_name_without_user_context(tmp_path, monkeypatch):
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+    assert user_name() is None
 
 
 def test_prompt_covers_expected_keys():

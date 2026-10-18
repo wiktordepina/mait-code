@@ -3,4 +3,12 @@
 
 # LLM — API reference
 
+## Invocation
+
 ::: mait_code.llm.call_claude
+
+## Diagnostics
+
+::: mait_code.llm.ProbeResult
+
+::: mait_code.llm.probe_claude

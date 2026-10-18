@@ -572,12 +572,21 @@ def doctor_cmd(
             help="Override the mait-code data directory.",
         ),
     ] = None,
+    llm: Annotated[
+        bool,
+        typer.Option(
+            "--llm/--no-llm",
+            help="Make one real nested claude call to check observe and "
+            "reflect can run (costs a small model call).",
+        ),
+    ] = True,
 ) -> None:
     """Diagnose silent breakage in the install; exits 1 on any failure."""
     report = _doctor_impl(
         fix=fix,
         claude_dir=claude_dir_override,
         data_dir=data_dir_override,
+        llm=llm,
     )
     if as_json:
         typer.echo(_doctor_render_json(report))

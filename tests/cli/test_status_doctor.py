@@ -495,6 +495,115 @@ class TestDoctorCommand:
         assert err_console.no_color is True
 
 
+class TestDoctorNestedLlm:
+    """The opt-in live check that observe and reflect's nested call works."""
+
+    @pytest.fixture
+    def claude_on_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from mait_code.cli import _doctor
+
+        monkeypatch.setattr(_doctor.shutil, "which", lambda _name: "/bin/claude")
+        monkeypatch.setattr(_doctor, "_claude_version", lambda: (2, 1, 302))
+
+    def _probe(self, monkeypatch: pytest.MonkeyPatch, result: object) -> None:
+        from mait_code import llm
+
+        monkeypatch.setattr(llm, "probe_claude", lambda **_kw: result)
+
+    def _nested(self, report) -> object:
+        return next(c for c in report.checks if c.name == "nested-llm")
+
+    def test_left_out_by_default(self, fake_home: Path) -> None:
+        # The hub and dashboard call run_doctor() — they must not pay for a
+        # model call.
+        report = run_doctor()
+        assert all(c.name != "nested-llm" for c in report.checks)
+
+    def test_isolated_call_passes(
+        self, fake_home: Path, claude_on_path: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mait_code.llm import ProbeResult
+
+        self._probe(monkeypatch, ProbeResult(0, [], [], ""))
+        assert self._nested(run_doctor(llm=True)).level == "ok"
+
+    def test_refused_call_fails_with_stderr(
+        self, fake_home: Path, claude_on_path: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mait_code.llm import ProbeResult
+
+        stderr = "You cannot use --strict-mcp-config when an enterprise MCP config"
+        self._probe(monkeypatch, ProbeResult(1, [], [], stderr))
+        check = self._nested(run_doctor(llm=True))
+        assert check.level == "fail"
+        assert "exited 1" in check.message and stderr in check.message
+
+    @pytest.mark.parametrize(
+        ("tools", "servers", "shown"),
+        [
+            (["mcp__gmail__send"], [], "mcp__gmail__send"),
+            ([], ["maitre-d"], "maitre-d"),
+        ],
+    )
+    def test_leaky_call_fails(
+        self,
+        fake_home: Path,
+        claude_on_path: None,
+        monkeypatch: pytest.MonkeyPatch,
+        tools: list[str],
+        servers: list[str],
+        shown: str,
+    ) -> None:
+        # Zero tools with a server still started is not isolated: the server
+        # process ran and its instructions reached the prompt.
+        from mait_code.llm import ProbeResult
+
+        self._probe(monkeypatch, ProbeResult(0, tools, servers, ""))
+        check = self._nested(run_doctor(llm=True))
+        assert check.level == "fail"
+        assert shown in check.message
+
+    def test_old_claude_fails_before_probing(
+        self, fake_home: Path, claude_on_path: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mait_code.cli import _doctor
+
+        monkeypatch.setattr(_doctor, "_claude_version", lambda: (2, 1, 256))
+        self._probe(monkeypatch, None)  # would blow up if it were called
+        check = self._nested(run_doctor(llm=True))
+        assert check.level == "fail"
+        assert "2.1.256" in check.message and "2.1.257" in check.message
+
+    def test_missing_claude_fails(
+        self, fake_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mait_code.cli import _doctor
+
+        monkeypatch.setattr(_doctor.shutil, "which", lambda _name: None)
+        check = self._nested(run_doctor(llm=True))
+        assert check.level == "fail"
+        assert "not found" in check.message
+
+    def test_cli_runs_it_by_default_and_no_llm_skips(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        names = [
+            c["name"]
+            for c in json.loads(runner.invoke(app, ["doctor", "--json"]).output)[
+                "checks"
+            ]
+        ]
+        assert "nested-llm" in names
+        names = [
+            c["name"]
+            for c in json.loads(
+                runner.invoke(app, ["doctor", "--json", "--no-llm"]).output
+            )["checks"]
+        ]
+        assert "nested-llm" not in names
+
+
 class TestDoctorMemoryChecks:
     """The memory-health checks: embeddings, vector search, observe pipeline."""
 

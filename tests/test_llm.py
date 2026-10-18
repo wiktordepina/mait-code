@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mait_code.llm import call_claude
+from mait_code.llm import ProbeResult, call_claude, probe_claude
 
 
 @pytest.fixture
@@ -40,7 +40,9 @@ def test_call_claude_basic(mock_subprocess):
         "--no-session-persistence",
         "--tools",
         "",
-        "--strict-mcp-config",
+        "--disallowedTools",
+        "mcp__*",
+        "--safe-mode",
     ]
     assert args[1]["input"] == "test prompt"
     # Default timeout follows the llm-timeout setting (90 by default).
@@ -79,7 +81,9 @@ def test_call_claude_custom_model(mock_subprocess):
         "--no-session-persistence",
         "--tools",
         "",
-        "--strict-mcp-config",
+        "--disallowedTools",
+        "mcp__*",
+        "--safe-mode",
     ]
     assert args[1]["timeout"] == 30
 
@@ -90,7 +94,10 @@ def test_call_claude_disables_every_tool(mock_subprocess):
     Prompts embed transcript windows; with tools available, a transcript that
     reads like a task gets carried out (files written, commits pushed). This
     pins the command line only: that the flags take effect is Claude Code's
-    behaviour, measured on 2.1.301.
+    behaviour, measured on 2.1.302 (``mait-code doctor`` checks it live).
+    ``--tools ""`` alone leaves every MCP tool available, and
+    ``--strict-mcp-config`` is refused under a managed MCP config, so it
+    must not come back.
     """
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "ok"
@@ -101,7 +108,10 @@ def test_call_claude_disables_every_tool(mock_subprocess):
     cmd = mock_subprocess.call_args[0][0]
     tools_at = cmd.index("--tools")
     assert cmd[tools_at + 1] == ""
-    assert "--strict-mcp-config" in cmd
+    deny_at = cmd.index("--disallowedTools")
+    assert cmd[deny_at + 1] == "mcp__*"
+    assert "--safe-mode" in cmd
+    assert "--strict-mcp-config" not in cmd
     assert "--mcp-config" not in cmd
     assert not any(a.startswith("--allowed") for a in cmd)
 
@@ -274,3 +284,98 @@ class TestRetryBackoff:
         result = call_claude("prompt", retries=1, backoff_base=5.0)
         assert result == "ok"
         mock_sleep.assert_called_once_with(1.0)  # 5.0 ** 0 = 1.0
+
+
+class TestRefusal:
+    """A refused command line fails identically every time: no retries."""
+
+    @pytest.mark.parametrize(
+        "stderr",
+        [
+            "You cannot use --strict-mcp-config when an enterprise MCP config "
+            "is present",
+            "error: unknown option '--safe-mode'",
+        ],
+    )
+    def test_refusal_is_not_retried(
+        self, mock_subprocess, mock_sleep, stderr, caplog, monkeypatch
+    ):
+        import logging
+
+        # setup_logging() (run by earlier tests) sets propagate=False on the
+        # mait_code logger, which hides records from caplog.
+        monkeypatch.setattr(logging.getLogger("mait_code"), "propagate", True)
+        mock_subprocess.return_value.returncode = 1
+        mock_subprocess.return_value.stdout = ""
+        mock_subprocess.return_value.stderr = stderr
+
+        with caplog.at_level("ERROR", logger="mait_code.llm"):
+            result = call_claude("prompt", retries=2)
+
+        assert result is None
+        mock_subprocess.assert_called_once()
+        mock_sleep.assert_not_called()
+        # Logged in full at error level, not truncated as a warning.
+        assert any(
+            r.levelname == "ERROR" and stderr in r.message for r in caplog.records
+        )
+
+    def test_other_failures_still_retry(self, mock_subprocess, mock_sleep):
+        mock_subprocess.return_value.returncode = 1
+        mock_subprocess.return_value.stdout = ""
+        mock_subprocess.return_value.stderr = "API Error: 529 overloaded"
+
+        assert call_claude("prompt", retries=2) is None
+        assert mock_subprocess.call_count == 3
+
+
+class TestProbe:
+    _INIT = (
+        '{"type":"system","subtype":"init","tools":%s,"mcp_servers":%s}\n'
+        '{"type":"result","result":"ok"}\n'
+    )
+
+    def _run(self, mock_subprocess, tools: str, servers: str) -> ProbeResult:
+        mock_subprocess.return_value.returncode = 0
+        mock_subprocess.return_value.stdout = self._INIT % (tools, servers)
+        mock_subprocess.return_value.stderr = ""
+        return probe_claude(timeout=5)
+
+    def test_uses_call_claudes_command_line(self, mock_subprocess):
+        self._run(mock_subprocess, "[]", "[]")
+        cmd = mock_subprocess.call_args[0][0]
+        assert cmd[:10] == [
+            "claude",
+            "-p",
+            "--model",
+            "haiku",
+            "--no-session-persistence",
+            "--tools",
+            "",
+            "--disallowedTools",
+            "mcp__*",
+            "--safe-mode",
+        ]
+        assert cmd[10:] == ["--output-format", "stream-json", "--verbose"]
+
+    def test_reads_tools_and_servers_from_init(self, mock_subprocess):
+        probe = self._run(
+            mock_subprocess,
+            '["mcp__x__y"]',
+            '[{"name":"fake","status":"pending"}]',
+        )
+        assert probe == ProbeResult(0, ["mcp__x__y"], ["fake"], "")
+
+    def test_isolated_call(self, mock_subprocess):
+        assert self._run(mock_subprocess, "[]", "[]") == ProbeResult(0, [], [], "")
+
+    def test_refused_call(self, mock_subprocess):
+        mock_subprocess.return_value.returncode = 1
+        mock_subprocess.return_value.stdout = ""
+        mock_subprocess.return_value.stderr = "error: unknown option '--safe-mode'\n"
+        probe = probe_claude(timeout=5)
+        assert probe == ProbeResult(1, [], [], "error: unknown option '--safe-mode'")
+
+    def test_missing_cli(self, mock_subprocess):
+        mock_subprocess.side_effect = FileNotFoundError()
+        assert probe_claude(timeout=5).returncode is None

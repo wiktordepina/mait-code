@@ -33,6 +33,8 @@
 
 ::: mait_code.hooks.observe.parse_extraction
 
+::: mait_code.hooks.observe.user_name
+
 ## Scope
 
 ::: mait_code.hooks.observe.resolve_scope

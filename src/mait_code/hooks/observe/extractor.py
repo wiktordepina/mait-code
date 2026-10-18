@@ -4,6 +4,7 @@ import json
 import logging
 import re
 
+from mait_code.config import data_dir
 from mait_code.config import get as config_get
 from mait_code.llm import call_claude
 from mait_code.tools.memory.entities import ENTITY_TYPES, RELATIONSHIP_TYPES
@@ -84,6 +85,16 @@ Branch: {branch}
 
 """
 
+USER_HEADER = """\
+USER CONTEXT:
+The user's name is {name}.
+
+"""
+
+# The "**Name:** ..." line of user_context.md, as the identity template
+# writes it.
+_NAME_LINE = re.compile(r"^\*\*Name:\*\*[ \t]*(.*)$", re.MULTILINE)
+
 EXPECTED_KEYS = {
     "facts",
     "preferences",
@@ -100,6 +111,7 @@ def build_extraction_prompt(
     *,
     project: str | None = None,
     branch: str | None = None,
+    user: str | None = None,
 ) -> str:
     """Wrap conversation text in the extraction system prompt.
 
@@ -107,11 +119,15 @@ def build_extraction_prompt(
         conversation_text: Formatted conversation transcript.
         project: Project identifier to include in the context header.
         branch: Branch name to include in the context header.
+        user: The user's name, so entities and preferences name them
+            rather than "the user".
 
     Returns:
         The full extraction prompt ready to pass to the LLM.
     """
     parts = [EXTRACTION_PROMPT]
+    if user:
+        parts.append(USER_HEADER.format(name=user))
     if project:
         parts.append(
             CONTEXT_HEADER.format(project=project, branch=branch or "(default branch)")
@@ -120,6 +136,25 @@ def build_extraction_prompt(
     parts.append(conversation_text)
     parts.append("\n</CONVERSATION>")
     return "".join(parts)
+
+
+def user_name() -> str | None:
+    """The user's name from ``user_context.md``, or ``None`` if not filled in.
+
+    The nested LLM call loads no CLAUDE.md, so the extraction prompt has to
+    carry the name itself. Only the name is passed, not the whole user
+    context. A trailing parenthetical (e.g. a pronunciation note) is dropped.
+    """
+    try:
+        text = (data_dir() / "user_context.md").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = _NAME_LINE.search(text)
+    if match is None:
+        return None
+    # The unfilled template leaves an HTML comment as the value.
+    value = re.sub(r"<!--.*?-->", "", match.group(1)).split(" (")[0].strip()
+    return value or None
 
 
 def call_haiku(prompt: str) -> str | None:
@@ -196,7 +231,9 @@ def extract_observations(
         call succeeded, so treat the window as handled). The parsed extraction
         dict on success — its arrays may be empty when nothing was notable.
     """
-    prompt = build_extraction_prompt(conversation_text, project=project, branch=branch)
+    prompt = build_extraction_prompt(
+        conversation_text, project=project, branch=branch, user=user_name()
+    )
     raw = call_haiku(prompt)
     if raw is None:
         # Transport failure (timeout / non-zero exit) — signal "retry me".
