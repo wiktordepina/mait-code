@@ -48,6 +48,10 @@ jobs:
       # backstop against significant regression, set just below the ~94%
       # baseline so routine TUI churn stays green but a real drop fails CI.
       - run: uv run pytest -n auto --cov-fail-under=93
+      # xdist spreads files across workers, which hides state one test file
+      # leaks into the next. Run the memory suite (~15s) in a single process
+      # too, so an order leak there fails here rather than on someone's laptop.
+      - run: uv run pytest --no-cov tests/tools/memory/
 
   audit:
     name: Dependency audit (pip-audit)
