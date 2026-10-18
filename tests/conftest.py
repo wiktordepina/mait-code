@@ -107,3 +107,28 @@ def _block_real_embedding_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("fastembed.TextEmbedding", _BlockedTextEmbedding)
     monkeypatch.setattr(_embeddings, "_provider", None)
     monkeypatch.setattr(_embeddings, "_provider_failed", False)
+
+
+@pytest.fixture(autouse=True)
+def _block_real_nested_claude(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep every test off a real nested ``claude`` call.
+
+    ``mait-code doctor --llm`` probes one, which would cost a model call and
+    depend on the developer's login, and reads ``claude --version`` first.
+    The stubs report an unknown version and a call that never ran, so a
+    doctor run in a test sees a failing ``nested-llm`` check rather than a
+    fake pass. Tests of ``probe_claude`` itself import it before this runs
+    and patch ``subprocess.run`` instead.
+    """
+    from mait_code import llm
+    from mait_code.cli import _doctor
+
+    monkeypatch.setattr(_doctor, "_claude_version", lambda: None)
+
+    monkeypatch.setattr(
+        llm,
+        "probe_claude",
+        lambda **_kw: llm.ProbeResult(
+            None, [], [], "the real nested claude is blocked in tests"
+        ),
+    )

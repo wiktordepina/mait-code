@@ -12,8 +12,10 @@ memory entries that lack vectors (existing vectors are left alone).
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tomllib
 from contextlib import redirect_stdout
@@ -609,9 +611,106 @@ def _check_uv(_ddir: Path) -> Check:
     return Check("uv-on-path", "ok", "`uv` is on PATH")
 
 
+#: Oldest Claude Code whose command-line ``--disallowedTools`` rules survive a
+#: settings reload under ``allowManagedPermissionRulesOnly``.
+_MIN_CLAUDE_VERSION = (2, 1, 257)
+
+#: How long the nested-llm probe may take. Shorter than ``llm-timeout``: a
+#: one-word reply needs seconds, and a hung call shouldn't stall doctor.
+_PROBE_TIMEOUT = 30
+
+
+def _claude_version() -> tuple[int, int, int] | None:
+    """The installed Claude Code version, or ``None`` if it can't be read."""
+    try:
+        out = subprocess.run(
+            ["claude", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        ).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    match = re.match(r"\s*(\d+)\.(\d+)\.(\d+)", out)
+    if match is None:
+        return None
+    major, minor, patch = (int(g) for g in match.groups())
+    return major, minor, patch
+
+
+def _check_nested_llm() -> Check:
+    """One real nested call must succeed with no tools and no MCP servers.
+
+    Observe and reflect fail quietly — a warning in the log — so a host where
+    every nested call is refused (e.g. by a managed MCP config) otherwise
+    goes unnoticed. This makes a tiny real model call over the network, so
+    it runs only on ``doctor --llm``, never by default or from the hub or
+    dashboard.
+    """
+    from mait_code.llm import probe_claude
+
+    if shutil.which("claude") is None:
+        return Check(
+            "nested-llm",
+            "fail",
+            "`claude` not found on PATH — observe and reflect cannot run",
+            fix_hint="install Claude Code",
+        )
+    floor = ".".join(map(str, _MIN_CLAUDE_VERSION))
+    version = _claude_version()
+    if version is not None and version < _MIN_CLAUDE_VERSION:
+        return Check(
+            "nested-llm",
+            "fail",
+            f"Claude Code {'.'.join(map(str, version))} is older than {floor}; "
+            "nested calls may keep MCP tools under managed permission rules",
+            fix_hint="upgrade Claude Code: claude update",
+        )
+    probe = probe_claude(timeout=_PROBE_TIMEOUT)
+    if probe.returncode != 0:
+        exit_text = (
+            "did not run"
+            if probe.returncode is None
+            else (f"exited {probe.returncode}")
+        )
+        return Check(
+            "nested-llm",
+            "fail",
+            f"nested claude call {exit_text}: {probe.stderr or '(no stderr)'}",
+            fix_hint="observe and reflect fail the same way; check the "
+            "logs in $XDG_STATE_HOME/mait-code",
+        )
+    if not probe.saw_init:
+        return Check(
+            "nested-llm",
+            "fail",
+            "nested claude call printed no init event, so its tools and MCP "
+            "servers can't be confirmed",
+            fix_hint="report it: Claude Code's stream-json output changed",
+        )
+    leaks = []
+    if probe.tools:
+        leaks.append(f"tools {', '.join(probe.tools)}")
+    if probe.mcp_servers:
+        leaks.append(f"MCP servers {', '.join(probe.mcp_servers)}")
+    if leaks:
+        return Check(
+            "nested-llm",
+            "fail",
+            "nested claude call is not isolated: " + "; ".join(leaks),
+            fix_hint="report it: Claude Code's isolation flags changed meaning",
+        )
+    return Check(
+        "nested-llm",
+        "ok",
+        "nested claude call succeeds with no tools and no MCP servers",
+    )
+
+
 def run_doctor(
     *,
     fix: bool = False,
+    llm: bool = False,
     claude_dir: Path | None = None,
     data_dir: Path | None = None,
 ) -> DoctorReport:
@@ -623,6 +722,9 @@ def run_doctor(
             leave them as findings.
         claude_dir: Override the Claude Code config dir.
         data_dir: Override the data dir.
+        llm: When ``True``, also make one real nested ``claude`` call to
+            check that observe and reflect can run. Off by default: it
+            reaches the network and costs a model call.
 
     Returns:
         A :class:`DoctorReport` with the per-check outcomes and any
@@ -651,6 +753,8 @@ def run_doctor(
         _check_mods(cdir, source),
         _check_uv(ddir),
     ]
+    if llm:
+        checks.append(_check_nested_llm())
 
     return DoctorReport(checks=checks, fixes_applied=fixes)
 
