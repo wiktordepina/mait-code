@@ -152,12 +152,15 @@ class ProbeResult:
         tools: Tool names offered to the model.
         mcp_servers: MCP server names the call started, whatever their status.
         stderr: The call's stderr, stripped, or why it could not run.
+        saw_init: Whether an init event was found at all. Without one, the
+            empty ``tools`` and ``mcp_servers`` prove nothing.
     """
 
     returncode: int | None
     tools: list[str]
     mcp_servers: list[str]
     stderr: str
+    saw_init: bool = False
 
 
 def probe_claude(*, model: str = "haiku", timeout: int | None = None) -> ProbeResult:
@@ -196,19 +199,23 @@ def probe_claude(*, model: str = "haiku", timeout: int | None = None) -> ProbeRe
 
     tools: list[str] = []
     servers: list[str] = []
+    saw_init = False
     for line in result.stdout.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
         if isinstance(event, dict) and event.get("subtype") == "init":
+            saw_init = True
             tools = [str(t) for t in event.get("tools") or []]
             servers = [
                 str(s.get("name", "?")) if isinstance(s, dict) else str(s)
                 for s in event.get("mcp_servers") or []
             ]
             break
-    return ProbeResult(result.returncode, tools, servers, result.stderr.strip())
+    return ProbeResult(
+        result.returncode, tools, servers, result.stderr.strip(), saw_init
+    )
 
 
 def _command(model: str) -> list[str]:

@@ -12,11 +12,12 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
-- **`mait-code doctor` checks that observe and reflect can actually run.**
-  The new `nested-llm` check makes one small real nested `claude -p` call and
-  fails if it is refused, or if any tool or MCP server reaches it. It also
-  fails on a Claude Code older than 2.1.257. `--no-llm` skips it, and the hub
-  and dashboard never run it.
+- **`mait-code doctor --llm` checks that observe and reflect can actually
+  run.** The opt-in `nested-llm` check makes one small real nested
+  `claude -p` call and fails if it is refused, if any tool or MCP server
+  reaches it, or if it prints no init event to confirm either. It also fails
+  on a Claude Code older than 2.1.257. A plain `doctor` stays local, and the
+  hub and dashboard never run it.
 
 ### Fixed
 

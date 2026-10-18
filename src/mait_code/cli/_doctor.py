@@ -615,6 +615,10 @@ def _check_uv(_ddir: Path) -> Check:
 #: settings reload under ``allowManagedPermissionRulesOnly``.
 _MIN_CLAUDE_VERSION = (2, 1, 257)
 
+#: How long the nested-llm probe may take. Shorter than ``llm-timeout``: a
+#: one-word reply needs seconds, and a hung call shouldn't stall doctor.
+_PROBE_TIMEOUT = 30
+
 
 def _claude_version() -> tuple[int, int, int] | None:
     """The installed Claude Code version, or ``None`` if it can't be read."""
@@ -639,8 +643,9 @@ def _check_nested_llm() -> Check:
 
     Observe and reflect fail quietly — a warning in the log — so a host where
     every nested call is refused (e.g. by a managed MCP config) otherwise
-    goes unnoticed. This makes a tiny real call, so only the ``doctor``
-    command runs it, never the hub or dashboard.
+    goes unnoticed. This makes a tiny real model call over the network, so
+    it runs only on ``doctor --llm``, never by default or from the hub or
+    dashboard.
     """
     from mait_code.llm import probe_claude
 
@@ -661,7 +666,7 @@ def _check_nested_llm() -> Check:
             "nested calls may keep MCP tools under managed permission rules",
             fix_hint="upgrade Claude Code: claude update",
         )
-    probe = probe_claude()
+    probe = probe_claude(timeout=_PROBE_TIMEOUT)
     if probe.returncode != 0:
         exit_text = (
             "did not run"
@@ -674,6 +679,14 @@ def _check_nested_llm() -> Check:
             f"nested claude call {exit_text}: {probe.stderr or '(no stderr)'}",
             fix_hint="observe and reflect fail the same way; check the "
             "logs in $XDG_STATE_HOME/mait-code",
+        )
+    if not probe.saw_init:
+        return Check(
+            "nested-llm",
+            "fail",
+            "nested claude call printed no init event, so its tools and MCP "
+            "servers can't be confirmed",
+            fix_hint="report it: Claude Code's stream-json output changed",
         )
     leaks = []
     if probe.tools:
@@ -711,7 +724,7 @@ def run_doctor(
         data_dir: Override the data dir.
         llm: When ``True``, also make one real nested ``claude`` call to
             check that observe and reflect can run. Off by default: it
-            costs a model call, so the hub and dashboard leave it out.
+            reaches the network and costs a model call.
 
     Returns:
         A :class:`DoctorReport` with the per-check outcomes and any

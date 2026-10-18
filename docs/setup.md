@@ -84,7 +84,7 @@ Once installed, the `mait-code` binary owns the full install lifecycle. Its subc
 mait-code status            # read-only summary with a health badge, first-install
                             # and last-update dates (use --json)
 mait-code doctor            # run the health checks; --fix applies safe fixes (--json)
-                            # one makes a real model call; --no-llm skips it
+                            # --llm adds one real nested model call
 mait-code settings          # edit config interactively (lists when piped)
 mait-code settings list     # read-only view of the active config (use --json)
 mait-code settings get log-level         # one resolved value and its source (--json)

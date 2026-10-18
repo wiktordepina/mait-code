@@ -364,10 +364,19 @@ class TestProbe:
             '["mcp__x__y"]',
             '[{"name":"fake","status":"pending"}]',
         )
-        assert probe == ProbeResult(0, ["mcp__x__y"], ["fake"], "")
+        assert probe == ProbeResult(0, ["mcp__x__y"], ["fake"], "", saw_init=True)
 
     def test_isolated_call(self, mock_subprocess):
-        assert self._run(mock_subprocess, "[]", "[]") == ProbeResult(0, [], [], "")
+        assert self._run(mock_subprocess, "[]", "[]") == ProbeResult(
+            0, [], [], "", saw_init=True
+        )
+
+    def test_no_init_event_is_not_seen(self, mock_subprocess):
+        # An exit 0 with no init event must not read as an isolated call.
+        mock_subprocess.return_value.returncode = 0
+        mock_subprocess.return_value.stdout = '{"type":"result","result":"ok"}\n'
+        mock_subprocess.return_value.stderr = ""
+        assert probe_claude(timeout=5) == ProbeResult(0, [], [], "", saw_init=False)
 
     def test_refused_call(self, mock_subprocess):
         mock_subprocess.return_value.returncode = 1

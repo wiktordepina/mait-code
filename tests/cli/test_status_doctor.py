@@ -524,8 +524,19 @@ class TestDoctorNestedLlm:
     ) -> None:
         from mait_code.llm import ProbeResult
 
-        self._probe(monkeypatch, ProbeResult(0, [], [], ""))
+        self._probe(monkeypatch, ProbeResult(0, [], [], "", saw_init=True))
         assert self._nested(run_doctor(llm=True)).level == "ok"
+
+    def test_call_without_init_event_fails(
+        self, fake_home: Path, claude_on_path: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Empty tool and server lists prove nothing if no init event was read.
+        from mait_code.llm import ProbeResult
+
+        self._probe(monkeypatch, ProbeResult(0, [], [], "", saw_init=False))
+        check = self._nested(run_doctor(llm=True))
+        assert check.level == "fail"
+        assert "no init event" in check.message
 
     def test_refused_call_fails_with_stderr(
         self, fake_home: Path, claude_on_path: None, monkeypatch: pytest.MonkeyPatch
@@ -558,7 +569,7 @@ class TestDoctorNestedLlm:
         # process ran and its instructions reached the prompt.
         from mait_code.llm import ProbeResult
 
-        self._probe(monkeypatch, ProbeResult(0, tools, servers, ""))
+        self._probe(monkeypatch, ProbeResult(0, tools, servers, "", saw_init=True))
         check = self._nested(run_doctor(llm=True))
         assert check.level == "fail"
         assert shown in check.message
@@ -584,24 +595,18 @@ class TestDoctorNestedLlm:
         assert check.level == "fail"
         assert "not found" in check.message
 
-    def test_cli_runs_it_by_default_and_no_llm_skips(
+    def test_cli_runs_it_only_with_llm(
         self, fake_home: Path, fake_source: Path
     ) -> None:
+        # Opt-in: a plain doctor stays local, with no network or model call.
         install(source_dir=fake_source)
-        names = [
-            c["name"]
-            for c in json.loads(runner.invoke(app, ["doctor", "--json"]).output)[
-                "checks"
-            ]
-        ]
-        assert "nested-llm" in names
-        names = [
-            c["name"]
-            for c in json.loads(
-                runner.invoke(app, ["doctor", "--json", "--no-llm"]).output
-            )["checks"]
-        ]
-        assert "nested-llm" not in names
+
+        def names(*args: str) -> list[str]:
+            out = runner.invoke(app, ["doctor", "--json", *args]).output
+            return [c["name"] for c in json.loads(out)["checks"]]
+
+        assert "nested-llm" not in names()
+        assert "nested-llm" in names("--llm")
 
 
 class TestDoctorMemoryChecks:

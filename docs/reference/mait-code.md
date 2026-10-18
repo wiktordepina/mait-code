@@ -299,7 +299,7 @@ mait-code status --json | jq '.embedding_provider'
 **Synopsis**
 
 ```
-mait-code doctor [--fix] [--json] [--no-llm] [--data-dir <path>] [--claude-dir <path>]
+mait-code doctor [--fix] [--json] [--llm] [--data-dir <path>] [--claude-dir <path>]
 ```
 
 **Description**
@@ -317,7 +317,7 @@ ends with a one-line pass/fail verdict. The `--json` output includes a
 |------|---------|-------------|
 | `--fix` | off | Apply safe fixes for findings that support it. |
 | `--json` | off | Emit a machine-readable JSON document. |
-| `--llm` / `--no-llm` | `--llm` | Run the `nested-llm` check, which makes one small real model call. `--no-llm` skips it. |
+| `--llm` | off | Also run the `nested-llm` check, which reaches the network and makes one small real model call. |
 | `--data-dir <path>` | `$MAIT_CODE_DATA_DIR` or `~/.claude/mait-code-data` | Override the data directory location. |
 | `--claude-dir <path>` | `~/.claude` | Override the Claude Code config directory. |
 
@@ -336,7 +336,7 @@ ends with a one-line pass/fail verdict. The `--json` output includes a
 | `vector-search` | ok / warn | The sqlite-vec extension loads and the vector table is queryable. `warn` means recall silently degrades to keyword-only search; the message names the configured embedding provider and model. |
 | `observe-pipeline` | ok / warn | The observe hook has recorded a capture recently. `warn` when the newest capture is over 7 days old, or when a memory database exists but the hook has never captured anything. |
 | `uv-on-path` | ok / fail | `uv` is on `PATH` — required for `install` / `update`. |
-| `nested-llm` | ok / fail | One real nested `claude -p` call, made the way observe and reflect make theirs, exits `0` with no tools and no MCP servers. `fail` shows the call's stderr when it is refused (e.g. by a host's managed config), names any tool or MCP server that leaked through, or reports a Claude Code older than 2.1.257, where managed permission rules can drop the MCP deny. Only the `doctor` command runs it; the hub and dashboard leave it out. |
+| `nested-llm` | ok / fail | With `--llm` only. One real nested `claude -p` call, made the way observe and reflect make theirs, exits `0` with no tools and no MCP servers. `fail` shows the call's stderr when it is refused (e.g. by a host's managed config), names any tool or MCP server that leaked through, fails when the call prints no init event to confirm either, or reports a Claude Code older than 2.1.257, where managed permission rules can drop the MCP deny. The probe times out after 30 seconds. The hub and dashboard never run it. |
 
 **Examples**
 

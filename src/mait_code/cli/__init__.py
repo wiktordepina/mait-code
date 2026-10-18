@@ -576,10 +576,11 @@ def doctor_cmd(
         bool,
         typer.Option(
             "--llm/--no-llm",
-            help="Make one real nested claude call to check observe and "
-            "reflect can run (costs a small model call).",
+            help="Also make one real nested claude call to check observe "
+            "and reflect can run (reaches the network; costs a small model "
+            "call).",
         ),
-    ] = True,
+    ] = False,
 ) -> None:
     """Diagnose silent breakage in the install; exits 1 on any failure."""
     report = _doctor_impl(
