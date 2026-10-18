@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.89.0] — 2026-10-18
+
 ### Added
 
 - **`mait-code doctor --llm` checks that observe and reflect can actually
@@ -2792,7 +2794,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.88.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.89.0...HEAD
+[0.89.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.89.0
 [0.88.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.88.0
 [0.87.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.87.0
 [0.86.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.86.0
