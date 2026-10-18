@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 import mait_code.tui.banner as banner_mod
-from mait_code.cli._board_tui import INITIATIVES, BoardApp
+from mait_code.cli._board_tui import INITIATIVES, BoardApp, CardScreen
 from mait_code.tools.board import service
 from mait_code.tools.board.db import get_connection
 
@@ -87,7 +87,15 @@ def test_card_relationships_snapshot(snap_compare, tmp_path: Path) -> None:
     ids = _seed(db_path)
 
     async def run_before(pilot) -> None:
+        # Let the kanban settle first: its footer draws late, so opening the
+        # card at once snapshots it blank on a fast machine and drawn on a
+        # slow one. The worker then pushes the card in its own time.
+        await pilot.pause()
         pilot.app.run_worker(pilot.app.open_card(ids["router"]))
+        for _ in range(100):
+            if isinstance(pilot.app.screen, CardScreen):
+                break
+            await pilot.pause(0.05)
         await pilot.pause()
 
     assert snap_compare(
