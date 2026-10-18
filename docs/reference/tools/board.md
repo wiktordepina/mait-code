@@ -35,6 +35,8 @@
 
 ::: mait_code.tools.board.LINK_TYPES
 
+::: mait_code.tools.board.ORIGIN_LABEL
+
 ::: mait_code.tools.board.REFINED
 
 ::: mait_code.tools.board.is_valid_status

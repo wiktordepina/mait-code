@@ -134,6 +134,24 @@ def _remind_epic(conn, card_id: int) -> None:
     )
 
 
+def _note_closed_epic(conn, card_id: int) -> None:
+    """Note on stderr when *card_id* inherited an epic that is done or archived.
+
+    ``--from`` joins the origin's epic unasked, and an open card under a closed
+    initiative is easy to miss — redirect it with ``edit --parent``.
+    """
+    card = service.get_card(conn, card_id)
+    epic = card and card["parent"] and service.get_card(conn, card["parent"]["id"])
+    if not epic or epic["status"] not in (DONE, ARCHIVED):
+        return
+    print(
+        f"Note: #{card_id} joined epic #{epic['id']}, which is "
+        f"{label(epic['status'])} — move it with "
+        f"'mc-tool-board edit {card_id} --parent <epic|none>' if it belongs elsewhere.",
+        file=sys.stderr,
+    )
+
+
 def _card_payload(conn, card_id: int) -> dict:
     """Return a card in the ``show --json`` shape (comments included)."""
     card = service.get_card(conn, card_id)
@@ -171,9 +189,15 @@ def cmd_add(args):
             _fail("an epic belongs to no project; drop --project.")
         if args.parent is not None:
             _fail("an epic can't have a parent; drop --parent.")
+        if args.origin is not None:
+            _fail("an epic can't come from a card; drop --from.")
         project, kind, noun = None, EPIC, "Epic"
     else:
         project, kind, noun = args.project or get_project(), "card", "Card"
+    # Left out, the epic is --from's to inherit (and none without it).
+    parent = {}
+    if args.parent is not None:
+        parent["parent_id"] = None if args.parent == NO_PARENT else args.parent
     with connection() as conn:
         try:
             card_id = service.add_card(
@@ -183,13 +207,16 @@ def cmd_add(args):
                 description=args.description,
                 priority=args.priority,
                 kind=kind,
-                parent_id=args.parent,
+                origin_id=args.origin,
+                **parent,
             )
         except (service.CardNotFound, service.RelationError) as exc:
             _relation_failed(exc)
         _print_card(
             conn, args, card_id, f"{noun} #{card_id} added ({args.priority}): {title}"
         )
+        if args.origin is not None and args.parent is None:
+            _note_closed_epic(conn, card_id)
 
 
 def cmd_list(args):
@@ -887,7 +914,19 @@ def main():
     p_add.add_argument(
         "--epic", action="store_true", help="Add an epic (spans projects; no --project)"
     )
-    p_add.add_argument("--parent", type=int, metavar="EPIC", help="Epic the card is in")
+    p_add.add_argument(
+        "--parent",
+        type=_parent_arg,
+        metavar="EPIC",
+        help="Epic the card is in ('none' to drop the one --from would inherit)",
+    )
+    p_add.add_argument(
+        "--from",
+        dest="origin",
+        type=int,
+        metavar="N",
+        help="Card this one was split from or follows up; inherits its epic",
+    )
     p_add.add_argument("title", nargs="+", help="Card title")
     p_add.add_argument("--json", action="store_true", help="Emit the new card as JSON")
     p_add.set_defaults(func=cmd_add)

@@ -37,6 +37,7 @@ from mait_code.tools.board.columns import (
     IN_REVIEW,
     KINDS,
     LINK_TYPES,
+    ORIGIN_LABEL,
     REFINED,
 )
 from mait_code.tools.board.sessions import SessionRef, pid_alive
@@ -783,7 +784,8 @@ def add_card(
     priority: str = "medium",
     created_by: str | None = None,
     kind: str = CARD,
-    parent_id: int | None = None,
+    parent_id: int | None | _Unchanged = _Unchanged.KEEP,
+    origin_id: int | None = None,
 ) -> int:
     """Insert a backlog card and return its new id.
 
@@ -793,43 +795,70 @@ def add_card(
 
     An epic (``kind=EPIC``) always gets :data:`EPIC_PROJECT` — pass that or
     ``None`` as *project* — and no parent. A card needs a real *project* and
-    may name its epic as *parent_id*. Raises :class:`RelationError` when the
-    combination breaks those rules, and :class:`CardNotFound` for an unknown
-    *parent_id*.
+    may name its epic as *parent_id*.
+
+    *origin_id* names the card this one was split from or raised as a
+    follow-up of, in any project. The new card joins the origin's epic unless
+    *parent_id* is given (``None`` for no epic), and gets an
+    :data:`ORIGIN_LABEL` reference to ``#<origin_id>`` in the same
+    transaction, which holds the write lock from the checks on, so a
+    parallel writer can't change the origin or epic in between. Epics
+    neither have an origin nor serve as one.
+
+    Raises :class:`RelationError` when the combination breaks those rules,
+    and :class:`CardNotFound` for an unknown *parent_id* or *origin_id*.
     """
     if kind not in KINDS:
         raise RelationError(f"unknown kind {kind!r}")
-    if kind == EPIC:
-        if project not in (None, EPIC_PROJECT):
-            raise RelationError(f"an epic has no project (got {project!r})")
-        if parent_id is not None:
-            raise RelationError("an epic can't have a parent")
-        project = EPIC_PROJECT
-    else:
-        _check_card_project(project)
-        if parent_id is not None:
-            _require_epic(conn, parent_id)
-    now = _now()
-    cursor = conn.execute(
-        "INSERT INTO cards (project, title, description, status, priority, "
-        "created_at, updated_at, created_by, kind, parent_id) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (
-            project,
-            title,
-            description,
-            BACKLOG,
-            priority,
-            now,
-            now,
-            created_by,
-            kind,
-            parent_id,
-        ),
-    )
-    conn.commit()
-    card_id = cursor.lastrowid
-    assert card_id is not None  # a successful INSERT always sets lastrowid
+    with _write_lock(conn):
+        if kind == EPIC:
+            if project not in (None, EPIC_PROJECT):
+                raise RelationError(f"an epic has no project (got {project!r})")
+            if parent_id not in (None, _Unchanged.KEEP):
+                raise RelationError("an epic can't have a parent")
+            if origin_id is not None:
+                raise RelationError("an epic can't come from a card")
+            project, parent_id = EPIC_PROJECT, None
+        else:
+            _check_card_project(project)
+            if origin_id is not None:
+                origin = _require_row(conn, origin_id)
+                if origin[_KIND] == EPIC:
+                    raise RelationError(
+                        f"#{origin_id} is an epic; use it as the parent instead"
+                    )
+                if parent_id is _Unchanged.KEEP:
+                    parent_id = origin[_PARENT]
+            if parent_id is _Unchanged.KEEP:
+                parent_id = None
+            if parent_id is not None:
+                _require_epic(conn, parent_id)
+        now = _now()
+        cursor = conn.execute(
+            "INSERT INTO cards (project, title, description, status, priority, "
+            "created_at, updated_at, created_by, kind, parent_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                project,
+                title,
+                description,
+                BACKLOG,
+                priority,
+                now,
+                now,
+                created_by,
+                kind,
+                parent_id,
+            ),
+        )
+        card_id = cursor.lastrowid
+        assert card_id is not None  # a successful INSERT always sets lastrowid
+        if origin_id is not None:
+            conn.execute(
+                "INSERT INTO card_references (card_id, position, label, value) "
+                "VALUES (?, 1, ?, ?)",
+                (card_id, ORIGIN_LABEL, f"#{origin_id}"),
+            )
     return card_id
 
 
