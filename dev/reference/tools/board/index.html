@@ -1910,6 +1910,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.ORIGIN_LABEL" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ORIGIN_LABEL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.REFINED" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3127,6 +3138,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.ORIGIN_LABEL" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ORIGIN_LABEL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.REFINED" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4267,6 +4289,28 @@
 
 
 
+<h2 id="mait_code.tools.board.ORIGIN_LABEL" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">ORIGIN_LABEL</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#mait_code.tools.board.ORIGIN_LABEL" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">ORIGIN_LABEL</span> <span class="o">=</span> <span class="s1">&#39;from&#39;</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h2 id="mait_code.tools.board.REFINED" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">REFINED</span>
 
@@ -5314,8 +5358,9 @@ no loops. The message says which one, ready to show a user.</p>
   
       module-attribute
    (mait_code.tools.board.columns.CARD)" href="#mait_code.tools.board.CARD">CARD</a></span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">parent_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">parent_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">|</span> <span class="n"><span title="mait_code.tools.board.service._Unchanged">_Unchanged</span></span> <span class="o">=</span> <span class="n"><span title="mait_code.tools.board.service._Unchanged.KEEP">KEEP</span></span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">origin_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5326,9 +5371,16 @@ somewhere other than a local session (see :mod:<code>mait_code.remote</code>);
 <code>None</code> means it was created locally.</p>
 <p>An epic (<code>kind=EPIC</code>) always gets :data:<code>EPIC_PROJECT</code> — pass that or
 <code>None</code> as <em>project</em> — and no parent. A card needs a real <em>project</em> and
-may name its epic as <em>parent_id</em>. Raises :class:<code>RelationError</code> when the
-combination breaks those rules, and :class:<code>CardNotFound</code> for an unknown
-<em>parent_id</em>.</p>
+may name its epic as <em>parent_id</em>.</p>
+<p><em>origin_id</em> names the card this one was split from or raised as a
+follow-up of, in any project. The new card joins the origin's epic unless
+<em>parent_id</em> is given (<code>None</code> for no epic), and gets an
+:data:<code>ORIGIN_LABEL</code> reference to <code>#&lt;origin_id&gt;</code> in the same
+transaction, which holds the write lock from the checks on, so a
+parallel writer can't change the origin or epic in between. Epics
+neither have an origin nor serve as one.</p>
+<p>Raises :class:<code>RelationError</code> when the combination breaks those rules,
+and :class:<code>CardNotFound</code> for an unknown <em>parent_id</em> or <em>origin_id</em>.</p>
 
 
     </div>
