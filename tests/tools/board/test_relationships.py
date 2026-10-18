@@ -20,6 +20,7 @@ from mait_code.tools.board.columns import (
     EPIC_PROJECT,
     IN_PROGRESS,
     IN_REVIEW,
+    ORIGIN_LABEL,
     REFINED,
 )
 from mait_code.tools.board.sessions import SessionRef
@@ -190,6 +191,63 @@ def test_deleting_an_epic_orphans_its_members(board_db):
     service.remove_card(board_db, eid)
     card = service.get_card(board_db, cid)
     assert card is not None and card["parent_id"] is None
+
+
+# --- Origins (cards born from other cards) ---
+
+
+def test_origin_passes_on_its_epic_and_is_referenced(board_db):
+    eid = _epic(board_db)
+    origin = _card(board_db, parent_id=eid)
+    cid = service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=origin)
+    card = service.get_card(board_db, cid)
+    assert card["parent_id"] == eid
+    assert card["references"] == [{"label": ORIGIN_LABEL, "value": f"#{origin}"}]
+
+
+def test_origin_without_an_epic_gives_none(board_db):
+    origin = _card(board_db)
+    cid = service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=origin)
+    assert service.get_card(board_db, cid)["parent_id"] is None
+
+
+def test_explicit_parent_overrides_the_origins_epic(board_db):
+    inherited, chosen = _epic(board_db), _epic(board_db)
+    origin = _card(board_db, parent_id=inherited)
+    for parent_id in (chosen, None):
+        cid = service.add_card(
+            board_db,
+            project=TEST_PROJECT,
+            title="f",
+            origin_id=origin,
+            parent_id=parent_id,
+        )
+        assert service.get_card(board_db, cid)["parent_id"] == parent_id
+
+
+def test_origin_may_sit_in_another_project(board_db):
+    eid = _epic(board_db)
+    origin = _card(board_db, project="homelab", parent_id=eid)
+    cid = service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=origin)
+    assert service.get_card(board_db, cid)["parent_id"] == eid
+
+
+def test_unknown_origin_is_not_found_and_adds_nothing(board_db):
+    with pytest.raises(service.CardNotFound):
+        service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=999)
+    assert board_db.execute("SELECT COUNT(*) FROM cards").fetchone()[0] == 0
+
+
+def test_an_epic_is_no_origin(board_db):
+    eid = _epic(board_db)
+    with pytest.raises(service.RelationError, match="use it as the parent"):
+        service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=eid)
+
+
+def test_an_epic_has_no_origin(board_db):
+    origin = _card(board_db)
+    with pytest.raises(service.RelationError, match="can't come from a card"):
+        service.add_card(board_db, project=None, title="e", kind=EPIC, origin_id=origin)
 
 
 # --- Links ---

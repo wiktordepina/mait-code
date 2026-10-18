@@ -33,7 +33,16 @@ Several Claude Code sessions can work the same project at once, so each In Progr
 ### Refining
 
 - **"refine card N"**: draft a clear description and acceptance criteria, **show them to the user for approval first**, then run `mc-tool-board refine N --description "..." --acceptance "..."` (moves it to `refined`). Don't refine without confirmation.
-- **Splitting a card during refinement** is where ordering gets lost, so for each new card: copy the original's epic (`add ... --parent E`, from the original's `parent`), add a `split-from` reference to the original (`ref add NEW split-from "#N"`), and **ask the user how the pieces order** before linking any `blocks` — never guess a dependency.
+- **Splitting a card during refinement**: each piece is a card born from the original — see *Cards born from other cards* below.
+
+### Cards born from other cards
+
+Splits during refinement and follow-ups spotted mid-work are where an initiative loses track of its pieces, so every such card keeps its epic and its origin:
+
+- **Find the origin**: the card being split or refined, the card under discussion, or — for a follow-up raised while working — this session's card (`mc-tool-board list --mine`). If it's ambiguous (several bound cards, or the work is unrelated to any), ask.
+- **Add it with `--from`**: `mc-tool-board add "<title>" --from N [...]`. This joins N's epic and records a `from` → `#N` reference in one step; the origin may sit in another project. Override the epic with `--parent E`, or drop it with `--parent none`, when the new card belongs elsewhere.
+- **Say what it inherited** when proposing the card ("under epic #E, from #N") so the user can redirect it before you add it.
+- **Ordering is still the user's call**: ask how the new card orders against its origin and siblings before linking any `blocks` — never guess a dependency.
 
 ### Epics & dependencies
 
@@ -46,7 +55,7 @@ Cards relate two ways — both cross projects freely:
   - An epic's status is set by hand. When finishing or archiving its last open member prints *"epic #E has no open members"*, **offer** to complete the epic — never complete it unasked.
 - **`blocks` links** record that one card must be done before another can start: `mc-tool-board link A blocks B`, removed with `unlink A blocks B`. A waiting card shows `waiting on #A` in `list`, and `next` / `list --ready` skip it until A is done (or archived — `show` then flags the archived blocker for another look). A link that would close a loop is refused with the loop's path. Epics take no links: link their member cards.
 - **`blocked` tag vs links**: link when the blocker is another card; tag `blocked` (below) only when it's something outside the board — an upstream fix, a person, a decision.
-- Add links and parents only when the user has said how the work orders — ask rather than infer.
+- Add `blocks` links only when the user has said how the work orders — ask rather than infer. Epic membership is different: a card born from another inherits its epic via `--from` (above); otherwise ask which epic, if any, a new card belongs to.
 
 ### Finishing & parking
 
@@ -62,7 +71,7 @@ Cards relate two ways — both cross projects freely:
 
 The **description**, **acceptance criteria** and **completion summary** fields render markdown in the card detail view (plain text works too — it's a subset). Write these in markdown when it helps: headings, lists, emphasis, inline and fenced code all display formatted, and single newlines are kept as line breaks. No need to flatten a markdown source into plain prose.
 
-- Add: `mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project <name>]`. New cards land in `backlog`. Use `--project` for work with no git repo yet (e.g. an app idea).
+- Add: `mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project <name>] [--parent E] [--from N]`. New cards land in `backlog`. Use `--project` for work with no git repo yet (e.g. an app idea), and `--from` whenever the card comes out of another (see *Cards born from other cards*).
 - Edit: `mc-tool-board edit N [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...]`.
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
 - References (label→value links on a card): `mc-tool-board ref add N <label> <value>` — *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
@@ -81,4 +90,4 @@ The **description**, **acceptance criteria** and **completion summary** fields r
 
 ## Proactive behaviour
 
-If you spot work worth tracking during a session, you may **suggest** adding a card — but always ask before adding. When you open a PR for an in-progress card, offer to move it to review with the PR link; when you finish a chunk of work that maps to a card (or its PR merges), offer to complete it with a summary. Never move, complete, or archive cards without the user's say-so.
+If you spot work worth tracking during a session, you may **suggest** adding a card — but always ask before adding. When it comes out of a card on the board (usually this session's, `list --mine`), propose it with `--from` and name the epic it would inherit. When you open a PR for an in-progress card, offer to move it to review with the PR link; when you finish a chunk of work that maps to a card (or its PR merges), offer to complete it with a summary. Never move, complete, or archive cards without the user's say-so.

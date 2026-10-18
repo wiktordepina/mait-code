@@ -171,9 +171,15 @@ def cmd_add(args):
             _fail("an epic belongs to no project; drop --project.")
         if args.parent is not None:
             _fail("an epic can't have a parent; drop --parent.")
+        if args.origin is not None:
+            _fail("an epic can't come from a card; drop --from.")
         project, kind, noun = None, EPIC, "Epic"
     else:
         project, kind, noun = args.project or get_project(), "card", "Card"
+    # Left out, the epic is --from's to inherit (and none without it).
+    parent = {}
+    if args.parent is not None:
+        parent["parent_id"] = None if args.parent == NO_PARENT else args.parent
     with connection() as conn:
         try:
             card_id = service.add_card(
@@ -183,7 +189,8 @@ def cmd_add(args):
                 description=args.description,
                 priority=args.priority,
                 kind=kind,
-                parent_id=args.parent,
+                origin_id=args.origin,
+                **parent,
             )
         except (service.CardNotFound, service.RelationError) as exc:
             _relation_failed(exc)
@@ -887,7 +894,19 @@ def main():
     p_add.add_argument(
         "--epic", action="store_true", help="Add an epic (spans projects; no --project)"
     )
-    p_add.add_argument("--parent", type=int, metavar="EPIC", help="Epic the card is in")
+    p_add.add_argument(
+        "--parent",
+        type=_parent_arg,
+        metavar="EPIC",
+        help="Epic the card is in ('none' to drop the one --from would inherit)",
+    )
+    p_add.add_argument(
+        "--from",
+        dest="origin",
+        type=int,
+        metavar="N",
+        help="Card this one was split from or follows up; inherits its epic",
+    )
     p_add.add_argument("title", nargs="+", help="Card title")
     p_add.add_argument("--json", action="store_true", help="Emit the new card as JSON")
     p_add.set_defaults(func=cmd_add)

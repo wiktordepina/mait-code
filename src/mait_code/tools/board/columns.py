@@ -36,6 +36,11 @@ EPIC_PROJECT = "@epic"
 BLOCKS = "blocks"
 LINK_TYPES: tuple[str, ...] = (BLOCKS,)
 
+#: Reference label recording the card a new one was split from or raised as a
+#: follow-up of (``add --from N``), valued ``#N``. A reference, not a link: it
+#: carries provenance and never affects ordering.
+ORIGIN_LABEL = "from"
+
 #: Columns in left-to-right board order. ``archived`` is a hidden state and is
 #: deliberately excluded.
 BOARD_ORDER: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW, DONE)
@@ -80,6 +85,7 @@ __all__ = [
     "KINDS",
     "LABELS",
     "LINK_TYPES",
+    "ORIGIN_LABEL",
     "REFINED",
     "is_valid_status",
     "label",

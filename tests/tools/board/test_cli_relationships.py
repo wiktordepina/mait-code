@@ -17,6 +17,7 @@ from mait_code.tools.board.columns import (
     EPIC,
     EPIC_PROJECT,
     IN_PROGRESS,
+    ORIGIN_LABEL,
     REFINED,
 )
 
@@ -135,6 +136,36 @@ def test_add_with_a_non_epic_parent_is_refused(run, mock_conn):
     other = _card(mock_conn)
     code, _, err = run("add", "member", "--parent", other)
     assert code == 1 and "isn't an epic" in err
+
+
+def test_add_from_inherits_the_epic_and_records_the_origin(run, mock_conn):
+    eid = _epic(mock_conn)
+    origin = _card(mock_conn, project="homelab", parent_id=eid)
+    code, out, _ = run("add", "follow-up", "--from", origin, "--json")
+    card = json.loads(out)
+    assert code == 0 and card["parent"]["id"] == eid
+    assert card["references"] == [{"label": ORIGIN_LABEL, "value": f"#{origin}"}]
+
+
+def test_add_from_with_parent_none_drops_the_epic(run, mock_conn):
+    origin = _card(mock_conn, parent_id=_epic(mock_conn))
+    code, out, _ = run("add", "f", "--from", origin, "--parent", "none", "--json")
+    assert code == 0 and json.loads(out)["parent"] is None
+
+
+def test_add_from_unknown_card_is_not_found(run):
+    code, _, err = run("add", "f", "--from", 999)
+    assert code == 1 and "#999 not found" in err
+
+
+def test_add_from_an_epic_is_refused(run, mock_conn):
+    code, _, err = run("add", "f", "--from", _epic(mock_conn))
+    assert code == 1 and "use it as the parent" in err
+
+
+def test_add_epic_refuses_from(run, mock_conn):
+    code, _, err = run("add", "e", "--epic", "--from", _card(mock_conn))
+    assert code == 1 and "drop --from" in err
 
 
 def test_edit_parent_set_and_clear(run, mock_conn):

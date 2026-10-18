@@ -210,6 +210,14 @@ mc-tool-board epic show 170                         # its members, column by col
 - **Status by hand.** Move or complete an epic like any card. When finishing
   or archiving its last open member, the CLI notes *"epic #170 has no open
   members"* — a reminder, never an automatic move.
+- **New cards from old keep their epic.** A card split off during refinement,
+  or a follow-up spotted while working, is added with `--from`: it joins the
+  origin's epic and gets a `from` → `#N` reference, so you can trace it back.
+  `--parent` still wins — `--parent none` keeps it out of any epic.
+
+  ```bash
+  mc-tool-board add "Wake-word: tune the threshold" --from 141   # epic 170, from #141
+  ```
 
 ### Dependencies
 
@@ -405,7 +413,7 @@ mc-tool-board show ID [--json]
 mc-tool-board summary [--all] [--project PROJECT] [--json [--session ID]]   # --session adds bound/in-review cards + inbox count
 
 # Create & edit
-mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ... | --epic] [--parent EPIC] [--json]
+mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ... | --epic] [--parent EPIC|none] [--from ID] [--json]
 mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...] [--parent EPIC|none] [--json]
 mc-tool-board comment ID "<note>" [--author me|claude] [--json]
 
