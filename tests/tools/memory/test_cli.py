@@ -48,6 +48,18 @@ def mem_db(tmp_path):
 
 
 @pytest.fixture
+def restore_data_dir(tmp_path, monkeypatch):
+    """Point the data directory at ``tmp_path / "data"`` for ``restore``.
+
+    Set through the env var rather than by patching ``db.get_data_dir``:
+    ``cmd_restore`` imports ``hooks.observe.storage`` lazily, so a patch live
+    at that first import binds the mock into storage for the rest of the
+    process and redirects later tests' raw-log writes.
+    """
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path / "data"))
+
+
+@pytest.fixture
 def populated_mem_db(mem_db):
     """Memory test DB with sample data."""
     entries = [
@@ -699,17 +711,14 @@ class TestCmdReindex:
             run_reindex(missing_only=True)
 
 
+@pytest.mark.usefixtures("restore_data_dir")
 class TestCmdRestore:
     def test_restore_no_obs_dir(self, mem_db, tmp_path, capsys):
         from mait_code.tools.memory.cli import cmd_restore
 
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "nonexistent",
-        ):
-            args = _make_args(dry_run=False)
-            with pytest.raises(SystemExit):
-                cmd_restore(args)
+        args = _make_args(dry_run=False)
+        with pytest.raises(SystemExit):
+            cmd_restore(args)
 
     def test_restore_dry_run(self, mem_db, tmp_path, capsys):
         import json
@@ -730,12 +739,8 @@ class TestCmdRestore:
         }
         (obs_dir / "2025-01-01.jsonl").write_text(json.dumps(record) + "\n")
 
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            args = _make_args(dry_run=True)
-            cmd_restore(args)
+        args = _make_args(dry_run=True)
+        cmd_restore(args)
 
         out = capsys.readouterr().out
         assert "[dry-run]" in out
@@ -775,12 +780,8 @@ class TestCmdRestore:
         }
         (obs_dir / "2025-01-01.jsonl").write_text(json.dumps(record) + "\n")
 
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            args = _make_args(dry_run=False)
-            cmd_restore(args)
+        args = _make_args(dry_run=False)
+        cmd_restore(args)
 
         out = capsys.readouterr().out
         assert "Memories stored: 2" in out
@@ -806,11 +807,7 @@ class TestCmdRestore:
             "".join(json.dumps(r) + "\n" for r in records)
         )
 
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            cmd_restore(_make_args(dry_run=False))
+        cmd_restore(_make_args(dry_run=False))
 
         rows = dict(
             mem_db.execute("SELECT content, source FROM memory_entries").fetchall()
@@ -1314,6 +1311,7 @@ class TestReindexInternals:
 # --- Restore: warning/error branches ---
 
 
+@pytest.mark.usefixtures("restore_data_dir")
 class TestCmdRestoreBranches:
     def test_no_log_files(self, mem_db, tmp_path):
         from mait_code.tools.memory.cli import cmd_restore
@@ -1321,12 +1319,8 @@ class TestCmdRestoreBranches:
         # The observations dir exists but holds no .jsonl files.
         obs_dir = tmp_path / "data" / "memory" / "observations"
         obs_dir.mkdir(parents=True)
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            with pytest.raises(SystemExit):
-                cmd_restore(_make_args(dry_run=False))
+        with pytest.raises(SystemExit):
+            cmd_restore(_make_args(dry_run=False))
 
     def test_invalid_json_line_counts_error(self, mem_db, tmp_path, capsys):
         import json
@@ -1344,11 +1338,7 @@ class TestCmdRestoreBranches:
         }
         # One garbage line, one blank line, one good record.
         (obs_dir / "log.jsonl").write_text("{ not json\n\n" + json.dumps(good) + "\n")
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            cmd_restore(_make_args(dry_run=True))
+        cmd_restore(_make_args(dry_run=True))
         out = capsys.readouterr().out
         assert "invalid JSON" in out
         assert "Errors: 1" in out
@@ -1377,11 +1367,7 @@ class TestCmdRestoreBranches:
             }
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            cmd_restore(_make_args(dry_run=False))
+        cmd_restore(_make_args(dry_run=False))
         out = capsys.readouterr().out
         assert "Relationships upserted: 1" in out
         # Both endpoints were created on the fly.
@@ -1408,11 +1394,7 @@ class TestCmdRestoreBranches:
             }
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            cmd_restore(_make_args(dry_run=False))
+        cmd_restore(_make_args(dry_run=False))
         out = capsys.readouterr().out
         assert "Memories stored: 0" in out
         assert "Entities upserted: 0" in out
@@ -1434,10 +1416,6 @@ class TestCmdRestoreBranches:
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
         with (
-            patch(
-                "mait_code.tools.memory.db.get_data_dir",
-                return_value=tmp_path / "data",
-            ),
             patch(
                 "mait_code.tools.memory.writer.store_memory",
                 side_effect=RuntimeError("disk full"),
@@ -1465,10 +1443,6 @@ class TestCmdRestoreBranches:
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
         with (
-            patch(
-                "mait_code.tools.memory.db.get_data_dir",
-                return_value=tmp_path / "data",
-            ),
             patch(
                 "mait_code.tools.memory.entities.upsert_entity",
                 side_effect=RuntimeError("constraint"),
@@ -1501,10 +1475,6 @@ class TestCmdRestoreBranches:
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
         with (
-            patch(
-                "mait_code.tools.memory.db.get_data_dir",
-                return_value=tmp_path / "data",
-            ),
             patch(
                 "mait_code.tools.memory.entities.upsert_entity",
                 side_effect=RuntimeError("boom"),
@@ -1553,10 +1523,6 @@ class TestCmdRestoreBranches:
 
         with (
             patch(
-                "mait_code.tools.memory.db.get_data_dir",
-                return_value=tmp_path / "data",
-            ),
-            patch(
                 "mait_code.tools.memory.entities.upsert_entity",
                 side_effect=selective_upsert,
             ),
@@ -1589,10 +1555,6 @@ class TestCmdRestoreBranches:
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
         with (
             patch(
-                "mait_code.tools.memory.db.get_data_dir",
-                return_value=tmp_path / "data",
-            ),
-            patch(
                 "mait_code.tools.memory.entities.upsert_relationship",
                 side_effect=RuntimeError("rel boom"),
             ),
@@ -1619,11 +1581,7 @@ class TestCmdRestoreBranches:
             }
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
-        with patch(
-            "mait_code.tools.memory.db.get_data_dir",
-            return_value=tmp_path / "data",
-        ):
-            cmd_restore(_make_args(dry_run=True))
+        cmd_restore(_make_args(dry_run=True))
         out = capsys.readouterr().out
         # In dry-run the relationship is counted without touching the DB.
         assert "[dry-run]" in out
@@ -1646,10 +1604,6 @@ class TestCmdRestoreBranches:
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
         with (
-            patch(
-                "mait_code.tools.memory.db.get_data_dir",
-                return_value=tmp_path / "data",
-            ),
             patch("mait_code.tools.memory.cli.is_available", return_value=True),
             # The reindex helper reports nothing embedded, so the success
             # line is suppressed.
@@ -1676,10 +1630,6 @@ class TestCmdRestoreBranches:
         }
         (obs_dir / "log.jsonl").write_text(json.dumps(record) + "\n")
         with (
-            patch(
-                "mait_code.tools.memory.db.get_data_dir",
-                return_value=tmp_path / "data",
-            ),
             patch("mait_code.tools.memory.cli.is_available", return_value=True),
             patch(
                 "mait_code.tools.memory.cli.embed_texts",
