@@ -851,6 +851,7 @@ def test_create_card_opting_out_needs_an_origin(tmp_path):
         remote.create_card(
             tmp_path, client="phone", project="proj", title="t", inherit_epic=False
         )
+    assert not (tmp_path / "board.db").exists()
 
 
 def test_get_epic_refuses_a_plain_card(instance):

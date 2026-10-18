@@ -53,10 +53,10 @@ follow_up = remote.create_card(
 
 Deleting or archiving cards, tags, links, setting a card's epic, moving a card
 into In Progress, In Review or Done, writing or retiring memories, applying
-reflections, and changing reminders. These are decisions for whoever owns the instance, so the functions
-**don't exist** on this surface; they aren't refused at runtime. A test pins
-the module's public names to an allowlist, so adding one is a visible change to
-this contract, not a quiet addition.
+reflections, and changing reminders. These are decisions for whoever owns the
+instance, so the functions **don't exist** on this surface; they aren't refused
+at runtime. A test pins the module's public names to an allowlist, so adding
+one is a visible change to this contract, not a quiet addition.
 
 A refine of a card outside backlog/refined, or towards any other column, raises
 `TransitionRefused` and changes nothing. The status check and the write happen

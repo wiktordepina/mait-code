@@ -22,13 +22,14 @@ What is here is the whole contract:
   description current is the instance owner's bookkeeping.
 
 What is absent is just as deliberate: deleting or archiving, tags, links,
-setting a parent, moves into
-``in_progress`` / ``in_review`` / ``done``, memory writes, reflections and
-reminder changes. A card reaches an epic only through its origin — though
-since any card can be one, a client can reach any epic that has a member;
-the ``from`` reference and ``created_by`` show how the card got there. Those are decisions for whoever hosts the instance, so the
-functions do not exist here rather than refusing at runtime. A test pins
-``__all__`` to an allowlist.
+setting a parent, moves into ``in_progress`` / ``in_review`` / ``done``,
+memory writes, reflections and reminder changes. Those are decisions for
+whoever hosts the instance, so the functions do not exist here rather than
+refusing at runtime. A test pins ``__all__`` to an allowlist.
+
+A card reaches an epic only through its origin — though since any card can
+be one, a client can reach any epic that has a member. The ``from``
+reference and ``created_by`` show how the card got there.
 
 Every mutating call takes a required *client* name, recorded as the card's
 ``created_by`` on create and as the author of a comment on refine, so a card
