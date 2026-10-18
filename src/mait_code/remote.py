@@ -12,19 +12,24 @@ What is here is the whole contract:
   (ranked like ``mc-tool-memory search``), whether memory search can use its
   vectors, and active reminders.
 * **Create** a card. It always lands in ``backlog`` — there is no status
-  parameter to override.
+  parameter to override. A card may name the card it came from: it joins
+  that card's epic, unless the client opts out, and records a ``from``
+  reference to it.
 * **Refine** a card: edit its description and acceptance criteria, and move
   it between ``backlog`` and ``refined``. Any other column is refused, and so
   is an epic — it is never work to be picked up, so a client refining one has
   mistaken it for a card. Locally an epic can still be refined: keeping its
   description current is the instance owner's bookkeeping.
 
-What is absent is just as deliberate: deleting or archiving, tags, links and
-parents, moves into
-``in_progress`` / ``in_review`` / ``done``, memory writes, reflections and
-reminder changes. Those are decisions for whoever hosts the instance, so the
-functions do not exist here rather than refusing at runtime. A test pins
-``__all__`` to an allowlist.
+What is absent is just as deliberate: deleting or archiving, tags, links,
+setting a parent, moves into ``in_progress`` / ``in_review`` / ``done``,
+memory writes, reflections and reminder changes. Those are decisions for
+whoever hosts the instance, so the functions do not exist here rather than
+refusing at runtime. A test pins ``__all__`` to an allowlist.
+
+A card reaches an epic only through its origin — though since any card can
+be one, a client can reach any epic that has a member. The ``from``
+reference and ``created_by`` show how the card got there.
 
 Every mutating call takes a required *client* name, recorded as the card's
 ``created_by`` on create and as the author of a comment on refine, so a card
@@ -86,6 +91,7 @@ import sqlite3
 from collections.abc import Iterable, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from mait_code.tools.board import migrate as _board_migrate
 from mait_code.tools.board import service as _board
@@ -330,10 +336,19 @@ def create_card(
     title: str,
     description: str | None = None,
     priority: str = "medium",
+    origin_id: int | None = None,
+    inherit_epic: bool = True,
 ) -> dict:
     """Create a card in ``backlog``, recording *client* as its creator.
 
     There is no way to create a card anywhere but ``backlog``.
+
+    With *origin_id*, the card joins the origin's epic and gets a ``from`` →
+    ``#<origin_id>`` reference, in one transaction. An epic that is done or
+    archived is refused rather than joined, since nothing would surface the
+    card under it; pass ``inherit_epic=False`` to keep the reference and join
+    no epic. Without an origin, ``inherit_epic=True`` has nothing to inherit
+    and changes nothing.
 
     Args:
         data_dir: The instance's data directory.
@@ -342,13 +357,20 @@ def create_card(
         title: Card title.
         description: Optional markdown description.
         priority: ``"low"``, ``"medium"`` or ``"high"``.
+        origin_id: The card this one was split from or raised as a follow-up
+            of, in any project.
+        inherit_epic: Whether to join the origin's epic.
 
     Returns:
         The new card, with its (empty) comments.
 
     Raises:
         ValueError: If *client*, *project* or *title* is blank, *client* is
-            too long, or *priority* is unknown.
+            too long, *priority* is unknown, or *inherit_epic* is ``False``
+            without an *origin_id*.
+        CardNotFound: If no card has the id *origin_id*.
+        RelationError: If the origin is an epic, or its epic is done or
+            archived and *inherit_epic* is ``True``.
     """
     client = _require_client(client)
     if not project.strip():
@@ -357,16 +379,34 @@ def create_card(
         raise ValueError("title is required")
     if priority not in _PRIORITIES:
         raise ValueError(f"priority must be one of {', '.join(_PRIORITIES)}")
+    if not inherit_epic and origin_id is None:
+        raise ValueError("inherit_epic=False needs an origin_id")
+    # Left out, the epic is the origin's to pass on (and none without one).
+    parent: dict[str, Any] = {} if inherit_epic else {"parent_id": None}
     conn = _board_conn(data_dir, readonly=False)
     try:
-        card_id = _board.add_card(
-            conn,
-            project=project.strip(),
-            title=title.strip(),
-            description=description,
-            priority=priority,
-            created_by=client,
-        )
+        try:
+            card_id = _board.add_card(
+                conn,
+                project=project.strip(),
+                title=title.strip(),
+                description=description,
+                priority=priority,
+                created_by=client,
+                origin_id=origin_id,
+                refuse_closed_epic=True,
+                **parent,
+            )
+        except _board.EpicOrigin as exc:
+            # The service's message points at a parent, which isn't on offer here.
+            raise RelationError(
+                f"#{exc.card_id} is an epic; an origin must be a card"
+            ) from exc
+        except _board.InheritedEpicClosed as exc:
+            raise RelationError(
+                f"origin #{exc.origin_id}'s epic #{exc.epic_id} is {exc.status}; "
+                "pass inherit_epic=False"
+            ) from exc
         return _card_with_comments(conn, card_id)
     finally:
         conn.close()

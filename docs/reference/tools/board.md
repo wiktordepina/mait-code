@@ -81,6 +81,10 @@
 
 ::: mait_code.tools.board.CardNotFound
 
+::: mait_code.tools.board.EpicOrigin
+
+::: mait_code.tools.board.InheritedEpicClosed
+
 ::: mait_code.tools.board.LinkCycle
 
 ::: mait_code.tools.board.NotInProgress

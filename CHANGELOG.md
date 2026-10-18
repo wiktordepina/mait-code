@@ -10,6 +10,31 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.88.0] — 2026-10-18
+
+### Added
+
+- **Remote cards can name where they came from.** `remote.create_card` takes
+  an `origin_id`: the card joins that card's epic and gets a `from` → `#N`
+  reference in one transaction, the remote counterpart of `add --from`.
+  `inherit_epic=False` keeps the reference and joins no epic. There is still
+  no parent argument; the docs now say plainly that an origin can carry a card
+  into any epic that has a member, with `created_by` and the reference showing
+  how it got there.
+- **`refuse_closed_epic` on `service.add_card`**, with two typed
+  `RelationError` subclasses, `EpicOrigin` and `InheritedEpicClosed`, so a
+  caller can tell the origin refusals apart.
+
+### Changed
+
+- **A remote card won't join a closed epic.** If the origin's epic is done or
+  archived, `create_card` refuses with a `RelationError` naming
+  `inherit_epic=False`, rather than filing the card under an initiative
+  nobody is looking at. Local `add --from` still joins and notes it on stderr.
+- **The remote epic-origin error no longer suggests a parent**, which the
+  remote surface doesn't offer: it reads "#N is an epic; an origin must be a
+  card".
+
 ## [0.87.0] — 2026-10-18
 
 ### Added
@@ -2735,7 +2760,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.87.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.88.0...HEAD
+[0.88.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.88.0
 [0.87.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.87.0
 [0.86.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.86.0
 [0.85.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.85.0
