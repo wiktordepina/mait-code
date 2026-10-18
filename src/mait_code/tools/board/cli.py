@@ -134,6 +134,24 @@ def _remind_epic(conn, card_id: int) -> None:
     )
 
 
+def _note_closed_epic(conn, card_id: int) -> None:
+    """Note on stderr when *card_id* inherited an epic that is done or archived.
+
+    ``--from`` joins the origin's epic unasked, and an open card under a closed
+    initiative is easy to miss — redirect it with ``edit --parent``.
+    """
+    card = service.get_card(conn, card_id)
+    epic = card and card["parent"] and service.get_card(conn, card["parent"]["id"])
+    if not epic or epic["status"] not in (DONE, ARCHIVED):
+        return
+    print(
+        f"Note: #{card_id} joined epic #{epic['id']}, which is "
+        f"{label(epic['status'])} — move it with "
+        f"'mc-tool-board edit {card_id} --parent <epic|none>' if it belongs elsewhere.",
+        file=sys.stderr,
+    )
+
+
 def _card_payload(conn, card_id: int) -> dict:
     """Return a card in the ``show --json`` shape (comments included)."""
     card = service.get_card(conn, card_id)
@@ -197,6 +215,8 @@ def cmd_add(args):
         _print_card(
             conn, args, card_id, f"{noun} #{card_id} added ({args.priority}): {title}"
         )
+        if args.origin is not None and args.parent is None:
+            _note_closed_epic(conn, card_id)
 
 
 def cmd_list(args):

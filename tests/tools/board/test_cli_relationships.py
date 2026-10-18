@@ -13,6 +13,7 @@ import pytest
 from mait_code.tools.board import service
 from mait_code.tools.board.cli import main
 from mait_code.tools.board.columns import (
+    ARCHIVED,
     DONE,
     EPIC,
     EPIC_PROJECT,
@@ -151,6 +152,24 @@ def test_add_from_with_parent_none_drops_the_epic(run, mock_conn):
     origin = _card(mock_conn, parent_id=_epic(mock_conn))
     code, out, _ = run("add", "f", "--from", origin, "--parent", "none", "--json")
     assert code == 0 and json.loads(out)["parent"] is None
+
+
+@pytest.mark.parametrize("status", [DONE, ARCHIVED])
+def test_add_from_notes_an_inherited_closed_epic(run, mock_conn, status):
+    eid = _epic(mock_conn)
+    origin = _card(mock_conn, parent_id=eid)
+    service.move_card(mock_conn, eid, status)
+    code, out, err = run("add", "f", "--from", origin, "--json")
+    assert code == 0 and json.loads(out)["parent"]["id"] == eid
+    assert f"joined epic #{eid}, which is" in err
+
+
+def test_add_from_says_nothing_of_an_open_epic_or_explicit_parent(run, mock_conn):
+    closed = _epic(mock_conn)
+    origin = _card(mock_conn, parent_id=closed)
+    assert run("add", "f", "--from", origin)[2] == ""
+    service.move_card(mock_conn, closed, DONE)
+    assert run("add", "f", "--from", origin, "--parent", closed)[2] == ""
 
 
 def test_add_from_unknown_card_is_not_found(run):

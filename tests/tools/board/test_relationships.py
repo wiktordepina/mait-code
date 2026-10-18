@@ -238,6 +238,17 @@ def test_unknown_origin_is_not_found_and_adds_nothing(board_db):
     assert board_db.execute("SELECT COUNT(*) FROM cards").fetchone()[0] == 0
 
 
+def test_a_failed_origin_reference_leaves_no_card(board_db):
+    origin = _card(board_db)
+    board_db.execute(
+        "CREATE TRIGGER refuse_refs BEFORE INSERT ON card_references "
+        "BEGIN SELECT RAISE(ABORT, 'refused'); END"
+    )
+    with pytest.raises(sqlite3.IntegrityError, match="refused"):
+        service.add_card(board_db, project=TEST_PROJECT, title="f", origin_id=origin)
+    assert [c["id"] for c in service.list_cards(board_db)] == [origin]
+
+
 def test_an_epic_is_no_origin(board_db):
     eid = _epic(board_db)
     with pytest.raises(service.RelationError, match="use it as the parent"):
