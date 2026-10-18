@@ -2163,6 +2163,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.EpicOrigin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;EpicOrigin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.InheritedEpicClosed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;InheritedEpicClosed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.LinkCycle" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3384,6 +3406,28 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;CardNotFound
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.EpicOrigin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;EpicOrigin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.InheritedEpicClosed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;InheritedEpicClosed
       
     </span>
   </a>
@@ -5183,6 +5227,171 @@ Epics are left out, as on the board; see :func:<code>export_epic</code>.</p>
 
 
 
+<h2 id="mait_code.tools.board.EpicOrigin" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">EpicOrigin</span>
+
+
+<a href="#mait_code.tools.board.EpicOrigin" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">EpicOrigin</span><span class="p">(</span><span class="n">card_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            RelationError (mait_code.tools.board.service.RelationError)" href="#mait_code.tools.board.RelationError">RelationError</a></code></p>
+
+
+
+        <p>Raised when a new card names an epic as the card it came from.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">ATTRIBUTE</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="mait_code.tools.board.EpicOrigin.card_id">card_id</span></code></td>
+            <td class="doc-attribute-details">
+              <div class="doc-md-description">
+                <p>The epic named as the origin.</p>
+              </div>
+              <p>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mait_code.tools.board.InheritedEpicClosed" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">InheritedEpicClosed</span>
+
+
+<a href="#mait_code.tools.board.InheritedEpicClosed" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">InheritedEpicClosed</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">origin_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span> <span class="n">epic_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="n"><span title="str">str</span></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            RelationError (mait_code.tools.board.service.RelationError)" href="#mait_code.tools.board.RelationError">RelationError</a></code></p>
+
+
+
+        <p>Raised when a new card would inherit an epic that is done or archived.</p>
+<p>Only :func:<code>add_card</code> with <code>refuse_closed_epic=True</code> raises it.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">ATTRIBUTE</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="mait_code.tools.board.InheritedEpicClosed.origin_id">origin_id</span></code></td>
+            <td class="doc-attribute-details">
+              <div class="doc-md-description">
+                <p>The card the epic would have been inherited from.</p>
+              </div>
+              <p>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="mait_code.tools.board.InheritedEpicClosed.epic_id">epic_id</span></code></td>
+            <td class="doc-attribute-details">
+              <div class="doc-md-description">
+                <p>The closed epic.</p>
+              </div>
+              <p>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="mait_code.tools.board.InheritedEpicClosed.status">status</span></code></td>
+            <td class="doc-attribute-details">
+              <div class="doc-md-description">
+                <p>The epic's status, <code>done</code> or <code>archived</code>.</p>
+              </div>
+              <p>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
 <h2 id="mait_code.tools.board.LinkCycle" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">LinkCycle</span>
 
@@ -5360,7 +5569,8 @@ no loops. The message says which one, ready to show a user.</p>
    (mait_code.tools.board.columns.CARD)" href="#mait_code.tools.board.CARD">CARD</a></span><span class="p">,</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">parent_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">|</span> <span class="n"><span title="mait_code.tools.board.service._Unchanged">_Unchanged</span></span> <span class="o">=</span> <span class="n"><span title="mait_code.tools.board.service._Unchanged.KEEP">KEEP</span></span><span class="p">,</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">origin_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">refuse_closed_epic</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5378,7 +5588,10 @@ follow-up of, in any project. The new card joins the origin's epic unless
 :data:<code>ORIGIN_LABEL</code> reference to <code>#&lt;origin_id&gt;</code> in the same
 transaction, which holds the write lock from the checks on, so a
 parallel writer can't change the origin or epic in between. Epics
-neither have an origin nor serve as one.</p>
+neither have an origin nor serve as one (:class:<code>EpicOrigin</code>).</p>
+<p><em>refuse_closed_epic</em> refuses to inherit an epic that is done or archived
+(:class:<code>InheritedEpicClosed</code>), for a caller that can't warn about one
+afterwards. An explicit <em>parent_id</em> is never refused for its status.</p>
 <p>Raises :class:<code>RelationError</code> when the combination breaks those rules,
 and :class:<code>CardNotFound</code> for an unknown <em>parent_id</em> or <em>origin_id</em>.</p>
 

@@ -2254,7 +2254,7 @@ next to the data model and its tests.</p>
 </tr>
 <tr>
 <td><code>create_card</code></td>
-<td>A new card, <strong>always in backlog</strong>: there is no status parameter.</td>
+<td>A new card, <strong>always in backlog</strong>: there is no status parameter. With <code>origin_id</code>, it joins that card's epic and records a <code>from</code> reference; <code>inherit_epic=False</code> keeps the reference and joins no epic.</td>
 </tr>
 <tr>
 <td><code>refine_card</code></td>
@@ -2287,18 +2287,31 @@ next to the data model and its tests.</p>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">remote</span><span class="o">.</span><span class="n">refine_card</span><span class="p">(</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">data</span><span class="p">,</span> <span class="n">card</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="n">client</span><span class="o">=</span><span class="s2">&quot;laptop&quot;</span><span class="p">,</span> <span class="n">acceptance</span><span class="o">=</span><span class="s2">&quot;- token rotated</span><span class="se">\n</span><span class="s2">- runbook updated&quot;</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">follow_up</span> <span class="o">=</span> <span class="n">remote</span><span class="o">.</span><span class="n">create_card</span><span class="p">(</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">data</span><span class="p">,</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">client</span><span class="o">=</span><span class="s2">&quot;hermes&quot;</span><span class="p">,</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">project</span><span class="o">=</span><span class="s2">&quot;homelab&quot;</span><span class="p">,</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Alert before the forge token expires&quot;</span><span class="p">,</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">origin_id</span><span class="o">=</span><span class="n">card</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>  <span class="c1"># joins its epic, records `from` → #&lt;id&gt;</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="what-it-deliberately-cant">What it deliberately can't<a class="headerlink" href="#what-it-deliberately-cant" title="Permanent link">&para;</a></h2>
-<p>Deleting or archiving cards, tags, moving a card into In Progress, In Review or
-Done, writing or retiring memories, applying reflections, and changing
-reminders. These are decisions for whoever owns the instance, so the functions
-<strong>don't exist</strong> on this surface; they aren't refused at runtime. A test pins
-the module's public names to an allowlist, so adding one is a visible change to
-this contract, not a quiet addition.</p>
+<p>Deleting or archiving cards, tags, links, setting a card's epic, moving a card
+into In Progress, In Review or Done, writing or retiring memories, applying
+reflections, and changing reminders. These are decisions for whoever owns the
+instance, so the functions <strong>don't exist</strong> on this surface; they aren't refused
+at runtime. A test pins the module's public names to an allowlist, so adding
+one is a visible change to this contract, not a quiet addition.</p>
 <p>A refine of a card outside backlog/refined, or towards any other column, raises
 <code>TransitionRefused</code> and changes nothing. The status check and the write happen
 in one transaction, so a card the instance moves on concurrently can't be
 pulled back.</p>
+<p>A card created with <code>origin_id</code> reaches an epic only through its origin. Since
+any card can be an origin, a client can reach any epic that has a member; the
+<code>from</code> reference and <code>created_by</code> show how the card got there. An origin's epic
+that is done or archived is refused with <code>RelationError</code>, not joined, because
+nothing would surface the card under it. Pass <code>inherit_epic=False</code> to keep the
+reference without the epic.</p>
 <h2 id="provenance">Provenance<a class="headerlink" href="#provenance" title="Permanent link">&para;</a></h2>
 <p>Every write names its caller. <code>create_card</code> stores <code>client</code> as the card's
 <strong>Created by</strong> field, which <code>mc-tool-board show</code> prints and the board TUI shows

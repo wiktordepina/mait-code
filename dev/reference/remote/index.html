@@ -2848,13 +2848,21 @@ requested target.</p>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">title</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">,</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">description</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">priority</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">=</span> <span class="s2">&quot;medium&quot;</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="dict">dict</span></span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">origin_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">inherit_epic</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="dict">dict</span></span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
 
         <p>Create a card in <code>backlog</code>, recording <em>client</em> as its creator.</p>
 <p>There is no way to create a card anywhere but <code>backlog</code>.</p>
+<p>With <em>origin_id</em>, the card joins the origin's epic and gets a <code>from</code> →
+<code>#&lt;origin_id&gt;</code> reference, in one transaction. An epic that is done or
+archived is refused rather than joined, since nothing would surface the
+card under it; pass <code>inherit_epic=False</code> to keep the reference and join
+no epic. Without an origin, <code>inherit_epic=True</code> has nothing to inherit
+and changes nothing.</p>
 
 
 <table>
@@ -2969,6 +2977,47 @@ requested target.</p>
               </p>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>origin_id</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>The card this one was split from or raised as a follow-up
+of, in any project.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="int">int</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>inherit_epic</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Whether to join the origin's epic.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="bool">bool</span></code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>True</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3014,7 +3063,33 @@ requested target.</p>
             <td class="doc-raises-details">
               <div class="doc-md-description">
                 <p>If <em>client</em>, <em>project</em> or <em>title</em> is blank, <em>client</em> is
-too long, or <em>priority</em> is unknown.</p>
+too long, <em>priority</em> is unknown, or <em>inherit_epic</em> is <code>False</code>
+without an <em>origin_id</em>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code><a class="autorefs autorefs-internal" title="            CardNotFound (mait_code.tools.board.service.CardNotFound)" href="#mait_code.remote.CardNotFound">CardNotFound</a></code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If no card has the id <em>origin_id</em>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code><a class="autorefs autorefs-internal" title="            RelationError (mait_code.tools.board.service.RelationError)" href="#mait_code.remote.RelationError">RelationError</a></code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If the origin is an epic, or its epic is done or
+archived and <em>inherit_epic</em> is <code>True</code>.</p>
               </div>
             </td>
           </tr>
