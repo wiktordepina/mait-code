@@ -10,6 +10,30 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.87.0] — 2026-10-18
+
+### Added
+
+- **`mc-tool-board add --from N`.** A card split off during refinement or
+  raised as a follow-up joins N's epic and gets a `from` → `#N` reference in
+  one step. `--parent E` overrides the inherited epic and `--parent none`
+  drops it; an epic can't be an origin. When the inherited epic is done or
+  archived, the CLI says so on stderr so the card can be redirected.
+
+### Changed
+
+- **The board skill keeps new cards connected.** A new *Cards born from other
+  cards* section has Claude add splits and follow-ups with `--from` (the
+  session's bound card, or the one under discussion) and name the inherited
+  epic when proposing them. Epic membership is no longer lumped in with
+  `blocks` ordering, which still needs your say-so.
+
+### Fixed
+
+- **`add` is atomic.** Its checks and inserts run under the write lock, so a
+  failed write no longer leaves a half-added card on a connection that stays
+  open, such as the TUI's.
+
 ## [0.86.0] — 2026-10-18
 
 ### Added
@@ -2711,7 +2735,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.86.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.87.0...HEAD
+[0.87.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.87.0
 [0.86.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.86.0
 [0.85.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.85.0
 [0.84.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.84.0
