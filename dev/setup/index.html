@@ -2431,7 +2431,7 @@
 <p>The fastest path is the one-liner:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
 </span></code></pre></div>
-<p>This installs <code>uv</code> if missing, clones the latest release tag to <code>~/.local/share/mait-code/source/</code>, runs <code>uv tool install</code>, then <code>exec</code>s <code>mait-code install</code> to set up symlinks, settings, and data directories. Idempotent — re-run any time to upgrade.</p>
+<p>This installs <code>uv</code> if missing, clones the latest release tag to <code>~/.local/share/mait-code/source/</code>, runs <code>uv tool install</code>, then <code>exec</code>s <code>mait-code install</code> to set up symlinks, settings, and data directories. Idempotent — a re-run keeps your settings, data and edited templates, though <code>mait-code update</code> is the usual way to upgrade.</p>
 <h3 id="flags">Flags<a class="headerlink" href="#flags" title="Permanent link">&para;</a></h3>
 <p>Pass flags via <code>bash -s --</code>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh<span class="w"> </span><span class="se">\</span>
@@ -2448,8 +2448,8 @@
 <tbody>
 <tr>
 <td><code>--embedding-provider local\|bedrock</code></td>
-<td><code>local</code></td>
-<td>Forwarded to <code>mait-code install</code>.</td>
+<td>the configured provider, else <code>local</code></td>
+<td>Forwarded to <code>mait-code install</code> when given. On a re-run, leave it off to keep the current provider (and its <code>[bedrock]</code> extra).</td>
 </tr>
 <tr>
 <td><code>--ref &lt;tag\|branch\|sha&gt;</code></td>
@@ -2507,7 +2507,7 @@
 <li>Symlinks any <code>agents/*</code> files into <code>~/.claude/agents/</code>.</li>
 <li>Writes the centralised settings file at <code>$XDG_CONFIG_HOME/mait-code/settings.toml</code> with all configuration values (including the chosen embedding provider).</li>
 <li>Propagates settings as <code>MAIT_CODE_*</code> env vars and merges hook registrations into <code>~/.claude/settings.json</code> (preserving any pre-existing keys). When the <code>mods</code> setting is on, also registers the <a href="../companion-mod/">companion mod</a>.</li>
-<li>Writes the install record at <code>$XDG_STATE_HOME/mait-code/install.json</code> (default <code>~/.local/state/mait-code/install.json</code>).</li>
+<li>Writes the install record at <code>$XDG_DATA_HOME/mait-code/install.json</code> (default <code>~/.local/share/mait-code/install.json</code>).</li>
 </ol>
 <h2 id="lifecycle">Lifecycle<a class="headerlink" href="#lifecycle" title="Permanent link">&para;</a></h2>
 <p>Once installed, the <code>mait-code</code> binary owns the full install lifecycle. Its subcommands cover the common cases:</p>

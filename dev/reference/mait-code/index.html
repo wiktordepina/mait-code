@@ -2874,8 +2874,8 @@ creates data directories, copies templates, sets up symlinks
 </tr>
 <tr>
 <td><code>--embedding-provider &lt;name&gt;</code></td>
-<td><code>local</code></td>
-<td><code>local</code> (fastembed) or <code>bedrock</code> (AWS Bedrock; install with <code>[bedrock]</code> extra).</td>
+<td>the configured provider, else <code>local</code></td>
+<td><code>local</code> (fastembed) or <code>bedrock</code> (AWS Bedrock; install with <code>[bedrock]</code> extra). Omit it on a re-install to keep the current choice.</td>
 </tr>
 <tr>
 <td><code>--data-dir &lt;path&gt;</code></td>
@@ -2897,8 +2897,8 @@ creates data directories, copies templates, sets up symlinks
 <li>Writes a <code>MEMORY.md</code> stub into <code>&lt;data-dir&gt;/memory/</code> if missing.</li>
 <li>Symlinks <code>&lt;source&gt;/config/CLAUDE.md</code> to <code>&lt;claude-dir&gt;/CLAUDE.md</code>. If a non-symlink <code>CLAUDE.md</code> already exists, it's first renamed to <code>CLAUDE.md.backup</code>.</li>
 <li>Symlinks each <code>&lt;source&gt;/skills/&lt;name&gt;/</code> into <code>&lt;claude-dir&gt;/skills/</code> and each <code>&lt;source&gt;/agents/&lt;file&gt;</code> into <code>&lt;claude-dir&gt;/agents/</code>. <code>.gitkeep</code> placeholders are skipped.</li>
-<li>Writes <code>settings.toml</code> with the chosen <code>embedding-provider</code>; every other setting is written at its default, and an existing <code>[env]</code> table is carried over.</li>
-<li>Merges <code>&lt;source&gt;/config/settings.json</code> into <code>&lt;claude-dir&gt;/settings.json</code> (hooks, mcpServers, and <code>MAIT_CODE_EMBEDDING_PROVIDER</code> env). When the <code>mods</code> setting is on, also registers the <a href="../../companion-mod/">companion mod</a> folder in the <code>CLAUDE_CODE_PLUGIN_DIRS</code> env entry. User-set keys are preserved verbatim. The write is atomic (tempfile + rename).</li>
+<li>Writes <code>settings.toml</code>, starting from the existing file: every setting you've changed and the <code>[env]</code> table are kept, and <code>embedding-provider</code> changes only when <code>--embedding-provider</code> is passed. A fresh install gets the defaults with <code>embedding-provider = "local"</code>.</li>
+<li>Merges <code>&lt;source&gt;/config/settings.json</code> into <code>&lt;claude-dir&gt;/settings.json</code> (hooks, mcpServers, and a <code>MAIT_CODE_*</code> env entry for each setting in <code>settings.toml</code>). When the <code>mods</code> setting is on, also registers the <a href="../../companion-mod/">companion mod</a> folder in the <code>CLAUDE_CODE_PLUGIN_DIRS</code> env entry. User-set keys are preserved verbatim. The write is atomic (tempfile + rename).</li>
 <li>Writes the install record.</li>
 </ol>
 <p><strong>Examples</strong></p>
@@ -2934,11 +2934,11 @@ creates data directories, copies templates, sets up symlinks
 <li>This subcommand does <strong>not</strong> run <code>uv tool install</code>. By the time it
   runs, the <code>mait-code</code> binary is already on PATH (that's how it was
   invoked). The bash shim handles the bootstrap.</li>
-<li>Re-running <code>install</code> keeps your data: symlinks that already point
-  at the right target are left alone, and edited templates are never
-  overwritten. It does rewrite <code>settings.toml</code> (step 7), so any other
-  settings you've changed go back to their defaults — use <code>update</code> to
-  refresh an existing install.</li>
+<li>Re-running <code>install</code> is safe: symlinks that already point at the
+  right target are left alone, edited templates are never overwritten,
+  and your settings are kept (step 7). To refresh an existing install
+  from a newer release, <code>update</code> is still the tool — it also advances
+  the source clone.</li>
 </ul>
 <hr />
 <h2 id="mait-code-update"><code>mait-code update</code><a class="headerlink" href="#mait-code-update" title="Permanent link">&para;</a></h2>
