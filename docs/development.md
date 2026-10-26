@@ -6,6 +6,7 @@
 git clone https://github.com/wiktordepina/mait-code.git
 cd mait-code
 uv sync
+./scripts/install.sh    # thin shim around `mait-code install`
 ```
 
 ## Tests
