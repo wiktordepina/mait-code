@@ -1,122 +1,161 @@
-# mait-code
+<p align="center">
+  <img src="docs/assets/banner.png" alt="mait-code" width="720">
+</p>
 
-[![CI](https://github.com/wiktordepina/mait-code/actions/workflows/ci.yml/badge.svg)](https://github.com/wiktordepina/mait-code/actions/workflows/ci.yml)
-[![Docs](https://github.com/wiktordepina/mait-code/actions/workflows/docs.yml/badge.svg)](https://wiktordepina.github.io/mait-code/)
+<p align="center">
+  <strong>Claude Code forgets you every session. Your mait doesn't.</strong>
+</p>
 
-A companion framework that extends [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with persistent memory, a customisable identity, and reusable skills. It transforms Claude Code from a stateless coding assistant into a coding companion that remembers your projects, preferences, and patterns across sessions.
+<p align="center">
+  <a href="https://github.com/wiktordepina/mait-code/actions/workflows/ci.yml"><img src="https://github.com/wiktordepina/mait-code/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://wiktordepina.github.io/mait-code/"><img src="https://github.com/wiktordepina/mait-code/actions/workflows/docs.yml/badge.svg" alt="Docs"></a>
+</p>
 
-**Documentation:** <https://wiktordepina.github.io/mait-code/>
+<p align="center">
+  <a href="https://wiktordepina.github.io/mait-code/">Documentation</a> ·
+  <a href="#get-started-in-one-line">Install</a> ·
+  <a href="docs/philosophy.md">Why "mait"?</a>
+</p>
 
-## Key Features
+---
 
-- **Persistent Memory** — Three-tier memory system (raw observations, curated facts, hybrid FTS5 + vector search) with global/project/branch scoping
-- **Knowledge Graph** — Entity and relationship tracking extracted automatically from conversations
-- **Companion Identity** — Customisable soul document and user context that shape how the companion communicates and makes decisions
-- **Reactive Hooks** — `SessionStart` injects companion context, `PreCompact` and `SessionEnd` extract observations asynchronously
-- **Observation Pipeline** — Automatic extraction of facts, preferences, decisions, entities, and relationships via Claude Haiku, run with no tools so a transcript can't make it act; `mc-tool-memory observe` runs the same pipeline over prepared text, such as an automated job's digest, with its memories capped at project scope
-- **CLI Tools** — Memory, reminders, a cross-project kanban board, and a quick-capture inbox (`mc-tool-memory`, `mc-tool-reminders`, `mc-tool-board`, `mc-tool-inbox`)
-- **TUIs** — Full-screen Textual apps sharing one house theme: the home hub (`mait-code home`, or just `mait-code` on a terminal) with a user-authored start page of widget and shell-command tiles, the kanban board (`mait-code board`), the settings editor (`mait-code settings`), the memory review queue (`mait-code review`), and the read-only memory browser (`mait-code memory`), observations browser (`mait-code observations`), knowledge-graph explorer (`mait-code graph`) and log viewer (`mait-code logs`)
-- **Memory Review** — Important-but-ageing memories resurface in a due queue; confirm, refine or retire each in place so curated memory stays true instead of quietly decaying
-- **Bridge** — An opt-in link to your phone: capture thoughts into the inbox from anywhere and get due reminders as notifications with a Done button that round-trips back. Disabled by default and makes zero network calls until you switch it on
-- **Home Hub** — A tree-navigable front door to the board, memory, reminders, inbox, identity and system health, with live status badges; press Enter to jump into any sibling TUI, plus a system prompt view showing exactly what the companion is presented with at session start
-- **Skills** — Slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), and workflow (`/commit`, `/pre-pr-review`)
+mait-code turns [Claude Code](https://docs.anthropic.com/en/docs/claude-code) into a
+coding companion that remembers your projects, your preferences and the decisions you've
+already made. It picks up where you left off, keeps track of your work, and has the
+nerve to tell you when you're about to repeat last month's mistake.
 
-## Quick Start
+```text
+you   › let's just wrap the deploy in a retry loop with a sleep
 
-One-liner install (recommended):
+mait  › We did exactly that in the homelab pipeline back in June. It hid a
+        real failure for a week before you swapped it for `--wait` with a
+        timeout. I'd do the same here. Card #12 for the flaky deploy is
+        still on the board, too, if you fancy picking it up while we're in
+        there.
+```
+
+<sub>An illustrative exchange. The memory, the board and the pushback are all real features.</sub>
+
+<p align="center">
+  <img src="docs/assets/home/home.png" alt="The mait-code home hub" width="860">
+</p>
+
+## What you get
+
+### 🧠 It remembers
+
+Every session is quietly read once it ends. Facts, preferences, decisions, people and
+how they relate get pulled out and stored, scoped to the whole machine, one project or a
+single branch. The next session starts with the relevant context already loaded, so you
+don't have to re-explain yourself.
+
+- **Hybrid search** over everything it has learnt, combining keywords and meaning, via `/recall`
+- **A knowledge graph** of the projects, tools and people in your work, built up automatically
+- **Memory that stays true.** Important memories that are getting old come back up for review,
+  so you can confirm, refine or retire them, and `/reflect` turns recent learnings into
+  curated facts
+
+### 🗣️ It has a personality, and you write it
+
+A plain-English **soul document** sets its values and how it disagrees. A
+**user context** file tells it who you are. It's built to push back, to ask rather than
+assume, and to point out patterns it notices. You get a mate who's read the codebase, not
+a yes-machine. The [philosophy](docs/philosophy.md) explains why.
+
+### 📋 It keeps track of the work
+
+- **A kanban board that spans all your projects.** Ask it to pick up, refine or finish a card
+  straight from a session.
+- **Reminders** that come up at session start once they're due (`/remind`, `/reminders`).
+- **A quick-capture inbox** for "oh, I should look at…" thoughts, with `/triage` to route each
+  one to the board or to memory.
+- **The Bridge** (opt-in): capture from your phone and get reminders as notifications, with a
+  Done button that ticks them off back home.
+
+### 🖥️ It lives in your terminal
+
+Run `mait-code` and you get a set of full-screen terminal apps that share one theme: a home hub
+with your own start page, the board, a memory browser, a review queue, a knowledge-graph
+explorer, an observations browser, a log viewer and a settings editor.
+
+<table>
+  <tr>
+    <td><img src="docs/assets/board/board.png" alt="Kanban board"></td>
+    <td><img src="docs/assets/graph/graph.png" alt="Knowledge-graph explorer"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><code>mait-code board</code>: one board, every project</sub></td>
+    <td align="center"><sub><code>mait-code graph</code>: what it knows, and how it connects</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/memory/memory.png" alt="Memory browser"></td>
+    <td><img src="docs/assets/review/review.png" alt="Memory review queue"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><code>mait-code memory</code>: browse and filter everything it remembers</sub></td>
+    <td align="center"><sub><code>mait-code review</code>: keep ageing memories honest</sub></td>
+  </tr>
+</table>
+
+## How it works
+
+There are no daemons and nothing running in the background. Everything happens in response
+to something: a Claude Code hook firing, a skill you invoke, or a CLI tool you run.
+
+```mermaid
+flowchart LR
+    S["Claude Code session"] -- "session ends / compacts" --> O["Observation hook"]
+    O -- "Haiku extracts facts,<br/>decisions, entities, links" --> M[("Local memory<br/>SQLite · vectors · graph")]
+    M -- "/reflect · review" --> C["Curated facts"]
+    M --> I["Session-start hook"]
+    C --> I
+    I -- "identity + memory + board<br/>+ due reminders" --> S
+```
+
+## Built to be trusted
+
+- **Your data stays on your machine.** Memory is a local SQLite database, and embeddings run
+  locally by default (AWS Bedrock is optional).
+- **Extraction can't act.** The model that reads your transcripts runs with no tools, so a
+  transcript can't trick it into doing anything.
+- **Anything that touches the network is opt-in.** The Bridge makes zero network calls until you
+  switch it on, which matters on a locked-down work laptop.
+- **You can see exactly what it sees.** The home hub shows the full system prompt your companion
+  starts each session with.
+- **Well tested.** Over 2,400 tests, including snapshot tests for every terminal app.
+
+## Get started in one line
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash
 ```
 
-This installs [uv](https://docs.astral.sh/uv/) if missing, clones the latest release to `~/.local/share/mait-code/source/`, runs `uv tool install`, then runs `mait-code install` to wire up symlinks, settings, and data directories. Idempotent — re-running upgrades in place.
-
-Pass flags after `bash -s --`:
-
-```bash
-# AWS Bedrock embeddings instead of the local default:
-curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash -s -- --embedding-provider bedrock
-
-# Pin to a specific release:
-curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash -s -- --ref v0.69.0
-```
-
-Prefer to inspect before running:
+This installs [uv](https://docs.astral.sh/uv/) if you don't have it, installs the latest
+release and wires everything into `~/.claude/`. Running it again upgrades in place. Then make
+the companion yours:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh -o /tmp/mait-code-bootstrap.sh
-less /tmp/mait-code-bootstrap.sh   # review
-bash /tmp/mait-code-bootstrap.sh
+$EDITOR ~/.claude/mait-code-data/soul_document.md   # who it is
+$EDITOR ~/.claude/mait-code-data/user_context.md    # who you are
+claude                                              # and say hello
 ```
 
-After the install:
+You'll need the [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI. uv takes
+care of Python (≥ 3.13). Want to read the script first, pin a version or use Bedrock
+embeddings? The [setup guide](docs/setup.md) covers all of that, plus `mait-code update` and
+`mait-code uninstall` (which keeps your data unless you ask it not to).
 
-```bash
-# Personalise your companion
-$EDITOR ~/.claude/mait-code-data/soul_document.md
-$EDITOR ~/.claude/mait-code-data/user_context.md
+## Learn more
 
-# Start Claude Code in any project — the companion loads automatically
-claude
-```
+- [Philosophy](docs/philosophy.md): companion, not assistant
+- [How memory works](docs/memory.md): observations, search, embeddings, reflection
+- [Architecture](docs/architecture.md): design and the decisions behind it
+- [Skills reference](docs/reference/skills.md): every slash command
+- [Multi-machine sync](docs/sync.md) and [the Bridge](docs/bridge.md)
+- [Development guide](docs/development.md): hacking on mait-code itself
 
-### From a local clone
+Each terminal app has its own guide on the [documentation site](https://wiktordepina.github.io/mait-code/).
 
-If you're developing mait-code itself, or want a clone in a specific location:
+---
 
-```bash
-git clone https://github.com/wiktordepina/mait-code.git
-cd mait-code
-uv sync
-./scripts/install.sh    # thin shim around `mait-code install`
-```
-
-### Prerequisites
-
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI — install separately
-- `uv` is installed automatically by the bootstrap; otherwise grab it from <https://docs.astral.sh/uv/>
-- Python ≥ 3.13 (managed by uv)
-
-## Project Structure
-
-```
-mait-code/
-├── src/mait_code/        # Python package
-│   ├── hooks/            #   Hooks: session_start, observe, auto_format
-│   ├── tools/            #   CLI tools: memory, reminders, board, inbox
-│   ├── bridge/           #   Opt-in capture-in / notify-out transport
-│   ├── cli/              #   The mait-code CLI and its Textual TUIs
-│   └── tui/              #   Shared TUI layer: house theme, palette, base app
-├── config/               # CLAUDE.md and settings.json templates
-├── templates/            # Identity templates
-├── scripts/              # Install/uninstall scripts
-├── skills/               # Skill definitions
-├── agents/               # Agent definitions
-├── tests/                # Test suite (mirrors src/mait_code/)
-└── docs/                 # Documentation
-```
-
-## Documentation
-
-- [Philosophy](docs/philosophy.md) — The mait concept: why companion, not assistant
-- [Setup Guide](docs/setup.md) — Detailed installation and personalisation
-- [How Memory Works](docs/memory.md) — Observations, search, embeddings, reminders, and reflections
-- [Architecture](docs/architecture.md) — System design and technical decisions
-- [Skills Reference](docs/reference/skills.md) — Available slash commands
-- [Multi-Machine Sync](docs/sync.md) — Syncing data across machines
-- [The Bridge](docs/bridge.md) — The opt-in phone link, and how to set it up
-- [Development Guide](docs/development.md) — Contributing and extending
-
-Per-surface guides for each TUI — the [home hub](docs/home.md), [board](docs/board.md),
-[settings editor](docs/settings.md), [memory browser](docs/memory-browser.md),
-[review queue](docs/review.md), [observations browser](docs/observations.md),
-[graph explorer](docs/graph.md) and [log viewer](docs/logs.md) — live alongside
-these on the [documentation site](https://wiktordepina.github.io/mait-code/).
-
-## Uninstalling
-
-```bash
-./scripts/uninstall.sh
-```
-
-This removes symlinks and hook registrations from `~/.claude/`. Your personalised data in `~/.claude/mait-code-data/` is preserved by default (you'll be asked).
+<p align="center"><sub><b>mait</b> = <i>mate</i> + <i>AI</i>. The AI sits inside the word, not in front of it.</sub></p>
