@@ -2691,6 +2691,7 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wiktordepina/mait-code.git
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>mait-code
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>sync
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>./scripts/install.sh<span class="w">    </span><span class="c1"># thin shim around `mait-code install`</span>
 </span></code></pre></div>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-n<span class="w"> </span>auto<span class="w">  </span><span class="c1"># run the full suite in parallel</span>
@@ -2710,7 +2711,11 @@ module declares a non-empty <code>__all__</code>. CI's <code>ci.yml</code> runs 
 PR, plus a weekly scheduled run at 06:00 Monday — there is no push trigger. The
 test job gates on coverage (<code>pytest --cov-fail-under=93</code>, a backstop set a couple
 of points below the working baseline), and a separate <code>audit</code> job runs
-<code>pip-audit --strict</code> over the exported locked requirements.</p>
+<code>pip-audit --strict</code> over the exported locked requirements. After the parallel
+run, the test job runs the memory suite again in a single process, so a test that
+leaks state into the next file fails in CI rather than hiding behind xdist. A
+<code>mod</code> job type-checks and tests the optional Claude Code mod; it reports but
+doesn't gate merges.</p>
 <h3 id="snapshot-tests">Snapshot tests<a class="headerlink" href="#snapshot-tests" title="Permanent link">&para;</a></h3>
 <p>The TUIs are guarded by <code>pytest-textual-snapshot</code>: a test renders an app at a
 fixed terminal size and compares it against an accepted baseline under
@@ -2740,7 +2745,7 @@ re-breaks the typecheck. The CI typecheck job (<code>ci.yml</code>) handles this
 <ul>
 <li><strong>Use <code>uv run</code> everywhere</strong> — Never activate venvs manually</li>
 <li><strong>Entry points in pyproject.toml</strong> — All CLI commands are registered as <code>[project.scripts]</code></li>
-<li><strong>Data dir via env var</strong> — Use <code>MAIT_CODE_DATA_DIR</code> (defaults to <code>~/.claude/mait-code-data/</code>)</li>
+<li><strong>Data dir via settings</strong> — the <code>data-dir</code> setting or <code>MAIT_CODE_DATA_DIR</code> (defaults to <code>~/.claude/mait-code-data/</code>)</li>
 <li><strong>No asyncio in CLI tools</strong> — Tools and hooks are synchronous; MCP servers (if any) use async</li>
 <li><strong>Connections via <code>get_connection()</code></strong> — All memory modules use the shared connection factory</li>
 <li><strong>Package convention</strong> — Both hooks and tools use <code>&lt;name&gt;/cli.py</code> as the entry point containing <code>main()</code></li>
@@ -2777,8 +2782,9 @@ re-breaks the typecheck. The CI typecheck job (<code>ci.yml</code>) handles this
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>├── confirm.py     # Shared confirmation modal
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>├── filters.py     # Shared pick-one filter modals (generic + project-flavoured)
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>├── markdown.py    # Markdown rendering helpers for detail panes
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>├── app.py         # MaitApp base class + SHARED_TCSS path
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>└── app.tcss       # Shared stylesheet (modal geometry, conventions)
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>├── graph.py       # ThemedGraphView — node-link diagrams (graph explorer, epic diagram)
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>├── app.py         # MaitApp base class + SHARED_TCSS path
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>└── app.tcss       # Shared stylesheet (modal geometry, conventions)
 </span></code></pre></div>
 <p><strong>Dependency order:</strong> <code>palette.py</code> ← <code>theme.py</code> ← <code>app.py</code>; <code>render.py</code> and
 <code>help.py</code> sit on top of <code>palette.py</code>/<code>app.py</code> respectively. The one hard rule:
@@ -2876,8 +2882,8 @@ maintained.</p>
 <p>This injects the OS trust store into Python's <code>ssl</code> module via the <code>truststore</code> package, so corporate proxy CA certificates (e.g. Netskope) are trusted automatically. It is idempotent and fails silently if <code>truststore</code> is unavailable.</p>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>MAIT_CODE_LOG_LEVEL</code> env var (default: <code>INFO</code>) — set via <code>settings.json</code> <code>env</code> block</li>
-<li><code>MAIT_CODE_LOG_FILE</code> env var — override log file path</li>
+<li><code>log-level</code> setting (default: <code>INFO</code>) — <code>mait-code settings set log-level DEBUG</code>, or <code>MAIT_CODE_LOG_LEVEL</code> for one shell</li>
+<li><code>log-file</code> setting — override the log file path (<code>MAIT_CODE_LOG_FILE</code>)</li>
 <li>Logs write to <code>~/.local/state/mait-code/mait-code.jsonl</code> (rotates at midnight, keeps <code>log-backup-count</code> days — default 14)</li>
 <li>Logs never go to stdout/stderr</li>
 </ul>
@@ -2905,40 +2911,51 @@ maintained.</p>
 </span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>    <span class="n">results</span> <span class="o">=</span> <span class="n">search_entries</span><span class="p">(</span><span class="n">populated_db</span><span class="p">,</span> <span class="s2">&quot;dark mode&quot;</span><span class="p">)</span>
 </span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span>
 </span></code></pre></div>
-<p>For memory tool tests, patch <code>get_connection</code> to use a temp DB:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_connection</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">mem_db</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">):</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">db_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">get_connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">patched</span><span class="p">(</span><span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>        <span class="k">return</span> <span class="n">get_connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="k">with</span> <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mait_code.tools.memory.db.get_connection&quot;</span><span class="p">,</span> <span class="n">side_effect</span><span class="o">=</span><span class="n">patched</span><span class="p">):</span>
+<p>For memory CLI tests, patch the CLI's <code>connection</code> context manager to hand out a
+temp DB, and stub the embedding provider so nothing loads a model (the pattern in
+<code>tests/tools/memory/test_cli.py</code>):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">mait_code.tools.memory.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_connection</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">mem_db</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">):</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">get_connection</span><span class="p">(</span><span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span><span class="p">)</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="nd">@contextmanager</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">patched_connection</span><span class="p">(</span><span class="n">db_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>        <span class="k">yield</span> <span class="n">conn</span>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>    <span class="k">with</span> <span class="p">(</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>        <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mait_code.tools.memory.cli.connection&quot;</span><span class="p">,</span> <span class="n">side_effect</span><span class="o">=</span><span class="n">patched_connection</span><span class="p">),</span>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>        <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mait_code.tools.memory.writer.embed_text&quot;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>        <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mait_code.tools.memory.search.embed_text&quot;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>        <span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mait_code.tools.memory.cli.is_available&quot;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>    <span class="p">):</span>
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>        <span class="k">yield</span> <span class="n">conn</span>
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
 <h2 id="database-migrations">Database Migrations<a class="headerlink" href="#database-migrations" title="Permanent link">&para;</a></h2>
 <h3 id="adding-a-new-migration">Adding a new migration<a class="headerlink" href="#adding-a-new-migration" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Open <code>src/mait_code/tools/memory/migrate.py</code></li>
-<li>Append a new tuple to the <code>MIGRATIONS</code> list:
-   <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">MIGRATIONS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="mi">7</span><span class="p">,</span>  <span class="c1"># Next version number</span>
+<li>Add a tuple at the end of the <code>MIGRATIONS</code> list, numbered one past the last entry:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">(</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="mi">16</span><span class="p">,</span>  <span class="c1"># one past the last entry</span>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="s2">&quot;Description of what this migration does&quot;</span><span class="p">,</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="p">[</span>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>        <span class="s2">&quot;SQL statement 1&quot;</span><span class="p">,</span>
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        <span class="s2">&quot;SQL statement 2&quot;</span><span class="p">,</span>
 </span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="p">],</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p">))</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p">),</span>
 </span></code></pre></div></li>
 <li>For complex migrations, use a callable instead of SQL list:
    <div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_migrate_something</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="c1"># Complex migration logic here</span>
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="k">pass</span>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">MIGRATIONS</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;Complex migration&quot;</span><span class="p">,</span> <span class="n">_migrate_something</span><span class="p">))</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># ...and in MIGRATIONS:</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="s2">&quot;Complex migration&quot;</span><span class="p">,</span> <span class="n">_migrate_something</span><span class="p">),</span>
 </span></code></pre></div></li>
 <li>Migrations run automatically on next <code>get_connection()</code> call</li>
 <li>Add tests in <code>tests/tools/memory/test_migrate.py</code> to verify the new schema</li>

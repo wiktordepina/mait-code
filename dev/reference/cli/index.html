@@ -4874,8 +4874,9 @@ environment variables. Other user keys are preserved verbatim.</p>
         <p>Strip mait-code-owned entries from a settings dict.</p>
 <p>Hook entries are identified by any inner <code>command</code> starting with
 :data:<code>MAIT_CODE_HOOK_PREFIX</code>. MCP servers are removed by name from
-:data:<code>MAIT_CODE_MCP_SERVERS</code>. The
-<code>MAIT_CODE_EMBEDDING_PROVIDER</code> env entry is removed. Empty
+:data:<code>MAIT_CODE_MCP_SERVERS</code>. Every <code>MAIT_CODE_*</code> env entry is
+removed, and the mait-companion folder is dropped from
+:data:<code>PLUGIN_DIRS_ENV</code> (other plugin folders are kept). Empty
 top-level sections are dropped.</p>
 
 

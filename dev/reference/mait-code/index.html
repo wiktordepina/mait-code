@@ -1402,6 +1402,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#settings-unset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings unset
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1482,6 +1493,50 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code review
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code logs
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2498,6 +2553,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#settings-unset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settings unset
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2578,6 +2644,50 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code memory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code review
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code graph
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait-code-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mait-code logs
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2745,8 +2855,8 @@ points at <code>mait-code update</code> as the recovery path.</p>
 <p><strong>Description</strong></p>
 <p>First-time setup. Validates the source path is a mait-code clone,
 creates data directories, copies templates, sets up symlinks
-(<code>CLAUDE.md</code>, <code>skills/*</code>, <code>agents/*</code>), merges <code>settings.json</code>, and
-writes the install record.</p>
+(<code>CLAUDE.md</code>, <code>skills/*</code>, <code>agents/*</code>), writes <code>settings.toml</code>, merges
+<code>settings.json</code>, and writes the install record.</p>
 <p><strong>Flags</strong></p>
 <table>
 <thead>
@@ -2783,11 +2893,12 @@ writes the install record.</p>
 <ol>
 <li>Verifies <code>&lt;source&gt;/pyproject.toml</code> exists with <code>name = "mait-code"</code> and <code>&lt;source&gt;/src/mait_code/</code> is a directory.</li>
 <li>Creates <code>&lt;data-dir&gt;/memory/observations/</code> and <code>&lt;data-dir&gt;/memory/reflections/</code>. (<code>memory/graph/</code> is intentionally not created.)</li>
-<li>Copies <code>templates/soul_document.md</code> and <code>templates/user_context.md</code> into the data dir — <strong>never overwrites</strong> existing files.</li>
+<li>Syncs the identity templates into the data dir — <code>soul_document.md</code>, <code>user_context.md</code> and <code>communication_style.md</code>. A missing file is copied; an existing one is replaced only when it is a byte-identical, untouched copy of an older shipped template. Anything you've edited is <strong>never overwritten</strong>.</li>
 <li>Writes a <code>MEMORY.md</code> stub into <code>&lt;data-dir&gt;/memory/</code> if missing.</li>
 <li>Symlinks <code>&lt;source&gt;/config/CLAUDE.md</code> to <code>&lt;claude-dir&gt;/CLAUDE.md</code>. If a non-symlink <code>CLAUDE.md</code> already exists, it's first renamed to <code>CLAUDE.md.backup</code>.</li>
 <li>Symlinks each <code>&lt;source&gt;/skills/&lt;name&gt;/</code> into <code>&lt;claude-dir&gt;/skills/</code> and each <code>&lt;source&gt;/agents/&lt;file&gt;</code> into <code>&lt;claude-dir&gt;/agents/</code>. <code>.gitkeep</code> placeholders are skipped.</li>
-<li>Merges <code>&lt;source&gt;/config/settings.json</code> into <code>&lt;claude-dir&gt;/settings.json</code> (hooks, mcpServers, and <code>MAIT_CODE_EMBEDDING_PROVIDER</code> env). User-set keys are preserved verbatim. The write is atomic (tempfile + rename).</li>
+<li>Writes <code>settings.toml</code> with the chosen <code>embedding-provider</code>; every other setting is written at its default, and an existing <code>[env]</code> table is carried over.</li>
+<li>Merges <code>&lt;source&gt;/config/settings.json</code> into <code>&lt;claude-dir&gt;/settings.json</code> (hooks, mcpServers, and <code>MAIT_CODE_EMBEDDING_PROVIDER</code> env). When the <code>mods</code> setting is on, also registers the <a href="../../companion-mod/">companion mod</a> folder in the <code>CLAUDE_CODE_PLUGIN_DIRS</code> env entry. User-set keys are preserved verbatim. The write is atomic (tempfile + rename).</li>
 <li>Writes the install record.</li>
 </ol>
 <p><strong>Examples</strong></p>
@@ -2823,9 +2934,11 @@ writes the install record.</p>
 <li>This subcommand does <strong>not</strong> run <code>uv tool install</code>. By the time it
   runs, the <code>mait-code</code> binary is already on PATH (that's how it was
   invoked). The bash shim handles the bootstrap.</li>
-<li>Re-running <code>install</code> is safe — it's idempotent. Symlinks that
-  already point at the right target are left alone; templates are
-  never overwritten.</li>
+<li>Re-running <code>install</code> keeps your data: symlinks that already point
+  at the right target are left alone, and edited templates are never
+  overwritten. It does rewrite <code>settings.toml</code> (step 7), so any other
+  settings you've changed go back to their defaults — use <code>update</code> to
+  refresh an existing install.</li>
 </ul>
 <hr />
 <h2 id="mait-code-update"><code>mait-code update</code><a class="headerlink" href="#mait-code-update" title="Permanent link">&para;</a></h2>
@@ -2833,13 +2946,20 @@ writes the install record.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>mait-code update [--no-pull] [--ref &lt;tag|branch|sha&gt;] [--force] [--claude-dir &lt;path&gt;]
 </span></code></pre></div>
 <p><strong>Description</strong></p>
-<p>Advance the source tree to the right ref and — only if <code>HEAD</code> actually moved — reinstall via <code>uv tool install</code>, then refresh symlinks and settings and bump the install record. A repeated update with nothing new upstream is a cheap no-op: the reinstall is skipped rather than rebuilding every package.</p>
+<p>Advance the source tree to the right ref and — only if <code>HEAD</code> actually moved — reinstall via <code>uv tool install</code>, then refresh symlinks, settings and identity templates and bump the install record. A repeated update with nothing new upstream is a cheap no-op: the reinstall is skipped rather than rebuilding every package.</p>
 <p>How the source is advanced depends on its current state — a bootstrap install pins to a release <strong>tag</strong> (detached HEAD), while a local-clone dev install sits on a <strong>branch</strong>:</p>
 <ul>
 <li><code>--ref &lt;X&gt;</code> given → checkout <code>X</code>.</li>
 <li>On a branch → fast-forward it (<code>git merge --ff-only</code>).</li>
-<li>Detached HEAD (typical post-bootstrap) → checkout the latest <code>v*</code> tag.</li>
+<li>Detached HEAD (typical post-bootstrap) → force-checkout the latest <code>v*</code> tag.</li>
 </ul>
+<div class="admonition warning">
+<p class="admonition-title">Detached HEAD discards local edits</p>
+<p>On a detached-HEAD source the checkout runs with <code>--force</code>. Skills are
+symlinked into <code>~/.claude</code>, so editing one in place writes through into the
+source tree — and the next <code>update</code> throws those edits away. Keep changes
+you care about in a clone on a branch.</p>
+</div>
 <p><strong>Flags</strong></p>
 <table>
 <thead>
@@ -2876,16 +2996,18 @@ writes the install record.</p>
 <ol>
 <li>Reads the install record. Aborts with exit <code>1</code> if missing.</li>
 <li>Verifies the recorded source dir still looks like a mait-code clone.</li>
+<li>Reads <code>embedding-provider</code> from <code>settings.toml</code>. Aborts with exit <code>1</code> if it's missing (an install that predates <code>settings.toml</code> — run <code>install</code>) or not <code>local</code> / <code>bedrock</code>.</li>
 <li>Unless <code>--no-pull</code>: <code>git fetch origin --tags --prune</code>.</li>
 <li>Advance to the target ref:<ul>
 <li><code>--ref</code> given → <code>git checkout &lt;ref&gt;</code>.</li>
 <li>on a branch → <code>git merge --ff-only</code> (skipped under <code>--no-pull</code>).</li>
-<li>detached HEAD → <code>git checkout &lt;latest v* tag&gt;</code>. Aborts if there are no tags and no <code>--ref</code>.</li>
+<li>detached HEAD → <code>git checkout --force &lt;latest v* tag&gt;</code>, discarding local edits to tracked files. Aborts if there are no tags and no <code>--ref</code>.</li>
 </ul>
 </li>
-<li>If <code>HEAD</code> moved during step 4 (or <code>--force</code> was given): <code>uv tool install &lt;source&gt;[&lt;extra&gt;] --force --reinstall-package mait-code --python 3.13</code>. <code>--reinstall-package mait-code</code> forces a rebuild of just the local source — whose version does not bump between commits — while leaving unchanged third-party deps in place. The <code>[bedrock]</code> extra is applied when the install record records the bedrock provider. If <code>HEAD</code> did not move and <code>--force</code> was not given, this step is skipped.</li>
-<li>Re-runs the symlink and settings-merge steps from <code>install</code> (picks up new skills, settings.json changes). These run even when the reinstall is skipped.</li>
-<li>Rewrites the install record with the new version and timestamp.</li>
+<li>If <code>HEAD</code> moved during step 5 (or <code>--force</code> was given): <code>uv tool install &lt;source&gt;[&lt;extra&gt;] --force --reinstall-package mait-code --python 3.13</code>. <code>--reinstall-package mait-code</code> forces a rebuild of just the local source — whose version does not bump between commits — while leaving unchanged third-party deps in place. The <code>[bedrock]</code> extra is applied when <code>embedding-provider</code> (step 3) is <code>bedrock</code>. If <code>HEAD</code> did not move and <code>--force</code> was not given, this step is skipped.</li>
+<li>Re-runs the symlink and settings-merge steps from <code>install</code> (picks up new skills, settings.json changes): every key set in <code>settings.toml</code> is mirrored into <code>settings.json</code> as its <code>MAIT_CODE_*</code> env entry, and the mod's <code>CLAUDE_CODE_PLUGIN_DIRS</code> entry is added or removed to match the <code>mods</code> setting. These run even when the reinstall is skipped.</li>
+<li>Syncs the identity templates, as <code>install</code> step 3 does — creating any the install predates and upgrading untouched copies of older ones. This runs the code loaded when the command started, so a template change shipped in the release being installed lands on the <em>next</em> update.</li>
+<li>Rewrites the install record with a fresh <code>updated_at</code>, preserving <code>first_installed_at</code>.</li>
 </ol>
 <p><strong>Examples</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Standard update — fetch, advance to latest tag (or fast-forward</span>
@@ -2916,7 +3038,7 @@ writes the install record.</p>
 </tr>
 <tr>
 <td><code>1</code></td>
-<td>No install record, source dir no longer valid, detached HEAD with no <code>v*</code> tags (and no <code>--ref</code>), or any subprocess (<code>git</code>, <code>uv</code>) failed.</td>
+<td>No install record, source dir no longer valid, no valid <code>embedding-provider</code> in <code>settings.toml</code>, detached HEAD with no <code>v*</code> tags (and no <code>--ref</code>), or any subprocess (<code>git</code>, <code>uv</code>) failed.</td>
 </tr>
 </tbody>
 </table>
@@ -2968,7 +3090,7 @@ deletes the install record. Preserves the data directory by default.</p>
 <li>Removes <code>&lt;claude-dir&gt;/CLAUDE.md</code> if it's a symlink pointing into the recorded source. Restores <code>CLAUDE.md.backup</code> if present.</li>
 <li>Removes skill symlinks under <code>&lt;claude-dir&gt;/skills/</code> that resolve into the recorded source. Foreign symlinks (e.g. from other tools) are preserved.</li>
 <li>Same for agents.</li>
-<li>Cleans mait-code-owned entries from <code>&lt;claude-dir&gt;/settings.json</code> (hook commands with the <code>mc-hook-</code> prefix; legacy <code>mait-reminders</code> MCP server; the <code>MAIT_CODE_EMBEDDING_PROVIDER</code> env). Empty top-level sections are dropped.</li>
+<li>Cleans mait-code-owned entries from <code>&lt;claude-dir&gt;/settings.json</code> (hook commands with the <code>mc-hook-</code> prefix; legacy <code>mait-reminders</code> MCP server; every <code>MAIT_CODE_*</code> env entry; the mod folder in <code>CLAUDE_CODE_PLUGIN_DIRS</code>, keeping any other plugin folders). Empty top-level sections are dropped.</li>
 <li><code>uv tool uninstall mait-code</code> (unless <code>--keep-uv-tool</code>). Failure here is a warning — the binary may already be gone.</li>
 <li>With <code>--purge-data</code>: deletes the data directory.</li>
 <li>Deletes the install record.</li>
@@ -2995,8 +3117,10 @@ state, run <code>mait-code doctor</code> first.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mait-code status [--json] [--data-dir &lt;path&gt;] [--claude-dir &lt;path&gt;]
 </span></code></pre></div>
 <p><strong>Description</strong></p>
-<p>Read-only summary of the current install. Always exits <code>0</code> — there's
-no diagnostic intent here, just a report. The text output is grouped
+<p>Read-only summary of the current install. There's no diagnostic intent
+here, just a report: it exits <code>0</code> whatever it finds, and refuses to run
+(exit <code>1</code>) only when <code>settings.toml</code> is missing, rather than present
+defaults as configured values. The text output is grouped
 into sections under a one-line health badge (<code>healthy</code> / <code>degraded</code> /
 <code>not installed</code>); <code>degraded</code> flags fixable oddities such as an unlinked
 <code>CLAUDE.md</code>, with a git-style hint on how to fix them.</p>
@@ -3062,7 +3186,25 @@ into sections under a one-line health badge (<code>healthy</code> / <code>degrad
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mait-code<span class="w"> </span>status
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>mait-code<span class="w"> </span>status<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.embedding_provider&#39;</span>
 </span></code></pre></div>
-<p><strong>Exit code:</strong> always <code>0</code>.</p>
+<p><strong>Exit codes</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Report printed (a <code>degraded</code> install still exits <code>0</code>).</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>settings.toml</code> is missing — run <code>mait-code install</code>.</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="mait-code-doctor"><code>mait-code doctor</code><a class="headerlink" href="#mait-code-doctor" title="Permanent link">&para;</a></h2>
 <p><strong>Synopsis</strong></p>
@@ -3088,7 +3230,7 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 <tr>
 <td><code>--fix</code></td>
 <td>off</td>
-<td>Apply safe fixes for findings that support it.</td>
+<td>Apply safe fixes for the four findings that support them: dangling symlinks, a missing data dir, an unsettled embedding record, and missing embeddings.</td>
 </tr>
 <tr>
 <td><code>--json</code></td>
@@ -3133,9 +3275,19 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 <td>The recorded source still exists and looks like a mait-code clone. <code>warn</code> when there's no record to validate against.</td>
 </tr>
 <tr>
+<td><code>settings-file</code></td>
+<td>ok / fail</td>
+<td><code>settings.toml</code> exists and parses as TOML.</td>
+</tr>
+<tr>
 <td><code>settings-values</code></td>
 <td>ok / fail</td>
 <td>Every setting's value is valid for its type and range, and cross-field invariants hold (the scoring weights must sum to <code>1.0</code>). <code>fail</code> lists each offending value.</td>
+</tr>
+<tr>
+<td><code>env-table</code></td>
+<td>ok / warn</td>
+<td>The <code>[env]</code> table carries no <code>MAIT_CODE_*</code> keys — those are ignored at startup; set them through the matching <code>settings.toml</code> keys instead.</td>
 </tr>
 <tr>
 <td><code>settings</code></td>
@@ -3158,6 +3310,11 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 <td>The data dir exists and is writable. With <code>--fix</code>, creates it (plus the <code>memory/observations</code> and <code>memory/reflections</code> subdirs) if missing.</td>
 </tr>
 <tr>
+<td><code>embedding-record</code></td>
+<td>ok / warn / fail</td>
+<td>The stored vectors are recorded as built by the configured embedding model. <code>fail</code> when they came from another model — vector search, dedup and embedding stay off until a reindex; <code>warn</code> when no model is recorded, so a model change would go unnoticed. With <code>--fix</code>, verifies a re-embedded sample and adopts the configured model if it matches, re-embedding otherwise.</td>
+</tr>
+<tr>
 <td><code>memory-embeddings</code></td>
 <td>ok / warn</td>
 <td>Every live memory entry carries a vector. Entries stored while the embedding provider was unavailable are invisible to semantic search; <code>warn</code> reports the count and points at <code>mc-tool-memory reindex</code>. With <code>--fix</code>, embeds just the missing entries — existing vectors are left alone (progress goes to stderr, so <code>--json</code> output stays parseable); if the embedding provider can't run, the warning stands and reports why.</td>
@@ -3171,6 +3328,16 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 <td><code>observe-pipeline</code></td>
 <td>ok / warn</td>
 <td>The observe hook has recorded a capture recently. <code>warn</code> when the newest capture is over 7 days old, or when a memory database exists but the hook has never captured anything.</td>
+</tr>
+<tr>
+<td><code>bridge</code></td>
+<td>ok / warn</td>
+<td>When the <a href="../../bridge/">Bridge</a> is enabled, its channel config is complete. Disabled is <code>ok</code>; enabled with gaps is <code>warn</code>, never <code>fail</code>.</td>
+</tr>
+<tr>
+<td><code>mods</code></td>
+<td>ok / warn</td>
+<td>The <code>mods</code> setting and <code>CLAUDE_CODE_PLUGIN_DIRS</code> agree: <code>warn</code> when the mod is on but not registered, off but still loaded, loaded from another source tree, or its folder is missing. Re-applying the setting (<code>settings set mods …</code>) repairs it.</td>
 </tr>
 <tr>
 <td><code>uv-on-path</code></td>
@@ -3216,6 +3383,8 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>mait-code settings get &lt;key&gt; [--json]       # one resolved value + source
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>mait-code settings get theme --palette       # the resolved theme&#39;s colours, as JSON
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>mait-code settings set &lt;key&gt; &lt;value&gt; [flags]
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>mait-code settings set env.&lt;NAME&gt; &lt;value&gt;    # add / change a custom [env] variable
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>mait-code settings unset env.&lt;NAME&gt;          # remove a custom [env] variable
 </span></code></pre></div>
 <p><strong>Description</strong></p>
 <p>View and edit the active configuration. Bare <code>mait-code settings</code> opens a
@@ -3227,7 +3396,8 @@ the editor — goes through one shared path: validate → persist
 <h3 id="the-interactive-editor">The interactive editor<a class="headerlink" href="#the-interactive-editor" title="Permanent link">&para;</a></h3>
 <p>A master–detail layout: the settings list on the left, an inline edit form
 on the right that adapts to the highlighted setting — a radio set for enums
-(<code>embedding-provider</code>, <code>log-level</code>), a text input with live validation for
+(<code>embedding-provider</code>, <code>log-level</code>, <code>bridge</code>, <code>mods</code>, <code>status-bar-style</code>, and
+<code>theme</code>, whose choices are the registered themes), a text input with live validation for
 everything else, and a read-only view for derived values. The three scoring
 weights collapse into one <strong>grouped</strong> row whose editor retunes all three at
 once and only enables <em>Apply</em> when they sum to <code>1.0</code>. Migration and
@@ -3257,9 +3427,11 @@ to the terminal so <code>reindex</code> prints its normal progress, then returns
 </table>
 <h3 id="settings-list"><code>settings list</code><a class="headerlink" href="#settings-list" title="Permanent link">&para;</a></h3>
 <p>Read-only view of every knob the framework reads, with its resolved value
-and <em>source</em>. Modelled on <code>aws configure list</code>. Always exits <code>0</code>: it
-<em>reports</em> configuration, it doesn't validate it (that's <code>doctor</code>'s job, via
-the <code>settings-values</code> check).</p>
+and <em>source</em>. Modelled on <code>aws configure list</code>. It <em>reports</em> configuration,
+it doesn't validate it (that's <code>doctor</code>'s job, via the <code>settings-values</code>
+check), so it exits <code>0</code> whatever the values — but like <code>status</code> it refuses to
+run, with exit <code>1</code>, when <code>settings.toml</code> is missing. Custom <code>[env]</code> variables
+show as <code>env.&lt;NAME&gt;</code> rows, followed by the tool-approval presets.</p>
 <table>
 <thead>
 <tr>
@@ -3300,14 +3472,16 @@ the <code>settings-values</code> check).</p>
 </table>
 <p>Settings fall into three groups:</p>
 <ul>
-<li><strong>Primary</strong> — written uncommented in <code>settings.toml</code>: <code>data-dir</code>, <code>log-level</code>, <code>log-file</code>, <code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code>, <code>bedrock-region</code>.</li>
-<li><strong>Advanced</strong> — written commented-out (the built-in default applies until you opt in via <code>set</code> or by uncommenting): <code>log-backup-count</code>, <code>extraction-model</code>, <code>reflection-model</code>, <code>llm-timeout</code>, <code>reflection-batch-size</code>, <code>reflection-novelty-gate</code>, <code>git-timeout</code>, and the scoring/dedup tuning knobs <code>score-weight-recency</code>, <code>score-weight-importance</code>, <code>score-weight-relevance</code>, <code>half-life-episodic</code>, <code>half-life-semantic</code>, <code>half-life-procedural</code>, <code>dedup-string-threshold</code>, <code>dedup-vector-threshold</code>, <code>dedup-conflict-threshold</code>, <code>scope-boost-global</code>, <code>scope-boost-cross-project</code>.</li>
-<li><strong>Derived</strong> (source <code>derived</code>, not settable): <code>embedding-dim</code>, <code>memory-db-path</code>, <code>reminders-db-path</code>, <code>model-cache-dir</code>, <code>observations-dir</code>, <code>project-aliases-path</code>.</li>
+<li><strong>Primary</strong> — written uncommented in <code>settings.toml</code>: <code>data-dir</code>, <code>log-level</code>, <code>log-file</code>, <code>theme</code>, <code>bridge</code>, <code>bridge-type</code>, <code>mods</code>, <code>status-bar-style</code>, <code>jira-base-url</code>, <code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code>, <code>bedrock-region</code>.</li>
+<li><strong>Advanced</strong> — written commented-out (the built-in default applies until you opt in via <code>set</code> or by uncommenting): <code>log-backup-count</code>, <code>extraction-model</code>, <code>reflection-model</code>, <code>llm-timeout</code>, <code>reflection-batch-size</code>, <code>reflection-novelty-gate</code>, <code>git-timeout</code>, <code>dashboard-tile-timeout</code>, the review knobs <code>review-threshold</code> and <code>review-min-importance</code>, and the scoring/dedup tuning knobs <code>score-weight-recency</code>, <code>score-weight-importance</code>, <code>score-weight-relevance</code>, <code>half-life-episodic</code>, <code>half-life-semantic</code>, <code>half-life-procedural</code>, <code>dedup-string-threshold</code>, <code>dedup-vector-threshold</code>, <code>dedup-conflict-threshold</code>, <code>scope-boost-global</code>, <code>scope-boost-cross-project</code>.</li>
+<li><strong>Derived</strong> (source <code>derived</code>, not settable): <code>embedding-dim</code>, <code>memory-db-path</code>, <code>reminders-db-path</code>, <code>bridge-config-path</code>, <code>model-cache-dir</code>, <code>observations-dir</code>, <code>project-aliases-path</code>, <code>dashboard-config-path</code>.</li>
 </ul>
 <p>See the <a href="../../memory/">Memory guide</a> for per-setting defaults and the scoring/dedup tuning ranges.</p>
 <h3 id="settings-get"><code>settings get</code><a class="headerlink" href="#settings-get" title="Permanent link">&para;</a></h3>
 <p>Print one resolved value and its source, for scripting. <code>--json</code> emits
-<code>{"key", "value", "source"}</code>. Exits <code>1</code> on an unknown key.</p>
+<code>{"key", "value", "source"}</code>. An <code>env.&lt;NAME&gt;</code> key reads a custom <code>[env]</code>
+variable instead. Exits <code>1</code> on an unknown key, or an <code>env.&lt;NAME&gt;</code> that isn't in
+the table.</p>
 <h3 id="settings-set"><code>settings set</code><a class="headerlink" href="#settings-set" title="Permanent link">&para;</a></h3>
 <p>Validate <code>&lt;value&gt;</code> against the same rules <code>doctor</code> runs, write it to
 <code>settings.toml</code>, then run the required follow-up. Validation reuses each
@@ -3356,6 +3530,11 @@ setting's own validator (and enum <code>choices</code>, e.g. <code>embedding-pro
 <td><code>--move-data</code> / <code>--no-move-data</code></td>
 </tr>
 <tr>
+<td><code>mods</code></td>
+<td>load or unload the <a href="../../companion-mod/">companion mod</a> via <code>CLAUDE_CODE_PLUGIN_DIRS</code> in <code>settings.json</code>; lands in the next Claude Code session</td>
+<td>—</td>
+</tr>
+<tr>
 <td>everything else</td>
 <td>none — applies on the next invocation</td>
 <td>—</td>
@@ -3374,6 +3553,16 @@ with the TOML, so the value <code>install</code> mirrored there (e.g.
 <code>embedding-provider</code>) can't silently shadow your change. It never <em>adds</em>
 keys to <code>settings.json</code>. If a shell export still overrides the new value,
 <code>set</code> warns precisely and names the variable to unset.</p>
+<p><strong>Custom <code>[env]</code> variables.</strong> <code>set env.&lt;NAME&gt; &lt;value&gt;</code> adds or changes a
+variable in the <code>[env]</code> table of <code>settings.toml</code>, which every mait-code entry
+point injects into its environment at startup (a variable already set in your
+shell wins). <code>MAIT_CODE_*</code> names are refused — those are settings. See the
+<a href="../../settings/#custom-environment-variables-the-env-table">settings guide</a>
+for the rules.</p>
+<h3 id="settings-unset"><code>settings unset</code><a class="headerlink" href="#settings-unset" title="Permanent link">&para;</a></h3>
+<p>Remove a custom <code>[env]</code> variable: <code>mait-code settings unset env.&lt;NAME&gt;</code>. Only
+<code>env.&lt;NAME&gt;</code> keys can be unset — registry settings always resolve to a value,
+so to undo one, <code>set</code> it back to its default.</p>
 <p><strong>Examples</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>mait-code<span class="w"> </span>settings<span class="w">                                  </span><span class="c1"># edit interactively</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>mait-code<span class="w"> </span>settings<span class="w"> </span>list<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.settings[] | select(.source == &quot;env&quot;)&#39;</span>
@@ -3381,9 +3570,13 @@ keys to <code>settings.json</code>. If a shell export still overrides the new va
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>log-level<span class="w"> </span>DEBUG
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>embedding-provider<span class="w"> </span>bedrock<span class="w"> </span>--reindex
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>data-dir<span class="w"> </span>~/mait-data<span class="w"> </span>--move-data
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">set</span><span class="w"> </span>env.AWS_PROFILE<span class="w"> </span>dev-bedrock
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>mait-code<span class="w"> </span>settings<span class="w"> </span><span class="nb">unset</span><span class="w"> </span>env.AWS_PROFILE
 </span></code></pre></div>
-<p><strong>Exit codes:</strong> <code>list</code>/bare always <code>0</code>; <code>get</code> and <code>set</code> exit <code>1</code> on an
-unknown key, invalid value, or a missing required follow-up flag.</p>
+<p><strong>Exit codes:</strong> every form exits <code>1</code> when <code>settings.toml</code> is missing.
+Otherwise <code>list</code>/bare exit <code>0</code>; <code>get</code>, <code>set</code> and <code>unset</code> exit <code>1</code> on an
+unknown key, invalid value, a missing required follow-up flag, or (for
+<code>unset</code>) a key that isn't <code>env.&lt;NAME&gt;</code> or isn't in the table.</p>
 <hr />
 <h2 id="mait-code-board"><code>mait-code board</code><a class="headerlink" href="#mait-code-board" title="Permanent link">&para;</a></h2>
 <p><strong>Synopsis</strong></p>
@@ -3395,8 +3588,11 @@ unknown key, invalid value, or a missing required follow-up flag.</p>
 full-screen <a href="https://textual.textualize.io/">Textual</a> TUI; when piped or
 redirected it falls back to a read-only text render, so scripts and the
 session-start summary are unaffected.</p>
+<p><code>--initiatives</code> opens on the Initiatives view — every open epic with its
+progress and members. Off a TTY it prints one line per open epic instead
+(<code>[#&lt;id&gt;] (&lt;priority&gt;) &lt;title&gt; — &lt;status&gt; — &lt;progress&gt;</code>, or <code>No initiatives.</code>).</p>
 <p>The board has a single fixed workflow shared by every project — the columns
-are not configurable. Cards flow left-to-right through four visible columns:</p>
+are not configurable. Cards flow left-to-right through five columns:</p>
 <table>
 <thead>
 <tr>
@@ -3422,20 +3618,27 @@ are not configurable. Cards flow left-to-right through four visible columns:</p>
 <td>Being worked on.</td>
 </tr>
 <tr>
+<td>In Review</td>
+<td><code>in_review</code></td>
+<td>Finished and awaiting review, usually an open PR. Hidden in the TUI while empty (<code>v</code> shows it anyway).</td>
+</tr>
+<tr>
 <td>Done</td>
 <td><code>done</code></td>
-<td>Completed.</td>
+<td>Completed. Hidden in the TUI by default (<code>d</code> shows it).</td>
 </tr>
 </tbody>
 </table>
-<p>A fifth status, <code>archived</code>, is hidden from the board by default (toggle it
-into view with <code>a</code> in the TUI).</p>
+<p>A further status, <code>archived</code>, sits off the flow and is hidden by default
+(toggle it into view with <code>a</code> in the TUI).</p>
 <p><code>blocked</code> is <strong>not</strong> a column — it is a free-form <em>tag</em> carried in place, so a
 blocked card keeps its real flow position. Blocking is the first consumer of a
 general tagging system (<code>tag</code> / <code>untag</code> on the CLI, <code>t</code> in the TUI).</p>
 <h3 id="the-interactive-board">The interactive board<a class="headerlink" href="#the-interactive-board" title="Permanent link">&para;</a></h3>
 <p>A column-per-status layout you navigate by card. Movement keys reslot the
-highlighted card; the rest open detail, annotate, tag, or change what's shown.</p>
+highlighted card; the rest create, edit, annotate, tag, or change what's shown.
+The main keys are below — the <a href="../../board/#tui-reference">board guide</a> has the
+full tables for the board, the Initiatives view and the card detail screen.</p>
 <table>
 <thead>
 <tr>
@@ -3445,8 +3648,8 @@ highlighted card; the rest open detail, annotate, tag, or change what's shown.</
 </thead>
 <tbody>
 <tr>
-<td><code>←</code> / <code>→</code></td>
-<td>Move focus between columns</td>
+<td><code>←</code> / <code>→</code> / <code>1</code>–<code>6</code></td>
+<td>Move focus between columns, or jump to the <em>n</em>th visible one</td>
 </tr>
 <tr>
 <td><code>&lt;</code> / <code>&gt;</code></td>
@@ -3457,8 +3660,12 @@ highlighted card; the rest open detail, annotate, tag, or change what's shown.</
 <td>Open the card detail view</td>
 </tr>
 <tr>
-<td><code>c</code></td>
-<td>Add a comment to the highlighted card</td>
+<td><code>n</code> / <code>e</code></td>
+<td>New card / edit the highlighted card</td>
+</tr>
+<tr>
+<td><code>c</code> / <code>C</code></td>
+<td>Comment on / complete the highlighted card</td>
 </tr>
 <tr>
 <td><code>t</code></td>
@@ -3469,12 +3676,12 @@ highlighted card; the rest open detail, annotate, tag, or change what's shown.</
 <td>Add / remove the <code>blocked</code> tag on the highlighted card (in place)</td>
 </tr>
 <tr>
-<td><code>p</code></td>
-<td>Filter by project (dropdown picker)</td>
+<td><code>p</code> / <code>/</code></td>
+<td>Filter by project / search cards by title</td>
 </tr>
 <tr>
-<td><code>a</code></td>
-<td>Toggle visibility of archived cards</td>
+<td><code>v</code> / <code>d</code> / <code>a</code></td>
+<td>Toggle the In Review column / the Done column / archived cards</td>
 </tr>
 <tr>
 <td><code>r</code></td>
@@ -3505,6 +3712,7 @@ cards at all it prints <code>No cards on the board.</code></p>
 <p><strong>Examples</strong></p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>mait-code<span class="w"> </span>board<span class="w">            </span><span class="c1"># drive the board interactively</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>mait-code<span class="w"> </span>board<span class="w"> </span><span class="p">|</span><span class="w"> </span>cat<span class="w">      </span><span class="c1"># plain text render (e.g. for piping or logs)</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>mait-code<span class="w"> </span>board<span class="w"> </span>--initiatives<span class="w">  </span><span class="c1"># open on the epics</span>
 </span></code></pre></div>
 <p><strong>Exit code:</strong> always <code>0</code>.</p>
 <blockquote>
@@ -3580,10 +3788,77 @@ pending marked <code>●</code> and reflected <code>·</code>:</p>
 </span></code></pre></div>
 <p><strong>Exit code:</strong> always <code>0</code>.</p>
 <hr />
+<h2 id="mait-code-memory"><code>mait-code memory</code><a class="headerlink" href="#mait-code-memory" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>mait-code memory                            # interactive browser (TTY) / grouped summary (piped)
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Browse everything the companion remembers, across every project and scope.
+Attached to a terminal it launches a full-screen
+<a href="https://textual.textualize.io/">Textual</a> TUI: memories grouped by type, the
+selected one rendered in full with its metadata, and a live filter. Piped or
+redirected it prints each type with its entry count and its five most recent
+entries (<code>[#&lt;id&gt;] &lt;date&gt; &lt;first line&gt;</code>), or <code>No memories stored yet.</code></p>
+<p>The browser is read-only — writing stays with <code>mc-tool-memory</code> and the memory
+skills. See the <a href="../../memory-browser/">memory browser guide</a> for the layout and
+keys.</p>
+<p><strong>Flags:</strong> none.</p>
+<p><strong>Exit code:</strong> always <code>0</code>.</p>
+<hr />
+<h2 id="mait-code-review"><code>mait-code review</code><a class="headerlink" href="#mait-code-review" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>mait-code review                            # interactive queue (TTY) / due list (piped)
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Work the memory review queue — important memories that have aged long enough to
+need a fresh look, most-decayed first. Attached to a terminal it launches a
+full-screen <a href="https://textual.textualize.io/">Textual</a> TUI where one key
+<strong>confirms</strong> (<code>c</code>), <strong>refines</strong> (<code>e</code>) or <strong>retires</strong> (<code>x</code>) the highlighted
+memory, writing through the same store operations as <code>mc-tool-memory reviewed</code>
+/ <code>supersede</code> / <code>retire</code>. Piped or redirected it prints the due list
+(<code>[#&lt;id&gt;] &lt;recall%&gt; &lt;first line&gt;</code>), or a line saying nothing is due.</p>
+<p>Unlike the other browsers, this one writes. See the
+<a href="../../review/">review queue guide</a> for the full tour.</p>
+<p><strong>Flags:</strong> none.</p>
+<p><strong>Exit code:</strong> always <code>0</code>.</p>
+<hr />
+<h2 id="mait-code-graph"><code>mait-code graph</code><a class="headerlink" href="#mait-code-graph" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>mait-code graph                             # interactive explorer (TTY) / hub summary (piped)
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Explore the entity knowledge graph the observe hook builds alongside your
+memories. Attached to a terminal it launches a full-screen
+<a href="https://textual.textualize.io/">Textual</a> TUI: pick an entity and see its
+neighbourhood as a node-link diagram or a relationship table, with each edge's
+context text. Piped or redirected it prints the connected entities (type, name,
+mention and link counts; the first 30), or a line saying the graph is still
+empty.</p>
+<p>The explorer is read-only. See the <a href="../../graph/">graph explorer guide</a> for the
+views and keys.</p>
+<p><strong>Flags:</strong> none.</p>
+<p><strong>Exit code:</strong> always <code>0</code>.</p>
+<hr />
+<h2 id="mait-code-logs"><code>mait-code logs</code><a class="headerlink" href="#mait-code-logs" title="Permanent link">&para;</a></h2>
+<p><strong>Synopsis</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>mait-code logs                              # interactive viewer (TTY) / day-grouped summary (piped)
+</span></code></pre></div>
+<p><strong>Description</strong></p>
+<p>Read the structured JSON logs every mait-code tool and hook writes. Attached to
+a terminal it launches a full-screen <a href="https://textual.textualize.io/">Textual</a>
+TUI: log lines grouped by day, with the selected line's full record — message,
+fields, invocation arguments, stack trace. Piped or redirected it prints the
+line and error tallies, then each day's line / warning / error counts with its
+first few error messages, or <code>No logs yet.</code></p>
+<p>The viewer is read-only — it never writes, truncates or rotates the files. See
+the <a href="../../logs/">log viewer guide</a> for filtering and keys.</p>
+<p><strong>Flags:</strong> none.</p>
+<p><strong>Exit code:</strong> always <code>0</code>.</p>
+<hr />
 <h2 id="mait-code-home"><code>mait-code home</code><a class="headerlink" href="#mait-code-home" title="Permanent link">&para;</a></h2>
 <p><strong>Synopsis</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>mait-code home                              # interactive hub (TTY) / text summary (piped)
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>mait-code                                   # bare invocation — same hub on a TTY
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>mait-code home                              # interactive hub (TTY) / text summary (piped)
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>mait-code                                   # bare invocation — same hub on a TTY
 </span></code></pre></div>
 <p><strong>Description</strong></p>
 <p>Open the companion's home hub — a navigable map over the board, memory,
@@ -3594,9 +3869,12 @@ compact text summary instead.</p>
 <p>A bare <code>mait-code</code> with no subcommand is the same front door: it opens the hub
 on a TTY and falls back to the root help when piped, so scripts and
 <code>mait-code | grep</code> are unaffected.</p>
-<p>The hub is read-only — it never writes a store or shells out. It renders the
-same data the <code>mc-tool-*</code> CLIs and skills work from, so it always reflects the
-real state. See the <a href="../../home/">home hub guide</a> for the full tour.</p>
+<p>The hub is presentation first: apart from <code>e</code> (reindex memory vectors, after a
+confirm) and the <strong>Companion mod</strong> toggle (which writes the <code>mods</code> setting), it
+never writes a store, and the only commands it runs are the shell-command tiles
+you author on its <a href="../../home/#the-start-page">start page</a>. It renders the same
+data the <code>mc-tool-*</code> CLIs and skills work from, so it always reflects the real
+state. See the <a href="../../home/">home hub guide</a> for the full tour.</p>
 <h3 id="the-interactive-hub">The interactive hub<a class="headerlink" href="#the-interactive-hub" title="Permanent link">&para;</a></h3>
 <p>A tree of sections down the left (Board, Memory, Reminders, Inbox, Identity,
 System), each carrying a live status badge; the highlighted section renders in
@@ -3619,11 +3897,15 @@ full on the right.</p>
 </tr>
 <tr>
 <td><code>r</code></td>
-<td>Reload every store (refresh the badges and current detail)</td>
+<td>Reload every store (refresh the badges and current detail, re-run the start-page tiles)</td>
+</tr>
+<tr>
+<td><code>e</code></td>
+<td>Reindex — bring memory vectors in line with the configured model, after a confirm</td>
 </tr>
 <tr>
 <td><code>Ctrl+P</code></td>
-<td>Command palette (Open board / memory / observations / settings, Reload, themes)</td>
+<td>Command palette (open the other TUIs, set up the start page, Reload, Reindex memory, themes)</td>
 </tr>
 <tr>
 <td><code>q</code> / <code>Esc</code></td>
@@ -3631,27 +3913,30 @@ full on the right.</p>
 </tr>
 </tbody>
 </table>
-<p>Pressing <code>Enter</code> on a launch leaf (<code>↗ Open board</code>, <code>↗ Open memory browser</code>,
-<code>↗ Open observations</code>, <code>↗ Open settings</code>) hands off to that dedicated TUI and
-returns to the hub when it quits, with the badges refreshed.</p>
+<p>Pressing <code>Enter</code> on a launch leaf hands off to that dedicated TUI — the board,
+its Initiatives view, the memory browser, the review queue, the observations
+browser, the graph explorer, the settings editor, the log viewer, the Bridge
+configurator, or the start-page editor — and returns to the hub when it quits,
+with the badges refreshed. The <a href="../../home/#opening-the-other-tuis">home hub guide</a>
+lists where each leaf lives.</p>
 <h3 id="the-non-tty-render_2">The non-TTY render<a class="headerlink" href="#the-non-tty-render_2" title="Permanent link">&para;</a></h3>
 <p>Off a TTY, <code>mait-code home</code> prints a one-block summary of each store:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>Board:
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  mait-code: 1 in progress · 1 refined
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>Reminders: 1 overdue · 0 upcoming
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>Inbox: 1
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>Memory: 128 entries · 0 unembedded · 3 unreflected
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>Board:
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>  mait-code: 1 in progress · 1 refined
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>Reminders: 1 overdue · 0 upcoming
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>Inbox: 1
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>Memory: 128 entries · 0 unembedded · 3 unreflected
 </span></code></pre></div>
 <p><strong>Examples</strong></p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>mait-code<span class="w">                  </span><span class="c1"># open the hub — the front door</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>mait-code<span class="w"> </span>home<span class="w">             </span><span class="c1"># the same, explicitly</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>mait-code<span class="w"> </span>home<span class="w"> </span><span class="p">|</span><span class="w"> </span>cat<span class="w">       </span><span class="c1"># plain text summary (e.g. for piping or logs)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>mait-code<span class="w">                  </span><span class="c1"># open the hub — the front door</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>mait-code<span class="w"> </span>home<span class="w">             </span><span class="c1"># the same, explicitly</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>mait-code<span class="w"> </span>home<span class="w"> </span><span class="p">|</span><span class="w"> </span>cat<span class="w">       </span><span class="c1"># plain text summary (e.g. for piping or logs)</span>
 </span></code></pre></div>
 <p><strong>Exit code:</strong> always <code>0</code>.</p>
 <hr />
 <h2 id="mait-code-version"><code>mait-code version</code><a class="headerlink" href="#mait-code-version" title="Permanent link">&para;</a></h2>
 <p><strong>Synopsis</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>mait-code version
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>mait-code version
 </span></code></pre></div>
 <p><strong>Description</strong></p>
 <p>Print the installed <code>mait-code</code> package version (from

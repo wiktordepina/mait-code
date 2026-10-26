@@ -2435,7 +2435,7 @@
 <h3 id="flags">Flags<a class="headerlink" href="#flags" title="Permanent link">&para;</a></h3>
 <p>Pass flags via <code>bash -s --</code>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--embedding-provider<span class="w"> </span>bedrock<span class="w"> </span>--ref<span class="w"> </span>v0.43.0
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--embedding-provider<span class="w"> </span>bedrock<span class="w"> </span>--ref<span class="w"> </span>v0.89.0
 </span></code></pre></div>
 <table>
 <thead>
@@ -2506,8 +2506,8 @@
 <li>Symlinks every <code>skills/*</code> directory into <code>~/.claude/skills/</code>.</li>
 <li>Symlinks any <code>agents/*</code> files into <code>~/.claude/agents/</code>.</li>
 <li>Writes the centralised settings file at <code>$XDG_CONFIG_HOME/mait-code/settings.toml</code> with all configuration values (including the chosen embedding provider).</li>
-<li>Propagates settings as <code>MAIT_CODE_*</code> env vars and merges hook registrations into <code>~/.claude/settings.json</code> (preserving any pre-existing keys).</li>
-<li>Writes the install record at <code>~/.local/share/mait-code/install.json</code>.</li>
+<li>Propagates settings as <code>MAIT_CODE_*</code> env vars and merges hook registrations into <code>~/.claude/settings.json</code> (preserving any pre-existing keys). When the <code>mods</code> setting is on, also registers the <a href="../companion-mod/">companion mod</a>.</li>
+<li>Writes the install record at <code>$XDG_STATE_HOME/mait-code/install.json</code> (default <code>~/.local/state/mait-code/install.json</code>).</li>
 </ol>
 <h2 id="lifecycle">Lifecycle<a class="headerlink" href="#lifecycle" title="Permanent link">&para;</a></h2>
 <p>Once installed, the <code>mait-code</code> binary owns the full install lifecycle. Its subcommands cover the common cases:</p>
@@ -2526,20 +2526,26 @@
 </span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>mait-code<span class="w"> </span>uninstall<span class="w"> </span>--purge-data<span class="w">   </span><span class="c1"># also delete the data directory</span>
 </span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>mait-code<span class="w"> </span>version<span class="w">           </span><span class="c1"># print the installed version</span>
 </span></code></pre></div>
-<p><code>doctor --fix</code> currently repairs three findings: dangling symlinks, a missing data
-directory, and missing embeddings. The rest it reports.</p>
+<p><code>doctor --fix</code> currently repairs four findings: dangling symlinks, a missing data
+directory, missing embeddings, and a missing or stale embedding-model record
+(re-embedding when the stored vectors came from another model). The rest it
+reports.</p>
 <p><code>uninstall</code> also runs <code>uv tool uninstall mait-code</code>, which removes the <code>mait-code</code>
 binary itself — pass <code>--keep-uv-tool</code> to leave it in place.</p>
 <p>The TUI surfaces are separate subcommands:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mait-code<span class="w">                   </span><span class="c1"># the home hub on a terminal; help when piped</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mait-code<span class="w"> </span>home<span class="w">              </span><span class="c1"># the home hub explicitly</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>mait-code<span class="w"> </span>board<span class="w">             </span><span class="c1"># kanban board</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>mait-code<span class="w"> </span>memory<span class="w">            </span><span class="c1"># memory browser</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>mait-code<span class="w"> </span>review<span class="w">            </span><span class="c1"># the memory review queue</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>mait-code<span class="w"> </span>observations<span class="w">      </span><span class="c1"># observations browser</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>mait-code<span class="w"> </span>graph<span class="w">             </span><span class="c1"># knowledge-graph explorer</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>mait-code<span class="w"> </span>logs<span class="w">              </span><span class="c1"># log viewer</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>mait-code<span class="w"> </span>board<span class="w"> </span>--initiatives<span class="w">   </span><span class="c1"># the board, opened on its Initiatives view</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>mait-code<span class="w"> </span>memory<span class="w">            </span><span class="c1"># memory browser</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>mait-code<span class="w"> </span>review<span class="w">            </span><span class="c1"># the memory review queue</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>mait-code<span class="w"> </span>observations<span class="w">      </span><span class="c1"># observations browser</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>mait-code<span class="w"> </span>graph<span class="w">             </span><span class="c1"># knowledge-graph explorer</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>mait-code<span class="w"> </span>logs<span class="w">              </span><span class="c1"># log viewer</span>
 </span></code></pre></div>
+<p>The <a href="../bridge/">Bridge</a> configurator and the <a href="../home/#setting-it-up-without-writing-toml">start-page
+editor</a> have no subcommand of their
+own — they open from the home hub.</p>
 <p>The install-lifecycle commands (<code>install</code>, <code>update</code>, <code>uninstall</code>, <code>status</code>,
 <code>doctor</code>) accept <code>--claude-dir</code>, and all but <code>update</code> accept <code>--data-dir</code>, for
 non-default layouts. The TUI subcommands, <code>settings</code> and <code>version</code> take neither.
@@ -2577,27 +2583,28 @@ notes, and exit codes.</p>
 <p>After installation, verify everything works:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Check CLAUDE.md symlink</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.claude/CLAUDE.md
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Should point to → /path/to/mait-code/config/CLAUDE.md</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># Check data directory</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>ls<span class="w"> </span>~/.claude/mait-code-data/
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Should contain: soul_document.md  user_context.md  communication_style.md  memory/</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># Check settings</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>cat<span class="w"> </span>~/.claude/settings.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>json.tool
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1"># Should contain mait-code hooks</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1"># Verify the memory CLI tool works</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>mc-tool-memory<span class="w"> </span>stats
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1"># Should print &quot;No memories stored yet.&quot; on fresh install</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="c1"># Check skills are symlinked</span>
-</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.claude/skills/recall/
-</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="c1"># Should point to → /path/to/mait-code/skills/recall</span>
-</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>
-</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="c1"># Start Claude Code — companion context should load</span>
-</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>claude
-</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="c1"># Try: /recall test  (should return &quot;No memories found&quot; on fresh install)</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Should point to → ~/.local/share/mait-code/source/config/CLAUDE.md</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># (or your clone&#39;s config/CLAUDE.md for a development install)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Check data directory</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>ls<span class="w"> </span>~/.claude/mait-code-data/
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="c1"># Should contain: soul_document.md  user_context.md  communication_style.md  memory/</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># Check settings</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>cat<span class="w"> </span>~/.claude/settings.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>json.tool
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c1"># Should contain mait-code hooks</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="c1"># Verify the memory CLI tool works</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>mc-tool-memory<span class="w"> </span>stats
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="c1"># Should print &quot;No memories stored yet.&quot; on fresh install</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1"># Check skills are symlinked</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.claude/skills/recall/
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="c1"># Should point to → ~/.local/share/mait-code/source/skills/recall</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="c1"># Start Claude Code — companion context should load</span>
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>claude
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="c1"># Try: /recall test  (should return &quot;No memories found&quot; on fresh install)</span>
 </span></code></pre></div>
 <h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
 <p>Use the built-in updater:</p>
@@ -2622,10 +2629,12 @@ where <code>git pull</code> fails outright — resolving that is exactly why <co
 <p>Because <code>CLAUDE.md</code> is a symlink, Claude Code always reads the latest config
 either way.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>Start here:</strong> <code>mait-code doctor --fix</code>. It runs 14 checks covering symlinks,
-hook registration, hooks-on-PATH, the data directory, memory health, embeddings,
-vector search, the observe pipeline, the Bridge, and settings values — and
-repairs the three it safely can. <code>mait-code logs</code> (or
+<p><strong>Start here:</strong> <code>mait-code doctor --fix</code>. It runs 16 checks covering the install
+record and source clone, the settings file and its values, the <code>[env]</code> table,
+hook registration, hooks-on-PATH, symlinks, the data directory, the embedding
+record, memory embeddings, vector search, the observe pipeline, the Bridge, the
+companion mod and <code>uv</code> — and repairs the four it safely can. <code>--llm</code> adds a
+seventeenth that makes one real nested model call. <code>mait-code logs</code> (or
 <code>$XDG_STATE_HOME/mait-code/mait-code.jsonl</code>) shows what actually happened.</p>
 <p>If a specific symptom persists:</p>
 <p><strong>CLAUDE.md not loading:</strong> Check that <code>~/.claude/CLAUDE.md</code> is a valid symlink (<code>ls -la ~/.claude/CLAUDE.md</code>). <code>doctor --fix</code> repairs dangling symlinks.</p>

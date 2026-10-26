@@ -2222,7 +2222,7 @@
 
 <h1 id="the-remote-api">The remote API<a class="headerlink" href="#the-remote-api" title="Permanent link">&para;</a></h1>
 <p><code>mait_code.remote</code> is the part of a mait-code instance that another machine or
-agent may touch: read the board, raise cards, refine them, search memories,
+agent may touch: read the board and its epics, raise cards, refine them, search memories,
 check that memory search can use its vectors, and list reminders. It is a
 <strong>Python module, not a server</strong>. A separate service you run — typically one
 that speaks MCP to remote Claude Code sessions or other agents — imports it and
@@ -2251,6 +2251,14 @@ next to the data model and its tests.</p>
 <tr>
 <td><code>list_projects</code></td>
 <td>The projects that have cards.</td>
+</tr>
+<tr>
+<td><code>list_epics</code></td>
+<td>Epics with their member progress, priority-then-oldest; finished epics only when asked for. Archived epics never appear.</td>
+</tr>
+<tr>
+<td><code>get_epic</code></td>
+<td>One epic with its non-archived members, progress and comments, in the <code>mc-tool-board epic show --json</code> shape.</td>
 </tr>
 <tr>
 <td><code>create_card</code></td>
@@ -2303,14 +2311,17 @@ instance, so the functions <strong>don't exist</strong> on this surface; they ar
 at runtime. A test pins the module's public names to an allowlist, so adding
 one is a visible change to this contract, not a quiet addition.</p>
 <p>A refine of a card outside backlog/refined, or towards any other column, raises
-<code>TransitionRefused</code> and changes nothing. The status check and the write happen
+<code>TransitionRefused</code> and changes nothing; refining an epic raises
+<code>RelationError</code>. The status check and the write happen
 in one transaction, so a card the instance moves on concurrently can't be
 pulled back.</p>
 <p>A card created with <code>origin_id</code> reaches an epic only through its origin. Since
 any card can be an origin, a client can reach any epic that has a member; the
 <code>from</code> reference and <code>created_by</code> show how the card got there. An origin's epic
 that is done or archived is refused with <code>RelationError</code>, not joined, because
-nothing would surface the card under it. Pass <code>inherit_epic=False</code> to keep the
+nothing would surface the card under it. An epic can't be an origin itself
+(also <code>RelationError</code>), and an id that names no card raises <code>CardNotFound</code>
+from any function that takes one. Pass <code>inherit_epic=False</code> to keep the
 reference without the epic.</p>
 <h2 id="provenance">Provenance<a class="headerlink" href="#provenance" title="Permanent link">&para;</a></h2>
 <p>Every write names its caller. <code>create_card</code> stores <code>client</code> as the card's

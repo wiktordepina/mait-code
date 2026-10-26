@@ -3873,9 +3873,10 @@ layer; facts about you belong in mait-code.</strong> The <code>/reflect</code> a
 <code>memory-store</code> skills apply this rule when deciding where a fact goes, so
 project-specific code knowledge no longer accretes into mait-code's
 MEMORY.md.</p>
-<p>The native directory name is the project's absolute path with <code>/</code> replaced by
-<code>-</code> (<code>/home/w/mait-code</code> → <code>-home-w-mait-code</code>). That munging is lossy — a
-literal dash is indistinguishable from a path separator — so the memory
+<p>The native directory name is the project's absolute path with every
+non-alphanumeric character replaced by <code>-</code> (<code>/home/w/mait-code</code> →
+<code>-home-w-mait-code</code>). That munging is lossy — a literal dash, dot or underscore
+is indistinguishable from a path separator — so the memory
 browser's native view recovers readable project names best-effort, by
 checking which candidate paths actually exist on disk.</p>
 <p>Both layers are visible from one surface: the <a href="#memory-browser-mait-code-memory">memory
@@ -4125,10 +4126,14 @@ reveals them). See <a href="../graph/">the graph explorer guide</a> for the full
 <td><code>/commit</code></td>
 <td>Detect changes, generate conventional commit, confirm and commit</td>
 </tr>
+<tr>
+<td><code>memory-store</code></td>
+<td>Auto-invoked: store what Claude learns mid-session, without being asked</td>
+</tr>
 </tbody>
 </table>
 <h2 id="multi-machine-sync">Multi-Machine Sync<a class="headerlink" href="#multi-machine-sync" title="Permanent link">&para;</a></h2>
-<p>The data directory can be synced via git. <code>memory.db</code> is regenerable, so it is gitignored — the JSONL observation logs are the source of truth. After pulling on a new machine, run <code>mc-tool-memory restore</code> to replay the synced observation logs into the database and reindex embeddings. If the database already has entries and you only need to recompute embeddings, use <code>mc-tool-memory reindex</code>. The other databases (<code>board.db</code>, <code>reminders.db</code>, <code>inbox.db</code>) have no such source and are committed instead. See <a href="../sync/">Multi-Machine Sync</a> for the full workflow.</p>
+<p>The data directory can be synced via git, with all four databases (<code>memory.db</code>, <code>board.db</code>, <code>reminders.db</code>, <code>inbox.db</code>) committed. <code>memory.db</code> can't be rebuilt from the JSONL observation logs: they don't carry hand-stored memories, reflection insights, review state or supersede history. <code>mc-tool-memory restore</code> replays the logs into the database, but treat it as a recovery tool for a lost or corrupted database rather than part of the sync loop; to recompute embeddings only, use <code>mc-tool-memory reindex</code>. See <a href="../sync/">Multi-Machine Sync</a> for the full workflow.</p>
 
 
 

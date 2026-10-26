@@ -3035,6 +3035,9 @@ members from every project — the board's project and search filters don't appl
 here. Members sort by what can move: <strong>ready</strong> (<code>●</code>) first, then In Progress
 and In Review, then anything held up (<code>◼</code>, with what it's waiting on), then the
 rest of Refined and Backlog, Done last. Archived members are left out.</p>
+<p><img alt="The Initiatives view: open epics with their progress on the left, the
+highlighted epic's members from every project on the right, ready first and
+blocked members marked." src="../assets/board/initiatives.png" /></p>
 <table>
 <thead>
 <tr>
@@ -3089,6 +3092,9 @@ member links to appear as dimmed stubs labelled with their project. Members
 with no links aren't drawn — a line under the diagram counts them — and a
 diagram taller or wider than the pane scrolls. It's read-only: open cards from
 the table.</p>
+<p><img alt="The dependency diagram: blockers drawn above the cards they hold up, ready
+work in green, blocked in red, an out-of-epic stub dimmed with its
+project." src="../assets/board/initiatives-diagram.png" /></p>
 <h3 id="card-detail-screen">Card detail screen<a class="headerlink" href="#card-detail-screen" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3164,7 +3170,7 @@ persists across sessions.</p>
 <p>The TUI is a front-end over the <code>mc-tool-board</code> command, which you (or Claude)
 can call directly. The same store backs both.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># View</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mc-tool-board<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>--all<span class="o">]</span><span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--archived<span class="o">]</span><span class="w"> </span><span class="o">[</span>--search<span class="w"> </span>TEXT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--mine<span class="w"> </span><span class="p">|</span><span class="w"> </span>--session<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--epic<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--ready<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>mc-tool-board<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>--all<span class="o">]</span><span class="w"> </span><span class="o">[</span>--status<span class="w"> </span>STATUS<span class="o">]</span><span class="w"> </span><span class="o">[</span>--archived<span class="o">]</span><span class="w"> </span><span class="o">[</span>--search/-q<span class="w"> </span>TEXT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--mine<span class="w"> </span><span class="p">|</span><span class="w"> </span>--session<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--epic<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--ready<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>mc-tool-board<span class="w"> </span>show<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>mc-tool-board<span class="w"> </span>summary<span class="w"> </span><span class="o">[</span>--all<span class="o">]</span><span class="w"> </span><span class="o">[</span>--project<span class="w"> </span>PROJECT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="w"> </span><span class="o">[</span>--session<span class="w"> </span>ID<span class="o">]]</span><span class="w">   </span><span class="c1"># --session adds bound/in-review cards + inbox count</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>

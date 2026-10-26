@@ -2322,7 +2322,10 @@ reflection will actually chew on.</p>
 edits or deletes — synthesis stays with the <code>/reflect</code> skill, writing stays
 with the hook. The pending/reflected split is judged against the <strong>reflection
 watermark</strong> (the high-water mark <code>/reflect</code> advances), so what you see pending
-here is precisely what the next reflection run will consider.</p>
+here is precisely what the next reflection run will consider. Entries written
+by an automated job (<code>mc-tool-memory observe</code>) are only ever read by their
+project's reflection, so they count as pending only under that project's filter
+(<code>p</code>); in the unfiltered view they show as reflected.</p>
 <h2 id="the-layout">The layout<a class="headerlink" href="#the-layout" title="Permanent link">&para;</a></h2>
 <p>Three regions, top to bottom:</p>
 <ul>

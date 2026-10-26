@@ -2566,7 +2566,7 @@
 <ol>
 <li>Preprocesses search results via <code>mc-tool-memory search</code> (injected before Claude sees the skill)</li>
 <li>Results are ranked by composite score (recency + importance + relevance)</li>
-<li>If no query is provided, shows recent memories via <code>mc-tool-memory list</code></li>
+<li>Also preprocesses the five most recent memories via <code>mc-tool-memory list</code>, which stand in for results when no query is given</li>
 <li>For follow-up searches, uses Bash to call <code>mc-tool-memory search</code> directly</li>
 </ol>
 <h3 id="remember">/remember<a class="headerlink" href="#remember" title="Permanent link">&para;</a></h3>
@@ -2648,9 +2648,16 @@ so the two don't drift and double-spend context.</p>
 <li>Teaches Claude the verb vocabulary so conversational requests map to <code>mc-tool-board</code> calls:</li>
 <li>"pick up the next refined card" → <code>mc-tool-board next --claim</code> (top refined card → <code>in_progress</code>)</li>
 <li>"refine card N" → draft description + acceptance criteria, confirm, then <code>mc-tool-board refine N ...</code></li>
-<li>complete / block / unblock / tag / untag / archive / move / add / edit / comment via the matching subcommands</li>
-<li>Cards flow through fixed columns: backlog → refined → in_progress → done, plus a hidden <code>archived</code> side-state; <code>blocked</code> is a tag carried in place, not a column</li>
-<li>Never moves, completes, or archives cards without the user's confirmation</li>
+<li>"what's next?" → <code>mc-tool-board next</code> (only <em>ready</em> cards: refined, not blocked, not waiting on another card); <code>next --epic N</code> for one initiative</li>
+<li>"move it to review" → <code>mc-tool-board review N --pr &lt;url&gt;</code>, recording the PR on the card</li>
+<li>complete / block / unblock / tag / untag / archive / move / add / edit / comment / ref via the matching subcommands</li>
+<li>Cards flow through fixed columns: backlog → refined → in_progress → in_review → done, plus a hidden <code>archived</code> side-state; <code>blocked</code> is a tag carried in place, not a column</li>
+<li>Knows the board's structure beyond columns:</li>
+<li><strong>Epics</strong> group cards across projects (<code>add --epic</code>, <code>--parent E</code>, <code>epic list</code> / <code>show</code> / <code>promote</code>)</li>
+<li><strong><code>blocks</code> links</strong> order work between cards (<code>link A blocks B</code>, <code>unlink</code>); <code>list --ready</code> shows what can move</li>
+<li><strong>Origins</strong>: a card split off or raised from another is added with <code>--from N</code>, inheriting its epic and recording where it came from</li>
+<li><strong>Session binding</strong>: In Progress cards record which sessions work them (<code>bind</code>, <code>unbind</code>, <code>list --mine</code>)</li>
+<li>Never moves, completes, or archives cards without the user's confirmation, and never adds a <code>blocks</code> link without being told how the work orders</li>
 </ol>
 <h3 id="triage">/triage<a class="headerlink" href="#triage" title="Permanent link">&para;</a></h3>
 <p>Drain the quick-capture inbox by routing each captured item to where it belongs. Suggestion-based — Claude proposes a destination per item; the user decides.</p>
@@ -2771,7 +2778,7 @@ own directory is expected; a write anywhere else is a bug in the review.</p>
 </span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>└── pre-pr-review/
 </span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    └── SKILL.md     # Cold second opinion on a branch before opening a PR
 </span></code></pre></div>
-<p>Skills are symlinked into <code>~/.claude/skills/</code> by <code>install.sh</code> and loaded by Claude Code automatically.</p>
+<p>Skills are symlinked into <code>~/.claude/skills/</code> by <code>mait-code install</code> (and refreshed by <code>mait-code update</code>, which also prunes links to removed skills) and loaded by Claude Code automatically.</p>
 <h3 id="skill-definition-format">Skill Definition Format<a class="headerlink" href="#skill-definition-format" title="Permanent link">&para;</a></h3>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nn">---</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skill-name</span>

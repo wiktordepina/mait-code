@@ -2499,7 +2499,7 @@ comes back thinner than the one it replaces.</p>
 <li>Re-run <code>/reflect</code> to consolidate if needed</li>
 </ol>
 <h3 id="observation-conflicts">Observation conflicts<a class="headerlink" href="#observation-conflicts" title="Permanent link">&para;</a></h3>
-<p>Observations are timestamped files, so conflicts are rare. If they occur, keep both versions — the reflection system will deduplicate.</p>
+<p>Observations are timestamped files, so conflicts are rare. If they occur, keep both versions — a duplicated line is harmless, because the memory writer deduplicates near-identical entries on store, including when <code>restore</code> replays the logs.</p>
 <h2 id="embedding-provider">Embedding Provider<a class="headerlink" href="#embedding-provider" title="Permanent link">&para;</a></h2>
 <p>The embedding provider lives in <code>$XDG_CONFIG_HOME/mait-code/settings.toml</code>, which
 sits <em>outside</em> the data directory and so is not synced — set it on each machine:</p>

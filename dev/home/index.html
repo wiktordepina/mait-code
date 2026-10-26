@@ -2406,7 +2406,8 @@ gives them one entrance. Open it and you can see, in one glance, what's in
 progress, what's overdue, how much is waiting to be triaged, and what Claude sees
 when a session starts — then step straight into the dedicated tool for whatever
 you want to act on.</p>
-<p>It is <strong>pure presentation</strong>: the hub never writes. Every panel reads the same
+<p>It is <strong>presentation first</strong>: apart from <code>e</code> (reindex) and the Companion mod
+toggle, the hub never writes. Every panel reads the same
 stores the <code>mc-tool-*</code> CLIs and skills use, so what you see here is exactly what
 the rest of mait-code is working from. A broken store renders a quiet snag line
 in its panel rather than taking the hub down. The only commands it ever runs are
@@ -2605,6 +2606,8 @@ viewer</a> are full applications in their own right. Each has a dedicated
 so it reads as a hand-off rather than just another row:</p>
 <ul>
 <li><code>↗ Open board</code> — under <strong>Board</strong></li>
+<li><code>↗ Open initiatives</code> — under <strong>Board</strong> (opens the board straight on its
+  <a href="../board/#initiatives-view">Initiatives view</a>)</li>
 <li><code>↗ Open memory browser</code> — under <strong>Memory</strong></li>
 <li><code>↗ Open review</code> — under <strong>Memory</strong>, beneath <em>Due for review</em> (it's where you
   act on that count)</li>
@@ -2626,7 +2629,7 @@ each return rebuilds the tree from the stores. The category nodes themselves sta
 ordinary expand/collapse sections, so you never lose the ability to fold a branch
 away.</p>
 <p>Most of the hand-offs also live in the <code>Ctrl+P</code> command palette (<strong>Open board</strong>,
-<strong>Open memory</strong>, <strong>Open review</strong>, <strong>Open observations</strong>, <strong>Open settings</strong>,
+<strong>Open initiatives</strong>, <strong>Open memory</strong>, <strong>Open review</strong>, <strong>Open observations</strong>, <strong>Open settings</strong>,
 <strong>Open logs</strong>, <strong>Set up start page</strong>), alongside <strong>Reload</strong> and
 <strong>Reindex memory</strong>. The graph explorer and the Bridge configurator are tree
 leaves only — they have no palette entry.</p>
@@ -2647,7 +2650,7 @@ badge shows whether it's currently on or off.</p>
 <tr>
 <td><strong>Board</strong></td>
 <td>Live cards split into <em>In progress</em>, <em>In review</em> and <em>Next up</em></td>
-<td><code>↗ Open board</code>, In progress, In review, Next up, By project</td>
+<td><code>↗ Open board</code>, <code>↗ Open initiatives</code>, In progress, In review, Next up, By project</td>
 </tr>
 <tr>
 <td><strong>Memory</strong></td>
@@ -2686,6 +2689,7 @@ presented with at the start of a session, in order:</p>
 <ol>
 <li>the <strong>soul document</strong> — the companion's identity and values,</li>
 <li>the <strong>user context</strong> — who you are and how you like to work,</li>
+<li>the <strong>communication style</strong> — how responses are shaped,</li>
 <li>the <strong>curated memory</strong> (<code>MEMORY.md</code>) — the high-confidence facts, and</li>
 <li>the <strong>session context</strong> — built live by the session-start hook (overdue
    reminders, the active board, the inbox count).</li>
@@ -2721,11 +2725,11 @@ header." src="../assets/home/home-sysprompt.png" /></p>
 </tr>
 <tr>
 <td><code>e</code></td>
-<td>Reindex — embed the memory entries missing a vector, after a confirm</td>
+<td>Reindex — bring memory vectors in line with the configured model, after a confirm</td>
 </tr>
 <tr>
 <td><code>Ctrl+P</code></td>
-<td>Command palette (Open board / memory / review / observations / settings / logs, Set up start page, Reload, Reindex memory, themes)</td>
+<td>Command palette (Open board / initiatives / memory / review / observations / settings / logs, Set up start page, Reload, Reindex memory, themes)</td>
 </tr>
 <tr>
 <td><code>?</code></td>
@@ -2750,10 +2754,13 @@ header." src="../assets/home/home-sysprompt.png" /></p>
 <li><strong><code>e</code> when embeddings lag.</strong> If <em>Embedding coverage</em> (or the health line's
   <code>memory-embeddings</code> warning) shows unembedded entries, press <code>e</code> — after a
   confirm naming the missing count, home drops to the terminal to embed just
-  those entries, then comes back with fresh numbers. When nothing is missing
-  it says so and skips the confirm. The same fix runs non-interactively via
-  <code>mait-code doctor --fix</code>; a full from-scratch re-embed stays with
-  <code>mc-tool-memory reindex</code>.</li>
+  those entries, then comes back with fresh numbers. If the stored vectors
+  came from a different model than the one configured, the confirm says so and
+  <code>e</code> rebuilds every vector instead; with no record of the model, it re-embeds a
+  sample first and rebuilds everything only if that disagrees. When every entry
+  already has a vector from the configured model it says so and skips the
+  confirm. The same fix runs non-interactively via <code>mait-code doctor --fix</code>;
+  <code>mc-tool-memory reindex</code> forces a full from-scratch re-embed.</li>
 <li><strong>Keep curated memory fresh.</strong> <em>Memory → Due for review</em> lists the entries that
   have <a href="../memory/#review-keeping-curated-memory-fresh">decayed past the resurfacing threshold</a> —
   the leaf carries a warn-styled count when any are waiting. Press <code>↗ Open review</code>

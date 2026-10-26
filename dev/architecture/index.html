@@ -1417,6 +1417,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-remote-api-remotepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Remote API (remote.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-companion-mod-mods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Companion Mod (mods/)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#console-and-theming-consolepy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2714,6 +2736,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-remote-api-remotepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Remote API (remote.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-companion-mod-mods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Companion Mod (mods/)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#console-and-theming-consolepy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2853,23 +2897,23 @@
         subgraph tools_pkg ["tools/"]
             memory_tool["memory/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, writer&lt;br/&gt;search, scoring, entities&lt;br/&gt;embeddings, reflect, review&lt;br/&gt;native, observations, stats"]
             reminders_tool["reminders/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, service"]
-            board_tool["board/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, columns, service, export"]
+            board_tool["board/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, columns&lt;br/&gt;service, sessions, export"]
             inbox_tool["inbox/ &lt;i&gt;(CLI)&lt;/i&gt;&lt;br/&gt;cli, db, migrate, service"]
         end
         subgraph bridge_pkg ["bridge/ &lt;i&gt;(opt-in transport)&lt;/i&gt;"]
             bridge_core["base, registry, service, config&lt;br/&gt;control, ntfy, loopback"]
         end
         subgraph ui_pkg ["cli/ + tui/"]
-            cli_layer["cli/ &lt;i&gt;(mait-code)&lt;/i&gt;&lt;br/&gt;install, update, status, doctor&lt;br/&gt;settings, permissions, dashboard&lt;br/&gt;+ 10 Textual TUIs"]
-            tui_layer["tui/ &lt;i&gt;(shared)&lt;/i&gt;&lt;br/&gt;app, theme, palette, banner&lt;br/&gt;brand, confirm, filters, markdown"]
+            cli_layer["cli/ &lt;i&gt;(mait-code)&lt;/i&gt;&lt;br/&gt;install, update, status, doctor&lt;br/&gt;settings, permissions, dashboard&lt;br/&gt;+ 11 Textual TUIs"]
+            tui_layer["tui/ &lt;i&gt;(shared)&lt;/i&gt;&lt;br/&gt;app, theme, palette, banner&lt;br/&gt;brand, confirm, filters, markdown&lt;br/&gt;graph, help, render"]
         end
-        shared["config.py + context.py + console.py&lt;br/&gt;llm.py + logging.py + ssl.py &lt;i&gt;(shared)&lt;/i&gt;"]
+        shared["config.py + context.py + console.py&lt;br/&gt;llm.py + logging.py + ssl.py&lt;br/&gt;remote.py &lt;i&gt;(shared)&lt;/i&gt;"]
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
         identity["soul_document.md&lt;br/&gt;user_context.md&lt;br/&gt;communication_style.md"]
-        memory_store["memory/&lt;br/&gt;MEMORY.md &lt;i&gt;(curated)&lt;/i&gt;&lt;br/&gt;memory.db &lt;i&gt;(SQLite)&lt;/i&gt;&lt;br/&gt;observations/ &lt;i&gt;(raw JSONL)&lt;/i&gt;&lt;br/&gt;reflections/ &lt;i&gt;(synthesised)&lt;/i&gt;"]
-        other_dbs["reminders.db&lt;br/&gt;board.db&lt;br/&gt;inbox.db"]
+        memory_store["memory/&lt;br/&gt;MEMORY.md &lt;i&gt;(curated)&lt;/i&gt;&lt;br/&gt;observations/ &lt;i&gt;(raw JSONL)&lt;/i&gt;&lt;br/&gt;reflections/ &lt;i&gt;(synthesised)&lt;/i&gt;"]
+        other_dbs["memory.db &lt;i&gt;(SQLite)&lt;/i&gt;&lt;br/&gt;reminders.db&lt;br/&gt;board.db&lt;br/&gt;inbox.db"]
         cfg["dashboard.toml&lt;br/&gt;bridge.json&lt;br/&gt;project-aliases.json"]
     end
 
@@ -2936,6 +2980,26 @@
 <td><code>created_at</code></td>
 <td>DATETIME</td>
 <td>Timestamp of creation</td>
+</tr>
+<tr>
+<td><code>reviewed_at</code></td>
+<td>DATETIME</td>
+<td>Anchor the review decay curve restarts from; NULL reads as <code>created_at</code></td>
+</tr>
+<tr>
+<td><code>superseded_by</code></td>
+<td>INTEGER FK</td>
+<td>The entry that replaced this one (null while live)</td>
+</tr>
+<tr>
+<td><code>superseded_at</code></td>
+<td>DATETIME</td>
+<td>When the entry was superseded or retired (null while live)</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>TEXT</td>
+<td>What wrote the entry when not a session's observe hook (e.g. <code>job</code> from <code>mc-tool-memory observe</code>); null otherwise</td>
 </tr>
 </tbody>
 </table>
@@ -3061,6 +3125,8 @@
 <li><code>idx_memory_entries_scope</code> — scope filtering</li>
 <li><code>idx_memory_entries_project</code> — project filtering</li>
 <li><code>idx_memory_entries_project_scope</code> — combined project + scope lookups</li>
+<li><code>idx_memory_entries_reviewed_at</code> — review resurfacing</li>
+<li><code>idx_memory_entries_superseded</code> — partial index over superseded rows (history lookups)</li>
 <li><code>idx_entities_name</code> — entity name lookup</li>
 <li><code>idx_entities_type</code> — entity type filtering</li>
 <li><code>idx_rel_unique</code> — relationship deduplication</li>
@@ -3068,6 +3134,8 @@
 </ul>
 <p><strong>Reflection state: <code>reflection_watermark</code></strong></p>
 <p>Tracks the last <code>memory_entries.id</code> reflected on per project, so <code>/reflect</code> is idempotent across runs. Primary key on <code>project</code> (empty string for global). Columns: <code>project</code>, <code>last_reflected_id</code>, <code>last_reflected_at</code>.</p>
+<p><strong>Embedding record: <code>memory_meta</code></strong></p>
+<p>A <code>key</code>/<code>value</code> table recording which provider, model and width built the stored vectors, so every vector path can refuse to compare against vectors from a different model. Written by <code>reindex</code> or by the first vector into an empty table — never by a migration. See <a href="../memory/#the-embedding-record">the embedding record</a>.</p>
 <h3 id="composite-scoring">Composite Scoring<a class="headerlink" href="#composite-scoring" title="Permanent link">&para;</a></h3>
 <p>Memory retrieval results are ranked by a composite score:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>score = (0.3 × recency + 0.3 × importance + 0.4 × relevance) × scope_boost
@@ -3095,7 +3163,8 @@ for the wider scopes.</p>
 </ul>
 <h3 id="deduplication">Deduplication<a class="headerlink" href="#deduplication" title="Permanent link">&para;</a></h3>
 <p>Before storing a new memory, the writer checks for near-duplicates (scoped to the
-new entry's project) using two complementary measures:</p>
+new entry's project <strong>and entry type</strong> — the same content stored as a different
+type is never a duplicate) using two complementary measures:</p>
 <ol>
 <li>Extract first 8 significant words (length &gt; 2) from new content</li>
 <li>Gather candidates from <strong>both</strong> FTS5 keyword search and vector similarity search</li>
@@ -3169,8 +3238,8 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>list</code></td>
-<td>--limit?, --type?, --since?, --project?, --branch?, --scope?</td>
-<td>List recent entries, optionally filtered by type and time period (e.g. <code>24h</code>, <code>7d</code>, <code>1w</code>)</td>
+<td>--limit?, --type?, --since?, --include-superseded?, --source?, --project?, --branch?, --scope?</td>
+<td>List recent entries, optionally filtered by type, time period (e.g. <code>24h</code>, <code>7d</code>, <code>1w</code>) or writing source; superseded entries are hidden unless asked for</td>
 </tr>
 <tr>
 <td><code>delete</code></td>
@@ -3186,6 +3255,11 @@ new entry's project) using two complementary measures:</p>
 <td><code>entities</code></td>
 <td>query?, --limit?</td>
 <td>Search or list knowledge graph entities</td>
+</tr>
+<tr>
+<td><code>entities merge</code></td>
+<td>source, target</td>
+<td>Fold an alias entity into another: relationships are repointed, mention counts summed, the source deleted</td>
 </tr>
 <tr>
 <td><code>relationships</code></td>
@@ -3204,8 +3278,13 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>reflect</code></td>
-<td>--days?, --min-new?, --batch-size?, --drain?, --project?, --branch?, --scope?</td>
-<td>Synthesise observations into insights, propose MEMORY.md updates</td>
+<td>--days?, --min-new?, --batch-size?, --drain?, --json?, --project?, --branch?, --scope?</td>
+<td>Synthesise observations into insights, propose MEMORY.md updates (<code>--json</code> emits the insights and structured MEMORY.md operations)</td>
+</tr>
+<tr>
+<td><code>observe</code></td>
+<td>--file, --project, --branch?, --trigger?, --max-chars?, --json?</td>
+<td>Extract and store observations from prepared text (e.g. a job digest) the way the observe hook does for a session; capped (no preferences, no global scope, importance ≤ 7), and <code>--trigger</code> (default <code>job</code>) becomes the entries' <code>source</code></td>
 </tr>
 <tr>
 <td><code>canonicalize-projects</code></td>
@@ -3229,8 +3308,8 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>retire</code></td>
-<td>id</td>
-<td>Drop an entry from recall, keeping the row for audit</td>
+<td>id | --source, --project?, --yes?, --json?</td>
+<td>Drop an entry from recall, keeping the row for audit; <code>--source</code> retires every live entry from one source (listing the matches until <code>--yes</code>)</td>
 </tr>
 <tr>
 <td><code>merge</code></td>
@@ -3239,9 +3318,9 @@ new entry's project) using two complementary measures:</p>
 </tr>
 </tbody>
 </table>
-<p>Scope flags apply to every command that touches <code>memory_entries</code>: <code>--project</code> and <code>--branch</code> override the auto-detected context; <code>--scope</code> filters or sets the entry scope (<code>global</code>, <code>project</code>, <code>branch</code>, or <code>all</code> — the last disables filtering at query time).</p>
+<p>The scope flags (<code>--project</code>, <code>--branch</code>, <code>--scope</code>) are taken by <code>search</code>, <code>store</code>, <code>list</code>, <code>review</code> and <code>reflect</code>: <code>--project</code> and <code>--branch</code> override the auto-detected context; <code>--scope</code> filters or sets the entry scope (<code>global</code>, <code>project</code>, <code>branch</code>, or <code>all</code> — the last disables filtering at query time). <code>observe</code> takes its own required <code>--project</code> and optional <code>--branch</code>, and <code>retire --source</code> an optional <code>--project</code>.</p>
 <h2 id="memory-browser-tui-mait-code-memory">Memory Browser TUI (<code>mait-code memory</code>)<a class="headerlink" href="#memory-browser-tui-mait-code-memory" title="Permanent link">&para;</a></h2>
-<p><code>mait-code memory</code> opens a full-screen, read-only master–detail browser over the memory store: a tree of memories grouped by entry type on the left (counts per group, newest first), the selected memory's body — rendered as markdown, plain text being a subset — plus its metadata (created, importance, scope, class) on the right. <code>/</code> focuses a live substring filter (groups expand to the matches, the subtitle reports the narrowed count), <code>r</code> re-reads the store, a <code>Ctrl+P</code> command palette exposes the actions, and <code>?</code> opens the context help screen. It deliberately browses <em>everything</em> — across projects and scopes — and performs no mutations: reading is its whole job, and writes stay with <code>mc-tool-memory</code>. It is built on Textual over the same query layer as the CLI tool (<code>search.list_entries</code>), following the house TUI conventions: a TTY-gated launch (piped or redirected, it prints a grouped read-only summary instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
+<p><code>mait-code memory</code> opens a full-screen, read-only master–detail browser over the memory store: a tree of memories grouped by entry type on the left (counts per group, newest first), the selected memory's body — rendered as markdown, plain text being a subset — plus its metadata (created, importance, scope, class) on the right. <code>/</code> focuses a live substring filter (groups expand to the matches, the subtitle reports the narrowed count), <code>p</code> narrows to one project (plus globals), <code>n</code> flips to the <strong>native view</strong> — Claude Code's own per-project auto-memory files under <code>~/.claude/projects/&lt;slug&gt;/memory/</code>, equally read-only (see <a href="../memory-browser/#the-native-view">the native view</a>) — <code>r</code> re-reads the store, a <code>Ctrl+P</code> command palette exposes the actions, and <code>?</code> opens the context help screen. It deliberately browses <em>everything</em> — across projects and scopes — and performs no mutations: reading is its whole job, and writes stay with <code>mc-tool-memory</code>. It is built on Textual over the same query layer as the CLI tool (<code>search.list_entries</code>), following the house TUI conventions: a TTY-gated launch (piped or redirected, it prints a grouped read-only summary instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
 <h2 id="review-queue-tui-mait-code-review">Review Queue TUI (<code>mait-code review</code>)<a class="headerlink" href="#review-queue-tui-mait-code-review" title="Permanent link">&para;</a></h2>
 <p><code>mait-code review</code> is the memory browser's writing counterpart: a queue of curated memories whose recall probability has decayed below <code>review-threshold</code> while their importance sits at or above <code>review-min-importance</code>, most-decayed first. Where the browser deliberately never writes, this surface exists to write — each entry gets one of three verbs, and each backs the same store operation the CLI exposes: <code>c</code> confirm (<code>mark_reviewed</code>, resetting the decay curve), <code>e</code> refine (an editor that supersedes the entry on save), <code>x</code> retire (behind a confirm, since it hides a fact from recall). Moving the highlight without choosing leaves the memory in the queue. <code>p</code> narrows to one project using the memory browser's picker, <code>r</code> recomputes the queue. The resurfacing query lives in <code>tools/memory/review.py</code> and decays from the <code>reviewed_at</code> anchor (migration 13) rather than <code>created_at</code>, so a memory's clock restarts when it is confirmed, not when it was first stored — the recall figure is a decay function, not a usage count, since nothing tracks retrieval. Same house conventions: TTY-gated (piped, it prints the due list as text), lazily imported, one connection for the app's lifetime.</p>
 <h2 id="observations-browser-tui-mait-code-observations">Observations Browser TUI (<code>mait-code observations</code>)<a class="headerlink" href="#observations-browser-tui-mait-code-observations" title="Permanent link">&para;</a></h2>
@@ -3286,7 +3365,7 @@ new entry's project) using two complementary measures:</p>
 <tr>
 <td><code>status</code></td>
 <td>TEXT</td>
-<td>Column: <code>backlog</code>, <code>refined</code>, <code>in_progress</code>, <code>done</code>, or <code>archived</code> (default <code>backlog</code>)</td>
+<td>Column: <code>backlog</code>, <code>refined</code>, <code>in_progress</code>, <code>in_review</code>, <code>done</code>, or <code>archived</code> (default <code>backlog</code>)</td>
 </tr>
 <tr>
 <td><code>priority</code></td>
@@ -3312,6 +3391,21 @@ new entry's project) using two complementary measures:</p>
 <td><code>completed_at</code></td>
 <td>DATETIME</td>
 <td>Timestamp of completion (null unless <code>done</code>)</td>
+</tr>
+<tr>
+<td><code>created_by</code></td>
+<td>TEXT</td>
+<td>Provenance: the client that raised the card through <a href="../remote/#provenance"><code>mait_code.remote</code></a>; null when created locally</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>TEXT</td>
+<td><code>card</code> or <code>epic</code> (default <code>card</code>)</td>
+</tr>
+<tr>
+<td><code>parent_id</code></td>
+<td>INTEGER FK</td>
+<td>The epic the card belongs to; <code>ON DELETE SET NULL</code></td>
 </tr>
 </tbody>
 </table>
@@ -3375,9 +3469,118 @@ new entry's project) using two complementary measures:</p>
 </tbody>
 </table>
 <p>Free-form tags ride alongside a card's status. <code>blocked</code> is the first consumer: blocking tags a card in place rather than moving it, so the card keeps its real flow position. Each card dict carries a sorted <code>tags</code> list.</p>
+<p><strong>References table: <code>card_references</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INTEGER PK</td>
+<td>Auto-incrementing identifier</td>
+</tr>
+<tr>
+<td><code>card_id</code></td>
+<td>INTEGER FK</td>
+<td>References <code>cards(id)</code>; <code>ON DELETE CASCADE</code></td>
+</tr>
+<tr>
+<td><code>position</code></td>
+<td>INTEGER</td>
+<td>1-based order on the card</td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>TEXT</td>
+<td>Reference label (e.g. <code>PR</code>, <code>JIRA</code>, <code>from</code>)</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td>TEXT</td>
+<td>URL, <code>file://</code> path, or bare ID</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Session bindings: <code>card_sessions</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>card_id</code></td>
+<td>INTEGER FK</td>
+<td>References <code>cards(id)</code>; <code>ON DELETE CASCADE</code></td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td>TEXT</td>
+<td>Claude Code session id; <code>UNIQUE(card_id, session_id)</code></td>
+</tr>
+<tr>
+<td><code>pid</code></td>
+<td>INTEGER</td>
+<td>The Claude Code process serving it — how a binding is known to be live and how it follows a <code>/clear</code></td>
+</tr>
+<tr>
+<td><code>bound_at</code></td>
+<td>TEXT</td>
+<td>Timestamp of binding</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Links table: <code>card_links</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>from_id</code></td>
+<td>INTEGER FK</td>
+<td>The blocking card; <code>ON DELETE CASCADE</code></td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>TEXT</td>
+<td><code>blocks</code> (the only type)</td>
+</tr>
+<tr>
+<td><code>to_id</code></td>
+<td>INTEGER FK</td>
+<td>The card that waits; <code>ON DELETE CASCADE</code></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Timestamp of creation</td>
+</tr>
+</tbody>
+</table>
+<p>Primary key on <code>(from_id, type, to_id)</code>; a card cannot link to itself, and the service refuses a link that would close a loop.</p>
 <p><strong>Columns are fixed, not configurable.</strong> <code>backlog → refined → in_progress → in_review → done</code> is the whole flow; <code>archived</code> is a hidden terminal excluded from default views. <code>blocked</code> is <strong>not</strong> a column — it is a tag carried in place (via <code>block</code>/<code>unblock</code>), so a blocked card keeps its real status. The constants live in <code>src/mait_code/tools/board/columns.py</code>. Project detection uses <code>mait_code.context.get_project()</code>; pass <code>--project</code> for work with no git repo (e.g. an app idea).</p>
+<p><strong>Relationships.</strong> Two cross-project relationships sit on top of the columns (see <a href="../board/#epics-and-dependencies">Epics and dependencies</a>):</p>
+<ul>
+<li><strong>Epics</strong> — a <code>kind = 'epic'</code> card is an umbrella over member cards (their <code>parent_id</code>). Epics carry the reserved project <code>@epic</code>, so they stay off the kanban, the counts and <code>next</code>; one level only, at most one epic per card.</li>
+<li><strong><code>blocks</code> links</strong> — <code>link A blocks B</code> records that B can't start until A is done. <code>next</code> hands out only <strong>ready</strong> cards: refined, not an epic, not tagged <code>blocked</code>, and not waiting on a blocker that is neither done nor archived.</li>
+<li><strong>Origin</strong> — <code>add --from N</code> records where a split-off or follow-up card came from as a <code>from</code> → <code>#N</code> reference (provenance, never ordering) and inherits N's epic unless <code>--parent</code> says otherwise.</li>
+</ul>
+<p><strong>Session binding.</strong> <code>card_sessions</code> ties In Progress cards to the Claude Code sessions working them. <code>sessions.py</code> is the only reader of <code>$CLAUDE_CODE_SESSION_ID</code>/<code>$CLAUDE_PID</code>, so the service layer stays environment-free; the session-start hook names a session's bound cards and moves bindings across <code>resume</code>/<code>clear</code>. See <a href="../board/#parallel-sessions">Parallel sessions</a>.</p>
 <h2 id="board-cli-tool-mc-tool-board">Board CLI Tool (<code>mc-tool-board</code>)<a class="headerlink" href="#board-cli-tool-mc-tool-board" title="Permanent link">&para;</a></h2>
-<p>Manually-driven kanban board. Claude in the live session acts as the worker ("pick up the next refined card"); there is no autonomous dispatcher — <em>you</em> drive the board. Cards are project-scoped via the basename of the git root (or cwd), stored in a shared <code>board.db</code>. Read commands accept <code>--json</code> for UI/skill consumption.</p>
+<p>Manually-driven kanban board. Claude in the live session acts as the worker ("pick up the next refined card"); there is no autonomous dispatcher — <em>you</em> drive the board. Cards are project-scoped via the basename of the git root (or cwd), stored in a shared <code>board.db</code>. Read commands accept <code>--json</code> for UI/skill consumption, and every mutating subcommand takes <code>--json</code> to emit the affected card (for <code>link</code>/<code>unlink</code>, card B; for <code>remove</code>, the card as it was) instead of a confirmation line — so <code>--json</code> is left out of the table below.</p>
 <table>
 <thead>
 <tr>
@@ -3389,18 +3592,18 @@ new entry's project) using two complementary measures:</p>
 <tbody>
 <tr>
 <td><code>add</code></td>
-<td>title, --description?, --priority?, --project?</td>
-<td>Add a card to the backlog</td>
+<td>title, --description?, --priority?, --project?, --epic?, --parent?, --from?</td>
+<td>Add a card to the backlog; <code>--epic</code> adds an epic instead, <code>--parent</code> puts the card in one (<code>none</code> to drop an inherited one), <code>--from N</code> records its origin and inherits N's epic</td>
 </tr>
 <tr>
 <td><code>list</code></td>
-<td>--all?, --status?, --archived?, --mine? | --session?, --json?</td>
-<td>List cards grouped by column (current project by default; archived hidden); <code>--mine</code>/<code>--session</code> keep cards bound to a session, across all projects</td>
+<td>--all?, --status?, --archived?, --search/-q?, --epic?, --ready?, --mine? | --session?, --json?</td>
+<td>List cards grouped by column (current project by default; archived hidden); <code>-q</code> filters by title, <code>--epic</code> keeps one epic's members (any project), <code>--ready</code> keeps what <code>next</code> could hand out, <code>--mine</code>/<code>--session</code> keep cards bound to a session, across all projects</td>
 </tr>
 <tr>
 <td><code>show</code></td>
 <td>id, --json?</td>
-<td>Show a card and its comment thread</td>
+<td>Show a card, its relationships and its comment thread</td>
 </tr>
 <tr>
 <td><code>move</code></td>
@@ -3414,8 +3617,13 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>next</code></td>
-<td>--project?, --claim?, --json?</td>
-<td>Show the next refined card (priority, then oldest); <code>--claim</code> moves it to <code>in_progress</code> and binds the current session</td>
+<td>--project?, --epic?, --claim?, --json?</td>
+<td>Show the next ready card (priority, then oldest); <code>--epic</code> picks from one epic's members in any project; <code>--claim</code> moves it to <code>in_progress</code> and binds the current session</td>
+</tr>
+<tr>
+<td><code>review</code></td>
+<td>id, --pr?</td>
+<td>Move a card to <code>in_review</code>; <code>--pr</code> records the pull request as a <code>PR</code> reference</td>
 </tr>
 <tr>
 <td><code>complete</code></td>
@@ -3441,6 +3649,31 @@ new entry's project) using two complementary measures:</p>
 <td><code>untag</code></td>
 <td>id, tag</td>
 <td>Remove a tag from a card</td>
+</tr>
+<tr>
+<td><code>link</code></td>
+<td>A, <code>blocks</code>, B</td>
+<td>Record that card B can't start until A is done (refused if it would close a loop)</td>
+</tr>
+<tr>
+<td><code>unlink</code></td>
+<td>A, <code>blocks</code>, B</td>
+<td>Remove a <code>blocks</code> link</td>
+</tr>
+<tr>
+<td><code>epic list</code></td>
+<td>--done?, --json?</td>
+<td>Open epics with member progress (<code>--done</code> includes finished ones)</td>
+</tr>
+<tr>
+<td><code>epic show</code></td>
+<td>id, --json?</td>
+<td>An epic and its members, column by column</td>
+</tr>
+<tr>
+<td><code>epic promote</code></td>
+<td>id</td>
+<td>Turn an existing card into an epic</td>
 </tr>
 <tr>
 <td><code>ref add</code></td>
@@ -3479,8 +3712,8 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>edit</code></td>
-<td>id, --title?, --description?, --priority?, --acceptance?</td>
-<td>Edit card fields</td>
+<td>id, --title?, --description?, --priority?, --acceptance?, --project?, --parent?</td>
+<td>Edit card fields; <code>--parent none</code> takes the card out of its epic</td>
 </tr>
 <tr>
 <td><code>remove</code></td>
@@ -3489,19 +3722,20 @@ new entry's project) using two complementary measures:</p>
 </tr>
 <tr>
 <td><code>summary</code></td>
-<td>--all?, --project?, --json?</td>
-<td>Per-column counts (the session-start hook reads the same counts via <code>service.summary_counts</code>)</td>
+<td>--all?, --project?, --session?, --json?</td>
+<td>Per-column counts (the session-start hook reads the same counts via <code>service.summary_counts</code>); <code>--session ID</code> (with <code>--json</code>) adds that session's bound cards, the In Review cards and the inbox count</td>
 </tr>
 <tr>
 <td><code>export</code></td>
-<td>id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search?</td>
-<td>Export one card or the whole board as markdown or JSON (stdout, or a file with <code>--out</code>)</td>
+<td>id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search?, --epic?</td>
+<td>Export one card, one epic with its members, or the whole board as markdown or JSON (stdout, or a file with <code>--out</code>)</td>
 </tr>
 </tbody>
 </table>
 <p>Every query and mutation — including the done-invariant (<code>completed_at</code> is set on entering <code>done</code> and cleared on leaving) and the session-invariant (leaving <code>in_progress</code> releases every <code>card_sessions</code> binding) — lives in <code>src/mait_code/tools/board/service.py</code>, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.</p>
 <h2 id="board-tui-mait-code-board">Board TUI (<code>mait-code board</code>)<a class="headerlink" href="#board-tui-mait-code-board" title="Permanent link">&para;</a></h2>
 <p><code>mait-code board</code> opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a <code>p</code> project-filter dropdown, arrow-key navigation, <code>&lt;</code>/<code>&gt;</code> to move a card along the flow (<code>backlog → refined → in_progress → in_review → done</code>; In Review hides itself while empty unless <code>v</code> reveals it), <code>t</code> to toggle a tag and <code>b</code>/<code>u</code> to tag/untag <code>blocked</code> in place, plus a near-fullscreen card screen (<code>Enter</code>) that shows the card with its comment thread and flips to an edit form in place with <code>e</code>. That form is the single place a card is changed: title, priority, <strong>status</strong>, <strong>tags</strong>, <strong>references</strong>, description and acceptance criteria all on one form. Tags, references and status are a working copy — Save applies them together and returns to the view; cancel discards every pending change. Block/unblock stay outside the form (they carry a reason comment a plain tag can't), so the form's tag editor leaves <code>blocked</code> alone. <code>n</code> creates a card, <code>C</code> completes one with a handoff summary, and <code>c</code> comments. The card screen carries a References section — a list of label→value links, clickable where the value is a URL or <code>file://</code> path. Priority and tags render as domain-coloured chips on the card rows (<code>blocked</code> distinct in the error colour). A <code>Ctrl+P</code> command palette exposes every action, <code>?</code> opens a context help screen built from the live key-bindings, number keys jump between columns, and actions raise toasts. It is built on Textual and reuses the board <code>service.py</code>, mirroring the <code>mait-code settings</code> editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
+<p><code>i</code> swaps the kanban for the <strong>Initiatives view</strong> (or launch straight into it with <code>mait-code board --initiatives</code>): every open epic with its progress beside a table of the highlighted epic's members from every project, ready ones first. There, <code>g</code> swaps the table for the epic's <code>blocks</code> dependency diagram, drawn top-down on the shared <code>tui/graph.py</code> view the graph explorer also uses. The card screen gains a <strong>Relationships</strong> section — the card's epic, its blockers and what it unblocks. Keys and screenshots live in the <a href="../board/#initiatives-view">board guide</a>.</p>
 <p>The board TUI is <strong>on-demand and foreground</strong> — it is launched explicitly, runs until you quit with <code>q</code>, and leaves nothing behind. The <em>No background services</em> principle is intact: there is no daemon polling the board, only a short-lived app you open when you want to see it.</p>
 <h2 id="inbox-database">Inbox Database<a class="headerlink" href="#inbox-database" title="Permanent link">&para;</a></h2>
 <p>The inbox database (<code>inbox.db</code>) backs a single frictionless quick-capture holding pen — a "capture now, sort later" store so a thought can be dumped without deciding upfront whether it is a board card or a memory.</p>
@@ -3574,15 +3808,19 @@ new entry's project) using two complementary measures:</p>
 </tbody>
 </table>
 <h2 id="home-hub-tui-mait-code-home">Home Hub TUI (<code>mait-code home</code>)<a class="headerlink" href="#home-hub-tui-mait-code-home" title="Permanent link">&para;</a></h2>
-<p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>e</code> embeds the memory entries missing a vector after a confirm (the hub's one write — it suspends to the terminal so the reindex progress prints normally), <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
-<p>Pressing <strong>Enter</strong> on a launch leaf — the board, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with, less the per-session section naming the cards a session is bound to (the hub has no session).</p>
-<p>This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from <code>mait_code.tui.brand</code>. The <code>BrandBanner</code> (<code>mait_code.tui.banner</code>) wraps them into one size-responsive masthead worn by every TUI in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the <code>mc-tool-*</code> CLIs use (nothing shells out, nothing writes), a TTY-gated launch (piped or redirected, <code>mait-code home</code> prints a compact text summary and bare <code>mait-code</code> keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.</p>
+<p><code>mait-code home</code> — or just <code>mait-code</code> with no subcommand on a terminal — opens the companion's front door: a tree-navigable hub over everything mait-code, not an at-a-glance readout. A slim <strong>tree sidebar</strong> (under a third of the width) lists the sections — Board, Memory, Reminders, Inbox, Identity, System — each tree node carrying a live status badge (active card count, memory total, overdue reminders in alarm colour, inbox count). The <strong>detail pane</strong> beside it renders the highlighted node in full, with no glance clipping: the whole live-card breakdown, the per-type memory tables, the complete <code>doctor</code> check list. A one-line install-health verdict (reusing the <code>doctor</code> checks) sits under the tree, and the installed version shows in the brand header. <code>r</code> re-reads every store (refreshing badges and the open detail), <code>e</code> embeds the memory entries missing a vector after a confirm (it suspends to the terminal so the reindex progress prints normally), <strong>System ▸ Companion mod</strong> toggles the <code>mods</code> setting (enabling asks first; see <a href="../companion-mod/">the companion mod</a>) — the hub's only two writes — <code>j</code>/<code>k</code> and the arrows move the cursor, and a <code>Ctrl+P</code> palette exposes the actions.</p>
+<p>Pressing <strong>Enter</strong> on a launch leaf — the board, the board's Initiatives view, the memory browser, the review queue, the observations browser, the graph explorer, the settings editor, the log viewer, the Bridge configurator, or the start-page setup editor — leaves home and opens that dedicated TUI; when it quits, home re-opens with freshly recomputed badges. The handoff is an exit-and-relaunch loop in the <code>home</code> command (<code>_run_home_loop</code>): home exits its event loop returning a <code>HomeTarget</code>, the loop launches that app, then re-enters a fresh home — one process, no nested event loops, and each launched app runs unchanged. The <strong>Identity → System prompt</strong> node renders what the companion is presented with at session start: the identity stack (soul document, user context, curated MEMORY.md) read from the data dir, then the live output of the session-start hook's context builder. It calls the same <code>build_session_context()</code> the hook calls, so the text on screen is exactly the text a new session opens with, less the per-session section naming the cards a session is bound to (the hub has no session).</p>
+<p>This is also where the brand lives: the box-drawing wordmark — a plain-text fallback on narrow terminals, a half-height variant on short ones — the signature glyph, and the companion voice in every empty state, all from <code>mait_code.tui.brand</code>. The <code>BrandBanner</code> (<code>mait_code.tui.banner</code>) wraps them into one size-responsive masthead worn by every TUI in place of a stock header, carrying each surface's view name over the tagline and version. The hub follows the house TUI conventions: presentation over the same store layers the <code>mc-tool-*</code> CLIs use (nothing shells out, and nothing writes beyond the reindex and the mod toggle), a TTY-gated launch (piped or redirected, <code>mait-code home</code> prints a compact text summary and bare <code>mait-code</code> keeps printing help), and per-view best-effort loading so one broken store renders a snag line rather than taking the hub down.</p>
 <h2 id="the-start-page-dashboardtoml">The Start Page (<code>dashboard.toml</code>)<a class="headerlink" href="#the-start-page-dashboardtoml" title="Permanent link">&para;</a></h2>
 <p>The home hub's root node renders a <strong>user-authored start page</strong> rather than a fixed readout: a grid of tiles declared in <code>dashboard.toml</code> in the data directory, one to four columns wide. A tile is either a <strong>built-in widget</strong> — the six in <code>_dashboard.py</code>'s <code>BUILTIN_WIDGETS</code>, reading the same store layers as the rest of the hub — or an arbitrary <strong>shell command</strong> whose stdout fills the tile. Shell tiles are what make the page personal (a <code>git log</code>, a deploy status, a weather one-liner) and are also the risk surface, so each runs under <code>dashboard-tile-timeout</code> seconds (default <code>5</code>) and a failure renders a snag line in that tile instead of taking the page down. The guided setup editor (<code>_dashboard_tui.py</code>, reachable from the hub or its command palette) writes the TOML so the format stays an implementation detail unless you want it. Loading and validation live in <code>cli/_dashboard.py</code>, kept separate from the TUI so the config can be parsed and checked without a terminal.</p>
 <h2 id="the-bridge-bridge">The Bridge (<code>bridge/</code>)<a class="headerlink" href="#the-bridge-bridge" title="Permanent link">&para;</a></h2>
 <p>The Bridge is the companion's optional link to devices that aren't the terminal — capture in, notifications out. It is <strong>disabled by default and makes zero network calls while disabled</strong>: the drain short-circuits before any request. That default is deliberate rather than cautious-by-habit — enabling it means outbound network access, which a work machine under corporate policy may not permit, so it is a per-machine opt-in.</p>
 <p>The package is a small pluggable-channel design: <code>base.py</code> defines the channel protocol, <code>registry.py</code> maps a <code>bridge-type</code> setting to an implementation, and <code>service.py</code> holds the transport-agnostic drain/publish logic. Two channels ship — <code>ntfy.py</code> (a private <a href="https://ntfy.sh">ntfy</a> topic, the real one) and <code>loopback.py</code> (in-process, for tests). Channel credentials live in <code>bridge.json</code> in the data directory; the per-machine drain watermark lives beside it in <code>bridge-state.json</code>, which is why that file must not be synced between machines.</p>
 <p>Both directions ride the existing reactive triggers rather than a daemon: the session-start hook and <code>mc-tool-inbox drain</code> pull captures into the inbox, and the session-start hook and <code>mc-tool-reminders check</code> publish due reminders outward. A published reminder carries a <strong>Done</strong> action that posts <code>mait-ctl:dismiss:&lt;id&gt;</code> back to the capture topic; <code>control.py</code> intercepts any <code>mait-ctl:</code>-prefixed inbound message as a command rather than filing it as a capture, and the next drain dismisses the reminder. Each reminder publishes once, guarded by a <code>notified_at</code> stamp. <code>doctor</code> checks the Bridge but only ever warns — an unreachable phone is not a broken install.</p>
+<h2 id="the-remote-api-remotepy">The Remote API (<code>remote.py</code>)<a class="headerlink" href="#the-remote-api-remotepy" title="Permanent link">&para;</a></h2>
+<p><code>mait_code.remote</code> is the narrow surface another machine or agent may touch: list and read cards, raise and refine them, search memories, check that memory search can use its vectors, and list reminders. It is a <strong>Python module, not a server</strong> — a separate host service (typically one speaking MCP) imports it and owns the listening, authentication and per-client scopes, so mait-code itself never opens a port and <em>No background services</em> holds. What it can't do (delete, archive, move into In Progress or beyond, write memories) simply has no function, and a test pins the public names to an allowlist. Writes name their caller: <code>create_card</code> records it in <code>cards.created_by</code>. See <a href="../remote/">the remote API</a>.</p>
+<h2 id="the-companion-mod-mods">The Companion Mod (<code>mods/</code>)<a class="headerlink" href="#the-companion-mod-mods" title="Permanent link">&para;</a></h2>
+<p><code>mods/mait-companion/</code> is an optional Claude Code mod (on the early-access mods API) that adds <code>/capture</code> and a status bar above the prompt. It is <strong>off by default</strong>: with the <code>mods</code> setting enabled, <code>install</code> and <code>update</code> register the mod folder in <code>CLAUDE_CODE_PLUGIN_DIRS</code> in Claude Code's <code>settings.json</code> (and drop it when disabled), and <code>doctor</code>'s <code>mods</code> check flags the setting and that registration disagreeing. See <a href="../companion-mod/">the companion mod</a>.</p>
 <h2 id="console-and-theming-consolepy">Console and Theming (<code>console.py</code>)<a class="headerlink" href="#console-and-theming-consolepy" title="Permanent link">&para;</a></h2>
 <p>Every CLI surface prints through one shared <code>rich</code> <code>Console</code> in <code>console.py</code>, carrying the same palette the TUIs theme from. It is why <code>status</code>, <code>doctor</code> and <code>update</code> look like the TUIs rather than like stock argparse output, and why <code>--no-color</code> is a single global switch rather than a per-command concern. The TUI side of the same palette lives in <code>tui/theme.py</code>.</p>
 <h2 id="hooks">Hooks<a class="headerlink" href="#hooks" title="Permanent link">&para;</a></h2>
@@ -3631,9 +3869,10 @@ new entry's project) using two complementary measures:</p>
     C --&gt; D["extractor.py&lt;br/&gt;call Claude Haiku for&lt;br/&gt;structured extraction"]
     D --&gt; E["storage.py&lt;br/&gt;store to memory.db +&lt;br/&gt;daily JSONL logs"]
     E --&gt; F["cursor.py&lt;br/&gt;save new byte offset"]</code></pre>
+<p><strong>Nested LLM calls.</strong> Extraction and reflection both go through <code>llm.call_claude()</code>, which pipes the prompt to <code>claude -p --model &lt;model&gt;</code> as a subprocess. Every call is text in, text out, so the nested Claude runs isolated: from the data directory rather than the caller's cwd, with no built-in tools (<code>--tools ""</code>), no MCP tools (<code>--disallowedTools "mcp__*"</code>), no session persistence, and in <code>--safe-mode</code>, which loads no CLAUDE.md, skills, plugins, user hooks or MCP servers — so a transcript that reads like a task can't get the model to act on it, and every prompt carries its own context. Calls time out after <code>llm-timeout</code> seconds; extraction retries transient failures with exponential backoff, while a command line Claude Code refuses outright is never retried. Failures only log a warning, so <code>mait-code doctor --llm</code> makes one real nested call (opt-in, since it reaches the network) to prove the path works on this host.</p>
 <h2 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h2>
 <p>All entry points use a shared logging module (<code>src/mait_code/logging.py</code>) that writes to rotating log files. Logs never go to stdout/stderr to avoid interfering with hook JSON output.</p>
-<p><strong>Configuration</strong> (via <code>settings.json</code> <code>env</code> block or shell environment):</p>
+<p><strong>Configuration</strong> resolves per knob as environment variable → <code>$XDG_CONFIG_HOME/mait-code/settings.toml</code> → built-in default (<code>config.resolve()</code>). A value in Claude Code's <code>settings.json</code> <code>env</code> block is just an environment variable by the time mait-code reads it — a mirror <code>mait-code settings set</code> keeps in sync where one exists, not a separate source.</p>
 <p>Primary knobs:</p>
 <table>
 <thead>
@@ -3663,6 +3902,31 @@ new entry's project) using two complementary measures:</p>
 <td><code>MAIT_CODE_THEME</code></td>
 <td><code>mait-dark</code></td>
 <td>TUI colour theme; unknown names fall back to <code>mait-dark</code></td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_BRIDGE</code></td>
+<td><code>disabled</code></td>
+<td><a href="../bridge/">Bridge</a> capture/notify channel gate: <code>enabled</code> or <code>disabled</code></td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_BRIDGE_TYPE</code></td>
+<td><code>ntfy</code></td>
+<td>Which registered Bridge channel to use</td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_MODS</code></td>
+<td><code>disabled</code></td>
+<td>The <a href="../companion-mod/">companion mod</a>: <code>enabled</code> or <code>disabled</code></td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_STATUS_BAR_STYLE</code></td>
+<td><code>blocks</code></td>
+<td>How the mod's status bar draws: <code>blocks</code> or <code>slim</code></td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_JIRA_BASE_URL</code></td>
+<td><em>(empty)</em></td>
+<td>Jira site the status bar links card keys to</td>
 </tr>
 <tr>
 <td><code>MAIT_CODE_EMBEDDING_PROVIDER</code></td>
@@ -3731,6 +3995,21 @@ new entry's project) using two complementary measures:</p>
 <td><code>5</code></td>
 <td>Timeout (seconds) for git context probes</td>
 </tr>
+<tr>
+<td><code>MAIT_CODE_DASHBOARD_TILE_TIMEOUT</code></td>
+<td><code>5</code></td>
+<td>Timeout (seconds) for start-page shell-command tiles</td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_REVIEW_THRESHOLD</code></td>
+<td><code>0.5</code></td>
+<td>Recall probability below which a memory is surfaced for review (0.5 = one half-life since last review)</td>
+</tr>
+<tr>
+<td><code>MAIT_CODE_REVIEW_MIN_IMPORTANCE</code></td>
+<td><code>5</code></td>
+<td>Minimum importance (1-10) for a memory to be surfaced for review</td>
+</tr>
 </tbody>
 </table>
 <p>Advanced scoring/dedup tuning knobs (<code>MAIT_CODE_SCORE_WEIGHT_*</code>, <code>MAIT_CODE_HALF_LIFE_*</code>, <code>MAIT_CODE_DEDUP_*_THRESHOLD</code>, <code>MAIT_CODE_SCOPE_BOOST_*</code>) directly affect retrieval quality — see the <a href="../memory/">Memory guide</a> for the full list, ranges, and the weight-sum constraint.</p>
@@ -3758,7 +4037,7 @@ table</a> for the full list.</p>
 <li><strong>Communication Style</strong> — How responses are shaped: length, attention markers, shaping rules (stable, rarely changes)</li>
 <li><strong>MEMORY.md</strong> — Accumulated knowledge (updates frequently)</li>
 </ol>
-<p>The first three are seeded from <code>templates/</code> on install (the communication style from <code>templates/communication_styles/default.md</code>) and never overwritten. All four are referenced via <code>@</code> imports in <code>config/CLAUDE.md</code> and loaded into every Claude Code session.</p>
+<p>The first three are seeded from <code>templates/</code> on install (the communication style from <code>templates/communication_styles/default.md</code>). Install and update never overwrite your edits: a file is replaced only while it is still a byte-identical copy of an older shipped template, so untouched copies pick up template improvements and edited ones are left alone (<code>sync_identity_templates</code> in <code>cli/_install.py</code>). All four are referenced via <code>@</code> imports in <code>config/CLAUDE.md</code> and loaded into every Claude Code session.</p>
 <h2 id="migration-system">Migration System<a class="headerlink" href="#migration-system" title="Permanent link">&para;</a></h2>
 <p>Schema changes are managed via forward-only migrations in <code>src/mait_code/tools/memory/migrate.py</code>. Each migration has a version number, description, and body (SQL list or callable). The <code>schema_version</code> table tracks which migrations have been applied.</p>
 <p>Current migrations:</p>
@@ -3776,6 +4055,8 @@ table</a> for the full list.</p>
 <li>Add the supersession columns (<code>superseded_by</code>, <code>superseded_at</code>) to <code>memory_entries</code></li>
 <li>Remap entity and relationship types onto the canonical vocabularies, folding legacy values</li>
 <li>Add the <code>reviewed_at</code> anchor that review resurfacing decays from</li>
+<li>Create the <code>memory_meta</code> key/value table for the embedding record (left empty — a migration can't know which model built existing vectors)</li>
+<li>Add the <code>source</code> provenance column to <code>memory_entries</code></li>
 </ol>
 <p>Adding a new migration:</p>
 <ol>
@@ -3790,12 +4071,12 @@ table</a> for the full list.</p>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── communication_style.md    # Response shaping
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>├── memory/
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│   ├── MEMORY.md             # Curated facts (loaded every session)
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── memory.db             # SQLite FTS5 + vec0 + entities database
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   ├── observations/         # Raw JSONL session extractions
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   │   ├── YYYY-MM-DD.jsonl
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│   └── reflections/          # Reserved for synthesised insights (created on install)
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── models/                   # Cached embedding models (local provider only)
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── observations/         # Raw JSONL session extractions
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   │   ├── YYYY-MM-DD.jsonl
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   └── reflections/          # Reserved for synthesised insights (created on install)
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>├── models/                   # Cached embedding models (local provider only)
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── memory.db                 # SQLite FTS5 + vec0 + entities database
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── reminders.db              # Reminder database
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>├── board.db                  # Cross-project kanban board database
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├── inbox.db                  # Quick-capture inbox database
@@ -3845,7 +4126,7 @@ and what to leave behind.</p>
 </tr>
 <tr>
 <td>Symlinks over file copying</td>
-<td>Updates propagate automatically via <code>git pull</code>, no re-install needed</td>
+<td><code>CLAUDE.md</code>, skills and agents are symlinked from the source tree into <code>~/.claude/</code>, so a new source checkout takes effect without copying files. The Python package itself is a <code>uv tool install</code>, and bootstrap clones sit on a detached release tag, so <code>mait-code update</code> (fetch, check out, reinstall, re-link) is the upgrade path, not <code>git pull</code></td>
 </tr>
 <tr>
 <td>Exponential decay scoring</td>

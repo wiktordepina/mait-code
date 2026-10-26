@@ -2333,7 +2333,7 @@ the reference surface.</p>
 </tr>
 <tr>
 <td><strong>Guide</strong></td>
-<td>Procedural how-to docs — <code>setup.md</code>, the per-TUI guides (<code>home.md</code>, <code>board.md</code>, <code>settings.md</code>, <code>memory-browser.md</code>, <code>review.md</code>, <code>observations.md</code>, <code>graph.md</code>, <code>logs.md</code>), <code>bridge.md</code>, and <code>sync.md</code>.</td>
+<td>Procedural how-to docs — <code>setup.md</code>, the per-TUI guides (<code>home.md</code>, <code>board.md</code>, <code>settings.md</code>, <code>memory-browser.md</code>, <code>review.md</code>, <code>observations.md</code>, <code>graph.md</code>, <code>logs.md</code>), <code>bridge.md</code>, <code>companion-mod.md</code>, <code>remote.md</code>, and <code>sync.md</code>.</td>
 </tr>
 <tr>
 <td><strong>Concepts</strong></td>
@@ -2345,7 +2345,7 @@ the reference surface.</p>
 </tr>
 <tr>
 <td><strong>Reference</strong></td>
-<td><code>docs/reference/skills.md</code> (hand-authored) plus the Python API pages under <code>docs/reference/{tools,hooks}/</code> (auto-generated — see below).</td>
+<td><code>docs/reference/skills.md</code> (hand-authored) and <code>docs/reference/mait-code.md</code> (hand-authored) plus the Python API pages, including <code>docs/reference/{tools,hooks}/</code> (auto-generated — see below).</td>
 </tr>
 <tr>
 <td><strong>Contributing</strong></td>
@@ -2358,7 +2358,7 @@ the reference surface.</p>
 <ul>
 <li><strong>Markdown</strong>, GitHub-style. The full set of pymdown extensions is
   enabled in <code>mkdocs.yml</code> — admonitions, tabbed code blocks, mermaid
-  fences, footnotes, etc.</li>
+  fences, task lists, keys, etc.</li>
 <li><strong>British English</strong> spelling and grammar (behaviour, organise,
   centred).</li>
 <li><strong>Imperative</strong> mood in step-by-step guides ("Run the migration", not
@@ -2375,12 +2375,13 @@ the reference surface.</p>
 <li>Create the file under <code>docs/</code> (or a subdirectory if a section grows
    that warrants nesting).</li>
 <li>Add it to the <code>nav:</code> block in <code>mkdocs.yml</code> under the appropriate
-   tab — <code>strict: true</code> will fail the build if a doc exists but is not
-   in the nav.</li>
+   tab. <code>strict: true</code> does <strong>not</strong> catch a page left out of the nav —
+   mkdocs only logs it at INFO — so check the page shows up in the built
+   site's navigation.</li>
 <li>Run <code>uv run mkdocs build --strict</code> to verify.</li>
 </ol>
 <h2 id="api-reference-docsreference">API reference (<code>docs/reference/</code>)<a class="headerlink" href="#api-reference-docsreference" title="Permanent link">&para;</a></h2>
-<p>The Python API pages — <code>docs/reference/{context,cli,config,llm,logging,ssl,bridge}.md</code> plus the nested <code>docs/reference/tools/*.md</code> and <code>docs/reference/hooks/*.md</code> — are <strong>regenerated from each module's <code>__all__</code></strong> by <code>docs/gen_ref_pages.py</code>. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's <code>--check</code> invocation will flag the drift.</p>
+<p>The Python API pages — <code>docs/reference/index.md</code> and <code>docs/reference/{context,cli,config,llm,logging,remote,ssl,bridge}.md</code> plus the nested <code>docs/reference/tools/*.md</code> and <code>docs/reference/hooks/*.md</code> — are <strong>regenerated from each module's <code>__all__</code></strong> by <code>docs/gen_ref_pages.py</code>. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's <code>--check</code> invocation will flag the drift.</p>
 <p><code>docs/reference/skills.md</code> and <code>docs/reference/mait-code.md</code> (the <code>mait-code</code> CLI command reference) are the only <strong>hand-authored</strong> files under <code>docs/reference/</code>. Edit them directly — <code>skills.md</code> when adding or renaming a slash command, <code>mait-code.md</code> when changing a CLI command. (Note the deliberate split: <code>reference/cli.md</code> is the <em>generated</em> <code>mait_code.cli</code> Python API, while <code>reference/mait-code.md</code> is the hand-authored command reference.)</p>
 <p>The nested layout mirrors the dotted module hierarchy: <code>mait_code.tools.memory</code> lives at <code>docs/reference/tools/memory.md</code> and renders at <code>/reference/tools/memory/</code>.</p>
 <h3 id="the-__all__-contract">The <code>__all__</code> contract<a class="headerlink" href="#the-__all__-contract" title="Permanent link">&para;</a></h3>
@@ -2464,7 +2465,7 @@ mentioning an annotation that isn't on the signature (<code>griffe: No
 type or annotation for parameter X</code>), add the missing type
 annotation rather than removing the documentation.</p>
 <h2 id="what-ci-runs">What CI runs<a class="headerlink" href="#what-ci-runs" title="Permanent link">&para;</a></h2>
-<p><code>.github/workflows/docs.yml</code> runs these on every push to <code>main</code>, every PR, every <code>v*</code> tag, and on <code>release: published</code>:</p>
+<p><code>.github/workflows/docs.yml</code> runs these on every push to <code>main</code>, every PR, every <code>v*</code> tag, on <code>release: published</code>, and on a manual <code>workflow_dispatch</code> (which can backfill a release's deploy via its <code>deploy_version</code> input):</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--locked<span class="w"> </span>--group<span class="w"> </span>docs
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>docs/gen_ref_pages.py<span class="w"> </span>--check
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict
