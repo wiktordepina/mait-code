@@ -47,6 +47,15 @@ def _populate_fake_source_with_skills_and_agents(fake_source: Path) -> None:
     (fake_source / "agents" / ".gitkeep").write_text("")
 
 
+def _change_settings(
+    changes: dict[str, str], env: dict[str, str] | None = None
+) -> None:
+    """Change settings the way ``mait-code settings set`` does."""
+    from mait_code.config import read_settings_file, write_settings_file
+
+    write_settings_file({**read_settings_file(), **changes}, env=env)
+
+
 class TestVerifySource:
     def test_accepts_fake_source(self, fake_source: Path) -> None:
         verify_source(fake_source)  # does not raise
@@ -169,6 +178,58 @@ class TestInstallIdempotency:
         assert second.claude_md.already_linked or second.claude_md.updated
         assert len(second.skills.already_linked) >= len(first.skills.created)
 
+    def test_reinstall_keeps_changed_settings(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        from mait_code.config import read_env_table, read_settings_file
+
+        install(source_dir=fake_source, embedding_provider="bedrock")
+        _change_settings(
+            {"log-level": "DEBUG", "status-bar-style": "slim"}, env={"FOO": "bar"}
+        )
+
+        install(source_dir=fake_source)
+
+        values = read_settings_file()
+        assert values["embedding-provider"] == "bedrock"
+        assert values["log-level"] == "DEBUG"
+        assert values["status-bar-style"] == "slim"
+        assert read_env_table() == {"FOO": "bar"}
+
+    def test_reinstall_mirrors_kept_settings(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        install(source_dir=fake_source)
+        _change_settings({"log-level": "DEBUG"})
+
+        install(source_dir=fake_source)
+
+        merged = json.loads((fake_home / ".claude" / "settings.json").read_text())
+        assert merged["env"]["MAIT_CODE_LOG_LEVEL"] == "DEBUG"
+
+    def test_explicit_provider_overrides_existing(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        from mait_code.config import read_settings_file
+
+        install(source_dir=fake_source, embedding_provider="bedrock")
+        _change_settings({"log-level": "DEBUG"})
+
+        install(source_dir=fake_source, embedding_provider="local")
+
+        values = read_settings_file()
+        assert values["embedding-provider"] == "local"
+        assert values["log-level"] == "DEBUG"
+
+    def test_fresh_install_defaults_to_local(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        from mait_code.config import read_settings_file
+
+        install(source_dir=fake_source)
+
+        assert read_settings_file()["embedding-provider"] == "local"
+
     def test_templates_not_overwritten(
         self, fake_home: Path, fake_source: Path
     ) -> None:
@@ -206,6 +267,18 @@ class TestInstallCommand:
         assert result.exit_code == 0, result.output
         assert "Installed mait-code" in result.output
         assert install_record_path().exists()
+
+    def test_cli_without_provider_keeps_existing(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        from mait_code.config import read_settings_file
+
+        install(source_dir=fake_source, embedding_provider="bedrock")
+
+        result = runner.invoke(app, ["install", "--from", str(fake_source)])
+
+        assert result.exit_code == 0, result.output
+        assert read_settings_file()["embedding-provider"] == "bedrock"
 
     def test_cli_bad_provider_exits_1(self, fake_home: Path, fake_source: Path) -> None:
         result = runner.invoke(

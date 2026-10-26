@@ -84,6 +84,21 @@ docker run --rm \
             || { echo "settings.json missing"; exit 1; }
 
         echo "::endgroup::"
+
+        echo "::group::re-run bootstrap keeps changed settings"
+        mait-code settings set log-level DEBUG
+        mait-code settings set status-bar-style slim
+        bash /mait-code-src/scripts/bootstrap.sh \
+            --repo-url "file:///mait-code-src" \
+            --ref HEAD \
+            --dir "$HOME/.local/share/mait-code"
+        [[ "$(mait-code settings get log-level)" == DEBUG* ]] \
+            || { echo "re-run reset log-level"; exit 1; }
+        [[ "$(mait-code settings get status-bar-style)" == slim* ]] \
+            || { echo "re-run reset status-bar-style"; exit 1; }
+        [[ "$(mait-code settings get embedding-provider)" == local* ]] \
+            || { echo "re-run changed embedding-provider"; exit 1; }
+        echo "::endgroup::"
         echo
         echo "SMOKE TEST PASSED"
     '

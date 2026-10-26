@@ -29,7 +29,10 @@ from mait_code.cli._settings import (
     read_settings_file as read_claude_settings,
     write_settings_file as write_claude_settings,
 )
-from mait_code.config import write_settings_file as write_mait_settings
+from mait_code.config import (
+    read_settings_file as read_mait_settings,
+    write_settings_file as write_mait_settings,
+)
 from mait_code.cli._symlinks import (
     SymlinkResult,
     symlink_agents,
@@ -171,7 +174,7 @@ def verify_source(source_dir: Path) -> None:
 def install(
     *,
     source_dir: Path,
-    embedding_provider: str = "local",
+    embedding_provider: str | None = None,
     data_dir: Path | None = None,
     claude_dir: Path | None = None,
 ) -> InstallSummary:
@@ -179,7 +182,9 @@ def install(
 
     Args:
         source_dir: Absolute path to the cloned mait-code source.
-        embedding_provider: ``"local"`` or ``"bedrock"``.
+        embedding_provider: ``"local"`` or ``"bedrock"``. ``None`` keeps the
+            provider already in the settings file, or ``"local"`` on a
+            fresh install.
         data_dir: Override the mait-code data directory (defaults to
             :func:`~mait_code.cli._paths.data_dir`).
         claude_dir: Override the Claude Code config directory (defaults
@@ -192,7 +197,7 @@ def install(
         ValueError: If ``source_dir`` doesn't look like a mait-code clone,
             or if ``embedding_provider`` isn't a known value.
     """
-    if embedding_provider not in EMBEDDING_PROVIDERS:
+    if embedding_provider is not None and embedding_provider not in EMBEDDING_PROVIDERS:
         raise ValueError(
             f"--embedding-provider must be one of {EMBEDDING_PROVIDERS}, "
             f"got {embedding_provider!r}"
@@ -225,8 +230,13 @@ def install(
     skills_result = symlink_skills(source_dir, cdir)
     agents_result = symlink_agents(source_dir, cdir)
 
-    # 7. Write centralised settings file.
-    user_settings = {"embedding-provider": embedding_provider}
+    # 7. Write centralised settings file. Start from what's already there, so
+    #    a re-install (or a re-run of the bootstrap one-liner) keeps every
+    #    setting the user changed; only an explicit provider overrides.
+    user_settings = read_mait_settings()
+    if embedding_provider is not None:
+        user_settings["embedding-provider"] = embedding_provider
+    user_settings.setdefault("embedding-provider", "local")
     write_mait_settings(user_settings)
 
     # 8. Propagate settings into ~/.claude/settings.json for Claude Code.
