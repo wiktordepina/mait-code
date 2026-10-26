@@ -10,6 +10,40 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.90.0] — 2026-10-26
+
+### Fixed
+
+- **Re-installing keeps your settings.** `mait-code install` used to write
+  `settings.toml` from scratch with only `embedding-provider` set, so every
+  other setting you had changed went back to its default. The bootstrap
+  one-liner ends in `install`, so re-running it to upgrade silently reset
+  theme, mods, Bridge, logging and scoring settings. `install` now starts from
+  the existing file and changes the provider only when `--embedding-provider`
+  is passed; a fresh install still defaults to `local`.
+- **Re-running the bootstrap keeps a Bedrock install on Bedrock.** The
+  bootstrap and `scripts/install.sh` no longer force a provider. With no
+  `--embedding-provider`, they keep the configured one, including the
+  `[bedrock]` extra on the reinstall.
+- **Dependency advisories cleared.** pillow, filelock and certifi move past 41
+  published advisories; fastembed goes to 0.9.1 to allow pillow 13. Embeddings
+  are unchanged, so existing databases need no reindex.
+
+### Changed
+
+- **The README introduces mait-code** instead of listing its internals: an
+  example exchange, feature pillars with screenshots, a diagram of the memory
+  loop, and a section on local data and opt-in network access.
+- **The documentation caught up with the code.** Architecture, the CLI
+  reference, setup, memory, sync and every TUI guide were checked against the
+  source and corrected; the CLI reference gains the `memory`, `review`, `graph`
+  and `logs` subcommands, and the screenshots are re-rendered, with the
+  Initiatives view added.
+- **Ruff's lint rules are pinned** to its long-standing defaults, so a ruff
+  upgrade can't change the lint policy.
+- **Dependabot** now proposes weekly, grouped updates for Python and GitHub
+  Actions, after a seven-day cooldown.
+
 ## [0.89.0] — 2026-10-18
 
 ### Added
@@ -2794,7 +2828,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.89.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.90.0...HEAD
+[0.90.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.90.0
 [0.89.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.89.0
 [0.88.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.88.0
 [0.87.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.87.0
