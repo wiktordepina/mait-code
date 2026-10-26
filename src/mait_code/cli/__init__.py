@@ -245,12 +245,15 @@ def install_cmd(
         ),
     ],
     embedding_provider: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--embedding-provider",
-            help="Which embedding backend to configure ('local' or 'bedrock').",
+            help=(
+                "Which embedding backend to configure ('local' or 'bedrock'). "
+                "Defaults to the one already configured, else 'local'."
+            ),
         ),
-    ] = "local",
+    ] = None,
     data_dir_override: Annotated[
         Path | None,
         typer.Option(

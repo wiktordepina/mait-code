@@ -9,7 +9,8 @@
 #   curl -fsSL ... | bash -s -- --embedding-provider bedrock --ref v0.15.0
 #
 # Flags:
-#   --embedding-provider <name>   local (default) or bedrock
+#   --embedding-provider <name>   local or bedrock. Default: the one already
+#                                 configured, else local.
 #   --ref <tag|branch|sha>        Checkout this ref after cloning. Default: latest v* tag.
 #   --dir <path>                  Install root. Default: ~/.local/share/mait-code
 #   --repo-url <url>              Override the upstream repo URL (mainly for testing).
@@ -21,8 +22,11 @@
 #   2. Warns (does not fail) if Claude Code is missing.
 #   3. Clones the repo to <dir>/source (or fetches if already there).
 #   4. Checks out the requested ref.
-#   5. `uv tool install` from the source, with the bedrock extra if requested.
-#   6. Execs `mait-code install --from <dir>/source --embedding-provider <provider>`.
+#   5. `uv tool install` from the source, with the bedrock extra if requested
+#      (or already configured).
+#   6. Execs `mait-code install --from <dir>/source`, passing
+#      `--embedding-provider` only when given. Install keeps an existing
+#      settings file, so re-running this on an installed machine is safe.
 
 set -euo pipefail
 
@@ -34,8 +38,9 @@ REPO_URL="${MAIT_CODE_REPO_URL:-https://github.com/wiktordepina/mait-code.git}"
 DEFAULT_DIR="${HOME}/.local/share/mait-code"
 DIR="${DEFAULT_DIR}"
 REF=""
-PROVIDER="local"
+PROVIDER=""
 SKIP_UV=false
+SETTINGS_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/mait-code/settings.toml"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -90,7 +95,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$PROVIDER" in
-    local|bedrock) ;;
+    ""|local|bedrock) ;;
     *) die "--embedding-provider must be 'local' or 'bedrock' (got '$PROVIDER')" ;;
 esac
 
@@ -155,8 +160,15 @@ git -C "$SOURCE_DIR" checkout --quiet "$REF"
 # 5. Install via uv tool
 # ---------------------------------------------------------------------------
 
+# With no --embedding-provider, a re-run keeps the configured provider, so the
+# reinstall needs its extra too.
+CONFIGURED_PROVIDER=""
+if [[ -f "$SETTINGS_FILE" ]]; then
+    CONFIGURED_PROVIDER="$(sed -n 's/^embedding-provider *= *"\([a-z]*\)".*/\1/p' "$SETTINGS_FILE" | head -n 1)"
+fi
+
 EXTRA=""
-if [[ "$PROVIDER" == "bedrock" ]]; then
+if [[ "${PROVIDER:-$CONFIGURED_PROVIDER}" == "bedrock" ]]; then
     EXTRA="[bedrock]"
 fi
 log "Installing mait-code via uv tool..."
@@ -172,4 +184,4 @@ command -v mait-code >/dev/null 2>&1 \
 # ---------------------------------------------------------------------------
 
 log "Handing off to mait-code install..."
-exec mait-code install --from "$SOURCE_DIR" --embedding-provider "$PROVIDER"
+exec mait-code install --from "$SOURCE_DIR" ${PROVIDER:+--embedding-provider "$PROVIDER"}

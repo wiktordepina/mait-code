@@ -17,8 +17,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Pick an embedding provider (interactive only when stdin is a TTY).
+# Pick an embedding provider: the environment, else the one already configured
+# (so a re-run keeps it), else ask (interactive only when stdin is a TTY).
 EMBED="${MAIT_CODE_EMBEDDING_PROVIDER:-}"
+SETTINGS_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/mait-code/settings.toml"
+if [[ -z "$EMBED" && -f "$SETTINGS_FILE" ]]; then
+    EMBED="$(sed -n 's/^embedding-provider *= *"\([a-z]*\)".*/\1/p' "$SETTINGS_FILE" | head -n 1)"
+fi
 if [[ -z "$EMBED" ]]; then
     if [[ -t 0 ]]; then
         echo "Embedding provider:"
