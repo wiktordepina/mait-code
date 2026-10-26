@@ -718,8 +718,8 @@ def run_doctor(
 
     Args:
         fix: When ``True``, apply the fixes for the dangling-symlinks,
-            missing-data-dir, and missing-embeddings checks; otherwise
-            leave them as findings.
+            missing-data-dir, embedding-record and missing-embeddings
+            checks; otherwise leave them as findings.
         claude_dir: Override the Claude Code config dir.
         data_dir: Override the data dir.
         llm: When ``True``, also make one real nested ``claude`` call to

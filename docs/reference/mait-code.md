@@ -72,8 +72,8 @@ mait-code install --from <path> [--embedding-provider local|bedrock]
 
 First-time setup. Validates the source path is a mait-code clone,
 creates data directories, copies templates, sets up symlinks
-(`CLAUDE.md`, `skills/*`, `agents/*`), merges `settings.json`, and
-writes the install record.
+(`CLAUDE.md`, `skills/*`, `agents/*`), writes `settings.toml`, merges
+`settings.json`, and writes the install record.
 
 **Flags**
 
@@ -88,12 +88,13 @@ writes the install record.
 
 1. Verifies `<source>/pyproject.toml` exists with `name = "mait-code"` and `<source>/src/mait_code/` is a directory.
 2. Creates `<data-dir>/memory/observations/` and `<data-dir>/memory/reflections/`. (`memory/graph/` is intentionally not created.)
-3. Copies `templates/soul_document.md` and `templates/user_context.md` into the data dir — **never overwrites** existing files.
+3. Syncs the identity templates into the data dir — `soul_document.md`, `user_context.md` and `communication_style.md`. A missing file is copied; an existing one is replaced only when it is a byte-identical, untouched copy of an older shipped template. Anything you've edited is **never overwritten**.
 4. Writes a `MEMORY.md` stub into `<data-dir>/memory/` if missing.
 5. Symlinks `<source>/config/CLAUDE.md` to `<claude-dir>/CLAUDE.md`. If a non-symlink `CLAUDE.md` already exists, it's first renamed to `CLAUDE.md.backup`.
 6. Symlinks each `<source>/skills/<name>/` into `<claude-dir>/skills/` and each `<source>/agents/<file>` into `<claude-dir>/agents/`. `.gitkeep` placeholders are skipped.
-7. Merges `<source>/config/settings.json` into `<claude-dir>/settings.json` (hooks, mcpServers, and `MAIT_CODE_EMBEDDING_PROVIDER` env). User-set keys are preserved verbatim. The write is atomic (tempfile + rename).
-8. Writes the install record.
+7. Writes `settings.toml` with the chosen `embedding-provider`; every other setting is written at its default, and an existing `[env]` table is carried over.
+8. Merges `<source>/config/settings.json` into `<claude-dir>/settings.json` (hooks, mcpServers, and `MAIT_CODE_EMBEDDING_PROVIDER` env). When the `mods` setting is on, also registers the [companion mod](../companion-mod.md) folder in the `CLAUDE_CODE_PLUGIN_DIRS` env entry. User-set keys are preserved verbatim. The write is atomic (tempfile + rename).
+9. Writes the install record.
 
 **Examples**
 
@@ -119,9 +120,11 @@ mait-code install --from /opt/mait-code/source \
 - This subcommand does **not** run `uv tool install`. By the time it
   runs, the `mait-code` binary is already on PATH (that's how it was
   invoked). The bash shim handles the bootstrap.
-- Re-running `install` is safe — it's idempotent. Symlinks that
-  already point at the right target are left alone; templates are
-  never overwritten.
+- Re-running `install` keeps your data: symlinks that already point
+  at the right target are left alone, and edited templates are never
+  overwritten. It does rewrite `settings.toml` (step 7), so any other
+  settings you've changed go back to their defaults — use `update` to
+  refresh an existing install.
 
 ---
 
@@ -135,13 +138,19 @@ mait-code update [--no-pull] [--ref <tag|branch|sha>] [--force] [--claude-dir <p
 
 **Description**
 
-Advance the source tree to the right ref and — only if `HEAD` actually moved — reinstall via `uv tool install`, then refresh symlinks and settings and bump the install record. A repeated update with nothing new upstream is a cheap no-op: the reinstall is skipped rather than rebuilding every package.
+Advance the source tree to the right ref and — only if `HEAD` actually moved — reinstall via `uv tool install`, then refresh symlinks, settings and identity templates and bump the install record. A repeated update with nothing new upstream is a cheap no-op: the reinstall is skipped rather than rebuilding every package.
 
 How the source is advanced depends on its current state — a bootstrap install pins to a release **tag** (detached HEAD), while a local-clone dev install sits on a **branch**:
 
 - `--ref <X>` given → checkout `X`.
 - On a branch → fast-forward it (`git merge --ff-only`).
-- Detached HEAD (typical post-bootstrap) → checkout the latest `v*` tag.
+- Detached HEAD (typical post-bootstrap) → force-checkout the latest `v*` tag.
+
+!!! warning "Detached HEAD discards local edits"
+    On a detached-HEAD source the checkout runs with `--force`. Skills are
+    symlinked into `~/.claude`, so editing one in place writes through into the
+    source tree — and the next `update` throws those edits away. Keep changes
+    you care about in a clone on a branch.
 
 **Flags**
 
@@ -156,14 +165,16 @@ How the source is advanced depends on its current state — a bootstrap install 
 
 1. Reads the install record. Aborts with exit `1` if missing.
 2. Verifies the recorded source dir still looks like a mait-code clone.
-3. Unless `--no-pull`: `git fetch origin --tags --prune`.
-4. Advance to the target ref:
+3. Reads `embedding-provider` from `settings.toml`. Aborts with exit `1` if it's missing (an install that predates `settings.toml` — run `install`) or not `local` / `bedrock`.
+4. Unless `--no-pull`: `git fetch origin --tags --prune`.
+5. Advance to the target ref:
     - `--ref` given → `git checkout <ref>`.
     - on a branch → `git merge --ff-only` (skipped under `--no-pull`).
-    - detached HEAD → `git checkout <latest v* tag>`. Aborts if there are no tags and no `--ref`.
-5. If `HEAD` moved during step 4 (or `--force` was given): `uv tool install <source>[<extra>] --force --reinstall-package mait-code --python 3.13`. `--reinstall-package mait-code` forces a rebuild of just the local source — whose version does not bump between commits — while leaving unchanged third-party deps in place. The `[bedrock]` extra is applied when the install record records the bedrock provider. If `HEAD` did not move and `--force` was not given, this step is skipped.
-6. Re-runs the symlink and settings-merge steps from `install` (picks up new skills, settings.json changes). These run even when the reinstall is skipped.
-7. Rewrites the install record with the new version and timestamp.
+    - detached HEAD → `git checkout --force <latest v* tag>`, discarding local edits to tracked files. Aborts if there are no tags and no `--ref`.
+6. If `HEAD` moved during step 5 (or `--force` was given): `uv tool install <source>[<extra>] --force --reinstall-package mait-code --python 3.13`. `--reinstall-package mait-code` forces a rebuild of just the local source — whose version does not bump between commits — while leaving unchanged third-party deps in place. The `[bedrock]` extra is applied when `embedding-provider` (step 3) is `bedrock`. If `HEAD` did not move and `--force` was not given, this step is skipped.
+7. Re-runs the symlink and settings-merge steps from `install` (picks up new skills, settings.json changes): every key set in `settings.toml` is mirrored into `settings.json` as its `MAIT_CODE_*` env entry, and the mod's `CLAUDE_CODE_PLUGIN_DIRS` entry is added or removed to match the `mods` setting. These run even when the reinstall is skipped.
+8. Syncs the identity templates, as `install` step 3 does — creating any the install predates and upgrading untouched copies of older ones. This runs the code loaded when the command started, so a template change shipped in the release being installed lands on the *next* update.
+9. Rewrites the install record with a fresh `updated_at`, preserving `first_installed_at`.
 
 **Examples**
 
@@ -187,7 +198,7 @@ mait-code update --no-pull --force
 | Code | Meaning |
 |------|---------|
 | `0` | Update succeeded. |
-| `1` | No install record, source dir no longer valid, detached HEAD with no `v*` tags (and no `--ref`), or any subprocess (`git`, `uv`) failed. |
+| `1` | No install record, source dir no longer valid, no valid `embedding-provider` in `settings.toml`, detached HEAD with no `v*` tags (and no `--ref`), or any subprocess (`git`, `uv`) failed. |
 
 ---
 
@@ -221,7 +232,7 @@ deletes the install record. Preserves the data directory by default.
 2. Removes `<claude-dir>/CLAUDE.md` if it's a symlink pointing into the recorded source. Restores `CLAUDE.md.backup` if present.
 3. Removes skill symlinks under `<claude-dir>/skills/` that resolve into the recorded source. Foreign symlinks (e.g. from other tools) are preserved.
 4. Same for agents.
-5. Cleans mait-code-owned entries from `<claude-dir>/settings.json` (hook commands with the `mc-hook-` prefix; legacy `mait-reminders` MCP server; the `MAIT_CODE_EMBEDDING_PROVIDER` env). Empty top-level sections are dropped.
+5. Cleans mait-code-owned entries from `<claude-dir>/settings.json` (hook commands with the `mc-hook-` prefix; legacy `mait-reminders` MCP server; every `MAIT_CODE_*` env entry; the mod folder in `CLAUDE_CODE_PLUGIN_DIRS`, keeping any other plugin folders). Empty top-level sections are dropped.
 6. `uv tool uninstall mait-code` (unless `--keep-uv-tool`). Failure here is a warning — the binary may already be gone.
 7. With `--purge-data`: deletes the data directory.
 8. Deletes the install record.
@@ -259,8 +270,10 @@ mait-code status [--json] [--data-dir <path>] [--claude-dir <path>]
 
 **Description**
 
-Read-only summary of the current install. Always exits `0` — there's
-no diagnostic intent here, just a report. The text output is grouped
+Read-only summary of the current install. There's no diagnostic intent
+here, just a report: it exits `0` whatever it finds, and refuses to run
+(exit `1`) only when `settings.toml` is missing, rather than present
+defaults as configured values. The text output is grouped
 into sections under a one-line health badge (`healthy` / `degraded` /
 `not installed`); `degraded` flags fixable oddities such as an unlinked
 `CLAUDE.md`, with a git-style hint on how to fix them.
@@ -290,7 +303,12 @@ mait-code status
 mait-code status --json | jq '.embedding_provider'
 ```
 
-**Exit code:** always `0`.
+**Exit codes**
+
+| Code | Meaning |
+|------|---------|
+| `0` | Report printed (a `degraded` install still exits `0`). |
+| `1` | `settings.toml` is missing — run `mait-code install`. |
 
 ---
 
@@ -315,7 +333,7 @@ ends with a one-line pass/fail verdict. The `--json` output includes a
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--fix` | off | Apply safe fixes for findings that support it. |
+| `--fix` | off | Apply safe fixes for the four findings that support them: dangling symlinks, a missing data dir, an unsettled embedding record, and missing embeddings. |
 | `--json` | off | Emit a machine-readable JSON document. |
 | `--llm` | off | Also run the `nested-llm` check, which reaches the network and makes one small real model call. |
 | `--data-dir <path>` | `$MAIT_CODE_DATA_DIR` or `~/.claude/mait-code-data` | Override the data directory location. |
@@ -327,14 +345,19 @@ ends with a one-line pass/fail verdict. The `--json` output includes a
 |------|--------|-------------|
 | `install-record` | ok / fail | Record exists and parses at the expected schema version. |
 | `source-dir` | ok / warn / fail | The recorded source still exists and looks like a mait-code clone. `warn` when there's no record to validate against. |
+| `settings-file` | ok / fail | `settings.toml` exists and parses as TOML. |
 | `settings-values` | ok / fail | Every setting's value is valid for its type and range, and cross-field invariants hold (the scoring weights must sum to `1.0`). `fail` lists each offending value. |
+| `env-table` | ok / warn | The `[env]` table carries no `MAIT_CODE_*` keys — those are ignored at startup; set them through the matching `settings.toml` keys instead. |
 | `settings` | ok / warn / fail | `<claude-dir>/settings.json` parses as JSON. `warn` if missing. |
 | `hooks-on-path` | ok / warn / fail | Every registered hook with the `mc-hook-` prefix resolves on `PATH`. |
 | `symlinks` | ok / warn | No dangling symlinks under `<claude-dir>/skills/` or `<claude-dir>/agents/`. Dangling links are a **warning** (auto-fixable, so they don't fail the run); `--fix` removes them. |
 | `data-dir` | ok / fail | The data dir exists and is writable. With `--fix`, creates it (plus the `memory/observations` and `memory/reflections` subdirs) if missing. |
+| `embedding-record` | ok / warn / fail | The stored vectors are recorded as built by the configured embedding model. `fail` when they came from another model — vector search, dedup and embedding stay off until a reindex; `warn` when no model is recorded, so a model change would go unnoticed. With `--fix`, verifies a re-embedded sample and adopts the configured model if it matches, re-embedding otherwise. |
 | `memory-embeddings` | ok / warn | Every live memory entry carries a vector. Entries stored while the embedding provider was unavailable are invisible to semantic search; `warn` reports the count and points at `mc-tool-memory reindex`. With `--fix`, embeds just the missing entries — existing vectors are left alone (progress goes to stderr, so `--json` output stays parseable); if the embedding provider can't run, the warning stands and reports why. |
 | `vector-search` | ok / warn | The sqlite-vec extension loads and the vector table is queryable. `warn` means recall silently degrades to keyword-only search; the message names the configured embedding provider and model. |
 | `observe-pipeline` | ok / warn | The observe hook has recorded a capture recently. `warn` when the newest capture is over 7 days old, or when a memory database exists but the hook has never captured anything. |
+| `bridge` | ok / warn | When the [Bridge](../bridge.md) is enabled, its channel config is complete. Disabled is `ok`; enabled with gaps is `warn`, never `fail`. |
+| `mods` | ok / warn | The `mods` setting and `CLAUDE_CODE_PLUGIN_DIRS` agree: `warn` when the mod is on but not registered, off but still loaded, loaded from another source tree, or its folder is missing. Re-applying the setting (`settings set mods …`) repairs it. |
 | `uv-on-path` | ok / fail | `uv` is on `PATH` — required for `install` / `update`. |
 | `nested-llm` | ok / fail | With `--llm` only. One real nested `claude -p` call, made the way observe and reflect make theirs, exits `0` with no tools and no MCP servers. `fail` shows the call's stderr when it is refused (e.g. by a host's managed config), names any tool or MCP server that leaked through, fails when the call prints no init event to confirm either, or reports a Claude Code older than 2.1.257, where managed permission rules can drop the MCP deny. The probe times out after 30 seconds. The hub and dashboard never run it. |
 
@@ -365,6 +388,8 @@ mait-code settings list [--json]            # read-only, provenance-aware view
 mait-code settings get <key> [--json]       # one resolved value + source
 mait-code settings get theme --palette       # the resolved theme's colours, as JSON
 mait-code settings set <key> <value> [flags]
+mait-code settings set env.<NAME> <value>    # add / change a custom [env] variable
+mait-code settings unset env.<NAME>          # remove a custom [env] variable
 ```
 
 **Description**
@@ -380,7 +405,8 @@ the editor — goes through one shared path: validate → persist
 
 A master–detail layout: the settings list on the left, an inline edit form
 on the right that adapts to the highlighted setting — a radio set for enums
-(`embedding-provider`, `log-level`), a text input with live validation for
+(`embedding-provider`, `log-level`, `bridge`, `mods`, `status-bar-style`, and
+`theme`, whose choices are the registered themes), a text input with live validation for
 everything else, and a read-only view for derived values. The three scoring
 weights collapse into one **grouped** row whose editor retunes all three at
 once and only enables *Apply* when they sum to `1.0`. Migration and
@@ -396,9 +422,11 @@ to the terminal so `reindex` prints its normal progress, then returns.
 ### `settings list`
 
 Read-only view of every knob the framework reads, with its resolved value
-and *source*. Modelled on `aws configure list`. Always exits `0`: it
-*reports* configuration, it doesn't validate it (that's `doctor`'s job, via
-the `settings-values` check).
+and *source*. Modelled on `aws configure list`. It *reports* configuration,
+it doesn't validate it (that's `doctor`'s job, via the `settings-values`
+check), so it exits `0` whatever the values — but like `status` it refuses to
+run, with exit `1`, when `settings.toml` is missing. Custom `[env]` variables
+show as `env.<NAME>` rows, followed by the tool-approval presets.
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -412,16 +440,18 @@ the `settings-values` check).
 
 Settings fall into three groups:
 
-- **Primary** — written uncommented in `settings.toml`: `data-dir`, `log-level`, `log-file`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`.
-- **Advanced** — written commented-out (the built-in default applies until you opt in via `set` or by uncommenting): `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`, `reflection-batch-size`, `reflection-novelty-gate`, `git-timeout`, and the scoring/dedup tuning knobs `score-weight-recency`, `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`, `half-life-semantic`, `half-life-procedural`, `dedup-string-threshold`, `dedup-vector-threshold`, `dedup-conflict-threshold`, `scope-boost-global`, `scope-boost-cross-project`.
-- **Derived** (source `derived`, not settable): `embedding-dim`, `memory-db-path`, `reminders-db-path`, `model-cache-dir`, `observations-dir`, `project-aliases-path`.
+- **Primary** — written uncommented in `settings.toml`: `data-dir`, `log-level`, `log-file`, `theme`, `bridge`, `bridge-type`, `mods`, `status-bar-style`, `jira-base-url`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`.
+- **Advanced** — written commented-out (the built-in default applies until you opt in via `set` or by uncommenting): `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`, `reflection-batch-size`, `reflection-novelty-gate`, `git-timeout`, `dashboard-tile-timeout`, the review knobs `review-threshold` and `review-min-importance`, and the scoring/dedup tuning knobs `score-weight-recency`, `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`, `half-life-semantic`, `half-life-procedural`, `dedup-string-threshold`, `dedup-vector-threshold`, `dedup-conflict-threshold`, `scope-boost-global`, `scope-boost-cross-project`.
+- **Derived** (source `derived`, not settable): `embedding-dim`, `memory-db-path`, `reminders-db-path`, `bridge-config-path`, `model-cache-dir`, `observations-dir`, `project-aliases-path`, `dashboard-config-path`.
 
 See the [Memory guide](../memory.md) for per-setting defaults and the scoring/dedup tuning ranges.
 
 ### `settings get`
 
 Print one resolved value and its source, for scripting. `--json` emits
-`{"key", "value", "source"}`. Exits `1` on an unknown key.
+`{"key", "value", "source"}`. An `env.<NAME>` key reads a custom `[env]`
+variable instead. Exits `1` on an unknown key, or an `env.<NAME>` that isn't in
+the table.
 
 ### `settings set`
 
@@ -442,6 +472,7 @@ Follow-ups by key:
 |--------|-----------|-----------------|
 | `embedding-provider`, `embedding-model`, `bedrock-model-id` | re-embed stored memories (rebuild the vector table) | `--reindex` / `--no-reindex` |
 | `data-dir` | move the existing data directory to the new path | `--move-data` / `--no-move-data` |
+| `mods` | load or unload the [companion mod](../companion-mod.md) via `CLAUDE_CODE_PLUGIN_DIRS` in `settings.json`; lands in the next Claude Code session | — |
 | everything else | none — applies on the next invocation | — |
 
 For migration keys and `data-dir`, omitting the flag is an error that
@@ -458,6 +489,19 @@ with the TOML, so the value `install` mirrored there (e.g.
 keys to `settings.json`. If a shell export still overrides the new value,
 `set` warns precisely and names the variable to unset.
 
+**Custom `[env]` variables.** `set env.<NAME> <value>` adds or changes a
+variable in the `[env]` table of `settings.toml`, which every mait-code entry
+point injects into its environment at startup (a variable already set in your
+shell wins). `MAIT_CODE_*` names are refused — those are settings. See the
+[settings guide](../settings.md#custom-environment-variables-the-env-table)
+for the rules.
+
+### `settings unset`
+
+Remove a custom `[env]` variable: `mait-code settings unset env.<NAME>`. Only
+`env.<NAME>` keys can be unset — registry settings always resolve to a value,
+so to undo one, `set` it back to its default.
+
 **Examples**
 
 ```bash
@@ -467,10 +511,14 @@ mait-code settings get embedding-provider
 mait-code settings set log-level DEBUG
 mait-code settings set embedding-provider bedrock --reindex
 mait-code settings set data-dir ~/mait-data --move-data
+mait-code settings set env.AWS_PROFILE dev-bedrock
+mait-code settings unset env.AWS_PROFILE
 ```
 
-**Exit codes:** `list`/bare always `0`; `get` and `set` exit `1` on an
-unknown key, invalid value, or a missing required follow-up flag.
+**Exit codes:** every form exits `1` when `settings.toml` is missing.
+Otherwise `list`/bare exit `0`; `get`, `set` and `unset` exit `1` on an
+unknown key, invalid value, a missing required follow-up flag, or (for
+`unset`) a key that isn't `env.<NAME>` or isn't in the table.
 
 ---
 
@@ -490,18 +538,23 @@ full-screen [Textual](https://textual.textualize.io/) TUI; when piped or
 redirected it falls back to a read-only text render, so scripts and the
 session-start summary are unaffected.
 
+`--initiatives` opens on the Initiatives view — every open epic with its
+progress and members. Off a TTY it prints one line per open epic instead
+(`[#<id>] (<priority>) <title> — <status> — <progress>`, or `No initiatives.`).
+
 The board has a single fixed workflow shared by every project — the columns
-are not configurable. Cards flow left-to-right through four visible columns:
+are not configurable. Cards flow left-to-right through five columns:
 
 | Column | Status | Meaning |
 |--------|--------|---------|
 | Backlog | `backlog` | Captured, not yet refined. |
 | Refined | `refined` | Scoped and ready to pick up. |
 | In Progress | `in_progress` | Being worked on. |
-| Done | `done` | Completed. |
+| In Review | `in_review` | Finished and awaiting review, usually an open PR. Hidden in the TUI while empty (`v` shows it anyway). |
+| Done | `done` | Completed. Hidden in the TUI by default (`d` shows it). |
 
-A fifth status, `archived`, is hidden from the board by default (toggle it
-into view with `a` in the TUI).
+A further status, `archived`, sits off the flow and is hidden by default
+(toggle it into view with `a` in the TUI).
 
 `blocked` is **not** a column — it is a free-form *tag* carried in place, so a
 blocked card keeps its real flow position. Blocking is the first consumer of a
@@ -510,18 +563,21 @@ general tagging system (`tag` / `untag` on the CLI, `t` in the TUI).
 ### The interactive board
 
 A column-per-status layout you navigate by card. Movement keys reslot the
-highlighted card; the rest open detail, annotate, tag, or change what's shown.
+highlighted card; the rest create, edit, annotate, tag, or change what's shown.
+The main keys are below — the [board guide](../board.md#tui-reference) has the
+full tables for the board, the Initiatives view and the card detail screen.
 
 | Key | Action |
 |-----|--------|
-| `←` / `→` | Move focus between columns |
+| `←` / `→` / `1`–`6` | Move focus between columns, or jump to the *n*th visible one |
 | `<` / `>` | Move the highlighted card to the previous / next column |
 | `Enter` | Open the card detail view |
-| `c` | Add a comment to the highlighted card |
+| `n` / `e` | New card / edit the highlighted card |
+| `c` / `C` | Comment on / complete the highlighted card |
 | `t` | Toggle a tag on the highlighted card (type the tag; present → removed, absent → added) |
 | `b` / `u` | Add / remove the `blocked` tag on the highlighted card (in place) |
-| `p` | Filter by project (dropdown picker) |
-| `a` | Toggle visibility of archived cards |
+| `p` / `/` | Filter by project / search cards by title |
+| `v` / `d` / `a` | Toggle the In Review column / the Done column / archived cards |
 | `r` | Reload the board from the database |
 | `i` | Switch to the Initiatives view — epics with progress and their members |
 | `q` | Quit |
@@ -548,6 +604,7 @@ cards at all it prints `No cards on the board.`
 ```bash
 mait-code board            # drive the board interactively
 mait-code board | cat      # plain text render (e.g. for piping or logs)
+mait-code board --initiatives  # open on the epics
 ```
 
 **Exit code:** always `0`.
@@ -615,6 +672,113 @@ mait-code observations | head  # quick pending check (e.g. for piping or logs)
 
 ---
 
+## `mait-code memory`
+
+**Synopsis**
+
+```
+mait-code memory                            # interactive browser (TTY) / grouped summary (piped)
+```
+
+**Description**
+
+Browse everything the companion remembers, across every project and scope.
+Attached to a terminal it launches a full-screen
+[Textual](https://textual.textualize.io/) TUI: memories grouped by type, the
+selected one rendered in full with its metadata, and a live filter. Piped or
+redirected it prints each type with its entry count and its five most recent
+entries (`[#<id>] <date> <first line>`), or `No memories stored yet.`
+
+The browser is read-only — writing stays with `mc-tool-memory` and the memory
+skills. See the [memory browser guide](../memory-browser.md) for the layout and
+keys.
+
+**Flags:** none.
+
+**Exit code:** always `0`.
+
+---
+
+## `mait-code review`
+
+**Synopsis**
+
+```
+mait-code review                            # interactive queue (TTY) / due list (piped)
+```
+
+**Description**
+
+Work the memory review queue — important memories that have aged long enough to
+need a fresh look, most-decayed first. Attached to a terminal it launches a
+full-screen [Textual](https://textual.textualize.io/) TUI where one key
+**confirms** (`c`), **refines** (`e`) or **retires** (`x`) the highlighted
+memory, writing through the same store operations as `mc-tool-memory reviewed`
+/ `supersede` / `retire`. Piped or redirected it prints the due list
+(`[#<id>] <recall%> <first line>`), or a line saying nothing is due.
+
+Unlike the other browsers, this one writes. See the
+[review queue guide](../review.md) for the full tour.
+
+**Flags:** none.
+
+**Exit code:** always `0`.
+
+---
+
+## `mait-code graph`
+
+**Synopsis**
+
+```
+mait-code graph                             # interactive explorer (TTY) / hub summary (piped)
+```
+
+**Description**
+
+Explore the entity knowledge graph the observe hook builds alongside your
+memories. Attached to a terminal it launches a full-screen
+[Textual](https://textual.textualize.io/) TUI: pick an entity and see its
+neighbourhood as a node-link diagram or a relationship table, with each edge's
+context text. Piped or redirected it prints the connected entities (type, name,
+mention and link counts; the first 30), or a line saying the graph is still
+empty.
+
+The explorer is read-only. See the [graph explorer guide](../graph.md) for the
+views and keys.
+
+**Flags:** none.
+
+**Exit code:** always `0`.
+
+---
+
+## `mait-code logs`
+
+**Synopsis**
+
+```
+mait-code logs                              # interactive viewer (TTY) / day-grouped summary (piped)
+```
+
+**Description**
+
+Read the structured JSON logs every mait-code tool and hook writes. Attached to
+a terminal it launches a full-screen [Textual](https://textual.textualize.io/)
+TUI: log lines grouped by day, with the selected line's full record — message,
+fields, invocation arguments, stack trace. Piped or redirected it prints the
+line and error tallies, then each day's line / warning / error counts with its
+first few error messages, or `No logs yet.`
+
+The viewer is read-only — it never writes, truncates or rotates the files. See
+the [log viewer guide](../logs.md) for filtering and keys.
+
+**Flags:** none.
+
+**Exit code:** always `0`.
+
+---
+
 ## `mait-code home`
 
 **Synopsis**
@@ -636,9 +800,12 @@ A bare `mait-code` with no subcommand is the same front door: it opens the hub
 on a TTY and falls back to the root help when piped, so scripts and
 `mait-code | grep` are unaffected.
 
-The hub is read-only — it never writes a store or shells out. It renders the
-same data the `mc-tool-*` CLIs and skills work from, so it always reflects the
-real state. See the [home hub guide](../home.md) for the full tour.
+The hub is presentation first: apart from `e` (reindex memory vectors, after a
+confirm) and the **Companion mod** toggle (which writes the `mods` setting), it
+never writes a store, and the only commands it runs are the shell-command tiles
+you author on its [start page](../home.md#the-start-page). It renders the same
+data the `mc-tool-*` CLIs and skills work from, so it always reflects the real
+state. See the [home hub guide](../home.md) for the full tour.
 
 ### The interactive hub
 
@@ -650,13 +817,17 @@ full on the right.
 |-----|--------|
 | `↑` / `↓` (or `k` / `j`) | Move the highlight; the detail pane follows |
 | `Enter` | Toggle a section, or open a TUI from a `↗ Open …` launch leaf |
-| `r` | Reload every store (refresh the badges and current detail) |
-| `Ctrl+P` | Command palette (Open board / memory / observations / settings, Reload, themes) |
+| `r` | Reload every store (refresh the badges and current detail, re-run the start-page tiles) |
+| `e` | Reindex — bring memory vectors in line with the configured model, after a confirm |
+| `Ctrl+P` | Command palette (open the other TUIs, set up the start page, Reload, Reindex memory, themes) |
 | `q` / `Esc` | Quit |
 
-Pressing `Enter` on a launch leaf (`↗ Open board`, `↗ Open memory browser`,
-`↗ Open observations`, `↗ Open settings`) hands off to that dedicated TUI and
-returns to the hub when it quits, with the badges refreshed.
+Pressing `Enter` on a launch leaf hands off to that dedicated TUI — the board,
+its Initiatives view, the memory browser, the review queue, the observations
+browser, the graph explorer, the settings editor, the log viewer, the Bridge
+configurator, or the start-page editor — and returns to the hub when it quits,
+with the badges refreshed. The [home hub guide](../home.md#opening-the-other-tuis)
+lists where each leaf lives.
 
 ### The non-TTY render
 

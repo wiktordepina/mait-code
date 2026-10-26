@@ -21,7 +21,8 @@ progress, what's overdue, how much is waiting to be triaged, and what Claude see
 when a session starts — then step straight into the dedicated tool for whatever
 you want to act on.
 
-It is **pure presentation**: the hub never writes. Every panel reads the same
+It is **presentation first**: apart from `e` (reindex) and the Companion mod
+toggle, the hub never writes. Every panel reads the same
 stores the `mc-tool-*` CLIs and skills use, so what you see here is exactly what
 the rest of mait-code is working from. A broken store renders a quiet snag line
 in its panel rather than taking the hub down. The only commands it ever runs are
@@ -174,6 +175,8 @@ viewer](logs.md) are full applications in their own right. Each has a dedicated
 so it reads as a hand-off rather than just another row:
 
 - `↗ Open board` — under **Board**
+- `↗ Open initiatives` — under **Board** (opens the board straight on its
+  [Initiatives view](board.md#initiatives-view))
 - `↗ Open memory browser` — under **Memory**
 - `↗ Open review` — under **Memory**, beneath *Due for review* (it's where you
   act on that count)
@@ -196,7 +199,7 @@ ordinary expand/collapse sections, so you never lose the ability to fold a branc
 away.
 
 Most of the hand-offs also live in the `Ctrl+P` command palette (**Open board**,
-**Open memory**, **Open review**, **Open observations**, **Open settings**,
+**Open initiatives**, **Open memory**, **Open review**, **Open observations**, **Open settings**,
 **Open logs**, **Set up start page**), alongside **Reload** and
 **Reindex memory**. The graph explorer and the Bridge configurator are tree
 leaves only — they have no palette entry.
@@ -210,7 +213,7 @@ badge shows whether it's currently on or off.
 
 | Section | Highlighting it shows | Leaves |
 |---------|----------------------|--------|
-| **Board** | Live cards split into *In progress*, *In review* and *Next up* | `↗ Open board`, In progress, In review, Next up, By project |
+| **Board** | Live cards split into *In progress*, *In review* and *Next up* | `↗ Open board`, `↗ Open initiatives`, In progress, In review, Next up, By project |
 | **Memory** | Entry count and a by-type breakdown | `↗ Open memory browser`, By type, Due for review, `↗ Open review`, Embedding coverage, Reflection status, `↗ Open observations`, `↗ Open graph explorer` |
 | **Reminders** | Overdue and upcoming, with the overdue count raised in alarm | Overdue, Upcoming |
 | **Inbox** | How many captured items are waiting for triage | — |
@@ -230,8 +233,9 @@ presented with at the start of a session, in order:
 
 1. the **soul document** — the companion's identity and values,
 2. the **user context** — who you are and how you like to work,
-3. the **curated memory** (`MEMORY.md`) — the high-confidence facts, and
-4. the **session context** — built live by the session-start hook (overdue
+3. the **communication style** — how responses are shaped,
+4. the **curated memory** (`MEMORY.md`) — the high-confidence facts, and
+5. the **session context** — built live by the session-start hook (overdue
    reminders, the active board, the inbox count).
 
 Each block carries a **rough token estimate**, with the budget total in the
@@ -251,8 +255,8 @@ header.](assets/home/home-sysprompt.png)
 | `↑` / `↓` (or `k` / `j`) | Move the highlight; the detail pane follows |
 | `Enter` | Toggle a section, open a launch leaf, or re-show a detail leaf |
 | `r` | Reload every store — refreshes the badges, the current detail, and re-runs the start-page tiles |
-| `e` | Reindex — embed the memory entries missing a vector, after a confirm |
-| `Ctrl+P` | Command palette (Open board / memory / review / observations / settings / logs, Set up start page, Reload, Reindex memory, themes) |
+| `e` | Reindex — bring memory vectors in line with the configured model, after a confirm |
+| `Ctrl+P` | Command palette (Open board / initiatives / memory / review / observations / settings / logs, Set up start page, Reload, Reindex memory, themes) |
 | `?` | Show the key cheat-sheet |
 | `q` / `Esc` | Quit |
 
@@ -269,10 +273,13 @@ header.](assets/home/home-sysprompt.png)
 - **`e` when embeddings lag.** If *Embedding coverage* (or the health line's
   `memory-embeddings` warning) shows unembedded entries, press `e` — after a
   confirm naming the missing count, home drops to the terminal to embed just
-  those entries, then comes back with fresh numbers. When nothing is missing
-  it says so and skips the confirm. The same fix runs non-interactively via
-  `mait-code doctor --fix`; a full from-scratch re-embed stays with
-  `mc-tool-memory reindex`.
+  those entries, then comes back with fresh numbers. If the stored vectors
+  came from a different model than the one configured, the confirm says so and
+  `e` rebuilds every vector instead; with no record of the model, it re-embeds a
+  sample first and rebuilds everything only if that disagrees. When every entry
+  already has a vector from the configured model it says so and skips the
+  confirm. The same fix runs non-interactively via `mait-code doctor --fix`;
+  `mc-tool-memory reindex` forces a full from-scratch re-embed.
 - **Keep curated memory fresh.** *Memory → Due for review* lists the entries that
   have [decayed past the resurfacing threshold](memory.md#review-keeping-curated-memory-fresh) —
   the leaf carries a warn-styled count when any are waiting. Press `↗ Open review`

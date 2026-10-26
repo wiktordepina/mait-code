@@ -33,7 +33,7 @@ Search memory for past facts, decisions, patterns, and preferences.
 
 1. Preprocesses search results via `mc-tool-memory search` (injected before Claude sees the skill)
 2. Results are ranked by composite score (recency + importance + relevance)
-3. If no query is provided, shows recent memories via `mc-tool-memory list`
+3. Also preprocesses the five most recent memories via `mc-tool-memory list`, which stand in for results when no query is given
 4. For follow-up searches, uses Bash to call `mc-tool-memory search` directly
 
 ### /remember
@@ -139,9 +139,16 @@ View and drive the manually-driven kanban board for the current project. Claude 
 2. Teaches Claude the verb vocabulary so conversational requests map to `mc-tool-board` calls:
    - "pick up the next refined card" → `mc-tool-board next --claim` (top refined card → `in_progress`)
    - "refine card N" → draft description + acceptance criteria, confirm, then `mc-tool-board refine N ...`
-   - complete / block / unblock / tag / untag / archive / move / add / edit / comment via the matching subcommands
-3. Cards flow through fixed columns: backlog → refined → in_progress → done, plus a hidden `archived` side-state; `blocked` is a tag carried in place, not a column
-4. Never moves, completes, or archives cards without the user's confirmation
+   - "what's next?" → `mc-tool-board next` (only *ready* cards: refined, not blocked, not waiting on another card); `next --epic N` for one initiative
+   - "move it to review" → `mc-tool-board review N --pr <url>`, recording the PR on the card
+   - complete / block / unblock / tag / untag / archive / move / add / edit / comment / ref via the matching subcommands
+3. Cards flow through fixed columns: backlog → refined → in_progress → in_review → done, plus a hidden `archived` side-state; `blocked` is a tag carried in place, not a column
+4. Knows the board's structure beyond columns:
+   - **Epics** group cards across projects (`add --epic`, `--parent E`, `epic list` / `show` / `promote`)
+   - **`blocks` links** order work between cards (`link A blocks B`, `unlink`); `list --ready` shows what can move
+   - **Origins**: a card split off or raised from another is added with `--from N`, inheriting its epic and recording where it came from
+   - **Session binding**: In Progress cards record which sessions work them (`bind`, `unbind`, `list --mine`)
+5. Never moves, completes, or archives cards without the user's confirmation, and never adds a `blocks` link without being told how the work orders
 
 ### /triage
 
@@ -288,7 +295,7 @@ skills/
     └── SKILL.md     # Cold second opinion on a branch before opening a PR
 ```
 
-Skills are symlinked into `~/.claude/skills/` by `install.sh` and loaded by Claude Code automatically.
+Skills are symlinked into `~/.claude/skills/` by `mait-code install` (and refreshed by `mait-code update`, which also prunes links to removed skills) and loaded by Claude Code automatically.
 
 ### Skill Definition Format
 

@@ -1,10 +1,10 @@
 """Quick-capture inbox tool — a frictionless capture-now, sort-later holding pen.
 
 A single global SQLite store (``inbox.db``) of captured items. The CLI
-(``main``) handles capture / list / remove, sitting on the
+(``main``) handles add / list / remove / count / drain, sitting on the
 presentation-agnostic :mod:`~mait_code.tools.inbox.service` core. The
-``/triage`` skill drains items out to the board, tasks, decisions, or memory,
-so the inbox stays near-empty.
+``/triage`` skill routes each item out to the board or to memory, so the inbox
+stays near-empty.
 """
 
 from mait_code.tools.inbox.cli import main

@@ -21,7 +21,8 @@ allowed, per machine.
 Enable and configure it from the home hub — **System ▸ ↗ Configure Bridge**.
 That leaf is the only way into the editor; there is no `mait-code bridge`
 command. The form collects the channel's settings and offers a **Test
-connection** button that probes them before you save.
+connection** button that probes them before you save — `Ctrl+G` tests and
+`Ctrl+S` saves from anywhere in the form.
 
 The gate and the channel choice are also plain settings, if you'd rather script
 them or edit `settings.toml` directly:

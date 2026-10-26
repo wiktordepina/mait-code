@@ -1,7 +1,7 @@
 # The remote API
 
 `mait_code.remote` is the part of a mait-code instance that another machine or
-agent may touch: read the board, raise cards, refine them, search memories,
+agent may touch: read the board and its epics, raise cards, refine them, search memories,
 check that memory search can use its vectors, and list reminders. It is a
 **Python module, not a server**. A separate service you run — typically one
 that speaks MCP to remote Claude Code sessions or other agents — imports it and
@@ -19,6 +19,8 @@ next to the data model and its tests.
 | `list_cards` | Cards ordered priority-then-oldest; filter by project, status, tag or title. Archived cards are left out unless asked for by status. |
 | `get_card` | One card with its comments, in the `mc-tool-board show --json` shape. |
 | `list_projects` | The projects that have cards. |
+| `list_epics` | Epics with their member progress, priority-then-oldest; finished epics only when asked for. Archived epics never appear. |
+| `get_epic` | One epic with its non-archived members, progress and comments, in the `mc-tool-board epic show --json` shape. |
 | `create_card` | A new card, **always in backlog**: there is no status parameter. With `origin_id`, it joins that card's epic and records a `from` reference; `inherit_epic=False` keeps the reference and joins no epic. |
 | `refine_card` | Edit description and acceptance criteria, and move between **backlog and refined** only. |
 | `search_memories` | The same hybrid search and ranking as `mc-tool-memory search`, each result with a `score`. |
@@ -59,7 +61,8 @@ at runtime. A test pins the module's public names to an allowlist, so adding
 one is a visible change to this contract, not a quiet addition.
 
 A refine of a card outside backlog/refined, or towards any other column, raises
-`TransitionRefused` and changes nothing. The status check and the write happen
+`TransitionRefused` and changes nothing; refining an epic raises
+`RelationError`. The status check and the write happen
 in one transaction, so a card the instance moves on concurrently can't be
 pulled back.
 
@@ -67,7 +70,9 @@ A card created with `origin_id` reaches an epic only through its origin. Since
 any card can be an origin, a client can reach any epic that has a member; the
 `from` reference and `created_by` show how the card got there. An origin's epic
 that is done or archived is refused with `RelationError`, not joined, because
-nothing would surface the card under it. Pass `inherit_epic=False` to keep the
+nothing would surface the card under it. An epic can't be an origin itself
+(also `RelationError`), and an id that names no card raises `CardNotFound`
+from any function that takes one. Pass `inherit_epic=False` to keep the
 reference without the epic.
 
 ## Provenance
