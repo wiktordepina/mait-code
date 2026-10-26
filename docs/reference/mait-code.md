@@ -80,7 +80,7 @@ creates data directories, copies templates, sets up symlinks
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--from <path>` | *(required)* | Absolute path to the cloned mait-code source tree. |
-| `--embedding-provider <name>` | `local` | `local` (fastembed) or `bedrock` (AWS Bedrock; install with `[bedrock]` extra). |
+| `--embedding-provider <name>` | the configured provider, else `local` | `local` (fastembed) or `bedrock` (AWS Bedrock; install with `[bedrock]` extra). Omit it on a re-install to keep the current choice. |
 | `--data-dir <path>` | `$MAIT_CODE_DATA_DIR` or `~/.claude/mait-code-data` | Override the data directory location. |
 | `--claude-dir <path>` | `~/.claude` | Override the Claude Code config directory. |
 
@@ -92,8 +92,8 @@ creates data directories, copies templates, sets up symlinks
 4. Writes a `MEMORY.md` stub into `<data-dir>/memory/` if missing.
 5. Symlinks `<source>/config/CLAUDE.md` to `<claude-dir>/CLAUDE.md`. If a non-symlink `CLAUDE.md` already exists, it's first renamed to `CLAUDE.md.backup`.
 6. Symlinks each `<source>/skills/<name>/` into `<claude-dir>/skills/` and each `<source>/agents/<file>` into `<claude-dir>/agents/`. `.gitkeep` placeholders are skipped.
-7. Writes `settings.toml` with the chosen `embedding-provider`; every other setting is written at its default, and an existing `[env]` table is carried over.
-8. Merges `<source>/config/settings.json` into `<claude-dir>/settings.json` (hooks, mcpServers, and `MAIT_CODE_EMBEDDING_PROVIDER` env). When the `mods` setting is on, also registers the [companion mod](../companion-mod.md) folder in the `CLAUDE_CODE_PLUGIN_DIRS` env entry. User-set keys are preserved verbatim. The write is atomic (tempfile + rename).
+7. Writes `settings.toml`, starting from the existing file: every setting you've changed and the `[env]` table are kept, and `embedding-provider` changes only when `--embedding-provider` is passed. A fresh install gets the defaults with `embedding-provider = "local"`.
+8. Merges `<source>/config/settings.json` into `<claude-dir>/settings.json` (hooks, mcpServers, and a `MAIT_CODE_*` env entry for each setting in `settings.toml`). When the `mods` setting is on, also registers the [companion mod](../companion-mod.md) folder in the `CLAUDE_CODE_PLUGIN_DIRS` env entry. User-set keys are preserved verbatim. The write is atomic (tempfile + rename).
 9. Writes the install record.
 
 **Examples**
@@ -120,11 +120,11 @@ mait-code install --from /opt/mait-code/source \
 - This subcommand does **not** run `uv tool install`. By the time it
   runs, the `mait-code` binary is already on PATH (that's how it was
   invoked). The bash shim handles the bootstrap.
-- Re-running `install` keeps your data: symlinks that already point
-  at the right target are left alone, and edited templates are never
-  overwritten. It does rewrite `settings.toml` (step 7), so any other
-  settings you've changed go back to their defaults — use `update` to
-  refresh an existing install.
+- Re-running `install` is safe: symlinks that already point at the
+  right target are left alone, edited templates are never overwritten,
+  and your settings are kept (step 7). To refresh an existing install
+  from a newer release, `update` is still the tool — it also advances
+  the source clone.
 
 ---
 

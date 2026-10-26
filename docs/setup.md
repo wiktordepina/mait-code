@@ -14,7 +14,7 @@ The fastest path is the one-liner:
 curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh | bash
 ```
 
-This installs `uv` if missing, clones the latest release tag to `~/.local/share/mait-code/source/`, runs `uv tool install`, then `exec`s `mait-code install` to set up symlinks, settings, and data directories. Idempotent — re-run any time to upgrade.
+This installs `uv` if missing, clones the latest release tag to `~/.local/share/mait-code/source/`, runs `uv tool install`, then `exec`s `mait-code install` to set up symlinks, settings, and data directories. Idempotent — a re-run keeps your settings, data and edited templates, though `mait-code update` is the usual way to upgrade.
 
 ### Flags
 
@@ -27,7 +27,7 @@ curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts
 
 | Flag | Default | Purpose |
 |------|---------|---------|
-| `--embedding-provider local\|bedrock` | `local` | Forwarded to `mait-code install`. |
+| `--embedding-provider local\|bedrock` | the configured provider, else `local` | Forwarded to `mait-code install` when given. On a re-run, leave it off to keep the current provider (and its `[bedrock]` extra). |
 | `--ref <tag\|branch\|sha>` | latest `v*` tag | Checkout this ref after cloning. `main` for bleeding edge. |
 | `--dir <path>` | `~/.local/share/mait-code` | Install root. Source goes in `<dir>/source`. |
 | `--no-uv` | off | Don't try to install `uv` (fail if not on PATH). |
@@ -74,7 +74,7 @@ mait-code install --from "$PWD" --embedding-provider local
 7. Symlinks any `agents/*` files into `~/.claude/agents/`.
 8. Writes the centralised settings file at `$XDG_CONFIG_HOME/mait-code/settings.toml` with all configuration values (including the chosen embedding provider).
 9. Propagates settings as `MAIT_CODE_*` env vars and merges hook registrations into `~/.claude/settings.json` (preserving any pre-existing keys). When the `mods` setting is on, also registers the [companion mod](companion-mod.md).
-10. Writes the install record at `$XDG_STATE_HOME/mait-code/install.json` (default `~/.local/state/mait-code/install.json`).
+10. Writes the install record at `$XDG_DATA_HOME/mait-code/install.json` (default `~/.local/share/mait-code/install.json`).
 
 ## Lifecycle
 
