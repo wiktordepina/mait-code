@@ -3066,7 +3066,7 @@ into sections under a one-line health badge (<code>healthy</code> / <code>degrad
 <hr />
 <h2 id="mait-code-doctor"><code>mait-code doctor</code><a class="headerlink" href="#mait-code-doctor" title="Permanent link">&para;</a></h2>
 <p><strong>Synopsis</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mait-code doctor [--fix] [--json] [--data-dir &lt;path&gt;] [--claude-dir &lt;path&gt;]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>mait-code doctor [--fix] [--json] [--llm] [--data-dir &lt;path&gt;] [--claude-dir &lt;path&gt;]
 </span></code></pre></div>
 <p><strong>Description</strong></p>
 <p>Validate the install. Surfaces silent breakage — broken symlinks,
@@ -3094,6 +3094,11 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 <td><code>--json</code></td>
 <td>off</td>
 <td>Emit a machine-readable JSON document.</td>
+</tr>
+<tr>
+<td><code>--llm</code></td>
+<td>off</td>
+<td>Also run the <code>nested-llm</code> check, which reaches the network and makes one small real model call.</td>
 </tr>
 <tr>
 <td><code>--data-dir &lt;path&gt;</code></td>
@@ -3171,6 +3176,11 @@ ends with a one-line pass/fail verdict. The <code>--json</code> output includes 
 <td><code>uv-on-path</code></td>
 <td>ok / fail</td>
 <td><code>uv</code> is on <code>PATH</code> — required for <code>install</code> / <code>update</code>.</td>
+</tr>
+<tr>
+<td><code>nested-llm</code></td>
+<td>ok / fail</td>
+<td>With <code>--llm</code> only. One real nested <code>claude -p</code> call, made the way observe and reflect make theirs, exits <code>0</code> with no tools and no MCP servers. <code>fail</code> shows the call's stderr when it is refused (e.g. by a host's managed config), names any tool or MCP server that leaked through, fails when the call prints no init event to confirm either, or reports a Claude Code older than 2.1.257, where managed permission rules can drop the MCP deny. The probe times out after 30 seconds. The hub and dashboard never run it.</td>
 </tr>
 </tbody>
 </table>
