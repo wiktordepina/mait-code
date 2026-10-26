@@ -31,10 +31,10 @@ The hand-authored pages under `docs/` populate six tabs:
 | Tab | What lives here |
 |-----|-----------------|
 | **Home** | `docs/README.md` — project intro, key features, quick start. |
-| **Guide** | Procedural how-to docs — `setup.md`, the per-TUI guides (`home.md`, `board.md`, `settings.md`, `memory-browser.md`, `review.md`, `observations.md`, `graph.md`, `logs.md`), `bridge.md`, and `sync.md`. |
+| **Guide** | Procedural how-to docs — `setup.md`, the per-TUI guides (`home.md`, `board.md`, `settings.md`, `memory-browser.md`, `review.md`, `observations.md`, `graph.md`, `logs.md`), `bridge.md`, `companion-mod.md`, `remote.md`, and `sync.md`. |
 | **Concepts** | Conceptual prose (`philosophy.md`, `memory.md`). |
 | **Architecture** | System design (`architecture.md`). |
-| **Reference** | `docs/reference/skills.md` (hand-authored) plus the Python API pages under `docs/reference/{tools,hooks}/` (auto-generated — see below). |
+| **Reference** | `docs/reference/skills.md` (hand-authored) and `docs/reference/mait-code.md` (hand-authored) plus the Python API pages, including `docs/reference/{tools,hooks}/` (auto-generated — see below). |
 | **Contributing** | Developer-facing docs (`development.md`, this file). |
 
 When deciding where a new page belongs, think about why the reader is opening it: stepping through a procedure → Guide, building a mental model → Concepts, looking up specifics → Reference.
@@ -43,7 +43,7 @@ Conventions:
 
 - **Markdown**, GitHub-style. The full set of pymdown extensions is
   enabled in `mkdocs.yml` — admonitions, tabbed code blocks, mermaid
-  fences, footnotes, etc.
+  fences, task lists, keys, etc.
 - **British English** spelling and grammar (behaviour, organise,
   centred).
 - **Imperative** mood in step-by-step guides ("Run the migration", not
@@ -60,13 +60,14 @@ To add a new prose page:
 1. Create the file under `docs/` (or a subdirectory if a section grows
    that warrants nesting).
 2. Add it to the `nav:` block in `mkdocs.yml` under the appropriate
-   tab — `strict: true` will fail the build if a doc exists but is not
-   in the nav.
+   tab. `strict: true` does **not** catch a page left out of the nav —
+   mkdocs only logs it at INFO — so check the page shows up in the built
+   site's navigation.
 3. Run `uv run mkdocs build --strict` to verify.
 
 ## API reference (`docs/reference/`)
 
-The Python API pages — `docs/reference/{context,cli,config,llm,logging,ssl,bridge}.md` plus the nested `docs/reference/tools/*.md` and `docs/reference/hooks/*.md` — are **regenerated from each module's `__all__`** by `docs/gen_ref_pages.py`. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's `--check` invocation will flag the drift.
+The Python API pages — `docs/reference/index.md` and `docs/reference/{context,cli,config,llm,logging,remote,ssl,bridge}.md` plus the nested `docs/reference/tools/*.md` and `docs/reference/hooks/*.md` — are **regenerated from each module's `__all__`** by `docs/gen_ref_pages.py`. Editing those files by hand is futile — the next regeneration run overwrites them, and CI's `--check` invocation will flag the drift.
 
 `docs/reference/skills.md` and `docs/reference/mait-code.md` (the `mait-code` CLI command reference) are the only **hand-authored** files under `docs/reference/`. Edit them directly — `skills.md` when adding or renaming a slash command, `mait-code.md` when changing a CLI command. (Note the deliberate split: `reference/cli.md` is the *generated* `mait_code.cli` Python API, while `reference/mait-code.md` is the hand-authored command reference.)
 
@@ -169,7 +170,7 @@ annotation rather than removing the documentation.
 
 ## What CI runs
 
-`.github/workflows/docs.yml` runs these on every push to `main`, every PR, every `v*` tag, and on `release: published`:
+`.github/workflows/docs.yml` runs these on every push to `main`, every PR, every `v*` tag, on `release: published`, and on a manual `workflow_dispatch` (which can backfill a release's deploy via its `deploy_version` input):
 
 ```bash
 uv sync --locked --group docs

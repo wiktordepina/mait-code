@@ -540,9 +540,10 @@ layer; facts about you belong in mait-code.** The `/reflect` and
 project-specific code knowledge no longer accretes into mait-code's
 MEMORY.md.
 
-The native directory name is the project's absolute path with `/` replaced by
-`-` (`/home/w/mait-code` → `-home-w-mait-code`). That munging is lossy — a
-literal dash is indistinguishable from a path separator — so the memory
+The native directory name is the project's absolute path with every
+non-alphanumeric character replaced by `-` (`/home/w/mait-code` →
+`-home-w-mait-code`). That munging is lossy — a literal dash, dot or underscore
+is indistinguishable from a path separator — so the memory
 browser's native view recovers readable project names best-effort, by
 checking which candidate paths actually exist on disk.
 
@@ -657,7 +658,8 @@ reveals them). See [the graph explorer guide](graph.md) for the full tour.
 | `/remind <when> <what>` | Set a reminder |
 | `/reminders` | Show active and overdue reminders |
 | `/commit` | Detect changes, generate conventional commit, confirm and commit |
+| `memory-store` | Auto-invoked: store what Claude learns mid-session, without being asked |
 
 ## Multi-Machine Sync
 
-The data directory can be synced via git. `memory.db` is regenerable, so it is gitignored — the JSONL observation logs are the source of truth. After pulling on a new machine, run `mc-tool-memory restore` to replay the synced observation logs into the database and reindex embeddings. If the database already has entries and you only need to recompute embeddings, use `mc-tool-memory reindex`. The other databases (`board.db`, `reminders.db`, `inbox.db`) have no such source and are committed instead. See [Multi-Machine Sync](sync.md) for the full workflow.
+The data directory can be synced via git, with all four databases (`memory.db`, `board.db`, `reminders.db`, `inbox.db`) committed. `memory.db` can't be rebuilt from the JSONL observation logs: they don't carry hand-stored memories, reflection insights, review state or supersede history. `mc-tool-memory restore` replays the logs into the database, but treat it as a recovery tool for a lost or corrupted database rather than part of the sync loop; to recompute embeddings only, use `mc-tool-memory reindex`. See [Multi-Machine Sync](sync.md) for the full workflow.

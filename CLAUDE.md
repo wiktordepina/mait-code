@@ -37,14 +37,14 @@ The point is a strict separation between polished, shipped artefacts (committed,
 ## Lint, format, typecheck, test
 
 ```bash
-uv run ruff check src/         # Lint
-uv run ruff format src/        # Format
+uv run ruff check src/ tests/   # Lint
+uv run ruff format src/ tests/  # Format
 uv run pyright                 # Typecheck (standard mode, src/ only)
 uv run pytest -n auto          # Test suite in parallel (over two thousand tests)
 ```
 
-CI runs ruff over `src/ tests/`, so narrowing the lint/format commands to `src/`
-alone passes locally and fails on the PR.
+CI runs ruff over `src/ tests/`, so don't narrow the lint/format commands to
+`src/` alone — that passes locally and fails on the PR.
 
 `pyright` reads the optional `boto3` import in `tools/memory/embeddings.py`,
 so the bedrock extra must be installed. Sync it together with the docs group —
@@ -86,13 +86,14 @@ src/mait_code/
 ├── ssl.py           # OS trust store injection (setup_ssl, for corporate proxies)
 ├── hooks/           # Claude Code hook handlers (session_start, observe, auto_format)
 ├── bridge/          # Opt-in capture-in / notify-out transport (ntfy, loopback)
-├── cli/             # The `mait-code` CLI + 10 Textual TUIs (home, board, settings,
-│                    # memory, review, observations, graph, logs, bridge, dashboard)
+├── cli/             # The `mait-code` CLI + 11 Textual TUIs (home, board, initiatives,
+│                    # settings, memory, review, observations, graph, logs, bridge,
+│                    # dashboard)
 ├── tui/             # Shared TUI layer: house theme, palette, base MaitApp
 └── tools/           # CLI tools (memory, reminders, board, inbox)
 config/              # CLAUDE.md and settings.json templates
-templates/           # Identity templates (soul_document, user_context)
-scripts/             # install.sh, uninstall.sh
+templates/           # Identity templates (soul_document, user_context, communication_styles/)
+scripts/             # bootstrap.sh (one-line install), install.sh, uninstall.sh, test helpers
 skills/              # Skill definitions (loaded by Claude Code)
 agents/              # Agent definitions
 mods/                # Optional Claude Code mods (mait-companion; opt-in via the `mods` setting)

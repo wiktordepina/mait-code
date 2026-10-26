@@ -27,7 +27,10 @@ It is deliberately **read-only**, like the memory browser. It never reflects,
 edits or deletes — synthesis stays with the `/reflect` skill, writing stays
 with the hook. The pending/reflected split is judged against the **reflection
 watermark** (the high-water mark `/reflect` advances), so what you see pending
-here is precisely what the next reflection run will consider.
+here is precisely what the next reflection run will consider. Entries written
+by an automated job (`mc-tool-memory observe`) are only ever read by their
+project's reflection, so they count as pending only under that project's filter
+(`p`); in the unfiltered view they show as reflected.
 
 ## The layout
 

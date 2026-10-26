@@ -117,7 +117,7 @@ MEMORY.md is the most likely file to have merge conflicts (both machines may upd
 
 ### Observation conflicts
 
-Observations are timestamped files, so conflicts are rare. If they occur, keep both versions — the reflection system will deduplicate.
+Observations are timestamped files, so conflicts are rare. If they occur, keep both versions — a duplicated line is harmless, because the memory writer deduplicates near-identical entries on store, including when `restore` replays the logs.
 
 ## Embedding Provider
 

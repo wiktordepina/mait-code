@@ -36,7 +36,7 @@ Three regions, top to bottom:
 - **The footer** — the live key hints.
 
 The tree groups entries by **type** — *fact*, *preference*, *decision*,
-*insight*, *event*, *task*, *relationship* — each group showing its count, with
+*procedure*, *insight*, *event*, *task*, *relationship* — each group showing its count, with
 the newest entries first inside it. On boot the first group is expanded and the
 rest collapsed. Each leaf reads `<date>  <first line of the memory>`, clipped to
 fit, so a group is scannable without opening anything.

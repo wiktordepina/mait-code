@@ -1,7 +1,7 @@
 """Reminders tool — project-scoped one-shot reminders surfaced at session start.
 
 A small SQLite-backed reminder list per project. The CLI (``main``) handles
-add / list / dismiss / check operations; the session-start hook reads the
+set / list / dismiss / check operations; the session-start hook reads the
 overdue set and surfaces it in the greeting.
 """
 

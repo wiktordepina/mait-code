@@ -107,8 +107,9 @@ def unmerge_settings(settings: dict[str, Any]) -> dict[str, Any]:
 
     Hook entries are identified by any inner ``command`` starting with
     :data:`MAIT_CODE_HOOK_PREFIX`. MCP servers are removed by name from
-    :data:`MAIT_CODE_MCP_SERVERS`. The
-    ``MAIT_CODE_EMBEDDING_PROVIDER`` env entry is removed. Empty
+    :data:`MAIT_CODE_MCP_SERVERS`. Every ``MAIT_CODE_*`` env entry is
+    removed, and the mait-companion folder is dropped from
+    :data:`PLUGIN_DIRS_ENV` (other plugin folders are kept). Empty
     top-level sections are dropped.
 
     Args:

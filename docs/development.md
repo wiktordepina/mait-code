@@ -31,7 +31,11 @@ module declares a non-empty `__all__`. CI's `ci.yml` runs the full suite on ever
 PR, plus a weekly scheduled run at 06:00 Monday — there is no push trigger. The
 test job gates on coverage (`pytest --cov-fail-under=93`, a backstop set a couple
 of points below the working baseline), and a separate `audit` job runs
-`pip-audit --strict` over the exported locked requirements.
+`pip-audit --strict` over the exported locked requirements. After the parallel
+run, the test job runs the memory suite again in a single process, so a test that
+leaks state into the next file fails in CI rather than hiding behind xdist. A
+`mod` job type-checks and tests the optional Claude Code mod; it reports but
+doesn't gate merges.
 
 ### Snapshot tests
 
@@ -75,7 +79,7 @@ re-breaks the typecheck. The CI typecheck job (`ci.yml`) handles this itself.
 
 - **Use `uv run` everywhere** — Never activate venvs manually
 - **Entry points in pyproject.toml** — All CLI commands are registered as `[project.scripts]`
-- **Data dir via env var** — Use `MAIT_CODE_DATA_DIR` (defaults to `~/.claude/mait-code-data/`)
+- **Data dir via settings** — the `data-dir` setting or `MAIT_CODE_DATA_DIR` (defaults to `~/.claude/mait-code-data/`)
 - **No asyncio in CLI tools** — Tools and hooks are synchronous; MCP servers (if any) use async
 - **Connections via `get_connection()`** — All memory modules use the shared connection factory
 - **Package convention** — Both hooks and tools use `<name>/cli.py` as the entry point containing `main()`
@@ -120,6 +124,7 @@ src/mait_code/tui/
 ├── confirm.py     # Shared confirmation modal
 ├── filters.py     # Shared pick-one filter modals (generic + project-flavoured)
 ├── markdown.py    # Markdown rendering helpers for detail panes
+├── graph.py       # ThemedGraphView — node-link diagrams (graph explorer, epic diagram)
 ├── app.py         # MaitApp base class + SHARED_TCSS path
 └── app.tcss       # Shared stylesheet (modal geometry, conventions)
 ```
@@ -219,8 +224,8 @@ This injects the OS trust store into Python's `ssl` module via the `truststore` 
 
 ### Configuration
 
-- `MAIT_CODE_LOG_LEVEL` env var (default: `INFO`) — set via `settings.json` `env` block
-- `MAIT_CODE_LOG_FILE` env var — override log file path
+- `log-level` setting (default: `INFO`) — `mait-code settings set log-level DEBUG`, or `MAIT_CODE_LOG_LEVEL` for one shell
+- `log-file` setting — override the log file path (`MAIT_CODE_LOG_FILE`)
 - Logs write to `~/.local/state/mait-code/mait-code.jsonl` (rotates at midnight, keeps `log-backup-count` days — default 14)
 - Logs never go to stdout/stderr
 
@@ -252,19 +257,29 @@ def test_with_data(populated_db):
     assert len(results) >= 1
 ```
 
-For memory tool tests, patch `get_connection` to use a temp DB:
+For memory CLI tests, patch the CLI's `connection` context manager to hand out a
+temp DB, and stub the embedding provider so nothing loads a model (the pattern in
+`tests/tools/memory/test_cli.py`):
 
 ```python
+from contextlib import contextmanager
 from unittest.mock import patch
 from mait_code.tools.memory.db import get_connection
 
 @pytest.fixture
 def mem_db(tmp_path):
-    db_path = tmp_path / "test.db"
-    conn = get_connection(db_path)
-    def patched(**_kwargs):
-        return get_connection(db_path)
-    with patch("mait_code.tools.memory.db.get_connection", side_effect=patched):
+    conn = get_connection(tmp_path / "test.db")
+
+    @contextmanager
+    def patched_connection(db_path=None):
+        yield conn
+
+    with (
+        patch("mait_code.tools.memory.cli.connection", side_effect=patched_connection),
+        patch("mait_code.tools.memory.writer.embed_text", return_value=None),
+        patch("mait_code.tools.memory.search.embed_text", return_value=None),
+        patch("mait_code.tools.memory.cli.is_available", return_value=False),
+    ):
         yield conn
     conn.close()
 ```
@@ -274,16 +289,16 @@ def mem_db(tmp_path):
 ### Adding a new migration
 
 1. Open `src/mait_code/tools/memory/migrate.py`
-2. Append a new tuple to the `MIGRATIONS` list:
+2. Add a tuple at the end of the `MIGRATIONS` list, numbered one past the last entry:
    ```python
-   MIGRATIONS.append((
-       7,  # Next version number
+   (
+       16,  # one past the last entry
        "Description of what this migration does",
        [
            "SQL statement 1",
            "SQL statement 2",
        ],
-   ))
+   ),
    ```
 3. For complex migrations, use a callable instead of SQL list:
    ```python
@@ -291,7 +306,8 @@ def mem_db(tmp_path):
        # Complex migration logic here
        pass
 
-   MIGRATIONS.append((7, "Complex migration", _migrate_something))
+   # ...and in MIGRATIONS:
+   (16, "Complex migration", _migrate_something),
    ```
 4. Migrations run automatically on next `get_connection()` call
 5. Add tests in `tests/tools/memory/test_migrate.py` to verify the new schema

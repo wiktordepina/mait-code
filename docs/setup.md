@@ -22,7 +22,7 @@ Pass flags via `bash -s --`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts/bootstrap.sh \
-    | bash -s -- --embedding-provider bedrock --ref v0.43.0
+    | bash -s -- --embedding-provider bedrock --ref v0.89.0
 ```
 
 | Flag | Default | Purpose |
@@ -73,8 +73,8 @@ mait-code install --from "$PWD" --embedding-provider local
 6. Symlinks every `skills/*` directory into `~/.claude/skills/`.
 7. Symlinks any `agents/*` files into `~/.claude/agents/`.
 8. Writes the centralised settings file at `$XDG_CONFIG_HOME/mait-code/settings.toml` with all configuration values (including the chosen embedding provider).
-9. Propagates settings as `MAIT_CODE_*` env vars and merges hook registrations into `~/.claude/settings.json` (preserving any pre-existing keys).
-10. Writes the install record at `~/.local/share/mait-code/install.json`.
+9. Propagates settings as `MAIT_CODE_*` env vars and merges hook registrations into `~/.claude/settings.json` (preserving any pre-existing keys). When the `mods` setting is on, also registers the [companion mod](companion-mod.md).
+10. Writes the install record at `$XDG_STATE_HOME/mait-code/install.json` (default `~/.local/state/mait-code/install.json`).
 
 ## Lifecycle
 
@@ -97,8 +97,10 @@ mait-code uninstall --purge-data   # also delete the data directory
 mait-code version           # print the installed version
 ```
 
-`doctor --fix` currently repairs three findings: dangling symlinks, a missing data
-directory, and missing embeddings. The rest it reports.
+`doctor --fix` currently repairs four findings: dangling symlinks, a missing data
+directory, missing embeddings, and a missing or stale embedding-model record
+(re-embedding when the stored vectors came from another model). The rest it
+reports.
 
 `uninstall` also runs `uv tool uninstall mait-code`, which removes the `mait-code`
 binary itself — pass `--keep-uv-tool` to leave it in place.
@@ -109,12 +111,17 @@ The TUI surfaces are separate subcommands:
 mait-code                   # the home hub on a terminal; help when piped
 mait-code home              # the home hub explicitly
 mait-code board             # kanban board
+mait-code board --initiatives   # the board, opened on its Initiatives view
 mait-code memory            # memory browser
 mait-code review            # the memory review queue
 mait-code observations      # observations browser
 mait-code graph             # knowledge-graph explorer
 mait-code logs              # log viewer
 ```
+
+The [Bridge](bridge.md) configurator and the [start-page
+editor](home.md#setting-it-up-without-writing-toml) have no subcommand of their
+own — they open from the home hub.
 
 The install-lifecycle commands (`install`, `update`, `uninstall`, `status`,
 `doctor`) accept `--claude-dir`, and all but `update` accept `--data-dir`, for
@@ -164,7 +171,8 @@ After installation, verify everything works:
 ```bash
 # Check CLAUDE.md symlink
 ls -la ~/.claude/CLAUDE.md
-# Should point to → /path/to/mait-code/config/CLAUDE.md
+# Should point to → ~/.local/share/mait-code/source/config/CLAUDE.md
+# (or your clone's config/CLAUDE.md for a development install)
 
 # Check data directory
 ls ~/.claude/mait-code-data/
@@ -180,7 +188,7 @@ mc-tool-memory stats
 
 # Check skills are symlinked
 ls -la ~/.claude/skills/recall/
-# Should point to → /path/to/mait-code/skills/recall
+# Should point to → ~/.local/share/mait-code/source/skills/recall
 
 # Start Claude Code — companion context should load
 claude
@@ -221,10 +229,12 @@ either way.
 
 ## Troubleshooting
 
-**Start here:** `mait-code doctor --fix`. It runs 14 checks covering symlinks,
-hook registration, hooks-on-PATH, the data directory, memory health, embeddings,
-vector search, the observe pipeline, the Bridge, and settings values — and
-repairs the three it safely can. `mait-code logs` (or
+**Start here:** `mait-code doctor --fix`. It runs 16 checks covering the install
+record and source clone, the settings file and its values, the `[env]` table,
+hook registration, hooks-on-PATH, symlinks, the data directory, the embedding
+record, memory embeddings, vector search, the observe pipeline, the Bridge, the
+companion mod and `uv` — and repairs the four it safely can. `--llm` adds a
+seventeenth that makes one real nested model call. `mait-code logs` (or
 `$XDG_STATE_HOME/mait-code/mait-code.jsonl`) shows what actually happened.
 
 If a specific symptom persists:

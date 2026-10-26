@@ -131,7 +131,7 @@ curl -fsSL https://raw.githubusercontent.com/wiktordepina/mait-code/main/scripts
 ```
 
 This installs [uv](https://docs.astral.sh/uv/) if you don't have it, installs the latest
-release and wires everything into `~/.claude/`. Running it again upgrades in place. Then make
+release and wires everything into `~/.claude/`. Upgrade later with `mait-code update`. Then make
 the companion yours:
 
 ```bash

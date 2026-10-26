@@ -341,6 +341,10 @@ here. Members sort by what can move: **ready** (`●`) first, then In Progress
 and In Review, then anything held up (`◼`, with what it's waiting on), then the
 rest of Refined and Backlog, Done last. Archived members are left out.
 
+![The Initiatives view: open epics with their progress on the left, the
+highlighted epic's members from every project on the right, ready first and
+blocked members marked.](assets/board/initiatives.png)
+
 | Key | Action |
 |-----|--------|
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Move through the epics or members |
@@ -361,6 +365,10 @@ member links to appear as dimmed stubs labelled with their project. Members
 with no links aren't drawn — a line under the diagram counts them — and a
 diagram taller or wider than the pane scrolls. It's read-only: open cards from
 the table.
+
+![The dependency diagram: blockers drawn above the cards they hold up, ready
+work in green, blocked in red, an out-of-epic stub dimmed with its
+project.](assets/board/initiatives-diagram.png)
 
 ### Card detail screen
 
@@ -408,7 +416,7 @@ can call directly. The same store backs both.
 
 ```bash
 # View
-mc-tool-board list [--all] [--status STATUS] [--archived] [--search TEXT] [--mine | --session ID] [--epic ID] [--ready] [--json]
+mc-tool-board list [--all] [--status STATUS] [--archived] [--search/-q TEXT] [--mine | --session ID] [--epic ID] [--ready] [--json]
 mc-tool-board show ID [--json]
 mc-tool-board summary [--all] [--project PROJECT] [--json [--session ID]]   # --session adds bound/in-review cards + inbox count
 
