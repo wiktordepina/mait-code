@@ -2352,6 +2352,8 @@ nothing in the background. The bar refreshes at these points only:</p>
 <ul>
 <li>when a session starts</li>
 <li>after each of your turns (not after each subagent's)</li>
+<li>as a board command Claude runs mid-turn returns (any <code>mc-tool-board</code>
+  call, not a subagent's), so a card it claims shows straight away</li>
 <li>after a <code>/capture</code></li>
 <li>whenever Claude Code reports new context or rate-limit figures (those
   segments only; compactions included)</li>
