@@ -915,6 +915,41 @@ class TestLiveRefresh:
         assert status == DONE
         assert summary == "shipped it"
 
+    def test_open_card_view_refreshes_on_an_outside_run_step(
+        self, board_path: Path
+    ) -> None:
+        # A playbook drives the run from the CLI while the card is open here.
+        ids = _seed(board_path, [{"title": "card", "status": REFINED}])
+        seed = get_connection(board_path)
+        try:
+            service.start_run(seed, ids["card"], "work", ["Refine", "Build"])
+        finally:
+            seed.close()
+
+        async def scenario():
+            app = BoardApp(db_path=board_path)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                app._focus_status(REFINED)
+                await pilot.press("enter")
+                await pilot.pause()
+                screen = app.screen
+                assert isinstance(screen, CardScreen)
+                other = get_connection(board_path)
+                try:
+                    service.set_step(other, ids["card"], "1", "in_progress")
+                finally:
+                    other.close()
+                await app._poll_external_changes()
+                await pilot.pause()
+                run_text = str(screen.query_one(".run", Static).render())
+                return screen._card["run"]["current"], run_text
+
+        current, run_text = _run(scenario)
+        assert current == 1
+        assert "Refine  in progress" in run_text
+        assert "← current" in run_text
+
     def test_edit_mode_is_not_clobbered_by_refresh(self, board_path: Path) -> None:
         # A refresh must never discard an in-progress edit.
         ids = _seed(board_path, [{"title": "card", "status": REFINED}])

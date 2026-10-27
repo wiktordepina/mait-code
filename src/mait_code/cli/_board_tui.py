@@ -534,6 +534,11 @@ class CardScreen(ModalScreen[None]):
             widgets.append(Static("Relationships", classes="section-head"))
             widgets.append(Rule())
             widgets.append(Static(relations, classes="relations"))
+        run = card.get("run")
+        if run:
+            widgets.append(Static("Run", classes="section-head"))
+            widgets.append(Rule())
+            widgets.append(Static(self._run_text(run), classes="run"))
         references = card.get("references", [])
         if references:
             widgets.append(
@@ -979,6 +984,40 @@ class CardScreen(ModalScreen[None]):
         for label, value in rows:
             grid.add_row(label, value)
         return grid
+
+    #: A step's status as one glyph, so the steps read down a single column.
+    _STEP_GLYPHS = {
+        "pending": "○",
+        "in_progress": "▶",
+        "done": "✓",
+        "skipped": "↷",
+        "paused": "‖",
+    }
+
+    @classmethod
+    def _run_text(cls, run: dict) -> Text:
+        """The open playbook run: its playbook and start, then one line per step.
+
+        Each step shows its glyph, position, name and status; a skip or pause
+        reason follows dimmed. The current step is bold; finished and pending
+        ones are dimmed so the eye lands on it.
+        """
+        text = Text(f"{run['playbook']}", style="bold")
+        started = run["started_at"][:16].replace("T", " ")
+        text.append(f"  ·  started {started}", style="dim")
+        for step in run["steps"]:
+            current = step["position"] == run["current"]
+            style = "bold" if current else ("" if step["status"] == "paused" else "dim")
+            text.append("\n")
+            text.append(f"{cls._STEP_GLYPHS.get(step['status'], '?')} ", style=style)
+            text.append(f"{step['position']}. ", style="dim")
+            text.append(step["name"], style=style)
+            text.append(f"  {step['status'].replace('_', ' ')}", style="dim")
+            if step["reason"]:
+                text.append(f" — {step['reason']}", style="dim")
+            if current:
+                text.append("  ← current", style="bold")
+        return text
 
     @staticmethod
     def _reference_line(position: int, ref: dict) -> Text:

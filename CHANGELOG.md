@@ -10,6 +10,20 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Added
+
+- **Playbook runs on board cards.** A card can now record where it is in a
+  playbook's run: `mc-tool-board run start N --playbook work --steps …` writes
+  the steps, `run step` sets each to pending, in progress, done, skipped (with
+  a reason, which is also added as a comment) or paused, and `run end` closes
+  the run. Completing, archiving or promoting the card ends it too. The open
+  run shows in `show`, the board TUI's card screen, exports, `--json` output,
+  the remote API and each bound card in `summary --json --session`, with the
+  current step marked. Old runs are kept.
+- **Board schema v7.** The remote API checks the schema version exactly, so a
+  host such as maitre-d needs upgrading to this release at the same time. Card
+  dicts now carry a `run` key, which a host may pass straight through.
+
 ### Changed
 
 - **A session can be bound to a card in any open column.** A binding now

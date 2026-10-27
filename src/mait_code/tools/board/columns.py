@@ -59,6 +59,22 @@ LABELS: dict[str, str] = {
 }
 
 
+#: A playbook run's step statuses (``card_run_steps.status``). Step names come
+#: from the playbook; the board only records where each one stands.
+STEP_PENDING = "pending"
+STEP_IN_PROGRESS = "in_progress"
+STEP_DONE = "done"
+STEP_SKIPPED = "skipped"
+STEP_PAUSED = "paused"
+STEP_STATUSES: tuple[str, ...] = (
+    STEP_PENDING,
+    STEP_IN_PROGRESS,
+    STEP_DONE,
+    STEP_SKIPPED,
+    STEP_PAUSED,
+)
+
+
 def is_valid_status(status: str) -> bool:
     """Return True if ``status`` is one of the fixed columns."""
     return status in ALL_STATUSES
@@ -87,6 +103,12 @@ __all__ = [
     "LINK_TYPES",
     "ORIGIN_LABEL",
     "REFINED",
+    "STEP_DONE",
+    "STEP_IN_PROGRESS",
+    "STEP_PAUSED",
+    "STEP_PENDING",
+    "STEP_SKIPPED",
+    "STEP_STATUSES",
     "is_valid_status",
     "label",
 ]

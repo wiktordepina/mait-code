@@ -1,7 +1,7 @@
 ---
 name: board
 description: View and drive the project kanban board. Use when the user mentions the board, asks to pick up / refine / move / complete a card, asks what's on the board, or wants to add a card to the board.
-allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*), Bash(mc-tool-board bind:*), Bash(mc-tool-board unbind:*), Bash(mc-tool-board link:*), Bash(mc-tool-board unlink:*), Bash(mc-tool-board epic:*)
+allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*), Bash(mc-tool-board bind:*), Bash(mc-tool-board unbind:*), Bash(mc-tool-board link:*), Bash(mc-tool-board unlink:*), Bash(mc-tool-board epic:*), Bash(mc-tool-board run:*)
 ---
 
 # /board
@@ -76,7 +76,16 @@ The **description**, **acceptance criteria** and **completion summary** fields r
 - Comment: `mc-tool-board comment N "<note>" [--author claude]`.
 - References (label→value links on a card): `mc-tool-board ref add N <label> <value>` — *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
 - Show one card with its comments and references: `mc-tool-board show N`.
-- Every mutating subcommand (`add`, `move`, `refine`, `review`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `bind`/`unbind`, `comment`, `edit`, `remove`, `link`/`unlink`, `epic promote`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape — e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.
+- Every mutating subcommand (`add`, `move`, `refine`, `review`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `bind`/`unbind`, `comment`, `edit`, `remove`, `link`/`unlink`, `epic promote`, `run start`/`run step`/`run end`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape — e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.
+
+### Playbook runs
+
+A playbook skill records where a card is in its run; you only drive these when a playbook asks, or the user does.
+
+- `mc-tool-board run start N --playbook <name> --steps "A" "B" …` writes the steps, all pending. Refused while the card has an open run, unless `--replace` (which ends it first) — check `run show N` before replacing.
+- `mc-tool-board run step N <position|name> <pending|in_progress|done|skipped|paused> [--reason …]`. A skip needs `--reason` and the board adds the card comment itself — don't post another. Only one step can be in progress.
+- `mc-tool-board run end N` once the playbook has reported on the run; nothing ends it automatically except completing, archiving or promoting the card.
+- `mc-tool-board run show N [--json]` for the open run; `show` includes it too.
 
 ### Viewing
 

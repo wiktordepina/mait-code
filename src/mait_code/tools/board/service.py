@@ -8,8 +8,8 @@ TUI holds a single connection for the app's lifetime.
 
 Rows are returned as the same dicts the CLI has always produced (see
 :func:`_card_dict`), each carrying its ``tags``, ``references``, active
-Claude Code ``sessions`` and relationships (``parent``, ``blocked_by``,
-``blocks``, ``waiting_on``, ``archived_blockers``).
+Claude Code ``sessions``, relationships (``parent``, ``blocked_by``,
+``blocks``, ``waiting_on``, ``archived_blockers``) and open playbook ``run``.
 
 The *session-invariant*: a card entering ``in_review``, ``done`` or
 ``archived``, or promoted to an epic, releases every session binding,
@@ -44,6 +44,11 @@ from mait_code.tools.board.columns import (
     LINK_TYPES,
     ORIGIN_LABEL,
     REFINED,
+    STEP_IN_PROGRESS,
+    STEP_PAUSED,
+    STEP_PENDING,
+    STEP_SKIPPED,
+    STEP_STATUSES,
 )
 from mait_code.tools.board.sessions import SessionRef, pid_alive
 
@@ -54,6 +59,7 @@ __all__ = [
     "InheritedEpicClosed",
     "LinkCycle",
     "RelationError",
+    "RunRefused",
     "add_card",
     "add_comment",
     "add_link",
@@ -66,11 +72,13 @@ __all__ = [
     "complete_card",
     "dependency_graph",
     "edit_card",
+    "end_run",
     "epic_members",
     "epic_without_open_members",
     "get_card",
     "get_comments",
     "get_epic",
+    "get_run",
     "list_cards",
     "list_epics",
     "list_projects",
@@ -90,7 +98,9 @@ __all__ = [
     "review_card",
     "set_parent",
     "set_references",
+    "set_step",
     "set_tags",
+    "start_run",
     "summary_counts",
     "unbind_session",
     "unblock_card",
@@ -133,6 +143,16 @@ class CardNotFound(Exception):
     def __init__(self, card_id: int) -> None:
         super().__init__(f"card #{card_id} not found")
         self.card_id = card_id
+
+
+class RunRefused(ValueError):
+    """A playbook run change the board refuses; the message names the card.
+
+    Raised for starting a run on an epic, a closed card or one with an open
+    run (without ``replace``), a step list it can't address, an unknown step,
+    a change with no open run, a second step in progress, or a reason given
+    or missing where the step rules say otherwise.
+    """
 
 
 class CardClosed(Exception):
@@ -392,11 +412,79 @@ def _ready_clause() -> tuple[str, list]:
 
 
 def _attach(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
-    """Attach tags, references, active sessions and relationships to each card."""
-    return _attach_links(
+    """Attach tags, references, sessions, relationships and the open run."""
+    return _attach_runs(
         conn,
-        _attach_sessions(conn, _attach_references(conn, _attach_tags(conn, cards))),
+        _attach_links(
+            conn,
+            _attach_sessions(conn, _attach_references(conn, _attach_tags(conn, cards))),
+        ),
     )
+
+
+def _current_step(steps: list[dict]) -> int | None:
+    """The step in progress, else the lowest-numbered paused one, else none."""
+    for wanted in (STEP_IN_PROGRESS, STEP_PAUSED):
+        for step in steps:
+            if step["status"] == wanted:
+                return step["position"]
+    return None
+
+
+def _attach_runs(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
+    """Populate each card dict's ``run`` key with its open run, or ``None``.
+
+    A run is ``{"id", "playbook", "started_at", "updated_at", "ended_at",
+    "current", "steps"}``, its steps ``{"position", "name", "status",
+    "reason", "started_at", "finished_at"}`` in order. Two queries for the
+    whole list (runs, then their steps), whatever its length.
+    """
+    if not cards:
+        return cards
+    ids = [c["id"] for c in cards]
+    placeholders = ", ".join("?" for _ in ids)
+    runs = conn.execute(
+        f"SELECT id, card_id, playbook, started_at, updated_at, ended_at "
+        f"FROM card_runs WHERE ended_at IS NULL AND card_id IN ({placeholders})",
+        ids,
+    ).fetchall()
+    by_card: dict[int, dict] = {}
+    by_run: dict[int, dict] = {}
+    for run_id, card_id, playbook, started_at, updated_at, ended_at in runs:
+        run = {
+            "id": run_id,
+            "playbook": playbook,
+            "started_at": started_at,
+            "updated_at": updated_at,
+            "ended_at": ended_at,
+            "current": None,
+            "steps": [],
+        }
+        by_card[card_id] = by_run[run_id] = run
+    if by_run:
+        run_ids = list(by_run)
+        rows = conn.execute(
+            f"SELECT run_id, position, name, status, reason, started_at, "
+            f"finished_at FROM card_run_steps WHERE run_id IN "
+            f"({', '.join('?' for _ in run_ids)}) ORDER BY run_id, position",
+            run_ids,
+        ).fetchall()
+        for run_id, position, name, status, reason, started, finished in rows:
+            by_run[run_id]["steps"].append(
+                {
+                    "position": position,
+                    "name": name,
+                    "status": status,
+                    "reason": reason,
+                    "started_at": started,
+                    "finished_at": finished,
+                }
+            )
+        for run in by_run.values():
+            run["current"] = _current_step(run["steps"])
+    for card in cards:
+        card["run"] = by_card.get(card["id"])
+    return cards
 
 
 # --- Queries ---
@@ -765,9 +853,16 @@ def _on_close(conn: sqlite3.Connection, card_id: int) -> None:
 
     Closing is entering ``done`` or ``archived`` by any verb, or promotion to an
     epic. Each such path calls this, so a new consequence of closing goes here
-    once rather than into every verb.
+    once rather than into every verb: the card's sessions are released and its
+    open playbook run is ended.
     """
     _release_sessions(conn, card_id)
+    now = _now()
+    conn.execute(
+        "UPDATE card_runs SET ended_at = ?, updated_at = ? "
+        "WHERE card_id = ? AND ended_at IS NULL",
+        (now, now, card_id),
+    )
 
 
 def bind_session(conn: sqlite3.Connection, card_id: int, session: SessionRef) -> None:
@@ -871,6 +966,235 @@ def prune_stale_bindings(conn: sqlite3.Connection, *, older_than: timedelta) -> 
     )
     conn.commit()
     return len(stale)
+
+
+# --- Playbook runs ---
+
+
+def get_run(conn: sqlite3.Connection, card_id: int) -> dict | None:
+    """Return a card's open playbook run (see :func:`_attach_runs`), or ``None``.
+
+    Raises :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    return _attach_runs(conn, [{"id": card_id}])[0]["run"]
+
+
+def _check_steps(card_id: int, steps: list[str]) -> list[str]:
+    """Refuse a step list that positions or names couldn't address."""
+    names = [name.strip() for name in steps]
+    if not names:
+        raise RunRefused(f"card #{card_id}: a run needs at least one step")
+    seen: set[str] = set()
+    for position, name in enumerate(names, 1):
+        if not name:
+            raise RunRefused(f"card #{card_id}: step {position} has no name")
+        if name.isdecimal():
+            # A digit name would read as a position in ``run step``.
+            raise RunRefused(
+                f"card #{card_id}: step name {name!r} is all digits; "
+                f"it would be read as a position"
+            )
+        if name in seen:
+            raise RunRefused(f"card #{card_id}: step name {name!r} appears twice")
+        seen.add(name)
+    return names
+
+
+def _open_run_id(conn: sqlite3.Connection, card_id: int) -> int | None:
+    row = conn.execute(
+        "SELECT id FROM card_runs WHERE card_id = ? AND ended_at IS NULL",
+        (card_id,),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def _touch_run(conn: sqlite3.Connection, card_id: int, run_id: int, now: str) -> None:
+    """Bump the run's and the card's ``updated_at`` (uncommitted)."""
+    conn.execute("UPDATE card_runs SET updated_at = ? WHERE id = ?", (now, run_id))
+    conn.execute("UPDATE cards SET updated_at = ? WHERE id = ?", (now, card_id))
+
+
+def start_run(
+    conn: sqlite3.Connection,
+    card_id: int,
+    playbook: str,
+    steps: list[str],
+    *,
+    replace: bool = False,
+) -> None:
+    """Start a playbook run on a card: its ordered *steps*, all ``pending``.
+
+    Step names come from the playbook, not the schema. With *replace*, an open
+    run is ended first; without it, an open run is refused, so a second
+    playbook (or a resumed session that didn't look) can't drop one that is
+    half done. Ended runs are kept as history.
+
+    Raises :class:`CardNotFound` for an unknown id, and :class:`RunRefused` for
+    an epic, a ``done`` or ``archived`` card, an open run without *replace*,
+    an empty *playbook*, or a step list that is empty or has an empty,
+    all-digit or repeated name.
+    """
+    playbook = playbook.strip()
+    with _write_lock(conn):
+        row = _require_row(conn, card_id)
+        if row[_KIND] == EPIC:
+            raise RunRefused(f"card #{card_id} is an epic; run its member cards")
+        if row[_STATUS] in _SETTLED:
+            raise RunRefused(f"card #{card_id} is {row[_STATUS]}; only open cards run")
+        if not playbook:
+            raise RunRefused(f"card #{card_id}: a run needs a playbook name")
+        names = _check_steps(card_id, steps)
+        now = _now()
+        open_run = _open_run_id(conn, card_id)
+        if open_run is not None:
+            if not replace:
+                raise RunRefused(
+                    f"card #{card_id} already has an open run; "
+                    f"end it or start again with replace"
+                )
+            conn.execute(
+                "UPDATE card_runs SET ended_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, open_run),
+            )
+        run_id = conn.execute(
+            "INSERT INTO card_runs (card_id, playbook, started_at, updated_at) "
+            "VALUES (?, ?, ?, ?)",
+            (card_id, playbook, now, now),
+        ).lastrowid
+        conn.executemany(
+            "INSERT INTO card_run_steps (run_id, position, name) VALUES (?, ?, ?)",
+            [(run_id, position, name) for position, name in enumerate(names, 1)],
+        )
+        conn.execute("UPDATE cards SET updated_at = ? WHERE id = ?", (now, card_id))
+
+
+def _resolve_step(
+    conn: sqlite3.Connection, card_id: int, run_id: int, step: str
+) -> tuple:
+    """The step row named by a 1-based position or an exact, case-sensitive name."""
+    step = step.strip()
+    cols = "position, name, status, reason, started_at, finished_at"
+    if step.isdecimal():
+        row = conn.execute(
+            f"SELECT {cols} FROM card_run_steps WHERE run_id = ? AND position = ?",
+            (run_id, int(step)),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            f"SELECT {cols} FROM card_run_steps WHERE run_id = ? AND name = ?",
+            (run_id, step),
+        ).fetchone()
+    if row is None:
+        raise RunRefused(f"card #{card_id}: the open run has no step {step!r}")
+    return row
+
+
+def set_step(
+    conn: sqlite3.Connection,
+    card_id: int,
+    step: str,
+    status: str,
+    *,
+    reason: str | None = None,
+) -> tuple[int, str]:
+    """Set one step of a card's open run to *status*; return its position and name.
+
+    *step* is a 1-based position or the exact step name. Any status may follow
+    any other, so a done step can be redone. The step's fields follow:
+
+    - ``pending`` resets it: timestamps and reason cleared.
+    - ``in_progress`` from ``paused`` resumes it, keeping ``started_at``; from
+      anything else it is a new attempt with a fresh ``started_at``. Only one
+      step may be in progress; setting the one already in progress again
+      changes nothing.
+    - ``paused`` sets ``started_at`` if it is empty; a *reason* is optional.
+    - ``done`` and ``skipped`` set ``finished_at``; ``skipped`` needs a
+      *reason*, and adds a card comment saying so in the same transaction.
+    - Leaving ``done`` or ``skipped`` clears ``finished_at``; leaving
+      ``skipped`` or ``paused`` clears the reason.
+
+    Every change bumps the run's and the card's ``updated_at``. A run never
+    ends on its own when its steps finish; see :func:`end_run`.
+
+    Raises :class:`CardNotFound` for an unknown id, :class:`ValueError` for a
+    status outside :data:`STEP_STATUSES`, and :class:`RunRefused` for a card
+    with no open run, an unknown step, a second step in progress, a skip with
+    no reason, or a reason on a status that takes none.
+    """
+    if status not in STEP_STATUSES:
+        raise ValueError(f"unknown step status {status!r}")
+    reason = reason.strip() if reason else None
+    with _write_lock(conn):
+        _require_row(conn, card_id)
+        if status == STEP_SKIPPED and not reason:
+            raise RunRefused(f"card #{card_id}: skipping a step needs a reason")
+        if reason and status not in (STEP_SKIPPED, STEP_PAUSED):
+            raise RunRefused(
+                f"card #{card_id}: a reason goes with skipped or paused, not {status}"
+            )
+        run_id = _open_run_id(conn, card_id)
+        if run_id is None:
+            raise RunRefused(f"card #{card_id} has no open run")
+        position, name, old, _reason, started, finished = _resolve_step(
+            conn, card_id, run_id, step
+        )
+        which = f"step {position} ({name})"
+        if status == STEP_IN_PROGRESS:
+            if old == STEP_IN_PROGRESS:
+                return position, name
+            busy = conn.execute(
+                "SELECT position, name FROM card_run_steps "
+                "WHERE run_id = ? AND status = ?",
+                (run_id, STEP_IN_PROGRESS),
+            ).fetchone()
+            if busy is not None:
+                raise RunRefused(
+                    f"card #{card_id}: step {busy[0]} ({busy[1]}) is already in "
+                    f"progress; finish, pause or reset it before starting {which}"
+                )
+        now = _now()
+        if status == STEP_PENDING:
+            started = finished = None
+        elif status == STEP_IN_PROGRESS:
+            started = started if (old == STEP_PAUSED and started) else now
+            finished = None
+        elif status == STEP_PAUSED:
+            started = started or now
+            finished = None
+        else:  # done or skipped
+            finished = now
+        conn.execute(
+            "UPDATE card_run_steps SET status = ?, reason = ?, started_at = ?, "
+            "finished_at = ? WHERE run_id = ? AND position = ?",
+            (status, reason, started, finished, run_id, position),
+        )
+        if status == STEP_SKIPPED:
+            # Inline, not add_comment: that commits on its own, mid-transaction.
+            conn.execute(
+                "INSERT INTO card_comments (card_id, author, body, created_at) "
+                "VALUES (?, ?, ?, ?)",
+                (card_id, "claude", f"Skipped {which}: {reason}", now),
+            )
+        _touch_run(conn, card_id, run_id, now)
+    return position, name
+
+
+def end_run(conn: sqlite3.Connection, card_id: int) -> None:
+    """End a card's open run, keeping it as history.
+
+    The playbook calls this once it has reported on the run; closing the card
+    ends it too (see :func:`_on_close`). Raises :class:`CardNotFound` for an
+    unknown id and :class:`RunRefused` if the card has no open run.
+    """
+    with _write_lock(conn):
+        _require_row(conn, card_id)
+        run_id = _open_run_id(conn, card_id)
+        if run_id is None:
+            raise RunRefused(f"card #{card_id} has no open run")
+        now = _now()
+        conn.execute("UPDATE card_runs SET ended_at = ? WHERE id = ?", (now, run_id))
+        _touch_run(conn, card_id, run_id, now)
 
 
 # --- Mutations ---
