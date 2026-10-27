@@ -79,7 +79,9 @@ def _bucket(card: dict, ready: set[int]) -> int:
 
     Ready first (what can be picked up now); then work in flight; then
     anything held up — waiting on a blocker or tagged ``blocked``, in any open
-    column; then the remaining refined and backlog cards; done last.
+    column; then the remaining refined and backlog cards, including a refined
+    card that a live session is bound to (it isn't free to pick up); done
+    last.
     """
     if card["id"] in ready:
         return _BUCKETS.index("ready")

@@ -430,6 +430,30 @@ def test_rebind_pid_never_duplicates_a_binding(board_db):
     assert _rows(board_db) == [(cid, "new", os.getpid())]
 
 
+def test_a_resume_renews_the_binding_age(board_db, dead_pid):
+    """Pruning counts from the last resume, not from the original bind."""
+    cid = _card(board_db)
+    service.bind_session(board_db, cid, SessionRef("long-running", dead_pid))
+    board_db.execute("UPDATE card_sessions SET bound_at = '2026-01-01T00:00:00+00:00'")
+    board_db.commit()
+
+    service.refresh_session_pid(board_db, "long-running", os.getpid())
+    service.refresh_session_pid(board_db, "long-running", dead_pid)
+    assert service.prune_stale_bindings(board_db, older_than=timedelta(days=14)) == 0
+    assert _rows(board_db) == [(cid, "long-running", dead_pid)]
+
+
+def test_a_clear_renews_the_binding_age(board_db):
+    cid = _card(board_db)
+    service.bind_session(board_db, cid, SessionRef("before", os.getpid()))
+    board_db.execute("UPDATE card_sessions SET bound_at = '2026-01-01T00:00:00+00:00'")
+    board_db.commit()
+
+    service.rebind_pid(board_db, os.getpid(), "after")
+    [(bound_at,)] = board_db.execute("SELECT bound_at FROM card_sessions").fetchall()
+    assert bound_at > "2026-01-02"
+
+
 # --- CLI ---
 
 

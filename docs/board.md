@@ -179,8 +179,8 @@ refining a card is bound to it as much as one building it.
   session, and only counts while that process is alive, so a closed session
   drops out without any clean-up. A resumed session keeps its binding, and so
   does a `/clear`: the session-start hook moves the binding to the new session.
-  A closed session's binding is kept for two weeks in case it's resumed, then
-  removed at the next session start.
+  A closed session's binding is kept for two weeks after it was last bound or
+  resumed, in case it's resumed again, then removed at the next session start.
 - **"The card I'm on"** is `mc-tool-board list --mine`, across every project. `show` lists a card's
   sessions, and each session's start-up context names its cards.
 

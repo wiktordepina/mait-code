@@ -69,9 +69,13 @@ def pid_alive(pid: int) -> bool:
     """Return whether a process with *pid* currently exists.
 
     Signal 0 checks existence without delivering anything. A process owned by
-    another user answers ``PermissionError``, which still means it exists. A
-    recycled pid reads as alive; that is accepted, as bindings are also
-    released whenever their card leaves In Progress.
+    another user answers ``PermissionError``, which still means it exists.
+
+    A recycled pid reads as alive. Bindings outlive moves between open
+    columns, so a false-live binding can hide a refined card from other
+    sessions' ``next``; that is accepted, as it needs the pid reused while the
+    binding is under two weeks old (older dead ones are pruned at session
+    start), and ``unbind`` clears it.
     """
     if pid <= 0:
         return False

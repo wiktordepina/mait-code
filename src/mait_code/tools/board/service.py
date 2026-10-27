@@ -9,11 +9,15 @@ TUI holds a single connection for the app's lifetime.
 Rows are returned as the same dicts the CLI has always produced (see
 :func:`_card_dict`), each carrying its ``tags``, ``references``, active
 Claude Code ``sessions`` and relationships (``parent``, ``blocked_by``,
-``blocks``, ``waiting_on``, ``archived_blockers``). The *session-invariant*: a card entering
-``in_review``, ``done`` or ``archived``, or promoted to an epic, releases every session binding,
-whichever verb moves it; moves between the other open columns keep them. Mutations raise :class:`CardNotFound` for a missing id
-rather than printing and exiting — that ``print``/``sys.exit`` is a CLI concern
-the caller layers on top (the CLI exits; the TUI flashes a notification).
+``blocks``, ``waiting_on``, ``archived_blockers``).
+
+The *session-invariant*: a card entering ``in_review``, ``done`` or
+``archived``, or promoted to an epic, releases every session binding,
+whichever verb moves it; moves between the other open columns keep them.
+
+Mutations raise :class:`CardNotFound` for a missing id rather than printing
+and exiting — that ``print``/``sys.exit`` is a CLI concern the caller layers
+on top (the CLI exits; the TUI flashes a notification).
 """
 
 from __future__ import annotations
@@ -808,11 +812,14 @@ def card_sessions(conn: sqlite3.Connection, card_id: int) -> list[dict]:
 def refresh_session_pid(conn: sqlite3.Connection, session_id: str, pid: int) -> int:
     """Point every binding of *session_id* at *pid*; return how many changed.
 
-    For a resumed session: same id, new Claude Code process.
+    For a resumed session: same id, new Claude Code process. Each binding's
+    ``bound_at`` is renewed too, so :func:`prune_stale_bindings` counts from
+    the resume rather than from the original bind.
     """
     changed = conn.execute(
-        "UPDATE card_sessions SET pid = ? WHERE session_id = ? AND pid != ?",
-        (pid, session_id, pid),
+        "UPDATE card_sessions SET pid = ?, bound_at = ? "
+        "WHERE session_id = ? AND pid != ?",
+        (pid, _now(), session_id, pid),
     ).rowcount
     conn.commit()
     return changed
@@ -823,12 +830,13 @@ def rebind_pid(conn: sqlite3.Connection, pid: int, session_id: str) -> int:
 
     For a ``/clear``: the process carries on under a new session id, and its
     cards should follow. A card already bound to *session_id* keeps that one
-    binding (the old one is dropped rather than duplicated).
+    binding (the old one is dropped rather than duplicated). A moved binding's
+    ``bound_at`` is renewed, as on a resume.
     """
     moved = conn.execute(
-        "UPDATE OR IGNORE card_sessions SET session_id = ? "
+        "UPDATE OR IGNORE card_sessions SET session_id = ?, bound_at = ? "
         "WHERE pid = ? AND session_id != ?",
-        (session_id, pid, session_id),
+        (session_id, _now(), pid, session_id),
     ).rowcount
     conn.execute(
         "DELETE FROM card_sessions WHERE pid = ? AND session_id != ?",
@@ -839,12 +847,15 @@ def rebind_pid(conn: sqlite3.Connection, pid: int, session_id: str) -> int:
 
 
 def prune_stale_bindings(conn: sqlite3.Connection, *, older_than: timedelta) -> int:
-    """Delete bindings whose process has gone and that are older than *older_than*.
+    """Delete dead bindings last bound or resumed more than *older_than* ago.
 
     A dead binding is kept so a resume can bring it back (see
     :func:`refresh_session_pid`), but on a card that stays open for weeks it
     would otherwise linger, and a recycled pid could make it read as live
-    again. Live bindings are never touched, whatever their age. Returns how
+    again. Age is counted from ``bound_at``, which a bind, a resume and a
+    ``/clear`` all renew; nothing records when a process dies, so a session
+    that ran for longer than *older_than* without either is pruned as soon as
+    it ends. Live bindings are never touched, whatever their age. Returns how
     many were deleted.
     """
     cutoff = (datetime.now(timezone.utc) - older_than).isoformat()
@@ -1056,9 +1067,9 @@ def review_card(
     """Move a card to ``in_review``, recording *pr* as a ``PR`` reference.
 
     The card is parked between ``in_progress`` and ``done`` until its pull
-    request merges, and its session bindings are released. Re-reviewing with a PR the card already carries (e.g.
-    after a re-push) doesn't duplicate the reference. Raises
-    :class:`CardNotFound` if the id is unknown.
+    request merges, and its session bindings are released. Re-reviewing with
+    a PR the card already carries (e.g. after a re-push) doesn't duplicate the
+    reference. Raises :class:`CardNotFound` if the id is unknown.
     """
     move_card(conn, card_id, IN_REVIEW)
     if pr and {"label": "PR", "value": pr} not in list_references(conn, card_id):

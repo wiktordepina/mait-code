@@ -10,7 +10,8 @@ from mait_code.logging import log_invocation, setup_logging
 
 logger = logging.getLogger(__name__)
 
-#: How long a dead session's card binding is kept for a resume to bring back.
+#: How long a dead session's card binding is kept, counted from when it was
+#: last bound or resumed, for a resume to bring back.
 STALE_BINDING_AGE = timedelta(days=14)
 
 
@@ -60,7 +61,7 @@ def _sync_session_bindings(event: dict) -> None:
 
 
 def _prune_session_bindings() -> None:
-    """Drop card bindings whose session died more than two weeks ago.
+    """Drop dead card bindings last bound or resumed over two weeks ago.
 
     Bindings now outlive moves between open columns, so nothing else clears a
     dead one off a card that stays open. Best-effort, like the sync above.

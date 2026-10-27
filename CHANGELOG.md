@@ -23,8 +23,8 @@ don't change the public surface. Everything is still in flux.
 - **`next` and `list --ready` skip a card another session is working on**, so
   a parallel session can't claim a card someone else is refining.
 - **Old bindings are cleaned up.** A closed session's binding is kept for two
-  weeks so a resume can bring it back, then removed at the next session
-  start.
+  weeks after it was last bound or resumed, so a resume can bring it back,
+  then removed at the next session start.
 - **`NotInProgress` is now `CardClosed`** in the board's Python API, raised
   when binding a Done or Archived card.
 
