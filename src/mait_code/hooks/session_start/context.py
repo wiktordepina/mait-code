@@ -59,12 +59,11 @@ def session_section(session_id: str) -> str:
     working a card (a quick check, a debugging detour) stays quiet.
     """
     from mait_code.tools.board import service
-    from mait_code.tools.board.columns import IN_PROGRESS
     from mait_code.tools.board.db import get_connection
 
     conn = get_connection()
     try:
-        cards = service.list_cards(conn, statuses=[IN_PROGRESS], session=session_id)
+        cards = service.list_cards(conn, session=session_id)
     finally:
         conn.close()
 

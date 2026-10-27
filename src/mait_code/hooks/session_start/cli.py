@@ -3,11 +3,15 @@
 import json
 import logging
 import sys
+from datetime import timedelta
 
 from mait_code.hooks.session_start.context import build_session_context
 from mait_code.logging import log_invocation, setup_logging
 
 logger = logging.getLogger(__name__)
+
+#: How long a dead session's card binding is kept for a resume to bring back.
+STALE_BINDING_AGE = timedelta(days=14)
 
 
 def _drain_bridge() -> None:
@@ -55,6 +59,22 @@ def _sync_session_bindings(event: dict) -> None:
         logger.exception("session start: card binding sync failed")
 
 
+def _prune_session_bindings() -> None:
+    """Drop card bindings whose session died more than two weeks ago.
+
+    Bindings now outlive moves between open columns, so nothing else clears a
+    dead one off a card that stays open. Best-effort, like the sync above.
+    """
+    try:
+        from mait_code.tools.board import service
+        from mait_code.tools.board.db import connection
+
+        with connection() as conn:
+            service.prune_stale_bindings(conn, older_than=STALE_BINDING_AGE)
+    except Exception:
+        logger.exception("session start: card binding prune failed")
+
+
 @log_invocation(name="mc-hook-session-start")
 def main():
     """Read session start event from stdin and output companion context."""
@@ -63,6 +83,7 @@ def main():
 
     _drain_bridge()
     _sync_session_bindings(event)
+    _prune_session_bindings()
 
     context = build_session_context(session_id=event.get("session_id"))
     if context:

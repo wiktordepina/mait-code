@@ -362,10 +362,10 @@ Primary key on `(from_id, type, to_id)`; a card cannot link to itself, and the s
 **Relationships.** Two cross-project relationships sit on top of the columns (see [Epics and dependencies](board.md#epics-and-dependencies)):
 
 - **Epics** — a `kind = 'epic'` card is an umbrella over member cards (their `parent_id`). Epics carry the reserved project `@epic`, so they stay off the kanban, the counts and `next`; one level only, at most one epic per card.
-- **`blocks` links** — `link A blocks B` records that B can't start until A is done. `next` hands out only **ready** cards: refined, not an epic, not tagged `blocked`, and not waiting on a blocker that is neither done nor archived.
+- **`blocks` links** — `link A blocks B` records that B can't start until A is done. `next` hands out only **ready** cards: refined, not an epic, not tagged `blocked`, not waiting on a blocker that is neither done nor archived, and not bound to a live session other than the caller's.
 - **Origin** — `add --from N` records where a split-off or follow-up card came from as a `from` → `#N` reference (provenance, never ordering) and inherits N's epic unless `--parent` says otherwise.
 
-**Session binding.** `card_sessions` ties In Progress cards to the Claude Code sessions working them. `sessions.py` is the only reader of `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`, so the service layer stays environment-free; the session-start hook names a session's bound cards and moves bindings across `resume`/`clear`. See [Parallel sessions](board.md#parallel-sessions).
+**Session binding.** `card_sessions` ties open cards, in any column, to the Claude Code sessions working them. Entering `in_review` or closing a card (`done`, `archived`, epic promotion — every close path runs `service._on_close`) releases its bindings. `sessions.py` is the only reader of `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`, so the service layer stays environment-free; the session-start hook names a session's bound cards, moves bindings across `resume`/`clear`, and prunes dead bindings older than two weeks. See [Parallel sessions](board.md#parallel-sessions).
 
 ## Board CLI Tool (`mc-tool-board`)
 
@@ -394,7 +394,7 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `ref remove` | id, position | Remove a reference by its 1-based position (see `ref list`) |
 | `ref list` | id, --json? | List a card's references in order |
 | `archive` | id | Archive a card (hidden, not deleted) |
-| `bind` | id, --session? --pid? | Bind a Claude Code session (default: `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`) to an In Progress card; refused without both, and `--session` needs its own `--pid` |
+| `bind` | id, --session? --pid? | Bind a Claude Code session (default: `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`) to an open card (not Done or Archived); refused without both, and `--session` needs its own `--pid` |
 | `unbind` | id, --session? | Drop a session's binding from a card |
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance?, --project?, --parent? | Edit card fields; `--parent none` takes the card out of its epic |
