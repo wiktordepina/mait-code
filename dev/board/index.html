@@ -2726,9 +2726,9 @@ glance and to do bulk triage by hand.</p>
   card that's ready (not tagged <code>blocked</code>, not waiting on an unfinished card that
   blocks it), moves it to <strong>In Progress</strong>, reads its acceptance criteria, and gets to
   work — all in the same session.</li>
-<li><em>"Continue card 12."</em> — in a fresh session, Claude binds itself to a card that's
-  already <strong>In Progress</strong> (see <a href="#parallel-sessions">parallel sessions</a>) and
-  carries on.</li>
+<li><em>"Continue card 12."</em> — in a fresh session, Claude binds itself to the card,
+  whichever open column it's in (see <a href="#parallel-sessions">parallel sessions</a>),
+  and carries on.</li>
 <li><em>"That's done."</em> — Claude completes the card with a summary of what changed.</li>
 </ul>
 <p>This is the loop that replaces up-front planning: refine just-in-time, pick up,
@@ -2760,20 +2760,31 @@ which is exactly why refining <em>before</em> picking up is worth the small cere
 <h2 id="parallel-sessions">Parallel sessions<a class="headerlink" href="#parallel-sessions" title="Permanent link">&para;</a></h2>
 <p>You may well run several Claude Code sessions against one project at once: two
 cards being built side by side, plus a third session that's only poking at a
-bug. <strong>In Progress</strong> then holds more than any one session is doing, so each
-In Progress card also records <em>which sessions are working on it</em>.</p>
+bug. The columns then hold more than any one session is doing, so each card
+also records <em>which sessions are working on it</em>. A binding means "this session
+is working on this card", whichever open column the card is in, so a session
+refining a card is bound to it as much as one building it.</p>
 <ul>
-<li><strong>Binding is automatic.</strong> Moving a card into <strong>In Progress</strong> from inside a
-  session (picking up the next card, or <code>move N in_progress</code>) binds it to that
-  session. <em>"Continue card 12"</em> in a new session runs <code>bind 12</code>. A card can
-  carry several sessions; a session with nothing bound (the bug-poking one)
-  simply has none.</li>
-<li><strong>Release is automatic too.</strong> A card leaving <strong>In Progress</strong> (review,
-  complete, archive, any move out) drops all its bindings.</li>
+<li><strong>Binding is automatic when you start work.</strong> Moving a card into
+  <strong>In Progress</strong> from inside a session (picking up the next card, or
+  <code>move N in_progress</code>) binds it to that session. <em>"Continue card 12"</em> in a new
+  session runs <code>bind 12</code>, which works on any card that isn't <strong>Done</strong> or
+  <strong>Archived</strong>. A card can carry several sessions; a session with nothing bound
+  (the bug-poking one) simply has none.</li>
+<li><strong>Release is automatic too.</strong> A card entering <strong>In Review</strong> (handed off) or
+  closing (<strong>Done</strong>, <strong>Archived</strong>, or promoted to an epic) drops all its
+  bindings, whichever verb moves it. Moves between <strong>Backlog</strong>, <strong>Refined</strong> and
+  <strong>In Progress</strong>, refining included, keep them. To work through PR feedback,
+  <code>bind</code> the In Review card again.</li>
+<li><strong>Held cards aren't handed out.</strong> <code>next</code> and <code>list --ready</code> pass over a card
+  that another live session is bound to, so a parallel session can't claim a
+  card someone else is refining.</li>
 <li><strong>Bindings stay honest.</strong> Each records the Claude Code process serving the
   session, and only counts while that process is alive, so a closed session
   drops out without any clean-up. A resumed session keeps its binding, and so
-  does a <code>/clear</code>: the session-start hook moves the binding to the new session.</li>
+  does a <code>/clear</code>: the session-start hook moves the binding to the new session.
+  A closed session's binding is kept for two weeks after it was last bound or
+  resumed, in case it's resumed again, then removed at the next session start.</li>
 <li><strong>"The card I'm on"</strong> is <code>mc-tool-board list --mine</code>, across every project. <code>show</code> lists a card's
   sessions, and each session's start-up context names its cards.</li>
 </ul>
@@ -2823,8 +2834,8 @@ epic tracks their progress:</p>
 </span></code></pre></div>
 <ul>
 <li><strong><code>next</code> respects it.</strong> <code>next</code> (and <code>next --claim</code>) hands out only <em>ready</em>
-  cards: refined, not tagged <code>blocked</code>, and not waiting on an unfinished
-  blocker. <code>list --ready</code> lists them all; <code>next --epic 170</code> picks the top ready
+  cards: refined, not tagged <code>blocked</code>, not waiting on an unfinished
+  blocker, and not held by another live session. <code>list --ready</code> lists them all; <code>next --epic 170</code> picks the top ready
   member of one initiative, whichever project it sits in.</li>
 <li><strong>Waiting shows up where you look.</strong> <code>list</code> rows end <code>waiting on #141</code>, and
   on the TUI's kanban a waiting card wears the blocked border with a
@@ -2896,7 +2907,7 @@ you're reading.</p>
 </tr>
 <tr>
 <td><strong>Sessions</strong></td>
-<td>Only on <strong>In Progress</strong> cards: the live Claude Code sessions working on it (see <a href="#parallel-sessions">parallel sessions</a>). Listed by <code>show</code> and in <code>--json</code> output; left out of exports.</td>
+<td>The live Claude Code sessions working on the card, in any open column (see <a href="#parallel-sessions">parallel sessions</a>). Listed by <code>show</code> and in <code>--json</code> output; left out of exports.</td>
 </tr>
 <tr>
 <td><strong>Created by</strong></td>
@@ -3188,7 +3199,7 @@ can call directly. The same store backs both.</p>
 </span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>mc-tool-board<span class="w"> </span>archive<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                                         </span><span class="c1"># hide without deleting</span>
 </span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>mc-tool-board<span class="w"> </span>remove<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                                          </span><span class="c1"># permanent delete</span>
 </span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="c1"># Sessions (In Progress cards; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="c1"># Sessions (any open card; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)</span>
 </span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>mc-tool-board<span class="w"> </span><span class="nb">bind</span><span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--session<span class="w"> </span>ID<span class="w"> </span>--pid<span class="w"> </span>PID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                  </span><span class="c1"># bind a session (--session needs --pid)</span>
 </span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>mc-tool-board<span class="w"> </span>unbind<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>--session<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--json<span class="o">]</span><span class="w">                           </span><span class="c1"># drop a session&#39;s binding</span>
 </span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>

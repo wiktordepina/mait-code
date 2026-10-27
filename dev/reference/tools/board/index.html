@@ -2152,6 +2152,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.CardClosed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;CardClosed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.CardNotFound" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2189,17 +2200,6 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;LinkCycle
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mait_code.tools.board.NotInProgress" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NotInProgress
       
     </span>
   </a>
@@ -2464,6 +2464,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;promote_epic
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.prune_stale_bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;prune_stale_bindings
       
     </span>
   </a>
@@ -3402,6 +3413,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#mait_code.tools.board.CardClosed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;CardClosed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#mait_code.tools.board.CardNotFound" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3439,17 +3461,6 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;LinkCycle
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mait_code.tools.board.NotInProgress" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NotInProgress
       
     </span>
   </a>
@@ -3714,6 +3725,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;promote_epic
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mait_code.tools.board.prune_stale_bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;prune_stale_bindings
       
     </span>
   </a>
@@ -5178,6 +5200,55 @@ Epics are left out, as on the board; see :func:<code>export_epic</code>.</p>
 
 
 
+<h2 id="mait_code.tools.board.CardClosed" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">CardClosed</span>
+
+
+<a href="#mait_code.tools.board.CardClosed" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">CardClosed</span><span class="p">(</span><span class="n">card_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="Exception">Exception</span></code></p>
+
+
+
+        <p>Raised when binding a session to a card that is <code>done</code> or <code>archived</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
 <h2 id="mait_code.tools.board.CardNotFound" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">CardNotFound</span>
 
@@ -5465,55 +5536,6 @@ already reaches 41 through 52.</p>
 
 
 
-<h2 id="mait_code.tools.board.NotInProgress" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">NotInProgress</span>
-
-
-<a href="#mait_code.tools.board.NotInProgress" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">NotInProgress</span><span class="p">(</span><span class="n">card_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="n"><span title="str">str</span></span><span class="p">)</span>
-</span></code></pre></div>
-
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="Exception">Exception</span></code></p>
-
-
-
-        <p>Raised when binding a session to a card that isn't In Progress.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
 <h2 id="mait_code.tools.board.RelationError" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">RelationError</span>
 
@@ -5744,8 +5766,8 @@ already exists, or an epic on either end.</p>
     <div class="doc doc-contents first">
 
         <p>Archive a card (hide it from default views).</p>
-<p>Releases the card's session bindings. Raises :class:<code>CardNotFound</code> if the
-id is unknown.</p>
+<p>Closes the card (see :func:<code>_on_close</code>). Raises :class:<code>CardNotFound</code> if
+the id is unknown.</p>
 
 
     </div>
@@ -5767,11 +5789,13 @@ id is unknown.</p>
 
     <div class="doc doc-contents first">
 
-        <p>Bind a Claude Code <em>session</em> to an In Progress card.</p>
-<p>Idempotent: re-binding the same session refreshes its pid and time. A card
-may carry several bindings (parallel sessions on one card). Raises :class:<code>CardNotFound</code> if the
-id is unknown, :class:<code>RelationError</code> for an epic (epics are never worked
-directly) and :class:<code>NotInProgress</code> unless the card is In Progress.</p>
+        <p>Bind a Claude Code <em>session</em> to an open card, in any column.</p>
+<p>A binding means the session is working on the card, whichever column it
+sits in. Idempotent: re-binding the same session refreshes its pid and
+time. A card may carry several bindings (parallel sessions on one card).
+Raises :class:<code>CardNotFound</code> if the id is unknown, :class:<code>RelationError</code>
+for an epic (epics are never worked directly; checked first) and
+:class:<code>CardClosed</code> for a <code>done</code> or <code>archived</code> card.</p>
 
 
     </div>
@@ -5845,8 +5869,8 @@ unknown.</p>
     <div class="doc doc-contents first">
 
         <p>Move a card to <code>done</code> with an optional completion summary.</p>
-<p>Releases the card's session bindings. Raises :class:<code>CardNotFound</code> if the
-id is unknown.</p>
+<p>Closes the card (see :func:<code>_on_close</code>). Raises :class:<code>CardNotFound</code> if
+the id is unknown.</p>
 
 
     </div>
@@ -6059,7 +6083,8 @@ if it isn't an epic.</p>
    (mait_code.tools.board.columns.CARD)" href="#mait_code.tools.board.CARD">CARD</a></span><span class="p">,</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">parent_id</span><span class="p">:</span> <span class="n"><span title="int">int</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">ready</span><span class="p">:</span> <span class="n"><span title="bool">bool</span></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">claimant</span><span class="p">:</span> <span class="n"><span title="str">str</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="list">list</span></span><span class="p">[</span><span class="n"><span title="dict">dict</span></span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents first">
@@ -6270,7 +6295,8 @@ parent filter.</p>
             <td class="doc-param-details">
               <div class="doc-md-description">
                 <p>Restrict to cards :func:<code>next_refined</code> could hand out —
-refined, not tagged <code>blocked</code>, not waiting on a blocker.</p>
+refined, not tagged <code>blocked</code>, not waiting on a blocker, and not
+held by a live session other than <em>claimant</em>.</p>
               </div>
               <p>
                   <span class="doc-param-annotation">
@@ -6280,6 +6306,27 @@ refined, not tagged <code>blocked</code>, not waiting on a blocker.</p>
                   <span class="doc-param-default">
                     <b>DEFAULT:</b>
                       <code>False</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>claimant</code>
+            </td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>With <em>ready</em>, the session id asking; its own bindings don't
+hold a card back. <code>None</code> treats every live binding as another's.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="str">str</span> | None</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
                   </span>
               </p>
             </td>
@@ -6380,9 +6427,11 @@ held up by an unsettled blocker). Done epics are left out unless
 
         <p>Move a card to <em>new_status</em>, maintaining the done- and session-invariants.</p>
 <p>Entering <code>done</code> stamps <code>completed_at</code>; leaving it clears the stamp.
-Moving anywhere but <code>in_progress</code> releases the card's session bindings;
-moving to <code>in_progress</code> with a <em>session</em> binds it — unless it's an epic,
-which never binds (its status is bookkeeping, not work). Raises
+Entering <code>in_review</code> releases the card's session bindings (the card is
+handed off), and entering <code>done</code> or <code>archived</code> closes it (see
+:func:<code>_on_close</code>); moves between the other columns keep them. Moving to
+<code>in_progress</code> with a <em>session</em> binds it — unless it's an epic, which
+never binds (its status is bookkeeping, not work). Raises
 :class:<code>CardNotFound</code> if the id is unknown.</p>
 
 
@@ -6411,8 +6460,10 @@ which never binds (its status is bookkeeping, not work). Raises
     <div class="doc doc-contents first">
 
         <p>Return the top <em>ready</em> card for <em>project</em> (priority, then oldest).</p>
-<p>Ready means refined, not tagged <code>blocked</code>, and not waiting on any
-unsettled <code>blocks</code> link (see :func:<code>_attach_links</code>). Given <em>epic_id</em>, the
+<p>Ready means refined, not tagged <code>blocked</code>, not waiting on any
+unsettled <code>blocks</code> link (see :func:<code>_attach_links</code>), and not held by a
+live session other than <em>session</em> — another session may be refining it
+under a playbook. Given <em>epic_id</em>, the
 search spans that epic's members in every project and <em>project</em> is
 ignored.</p>
 <p>With <code>claim=True</code> the card is moved to <code>in_progress</code> first (guarded on
@@ -6442,11 +6493,41 @@ that is unknown or not an epic, and :class:<code>ValueError</code> when neither
     <div class="doc doc-contents first">
 
         <p>Turn an existing card into an epic, keeping its history.</p>
-<p>Releases its session bindings, moves it to :data:<code>EPIC_PROJECT</code> and
+<p>Closes it as a card (see :func:<code>_on_close</code>), moves it to :data:<code>EPIC_PROJECT</code> and
 records the project it came from as a comment. Raises
 :class:<code>CardNotFound</code> for an unknown id and :class:<code>RelationError</code> if it is
 already an epic, has a parent, or has any <code>blocks</code> link — each of which
 an epic can't carry.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="mait_code.tools.board.prune_stale_bindings" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">prune_stale_bindings</span>
+
+
+<a href="#mait_code.tools.board.prune_stale_bindings" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">prune_stale_bindings</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">conn</span><span class="p">:</span> <span class="n"><span title="sqlite3.Connection">Connection</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">older_than</span><span class="p">:</span> <span class="n"><span title="datetime.timedelta">timedelta</span></span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="int">int</span></span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Delete dead bindings last bound or resumed more than <em>older_than</em> ago.</p>
+<p>A dead binding is kept so a resume can bring it back (see
+:func:<code>refresh_session_pid</code>), but on a card that stays open for weeks it
+would otherwise linger, and a recycled pid could make it read as live
+again. Age is counted from <code>bound_at</code>, which a bind, a resume and a
+<code>/clear</code> all renew; nothing records when a process dies, so a session
+that ran for longer than <em>older_than</em> without either is pruned as soon as
+it ends. Live bindings are never touched, whatever their age. Returns how
+many were deleted.</p>
 
 
     </div>
@@ -6473,8 +6554,8 @@ an epic can't carry.</p>
     <div class="doc doc-contents first">
 
         <p>Move a card to <code>refined</code>, optionally setting description/acceptance.</p>
-<p>Releases the card's session bindings. Raises :class:<code>CardNotFound</code> if the
-id is unknown.</p>
+<p>Keeps the card's session bindings: a session may refine the card it is
+working on. Raises :class:<code>CardNotFound</code> if the id is unknown.</p>
 
 
     </div>
@@ -6572,9 +6653,9 @@ id is unknown.</p>
 
         <p>Move a card to <code>in_review</code>, recording <em>pr</em> as a <code>PR</code> reference.</p>
 <p>The card is parked between <code>in_progress</code> and <code>done</code> until its pull
-request merges. Re-reviewing with a PR the card already carries (e.g.
-after a re-push) doesn't duplicate the reference. Raises
-:class:<code>CardNotFound</code> if the id is unknown.</p>
+request merges, and its session bindings are released. Re-reviewing with
+a PR the card already carries (e.g. after a re-push) doesn't duplicate the
+reference. Raises :class:<code>CardNotFound</code> if the id is unknown.</p>
 
 
     </div>

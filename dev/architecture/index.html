@@ -3575,10 +3575,10 @@ type is never a duplicate) using two complementary measures:</p>
 <p><strong>Relationships.</strong> Two cross-project relationships sit on top of the columns (see <a href="../board/#epics-and-dependencies">Epics and dependencies</a>):</p>
 <ul>
 <li><strong>Epics</strong> — a <code>kind = 'epic'</code> card is an umbrella over member cards (their <code>parent_id</code>). Epics carry the reserved project <code>@epic</code>, so they stay off the kanban, the counts and <code>next</code>; one level only, at most one epic per card.</li>
-<li><strong><code>blocks</code> links</strong> — <code>link A blocks B</code> records that B can't start until A is done. <code>next</code> hands out only <strong>ready</strong> cards: refined, not an epic, not tagged <code>blocked</code>, and not waiting on a blocker that is neither done nor archived.</li>
+<li><strong><code>blocks</code> links</strong> — <code>link A blocks B</code> records that B can't start until A is done. <code>next</code> hands out only <strong>ready</strong> cards: refined, not an epic, not tagged <code>blocked</code>, not waiting on a blocker that is neither done nor archived, and not bound to a live session other than the caller's.</li>
 <li><strong>Origin</strong> — <code>add --from N</code> records where a split-off or follow-up card came from as a <code>from</code> → <code>#N</code> reference (provenance, never ordering) and inherits N's epic unless <code>--parent</code> says otherwise.</li>
 </ul>
-<p><strong>Session binding.</strong> <code>card_sessions</code> ties In Progress cards to the Claude Code sessions working them. <code>sessions.py</code> is the only reader of <code>$CLAUDE_CODE_SESSION_ID</code>/<code>$CLAUDE_PID</code>, so the service layer stays environment-free; the session-start hook names a session's bound cards and moves bindings across <code>resume</code>/<code>clear</code>. See <a href="../board/#parallel-sessions">Parallel sessions</a>.</p>
+<p><strong>Session binding.</strong> <code>card_sessions</code> ties open cards, in any column, to the Claude Code sessions working them. Entering <code>in_review</code> or closing a card (<code>done</code>, <code>archived</code>, epic promotion — every close path runs <code>service._on_close</code>) releases its bindings. <code>sessions.py</code> is the only reader of <code>$CLAUDE_CODE_SESSION_ID</code>/<code>$CLAUDE_PID</code>, so the service layer stays environment-free; the session-start hook names a session's bound cards, moves bindings across <code>resume</code>/<code>clear</code>, and prunes dead bindings older than two weeks. See <a href="../board/#parallel-sessions">Parallel sessions</a>.</p>
 <h2 id="board-cli-tool-mc-tool-board">Board CLI Tool (<code>mc-tool-board</code>)<a class="headerlink" href="#board-cli-tool-mc-tool-board" title="Permanent link">&para;</a></h2>
 <p>Manually-driven kanban board. Claude in the live session acts as the worker ("pick up the next refined card"); there is no autonomous dispatcher — <em>you</em> drive the board. Cards are project-scoped via the basename of the git root (or cwd), stored in a shared <code>board.db</code>. Read commands accept <code>--json</code> for UI/skill consumption, and every mutating subcommand takes <code>--json</code> to emit the affected card (for <code>link</code>/<code>unlink</code>, card B; for <code>remove</code>, the card as it was) instead of a confirmation line — so <code>--json</code> is left out of the table below.</p>
 <table>
@@ -3698,7 +3698,7 @@ type is never a duplicate) using two complementary measures:</p>
 <tr>
 <td><code>bind</code></td>
 <td>id, --session? --pid?</td>
-<td>Bind a Claude Code session (default: <code>$CLAUDE_CODE_SESSION_ID</code>/<code>$CLAUDE_PID</code>) to an In Progress card; refused without both, and <code>--session</code> needs its own <code>--pid</code></td>
+<td>Bind a Claude Code session (default: <code>$CLAUDE_CODE_SESSION_ID</code>/<code>$CLAUDE_PID</code>) to an open card (not Done or Archived); refused without both, and <code>--session</code> needs its own <code>--pid</code></td>
 </tr>
 <tr>
 <td><code>unbind</code></td>
