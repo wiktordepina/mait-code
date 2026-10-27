@@ -3538,6 +3538,68 @@ type is never a duplicate) using two complementary measures:</p>
 </tr>
 </tbody>
 </table>
+<p><strong>Playbook runs: <code>card_runs</code> and <code>card_run_steps</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>card_runs.id</code></td>
+<td>INTEGER PK</td>
+<td>Auto-increment; a card's latest run has the highest id</td>
+</tr>
+<tr>
+<td><code>card_runs.card_id</code></td>
+<td>INTEGER FK</td>
+<td>References <code>cards(id)</code>; <code>ON DELETE CASCADE</code></td>
+</tr>
+<tr>
+<td><code>card_runs.playbook</code></td>
+<td>TEXT</td>
+<td>The playbook's name, e.g. <code>work</code></td>
+</tr>
+<tr>
+<td><code>card_runs.started_at</code> / <code>updated_at</code></td>
+<td>TEXT</td>
+<td>When the run started; when it or a step last changed</td>
+</tr>
+<tr>
+<td><code>card_runs.ended_at</code></td>
+<td>TEXT</td>
+<td><code>NULL</code> while open; a partial unique index allows one open run per card</td>
+</tr>
+<tr>
+<td><code>card_run_steps.run_id</code></td>
+<td>INTEGER FK</td>
+<td>References <code>card_runs(id)</code>; <code>ON DELETE CASCADE</code></td>
+</tr>
+<tr>
+<td><code>card_run_steps.position</code> / <code>name</code></td>
+<td>INTEGER / TEXT</td>
+<td>1-based order and the playbook's step name; primary key <code>(run_id, position)</code></td>
+</tr>
+<tr>
+<td><code>card_run_steps.status</code></td>
+<td>TEXT</td>
+<td><code>CHECK</code>: <code>pending</code>, <code>in_progress</code>, <code>done</code>, <code>skipped</code>, <code>paused</code>; a partial unique index allows one <code>in_progress</code> step per run</td>
+</tr>
+<tr>
+<td><code>card_run_steps.reason</code></td>
+<td>TEXT</td>
+<td>Why a step was skipped (required) or paused (optional)</td>
+</tr>
+<tr>
+<td><code>card_run_steps.started_at</code> / <code>finished_at</code></td>
+<td>TEXT</td>
+<td>Set and cleared by the step rules in <code>service.set_step</code></td>
+</tr>
+</tbody>
+</table>
 <p><strong>Links table: <code>card_links</code></strong></p>
 <table>
 <thead>
@@ -3706,6 +3768,26 @@ type is never a duplicate) using two complementary measures:</p>
 <td>Drop a session's binding from a card</td>
 </tr>
 <tr>
+<td><code>run start</code></td>
+<td>id, --playbook, --steps…, --replace?</td>
+<td>Start a playbook run: its ordered steps, all pending; refused while a run is open unless <code>--replace</code></td>
+</tr>
+<tr>
+<td><code>run step</code></td>
+<td>id, step, status, --reason?</td>
+<td>Set one step (by position or exact name) to <code>pending</code>/<code>in_progress</code>/<code>done</code>/<code>skipped</code>/<code>paused</code></td>
+</tr>
+<tr>
+<td><code>run end</code></td>
+<td>id</td>
+<td>End the card's open run, keeping it as history</td>
+</tr>
+<tr>
+<td><code>run show</code></td>
+<td>id, --json?</td>
+<td>Show the card's open run (<code>null</code> with <code>--json</code> when there is none)</td>
+</tr>
+<tr>
 <td><code>comment</code></td>
 <td>id, body, --author?</td>
 <td>Append a comment (author <code>me</code> or <code>claude</code>)</td>
@@ -3732,7 +3814,7 @@ type is never a duplicate) using two complementary measures:</p>
 </tr>
 </tbody>
 </table>
-<p>Every query and mutation — including the done-invariant (<code>completed_at</code> is set on entering <code>done</code> and cleared on leaving) and the session-invariant (leaving <code>in_progress</code> releases every <code>card_sessions</code> binding) — lives in <code>src/mait_code/tools/board/service.py</code>, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.</p>
+<p>Every query and mutation — including the done-invariant (<code>completed_at</code> is set on entering <code>done</code> and cleared on leaving), the session-invariant (entering <code>in_review</code> or closing a card releases every <code>card_sessions</code> binding) and the run rules (closing a card ends its open run) — lives in <code>src/mait_code/tools/board/service.py</code>, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.</p>
 <h2 id="board-tui-mait-code-board">Board TUI (<code>mait-code board</code>)<a class="headerlink" href="#board-tui-mait-code-board" title="Permanent link">&para;</a></h2>
 <p><code>mait-code board</code> opens a full-screen, interactive kanban — one pane per status side by side, every project's cards visible with a <code>p</code> project-filter dropdown, arrow-key navigation, <code>&lt;</code>/<code>&gt;</code> to move a card along the flow (<code>backlog → refined → in_progress → in_review → done</code>; In Review hides itself while empty unless <code>v</code> reveals it), <code>t</code> to toggle a tag and <code>b</code>/<code>u</code> to tag/untag <code>blocked</code> in place, plus a near-fullscreen card screen (<code>Enter</code>) that shows the card with its comment thread and flips to an edit form in place with <code>e</code>. That form is the single place a card is changed: title, priority, <strong>status</strong>, <strong>tags</strong>, <strong>references</strong>, description and acceptance criteria all on one form. Tags, references and status are a working copy — Save applies them together and returns to the view; cancel discards every pending change. Block/unblock stay outside the form (they carry a reason comment a plain tag can't), so the form's tag editor leaves <code>blocked</code> alone. <code>n</code> creates a card, <code>C</code> completes one with a handoff summary, and <code>c</code> comments. The card screen carries a References section — a list of label→value links, clickable where the value is a URL or <code>file://</code> path. Priority and tags render as domain-coloured chips on the card rows (<code>blocked</code> distinct in the error colour). A <code>Ctrl+P</code> command palette exposes every action, <code>?</code> opens a context help screen built from the live key-bindings, number keys jump between columns, and actions raise toasts. It is built on Textual and reuses the board <code>service.py</code>, mirroring the <code>mait-code settings</code> editor: a TTY-gated launch (piped or redirected, it prints a grouped read-only render instead), a lazily-imported app off the hot path of every other command, and a single connection held for the app's lifetime.</p>
 <p><code>i</code> swaps the kanban for the <strong>Initiatives view</strong> (or launch straight into it with <code>mait-code board --initiatives</code>): every open epic with its progress beside a table of the highlighted epic's members from every project, ready ones first. There, <code>g</code> swaps the table for the epic's <code>blocks</code> dependency diagram, drawn top-down on the shared <code>tui/graph.py</code> view the graph explorer also uses. The card screen gains a <strong>Relationships</strong> section — the card's epic, its blockers and what it unblocks. Keys and screenshots live in the <a href="../board/#initiatives-view">board guide</a>.</p>
