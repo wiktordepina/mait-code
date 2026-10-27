@@ -51,11 +51,11 @@ from mait_code.tools.board.export import (
 )
 from mait_code.tools.board.migrate import ensure_schema
 from mait_code.tools.board.service import (
+    CardClosed,
     CardNotFound,
     EpicOrigin,
     InheritedEpicClosed,
     LinkCycle,
-    NotInProgress,
     RelationError,
     add_card,
     add_comment,
@@ -80,6 +80,7 @@ from mait_code.tools.board.service import (
     move_card,
     next_refined,
     promote_epic,
+    prune_stale_bindings,
     refine_card,
     remove_card,
     remove_link,
@@ -131,11 +132,11 @@ __all__ = [
     "export_card",
     "export_epic",
     # Service
+    "CardClosed",
     "CardNotFound",
     "EpicOrigin",
     "InheritedEpicClosed",
     "LinkCycle",
-    "NotInProgress",
     "RelationError",
     "add_card",
     "add_comment",
@@ -160,6 +161,7 @@ __all__ = [
     "move_card",
     "next_refined",
     "promote_epic",
+    "prune_stale_bindings",
     "refine_card",
     "remove_card",
     "remove_link",

@@ -118,9 +118,9 @@ The more transformative path is to drive the board *through Claude*. Just talk:
   card that's ready (not tagged `blocked`, not waiting on an unfinished card that
   blocks it), moves it to **In Progress**, reads its acceptance criteria, and gets to
   work — all in the same session.
-- *"Continue card 12."* — in a fresh session, Claude binds itself to a card that's
-  already **In Progress** (see [parallel sessions](#parallel-sessions)) and
-  carries on.
+- *"Continue card 12."* — in a fresh session, Claude binds itself to the card,
+  whichever open column it's in (see [parallel sessions](#parallel-sessions)),
+  and carries on.
 - *"That's done."* — Claude completes the card with a summary of what changed.
 
 This is the loop that replaces up-front planning: refine just-in-time, pick up,
@@ -156,20 +156,31 @@ which is exactly why refining *before* picking up is worth the small ceremony.
 
 You may well run several Claude Code sessions against one project at once: two
 cards being built side by side, plus a third session that's only poking at a
-bug. **In Progress** then holds more than any one session is doing, so each
-In Progress card also records *which sessions are working on it*.
+bug. The columns then hold more than any one session is doing, so each card
+also records *which sessions are working on it*. A binding means "this session
+is working on this card", whichever open column the card is in, so a session
+refining a card is bound to it as much as one building it.
 
-- **Binding is automatic.** Moving a card into **In Progress** from inside a
-  session (picking up the next card, or `move N in_progress`) binds it to that
-  session. *"Continue card 12"* in a new session runs `bind 12`. A card can
-  carry several sessions; a session with nothing bound (the bug-poking one)
-  simply has none.
-- **Release is automatic too.** A card leaving **In Progress** (review,
-  complete, archive, any move out) drops all its bindings.
+- **Binding is automatic when you start work.** Moving a card into
+  **In Progress** from inside a session (picking up the next card, or
+  `move N in_progress`) binds it to that session. *"Continue card 12"* in a new
+  session runs `bind 12`, which works on any card that isn't **Done** or
+  **Archived**. A card can carry several sessions; a session with nothing bound
+  (the bug-poking one) simply has none.
+- **Release is automatic too.** A card entering **In Review** (handed off) or
+  closing (**Done**, **Archived**, or promoted to an epic) drops all its
+  bindings, whichever verb moves it. Moves between **Backlog**, **Refined** and
+  **In Progress**, refining included, keep them. To work through PR feedback,
+  `bind` the In Review card again.
+- **Held cards aren't handed out.** `next` and `list --ready` pass over a card
+  that another live session is bound to, so a parallel session can't claim a
+  card someone else is refining.
 - **Bindings stay honest.** Each records the Claude Code process serving the
   session, and only counts while that process is alive, so a closed session
   drops out without any clean-up. A resumed session keeps its binding, and so
   does a `/clear`: the session-start hook moves the binding to the new session.
+  A closed session's binding is kept for two weeks after it was last bound or
+  resumed, in case it's resumed again, then removed at the next session start.
 - **"The card I'm on"** is `mc-tool-board list --mine`, across every project. `show` lists a card's
   sessions, and each session's start-up context names its cards.
 
@@ -230,8 +241,8 @@ mc-tool-board unlink 141 blocks 147
 ```
 
 - **`next` respects it.** `next` (and `next --claim`) hands out only *ready*
-  cards: refined, not tagged `blocked`, and not waiting on an unfinished
-  blocker. `list --ready` lists them all; `next --epic 170` picks the top ready
+  cards: refined, not tagged `blocked`, not waiting on an unfinished
+  blocker, and not held by another live session. `list --ready` lists them all; `next --epic 170` picks the top ready
   member of one initiative, whichever project it sits in.
 - **Waiting shows up where you look.** `list` rows end `waiting on #141`, and
   on the TUI's kanban a waiting card wears the blocked border with a
@@ -269,7 +280,7 @@ Every card carries:
 | **Comments** | A threaded log — your notes and Claude's, each timestamped. |
 | **Epic** | The [epic](#epics) the card belongs to, if any — shown as `epic:` in `show`. |
 | **Blocked by / blocks** | Its [dependency links](#dependencies) in each direction; `show` and `list` mark the blockers it's still waiting on. |
-| **Sessions** | Only on **In Progress** cards: the live Claude Code sessions working on it (see [parallel sessions](#parallel-sessions)). Listed by `show` and in `--json` output; left out of exports. |
+| **Sessions** | The live Claude Code sessions working on the card, in any open column (see [parallel sessions](#parallel-sessions)). Listed by `show` and in `--json` output; left out of exports. |
 | **Created by** | Only on cards raised through the [remote API](remote.md): the client that created it, shown as *via &lt;client&gt;* on the meta line and as `created by:` in `show`. Locally created cards have none. |
 | **Completion summary** | The handoff note recorded when the card reaches **Done**. Renders [markdown](#markdown-in-the-body). |
 
@@ -434,7 +445,7 @@ mc-tool-board move ID <backlog|refined|in_progress|in_review|done|archived> [--j
 mc-tool-board archive ID [--json]                                         # hide without deleting
 mc-tool-board remove ID [--json]                                          # permanent delete
 
-# Sessions (In Progress cards; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)
+# Sessions (any open card; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)
 mc-tool-board bind ID [--session ID --pid PID] [--json]                  # bind a session (--session needs --pid)
 mc-tool-board unbind ID [--session ID] [--json]                           # drop a session's binding
 

@@ -79,6 +79,8 @@
 
 ## Service
 
+::: mait_code.tools.board.CardClosed
+
 ::: mait_code.tools.board.CardNotFound
 
 ::: mait_code.tools.board.EpicOrigin
@@ -86,8 +88,6 @@
 ::: mait_code.tools.board.InheritedEpicClosed
 
 ::: mait_code.tools.board.LinkCycle
-
-::: mait_code.tools.board.NotInProgress
 
 ::: mait_code.tools.board.RelationError
 
@@ -136,6 +136,8 @@
 ::: mait_code.tools.board.next_refined
 
 ::: mait_code.tools.board.promote_epic
+
+::: mait_code.tools.board.prune_stale_bindings
 
 ::: mait_code.tools.board.refine_card
 

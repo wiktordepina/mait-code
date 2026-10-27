@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import timedelta
 
 import pytest
 
@@ -110,12 +111,27 @@ def test_removing_a_card_cascades_its_bindings(board_db):
 # --- service: bind / unbind / read ---
 
 
-def test_bind_requires_in_progress(board_db):
-    cid = _card(board_db, status=REFINED)
-    with pytest.raises(service.NotInProgress) as exc:
+@pytest.mark.parametrize("status", [BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW])
+def test_bind_works_in_any_open_column(board_db, status):
+    cid = _card(board_db, status=status)
+    service.bind_session(board_db, cid, LIVE)
+    assert _rows(board_db) == [(cid, "live-session", os.getpid())]
+
+
+@pytest.mark.parametrize("status", [DONE, ARCHIVED])
+def test_bind_refuses_a_closed_card(board_db, status):
+    cid = _card(board_db, status=status)
+    with pytest.raises(service.CardClosed) as exc:
         service.bind_session(board_db, cid, LIVE)
-    assert exc.value.status == REFINED
+    assert exc.value.status == status
     assert _rows(board_db) == []
+
+
+def test_bind_checks_for_an_epic_before_the_column(board_db):
+    eid = service.add_card(board_db, project=None, title="epic", kind="epic")
+    service.move_card(board_db, eid, DONE)
+    with pytest.raises(service.RelationError, match="is an epic"):
+        service.bind_session(board_db, eid, LIVE)
 
 
 def test_bind_unknown_card(board_db):
@@ -216,8 +232,26 @@ def test_moving_into_in_progress_without_a_session_does_not_bind(board_db):
     assert _rows(board_db) == []
 
 
-@pytest.mark.parametrize("target", [BACKLOG, REFINED, IN_REVIEW, DONE, ARCHIVED])
-def test_leaving_in_progress_releases_every_binding(board_db, target):
+@pytest.mark.parametrize(
+    ("start", "target"),
+    [
+        (IN_PROGRESS, BACKLOG),
+        (IN_PROGRESS, REFINED),
+        (REFINED, BACKLOG),
+        (BACKLOG, REFINED),
+        (REFINED, IN_PROGRESS),
+    ],
+)
+def test_moves_between_open_columns_keep_bindings(board_db, start, target):
+    cid = _card(board_db, status=start)
+    service.bind_session(board_db, cid, LIVE)
+    service.bind_session(board_db, cid, SessionRef("second", os.getpid()))
+    service.move_card(board_db, cid, target)
+    assert len(_rows(board_db)) == 2
+
+
+@pytest.mark.parametrize("target", [IN_REVIEW, DONE, ARCHIVED])
+def test_entering_review_or_closing_releases_every_binding(board_db, target):
     cid = _card(board_db)
     service.bind_session(board_db, cid, LIVE)
     service.bind_session(board_db, cid, SessionRef("second", os.getpid()))
@@ -231,15 +265,42 @@ def test_leaving_in_progress_releases_every_binding(board_db, target):
         lambda conn, cid: service.complete_card(conn, cid, summary="done"),
         lambda conn, cid: service.review_card(conn, cid, pr="https://x/pr/1"),
         lambda conn, cid: service.archive_card(conn, cid),
-        lambda conn, cid: service.refine_card(conn, cid, acceptance="AC"),
+        lambda conn, cid: service.promote_epic(conn, cid),
     ],
-    ids=["complete", "review", "archive", "refine"],
+    ids=["complete", "review", "archive", "promote"],
 )
 def test_workflow_verbs_release_bindings(board_db, leave):
     cid = _card(board_db)
     service.bind_session(board_db, cid, LIVE)
     leave(board_db, cid)
     assert _rows(board_db) == []
+
+
+def test_refine_keeps_bindings(board_db):
+    cid = _card(board_db, status=BACKLOG)
+    service.bind_session(board_db, cid, LIVE)
+    service.refine_card(board_db, cid, acceptance="AC")
+    assert _rows(board_db) == [(cid, "live-session", os.getpid())]
+
+
+def test_a_dead_binding_on_a_refined_card_comes_back_on_resume(board_db, dead_pid):
+    """The case a playbook relies on: refine, close the session, resume it."""
+    cid = _card(board_db, status=BACKLOG)
+    service.bind_session(board_db, cid, SessionRef("paused", dead_pid))
+    service.refine_card(board_db, cid, acceptance="AC")
+    assert service.list_cards(board_db, session="paused") == []
+
+    assert service.refresh_session_pid(board_db, "paused", os.getpid()) == 1
+    assert [c["id"] for c in service.list_cards(board_db, session="paused")] == [cid]
+
+
+def test_a_reviewed_card_binds_again_for_pr_feedback(board_db):
+    cid = _card(board_db)
+    service.review_card(board_db, cid)
+    service.bind_session(board_db, cid, LIVE)
+    assert (
+        service.get_card(board_db, cid)["sessions"][0]["session_id"] == "live-session"
+    )
 
 
 def test_moving_back_to_in_progress_binds_the_current_session(board_db):
@@ -270,6 +331,68 @@ def test_next_without_claim_never_binds(board_db):
     _card(board_db, status=REFINED)
     service.next_refined(board_db, TEST_PROJECT, session=LIVE)
     assert _rows(board_db) == []
+
+
+def test_next_and_ready_pass_over_a_card_another_session_holds(board_db):
+    held = _card(board_db, "held", status=REFINED)
+    free = _card(board_db, "free", status=REFINED)
+    service.bind_session(board_db, held, SessionRef("playbook", os.getpid()))
+
+    card = service.next_refined(board_db, TEST_PROJECT, session=LIVE)
+    assert card is not None and card["id"] == free
+    ready = service.list_cards(board_db, ready=True, claimant=LIVE.session_id)
+    assert [c["id"] for c in ready] == [free]
+
+    claimed = service.next_refined(board_db, TEST_PROJECT, claim=True, session=LIVE)
+    assert claimed is not None and claimed["id"] == free
+    assert service.get_card(board_db, held)["status"] == REFINED
+
+
+def test_next_offers_a_card_held_only_by_the_caller(board_db):
+    cid = _card(board_db, status=REFINED)
+    service.bind_session(board_db, cid, LIVE)
+    card = service.next_refined(board_db, TEST_PROJECT, session=LIVE)
+    assert card is not None and card["id"] == cid
+    ready = service.list_cards(board_db, ready=True, claimant=LIVE.session_id)
+    assert [c["id"] for c in ready] == [cid]
+
+
+def test_next_offers_a_card_whose_binding_is_dead(board_db, dead_pid):
+    cid = _card(board_db, status=REFINED)
+    service.bind_session(board_db, cid, SessionRef("gone", dead_pid))
+    card = service.next_refined(board_db, TEST_PROJECT, session=LIVE)
+    assert card is not None and card["id"] == cid
+
+
+def test_without_a_claimant_any_live_binding_holds_a_card(board_db):
+    cid = _card(board_db, status=REFINED)
+    service.bind_session(board_db, cid, LIVE)
+    assert service.next_refined(board_db, TEST_PROJECT) is None
+    assert service.list_cards(board_db, ready=True) == []
+
+
+# --- service: pruning stale bindings ---
+
+
+def test_prune_drops_only_old_dead_bindings(board_db, dead_pid):
+    old, recent, live = (_card(board_db, t) for t in ("old", "recent", "live"))
+    for cid, session, pid, bound_at in [
+        (old, "old-dead", dead_pid, "2026-01-01T00:00:00+00:00"),
+        (recent, "recent-dead", dead_pid, "2999-01-01T00:00:00+00:00"),
+        (live, "old-live", os.getpid(), "2026-01-01T00:00:00+00:00"),
+    ]:
+        board_db.execute(
+            "INSERT INTO card_sessions (card_id, session_id, pid, bound_at) "
+            "VALUES (?, ?, ?, ?)",
+            (cid, session, pid, bound_at),
+        )
+    board_db.commit()
+
+    assert service.prune_stale_bindings(board_db, older_than=timedelta(days=14)) == 1
+    assert _rows(board_db) == [
+        (recent, "recent-dead", dead_pid),
+        (live, "old-live", os.getpid()),
+    ]
 
 
 # --- service: following a resume or a /clear ---
@@ -305,6 +428,30 @@ def test_rebind_pid_never_duplicates_a_binding(board_db):
     service.bind_session(board_db, cid, SessionRef("new", os.getpid()))
     service.rebind_pid(board_db, os.getpid(), "new")
     assert _rows(board_db) == [(cid, "new", os.getpid())]
+
+
+def test_a_resume_renews_the_binding_age(board_db, dead_pid):
+    """Pruning counts from the last resume, not from the original bind."""
+    cid = _card(board_db)
+    service.bind_session(board_db, cid, SessionRef("long-running", dead_pid))
+    board_db.execute("UPDATE card_sessions SET bound_at = '2026-01-01T00:00:00+00:00'")
+    board_db.commit()
+
+    service.refresh_session_pid(board_db, "long-running", os.getpid())
+    service.refresh_session_pid(board_db, "long-running", dead_pid)
+    assert service.prune_stale_bindings(board_db, older_than=timedelta(days=14)) == 0
+    assert _rows(board_db) == [(cid, "long-running", dead_pid)]
+
+
+def test_a_clear_renews_the_binding_age(board_db):
+    cid = _card(board_db)
+    service.bind_session(board_db, cid, SessionRef("before", os.getpid()))
+    board_db.execute("UPDATE card_sessions SET bound_at = '2026-01-01T00:00:00+00:00'")
+    board_db.commit()
+
+    service.rebind_pid(board_db, os.getpid(), "after")
+    [(bound_at,)] = board_db.execute("SELECT bound_at FROM card_sessions").fetchall()
+    assert bound_at > "2026-01-02"
 
 
 # --- CLI ---
@@ -405,13 +552,35 @@ def test_cli_bind_refuses_a_bad_pid(monkeypatch, capsys):
     assert "positive integer" in capsys.readouterr().err
 
 
-def test_cli_bind_refuses_a_card_not_in_progress(monkeypatch, capsys):
+@pytest.mark.parametrize(("status", "shown"), [(DONE, "Done"), (ARCHIVED, "Archived")])
+def test_cli_bind_refuses_a_closed_card(monkeypatch, capsys, status, shown):
     _in_session(monkeypatch)
-    cid = _cli_card(status=REFINED)
+    cid = _cli_card(status=status)
     with pytest.raises(SystemExit) as exc:
         _main(monkeypatch, "bind", str(cid))
     assert exc.value.code == 1
-    assert "only In Progress cards bind" in capsys.readouterr().err
+    assert f"card #{cid} is {shown}; only open cards bind." in capsys.readouterr().err
+
+
+def test_cli_bind_a_refined_card(monkeypatch, capsys):
+    _in_session(monkeypatch)
+    cid = _cli_card(status=REFINED)
+    _main(monkeypatch, "bind", str(cid))
+    assert _cli_rows() == [(cid, "cli-session", os.getpid())]
+
+
+def test_cli_next_and_ready_pass_over_another_sessions_card(monkeypatch, capsys):
+    _in_session(monkeypatch)
+    with connection() as conn:
+        held = _card(conn, "held", status=REFINED)
+        mine = _card(conn, "mine", status=REFINED)
+        service.bind_session(conn, held, SessionRef("other", os.getpid()))
+        service.bind_session(conn, mine, SessionRef("cli-session", os.getpid()))
+
+    _main(monkeypatch, "next", "--json")
+    assert json.loads(capsys.readouterr().out)["id"] == mine
+    _main(monkeypatch, "list", "--ready", "--json")
+    assert [c["id"] for c in json.loads(capsys.readouterr().out)] == [mine]
 
 
 def test_cli_bind_unknown_card(monkeypatch, capsys):
@@ -507,7 +676,9 @@ def test_summary_session_payload(monkeypatch, capsys):
         inbox_service.add_item(conn, body="a thought")
 
     data = _summary(monkeypatch, capsys, "--session", LIVE.session_id)
-    assert data["bound"] == [{"id": mine, "title": "mine", "jira": []}]
+    assert data["bound"] == [
+        {"id": mine, "title": "mine", "status": IN_PROGRESS, "jira": []}
+    ]
     assert data["in_review"] == [{"id": review, "title": "waiting"}]
     assert data["inbox"] == 1
     assert data["counts"][IN_PROGRESS] == 2
@@ -552,6 +723,21 @@ def test_summary_session_bound_spans_projects(monkeypatch, capsys):
     data = _summary(monkeypatch, capsys, "--session", LIVE.session_id)
     assert [c["id"] for c in data["bound"]] == [cid]
     assert data["in_review"] == []
+
+
+@pytest.mark.parametrize("status", [REFINED, IN_REVIEW])
+def test_summary_and_mine_show_bound_cards_in_any_open_column(
+    monkeypatch, capsys, status
+):
+    session = _in_session(monkeypatch)
+    with connection() as conn:
+        cid = _card(conn, "bound", status=status)
+        service.bind_session(conn, cid, session)
+
+    [card] = _summary(monkeypatch, capsys, "--session", session.session_id)["bound"]
+    assert (card["id"], card["status"]) == (cid, status)
+    _main(monkeypatch, "list", "--mine", "--json")
+    assert [c["id"] for c in json.loads(capsys.readouterr().out)] == [cid]
 
 
 def test_summary_session_drops_dead_bindings(monkeypatch, capsys, dead_pid):

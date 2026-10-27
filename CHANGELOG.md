@@ -12,6 +12,22 @@ don't change the public surface. Everything is still in flux.
 
 ### Changed
 
+- **A session can be bound to a card in any open column.** A binding now
+  means "this session is working on this card", not "this card is In
+  Progress". `bind N` works on Backlog, Refined, In Progress and In Review
+  cards, refining a card keeps its bindings, and so do moves between Backlog,
+  Refined and In Progress. Entering In Review or closing a card (Done,
+  Archived, epic promotion) still releases them. `list --mine`, the session
+  start-up context and the companion bar show bound cards in any column, and
+  each card in `summary --json --session` carries its `status`.
+- **`next` and `list --ready` skip a card another session is working on**, so
+  a parallel session can't claim a card someone else is refining.
+- **Old bindings are cleaned up.** A closed session's binding is kept for two
+  weeks after it was last bound or resumed, so a resume can bring it back,
+  then removed at the next session start.
+- **`NotInProgress` is now `CardClosed`** in the board's Python API, raised
+  when binding a Done or Archived card.
+
 - **The companion bar shows a claimed card straight away.** The mod's work
   row used to refresh only at session start, after `/capture` and at the end
   of each turn, so a card Claude picked up mid-turn didn't appear until the

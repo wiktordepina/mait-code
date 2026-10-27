@@ -9,10 +9,15 @@ TUI holds a single connection for the app's lifetime.
 Rows are returned as the same dicts the CLI has always produced (see
 :func:`_card_dict`), each carrying its ``tags``, ``references``, active
 Claude Code ``sessions`` and relationships (``parent``, ``blocked_by``,
-``blocks``, ``waiting_on``, ``archived_blockers``). The *session-invariant*: a card leaving
-``in_progress`` releases every session binding, whichever verb moves it. Mutations raise :class:`CardNotFound` for a missing id
-rather than printing and exiting — that ``print``/``sys.exit`` is a CLI concern
-the caller layers on top (the CLI exits; the TUI flashes a notification).
+``blocks``, ``waiting_on``, ``archived_blockers``).
+
+The *session-invariant*: a card entering ``in_review``, ``done`` or
+``archived``, or promoted to an epic, releases every session binding,
+whichever verb moves it; moves between the other open columns keep them.
+
+Mutations raise :class:`CardNotFound` for a missing id rather than printing
+and exiting — that ``print``/``sys.exit`` is a CLI concern the caller layers
+on top (the CLI exits; the TUI flashes a notification).
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ import enum
 import sqlite3
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from mait_code.tools.board.columns import (
     ARCHIVED,
@@ -43,11 +48,11 @@ from mait_code.tools.board.columns import (
 from mait_code.tools.board.sessions import SessionRef, pid_alive
 
 __all__ = [
+    "CardClosed",
     "CardNotFound",
     "EpicOrigin",
     "InheritedEpicClosed",
     "LinkCycle",
-    "NotInProgress",
     "RelationError",
     "add_card",
     "add_comment",
@@ -74,6 +79,7 @@ __all__ = [
     "move_card",
     "next_refined",
     "promote_epic",
+    "prune_stale_bindings",
     "rebind_pid",
     "refine_card",
     "refresh_session_pid",
@@ -129,11 +135,11 @@ class CardNotFound(Exception):
         self.card_id = card_id
 
 
-class NotInProgress(Exception):
-    """Raised when binding a session to a card that isn't In Progress."""
+class CardClosed(Exception):
+    """Raised when binding a session to a card that is ``done`` or ``archived``."""
 
     def __init__(self, card_id: int, status: str) -> None:
-        super().__init__(f"card #{card_id} is {status}, not in_progress")
+        super().__init__(f"card #{card_id} is {status}; only open cards bind")
         self.card_id = card_id
         self.status = status
 
@@ -284,7 +290,8 @@ def _attach_sessions(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     Each binding is a ``{"session_id", "pid", "bound_at"}`` dict, oldest first.
     A binding whose Claude Code process has gone is left out here but kept in
     the table: a resume brings the session back under a new pid (see
-    :func:`refresh_session_pid`), and the card leaving In Progress releases it.
+    :func:`refresh_session_pid`). The card moving to review or closing releases
+    it, and :func:`prune_stale_bindings` drops it once it is old enough.
     """
     if not cards:
         return cards
@@ -407,6 +414,7 @@ def list_cards(
     kind: str | None = CARD,
     parent_id: int | None = None,
     ready: bool = False,
+    claimant: str | None = None,
 ) -> list[dict]:
     """Return cards ordered priority-then-oldest.
 
@@ -428,7 +436,10 @@ def list_cards(
         parent_id: Restrict to the members of this epic, or ``None`` for no
             parent filter.
         ready: Restrict to cards :func:`next_refined` could hand out —
-            refined, not tagged ``blocked``, not waiting on a blocker.
+            refined, not tagged ``blocked``, not waiting on a blocker, and not
+            held by a live session other than *claimant*.
+        claimant: With *ready*, the session id asking; its own bindings don't
+            hold a card back. ``None`` treats every live binding as another's.
     """
     where: list[str] = []
     params: list = []
@@ -474,7 +485,14 @@ def list_cards(
         cards = [
             c for c in cards if any(b["session_id"] == session for b in c["sessions"])
         ]
+    if ready:
+        cards = [c for c in cards if not _held_elsewhere(c["sessions"], claimant)]
     return cards
+
+
+def _held_elsewhere(sessions: list[dict], claimant: str | None) -> bool:
+    """Whether any of a card's *active* bindings belongs to another session."""
+    return any(b["session_id"] != claimant for b in sessions)
 
 
 def get_card(conn: sqlite3.Connection, card_id: int) -> dict | None:
@@ -544,8 +562,10 @@ def next_refined(
 ) -> dict | None:
     """Return the top *ready* card for *project* (priority, then oldest).
 
-    Ready means refined, not tagged ``blocked``, and not waiting on any
-    unsettled ``blocks`` link (see :func:`_attach_links`). Given *epic_id*, the
+    Ready means refined, not tagged ``blocked``, not waiting on any
+    unsettled ``blocks`` link (see :func:`_attach_links`), and not held by a
+    live session other than *session* — another session may be refining it
+    under a playbook. Given *epic_id*, the
     search spans that epic's members in every project and *project* is
     ignored.
 
@@ -566,11 +586,17 @@ def next_refined(
     else:
         scope, scope_param = "project = ?", project
     ready, ready_params = _ready_clause()
-    row = conn.execute(
+    rows = conn.execute(
         f"SELECT {_CARD_COLS} FROM cards WHERE {scope} AND {ready} "
-        f"ORDER BY {_PRIORITY_ORDER}, created_at, id LIMIT 1",
+        f"ORDER BY {_PRIORITY_ORDER}, created_at, id",
         (scope_param, *ready_params),
-    ).fetchone()
+    ).fetchall()
+    # Liveness can't be checked in SQL, so held cards are skipped here.
+    claimant = session.session_id if session is not None else None
+    row = next(
+        (r for r in rows if not _held_elsewhere(card_sessions(conn, r[0]), claimant)),
+        None,
+    )
     if row is None:
         return None
     if claim:
@@ -734,19 +760,31 @@ def _release_sessions(conn: sqlite3.Connection, card_id: int) -> None:
     conn.execute("DELETE FROM card_sessions WHERE card_id = ?", (card_id,))
 
 
-def bind_session(conn: sqlite3.Connection, card_id: int, session: SessionRef) -> None:
-    """Bind a Claude Code *session* to an In Progress card.
+def _on_close(conn: sqlite3.Connection, card_id: int) -> None:
+    """What every path that closes a card does (uncommitted; the caller commits).
 
-    Idempotent: re-binding the same session refreshes its pid and time. A card
-    may carry several bindings (parallel sessions on one card). Raises :class:`CardNotFound` if the
-    id is unknown, :class:`RelationError` for an epic (epics are never worked
-    directly) and :class:`NotInProgress` unless the card is In Progress.
+    Closing is entering ``done`` or ``archived`` by any verb, or promotion to an
+    epic. Each such path calls this, so a new consequence of closing goes here
+    once rather than into every verb.
+    """
+    _release_sessions(conn, card_id)
+
+
+def bind_session(conn: sqlite3.Connection, card_id: int, session: SessionRef) -> None:
+    """Bind a Claude Code *session* to an open card, in any column.
+
+    A binding means the session is working on the card, whichever column it
+    sits in. Idempotent: re-binding the same session refreshes its pid and
+    time. A card may carry several bindings (parallel sessions on one card).
+    Raises :class:`CardNotFound` if the id is unknown, :class:`RelationError`
+    for an epic (epics are never worked directly; checked first) and
+    :class:`CardClosed` for a ``done`` or ``archived`` card.
     """
     row = _require_row(conn, card_id)
     if row[_KIND] == EPIC:
         raise RelationError(f"#{card_id} is an epic; work its member cards instead")
-    if row[_STATUS] != IN_PROGRESS:
-        raise NotInProgress(card_id, row[_STATUS])
+    if row[_STATUS] in _SETTLED:
+        raise CardClosed(card_id, row[_STATUS])
     _upsert_binding(conn, card_id, session)
     conn.commit()
 
@@ -774,11 +812,14 @@ def card_sessions(conn: sqlite3.Connection, card_id: int) -> list[dict]:
 def refresh_session_pid(conn: sqlite3.Connection, session_id: str, pid: int) -> int:
     """Point every binding of *session_id* at *pid*; return how many changed.
 
-    For a resumed session: same id, new Claude Code process.
+    For a resumed session: same id, new Claude Code process. Each binding's
+    ``bound_at`` is renewed too, so :func:`prune_stale_bindings` counts from
+    the resume rather than from the original bind.
     """
     changed = conn.execute(
-        "UPDATE card_sessions SET pid = ? WHERE session_id = ? AND pid != ?",
-        (pid, session_id, pid),
+        "UPDATE card_sessions SET pid = ?, bound_at = ? "
+        "WHERE session_id = ? AND pid != ?",
+        (pid, _now(), session_id, pid),
     ).rowcount
     conn.commit()
     return changed
@@ -789,12 +830,13 @@ def rebind_pid(conn: sqlite3.Connection, pid: int, session_id: str) -> int:
 
     For a ``/clear``: the process carries on under a new session id, and its
     cards should follow. A card already bound to *session_id* keeps that one
-    binding (the old one is dropped rather than duplicated).
+    binding (the old one is dropped rather than duplicated). A moved binding's
+    ``bound_at`` is renewed, as on a resume.
     """
     moved = conn.execute(
-        "UPDATE OR IGNORE card_sessions SET session_id = ? "
+        "UPDATE OR IGNORE card_sessions SET session_id = ?, bound_at = ? "
         "WHERE pid = ? AND session_id != ?",
-        (session_id, pid, session_id),
+        (session_id, _now(), pid, session_id),
     ).rowcount
     conn.execute(
         "DELETE FROM card_sessions WHERE pid = ? AND session_id != ?",
@@ -802,6 +844,33 @@ def rebind_pid(conn: sqlite3.Connection, pid: int, session_id: str) -> int:
     )
     conn.commit()
     return moved
+
+
+def prune_stale_bindings(conn: sqlite3.Connection, *, older_than: timedelta) -> int:
+    """Delete dead bindings last bound or resumed more than *older_than* ago.
+
+    A dead binding is kept so a resume can bring it back (see
+    :func:`refresh_session_pid`), but on a card that stays open for weeks it
+    would otherwise linger, and a recycled pid could make it read as live
+    again. Age is counted from ``bound_at``, which a bind, a resume and a
+    ``/clear`` all renew; nothing records when a process dies, so a session
+    that ran for longer than *older_than* without either is pruned as soon as
+    it ends. Live bindings are never touched, whatever their age. Returns how
+    many were deleted.
+    """
+    cutoff = (datetime.now(timezone.utc) - older_than).isoformat()
+    rows = conn.execute(
+        "SELECT card_id, session_id, pid FROM card_sessions WHERE bound_at < ?",
+        (cutoff,),
+    ).fetchall()
+    stale = [
+        (card_id, session_id) for card_id, session_id, pid in rows if not pid_alive(pid)
+    ]
+    conn.executemany(
+        "DELETE FROM card_sessions WHERE card_id = ? AND session_id = ?", stale
+    )
+    conn.commit()
+    return len(stale)
 
 
 # --- Mutations ---
@@ -914,9 +983,11 @@ def move_card(
     """Move a card to *new_status*, maintaining the done- and session-invariants.
 
     Entering ``done`` stamps ``completed_at``; leaving it clears the stamp.
-    Moving anywhere but ``in_progress`` releases the card's session bindings;
-    moving to ``in_progress`` with a *session* binds it — unless it's an epic,
-    which never binds (its status is bookkeeping, not work). Raises
+    Entering ``in_review`` releases the card's session bindings (the card is
+    handed off), and entering ``done`` or ``archived`` closes it (see
+    :func:`_on_close`); moves between the other columns keep them. Moving to
+    ``in_progress`` with a *session* binds it — unless it's an epic, which
+    never binds (its status is bookkeeping, not work). Raises
     :class:`CardNotFound` if the id is unknown.
     """
     row = _require_row(conn, card_id)
@@ -939,9 +1010,11 @@ def move_card(
             "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
             (new_status, now, card_id),
         )
-    if new_status != IN_PROGRESS:
+    if new_status in _SETTLED:
+        _on_close(conn, card_id)
+    elif new_status == IN_REVIEW:
         _release_sessions(conn, card_id)
-    elif session is not None and row[_KIND] != EPIC:
+    elif new_status == IN_PROGRESS and session is not None and row[_KIND] != EPIC:
         _upsert_binding(conn, card_id, session)
     conn.commit()
 
@@ -955,8 +1028,8 @@ def refine_card(
 ) -> None:
     """Move a card to ``refined``, optionally setting description/acceptance.
 
-    Releases the card's session bindings. Raises :class:`CardNotFound` if the
-    id is unknown.
+    Keeps the card's session bindings: a session may refine the card it is
+    working on. Raises :class:`CardNotFound` if the id is unknown.
     """
     fields: dict[str, str] = {"status": REFINED, "updated_at": _now()}
     if description is not None:
@@ -966,7 +1039,6 @@ def refine_card(
     _require_row(conn, card_id)
     cols = ", ".join(f"{key} = ?" for key in fields)
     conn.execute(f"UPDATE cards SET {cols} WHERE id = ?", (*fields.values(), card_id))
-    _release_sessions(conn, card_id)
     conn.commit()
 
 
@@ -975,8 +1047,8 @@ def complete_card(
 ) -> None:
     """Move a card to ``done`` with an optional completion summary.
 
-    Releases the card's session bindings. Raises :class:`CardNotFound` if the
-    id is unknown.
+    Closes the card (see :func:`_on_close`). Raises :class:`CardNotFound` if
+    the id is unknown.
     """
     _require_row(conn, card_id)
     now = _now()
@@ -985,7 +1057,7 @@ def complete_card(
         "updated_at = ? WHERE id = ?",
         (DONE, summary or None, now, now, card_id),
     )
-    _release_sessions(conn, card_id)
+    _on_close(conn, card_id)
     conn.commit()
 
 
@@ -995,9 +1067,9 @@ def review_card(
     """Move a card to ``in_review``, recording *pr* as a ``PR`` reference.
 
     The card is parked between ``in_progress`` and ``done`` until its pull
-    request merges. Re-reviewing with a PR the card already carries (e.g.
-    after a re-push) doesn't duplicate the reference. Raises
-    :class:`CardNotFound` if the id is unknown.
+    request merges, and its session bindings are released. Re-reviewing with
+    a PR the card already carries (e.g. after a re-push) doesn't duplicate the
+    reference. Raises :class:`CardNotFound` if the id is unknown.
     """
     move_card(conn, card_id, IN_REVIEW)
     if pr and {"label": "PR", "value": pr} not in list_references(conn, card_id):
@@ -1035,15 +1107,15 @@ def unblock_card(conn: sqlite3.Connection, card_id: int) -> None:
 def archive_card(conn: sqlite3.Connection, card_id: int) -> None:
     """Archive a card (hide it from default views).
 
-    Releases the card's session bindings. Raises :class:`CardNotFound` if the
-    id is unknown.
+    Closes the card (see :func:`_on_close`). Raises :class:`CardNotFound` if
+    the id is unknown.
     """
     _require_row(conn, card_id)
     conn.execute(
         "UPDATE cards SET status = ?, updated_at = ? WHERE id = ?",
         (ARCHIVED, _now(), card_id),
     )
-    _release_sessions(conn, card_id)
+    _on_close(conn, card_id)
     conn.commit()
 
 
@@ -1270,7 +1342,7 @@ def remove_link(
 def promote_epic(conn: sqlite3.Connection, card_id: int) -> None:
     """Turn an existing card into an epic, keeping its history.
 
-    Releases its session bindings, moves it to :data:`EPIC_PROJECT` and
+    Closes it as a card (see :func:`_on_close`), moves it to :data:`EPIC_PROJECT` and
     records the project it came from as a comment. Raises
     :class:`CardNotFound` for an unknown id and :class:`RelationError` if it is
     already an epic, has a parent, or has any ``blocks`` link — each of which
@@ -1299,7 +1371,7 @@ def promote_epic(conn: sqlite3.Connection, card_id: int) -> None:
             "VALUES (?, ?, ?, ?)",
             (card_id, "me", f"Promoted to an epic (was in project {row[1]}).", now),
         )
-        _release_sessions(conn, card_id)
+        _on_close(conn, card_id)
 
 
 def epic_members(

@@ -13,7 +13,9 @@ while it waits.
 
 Run from inside a Claude Code session, ``move N in_progress`` and
 ``next --claim`` also bind the card to that session (``bind``/``unbind`` do it
-explicitly), so parallel sessions can each tell their own card from the rest.
+explicitly, in any open column), so parallel sessions can each tell their own
+card from the rest; ``next`` and ``list --ready`` pass over a card another live
+session holds.
 
 The handlers here are thin: argument parsing, the not-found/exit helper, and
 presentation (text vs ``--json``). Every query and mutation — including the
@@ -245,6 +247,7 @@ def cmd_list(args):
             session=session,
             parent_id=args.epic,
             ready=args.ready,
+            claimant=current.session_id if (current := current_session()) else None,
         )
 
     if args.json:
@@ -509,7 +512,7 @@ def cmd_next(args):
                 conn,
                 project,
                 claim=args.claim,
-                session=current_session() if args.claim else None,
+                session=current_session(),
                 epic_id=args.epic,
             )
         except (service.CardNotFound, service.RelationError) as exc:
@@ -524,7 +527,8 @@ def cmd_next(args):
             )
             print(
                 f"No ready cards {scope} — none refined, or every refined "
-                f"card is tagged blocked or waiting on an unfinished blocker."
+                f"card is tagged blocked, waiting on an unfinished blocker, "
+                f"or held by another session."
             )
         return
 
@@ -672,7 +676,7 @@ def cmd_archive(args):
 
 
 def cmd_bind(args):
-    """Bind a Claude Code session (default: the current one) to an In Progress card."""
+    """Bind a Claude Code session (default: the current one) to an open card."""
     if args.session and args.pid is None:
         # Never pair another session's id with this process's pid: the binding
         # would live, die and follow a /clear with the wrong process.
@@ -693,10 +697,8 @@ def cmd_bind(args):
             service.bind_session(conn, args.id, SessionRef(session_id, pid))
         except service.CardNotFound:
             _not_found(args.id)
-        except service.NotInProgress as exc:
-            _fail(
-                f"card #{args.id} is {label(exc.status)}; only In Progress cards bind."
-            )
+        except service.CardClosed as exc:
+            _fail(f"card #{args.id} is {label(exc.status)}; only open cards bind.")
         except service.RelationError as exc:
             _fail(f"{exc}.")
         _print_card(
@@ -852,7 +854,8 @@ def _jira_links(references: list[dict]) -> list[dict]:
 def _session_brief(conn, session: str, project: str | None) -> dict:
     """What a status surface (the Claude Code mod) shows, in one payload.
 
-    The session's bound cards (any project) with their Jira links, the In
+    The session's bound cards (any project or open column) with their status
+    and Jira links, the In
     Review cards (scoped like the counts) and the global inbox count.
     """
     from mait_code.tools.inbox import service as inbox_service
@@ -865,6 +868,7 @@ def _session_brief(conn, session: str, project: str | None) -> dict:
             {
                 "id": card["id"],
                 "title": card["title"],
+                "status": card["status"],
                 "jira": _jira_links(card["references"]),
             }
             for card in service.list_cards(conn, session=session)
@@ -1083,9 +1087,7 @@ def main():
     p_ref_list.add_argument("--json", action="store_true", help="Emit JSON")
     p_ref_list.set_defaults(func=cmd_ref_list)
 
-    p_bind = sub.add_parser(
-        "bind", help="Bind a Claude Code session to an In Progress card"
-    )
+    p_bind = sub.add_parser("bind", help="Bind a Claude Code session to an open card")
     p_bind.add_argument("id", type=int, help="Card ID")
     p_bind.add_argument(
         "--session", metavar="ID", help=f"Session id (default: ${SESSION_ENV})"

@@ -199,14 +199,16 @@ def test_main_silent_when_nothing(monkeypatch, capsys, project):
 # --- card ↔ session bindings ---
 
 
-def _bound_card(title: str, session_id: str, pid: int) -> int:
+def _bound_card(
+    title: str, session_id: str, pid: int, status: str = "in_progress"
+) -> int:
     from mait_code.tools.board import service
     from mait_code.tools.board.db import connection
     from mait_code.tools.board.sessions import SessionRef
 
     with connection() as conn:
         cid = service.add_card(conn, project="p", title=title)
-        service.move_card(conn, cid, "in_progress")
+        service.move_card(conn, cid, status)
         service.bind_session(conn, cid, SessionRef(session_id, pid))
     return cid
 
@@ -239,6 +241,35 @@ def test_session_section_names_bound_cards(project):
         session_section("s1") == f"This session is working on #{cid} — Bind board cards"
     )
     assert session_section("nobody") == ""
+
+
+@pytest.mark.parametrize("status", ["backlog", "refined", "in_review"])
+def test_session_section_names_bound_cards_in_any_open_column(project, status):
+    import os
+
+    cid = _bound_card("Being refined", "s1", os.getpid(), status=status)
+    assert session_section("s1") == f"This session is working on #{cid} — Being refined"
+
+
+def test_session_start_prunes_old_dead_bindings(monkeypatch, project):
+    import subprocess
+    import sys
+
+    from mait_code.tools.board.db import connection
+
+    proc = subprocess.Popen([sys.executable, "-c", "pass"])
+    proc.wait()
+    old = _bound_card("Long gone", "old", proc.pid)
+    recent = _bound_card("Just closed", "recent", proc.pid)
+    with connection() as conn:
+        conn.execute(
+            "UPDATE card_sessions SET bound_at = ? WHERE card_id = ?",
+            ((datetime.now(timezone.utc) - timedelta(days=15)).isoformat(), old),
+        )
+        conn.commit()
+
+    _start(monkeypatch, "startup", "new-id", pid=None)
+    assert _bindings() == [(recent, "recent", proc.pid)]
 
 
 def test_build_session_context_adds_the_session_section(project):
