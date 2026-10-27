@@ -192,7 +192,7 @@ board behaves exactly as before.
 
 A *playbook* is a skill that drives a card through a fixed series of steps —
 refine, review, implement, raise a PR. The board records where a card is in
-such a run, so you (and the companion bar) can see it at a glance:
+such a run, so you can see it at a glance:
 
 ```bash
 mc-tool-board run start 12 --playbook work --steps "Refine" "Design review" "Implement"
@@ -210,7 +210,9 @@ mc-tool-board run end 12
   A skip needs a reason and adds a comment to the card; a pause may carry
   one. Only one step is in progress at a time, and any step can be redone.
 - **The current step** is the one in progress, or else the first paused one.
-  `show`, the TUI's card screen and the companion bar mark it.
+  `show` and the TUI's card screen mark it, and `summary --json --session`
+  carries it on each bound card for status surfaces such as the companion
+  mod.
 - **A run ends when the playbook says so** (`run end`), or when the card is
   completed, archived or promoted to an epic. Finishing every step doesn't
   end it, so the final state stays visible until the playbook has reported

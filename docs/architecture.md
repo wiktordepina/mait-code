@@ -421,7 +421,7 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `summary` | --all?, --project?, --session?, --json? | Per-column counts (the session-start hook reads the same counts via `service.summary_counts`); `--session ID` (with `--json`) adds that session's bound cards, the In Review cards and the inbox count |
 | `export` | id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search?, --epic? | Export one card, one epic with its members, or the whole board as markdown or JSON (stdout, or a file with `--out`) |
 
-Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) the session-invariant (entering `in_review` or closing a card releases every `card_sessions` binding) and the run rules (closing a card ends its open run) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
+Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving), the session-invariant (entering `in_review` or closing a card releases every `card_sessions` binding) and the run rules (closing a card ends its open run) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
 
 ## Board TUI (`mait-code board`)
 

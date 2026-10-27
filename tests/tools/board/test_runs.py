@@ -180,7 +180,7 @@ def test_a_step_is_addressed_by_exact_name(board_db, running):
         service.set_step(board_db, running, "design review", STEP_DONE)
 
 
-@pytest.mark.parametrize("step", ["4", "0", "Nope"])
+@pytest.mark.parametrize("step", ["4", "0", "Nope", "²"])
 def test_an_unknown_step_is_refused(board_db, running, step):
     with pytest.raises(service.RunRefused, match="has no step"):
         service.set_step(board_db, running, step, STEP_DONE)
@@ -296,6 +296,11 @@ def test_a_step_change_bumps_the_run_and_the_card(board_db, running):
     service.set_step(board_db, running, "1", STEP_DONE)
     assert _run(board_db, running)["updated_at"] > "2000-01-02"
     assert service.get_card(board_db, running)["updated_at"] > "2000-01-02"
+
+
+def test_an_unknown_card_is_reported_before_a_reason_problem(board_db):
+    with pytest.raises(service.CardNotFound):
+        service.set_step(board_db, 999, "1", STEP_DONE, reason="why")
 
 
 def test_a_step_change_needs_an_open_run(board_db):

@@ -989,7 +989,7 @@ def _check_steps(card_id: int, steps: list[str]) -> list[str]:
     for position, name in enumerate(names, 1):
         if not name:
             raise RunRefused(f"card #{card_id}: step {position} has no name")
-        if name.isdigit():
+        if name.isdecimal():
             # A digit name would read as a position in ``run step``.
             raise RunRefused(
                 f"card #{card_id}: step name {name!r} is all digits; "
@@ -1075,7 +1075,7 @@ def _resolve_step(
     """The step row named by a 1-based position or an exact, case-sensitive name."""
     step = step.strip()
     cols = "position, name, status, reason, started_at, finished_at"
-    if step.isdigit():
+    if step.isdecimal():
         row = conn.execute(
             f"SELECT {cols} FROM card_run_steps WHERE run_id = ? AND position = ?",
             (run_id, int(step)),
@@ -1125,14 +1125,14 @@ def set_step(
     if status not in STEP_STATUSES:
         raise ValueError(f"unknown step status {status!r}")
     reason = reason.strip() if reason else None
-    if status == STEP_SKIPPED and not reason:
-        raise RunRefused(f"card #{card_id}: skipping a step needs a reason")
-    if reason and status not in (STEP_SKIPPED, STEP_PAUSED):
-        raise RunRefused(
-            f"card #{card_id}: a reason goes with skipped or paused, not {status}"
-        )
     with _write_lock(conn):
         _require_row(conn, card_id)
+        if status == STEP_SKIPPED and not reason:
+            raise RunRefused(f"card #{card_id}: skipping a step needs a reason")
+        if reason and status not in (STEP_SKIPPED, STEP_PAUSED):
+            raise RunRefused(
+                f"card #{card_id}: a reason goes with skipped or paused, not {status}"
+            )
         run_id = _open_run_id(conn, card_id)
         if run_id is None:
             raise RunRefused(f"card #{card_id} has no open run")
