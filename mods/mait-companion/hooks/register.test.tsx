@@ -346,6 +346,36 @@ test('a turn refreshes the bar', async ($, on) => {
   await ui.unmount()
 })
 
+test('a board call mid-turn refreshes the bar as it returns', async ($, on) => {
+  const world: World = { summary: { bound: [], in_review: [], inbox: 0 } }
+  const calls = engine(on, world)
+  on('tool.call', () => ({ result: 'ok' }) as never)
+  await start($)
+  const before = calls.length
+  world.summary = { bound: [card(12, 'Claimed mid-turn')], in_review: [], inbox: 0 }
+  await $.tool.call({ tool: 'Bash', command: 'mc-tool-board next --claim --json' } as never)
+  expect(calls.slice(before)).toContainEqual(['mc-tool-board', 'summary', '--json', '--session', 'sess-1'])
+  // The refresh isn't awaited by the call, so let it land.
+  await new Promise(resolve => setTimeout(resolve, 0))
+  const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /#12/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('other Bash calls, and a subagent\'s board calls, leave the board alone', async ($, on) => {
+  const calls = engine(on)
+  agentEngine(on)
+  mock.clock(on)
+  await start($)
+  await $.agent.spawn({ prompt: 'a', description: 'd', subagentType: 'Explore' })
+  const before = calls.length
+  for (const command of ['git status', 'grep -r mc-tool-boards .', 'ls ~/my-mc-tool-board']) {
+    await $.tool.call({ tool: 'Bash', command } as never)
+  }
+  await $.tool.call({ tool: 'Bash', command: 'mc-tool-board list', agentId: 'ag-1' } as never)
+  expect(calls.slice(before).some(argv => argv[0] === 'mc-tool-board')).toBe(false)
+})
+
 // --- row 2: the session ----------------------------------------------------------
 
 const WHERE: World = {
