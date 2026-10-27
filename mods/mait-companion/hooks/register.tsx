@@ -19,6 +19,8 @@ const NO_WORK: WorkData = { bound: [], inReview: [], inbox: 0 }
 const NO_EVENTS: EventData = { agents: [] }
 /** How often a running agent's elapsed time moves on screen. */
 const TICK_MS = 5_000
+/** A Bash command that runs the board CLI, however it is wrapped. */
+const BOARD_CALL = /(^|[^\w-])mc-tool-board(?![\w-])/
 
 const work = atom({ plugin: 'mait-companion', key: 'work' } as const, NO_WORK)
 const session = atom({ plugin: 'mait-companion', key: 'session' } as const, {})
@@ -318,6 +320,15 @@ export const register: Register = on => {
       })
     }
     return next(e)
+  })
+
+  // A card claimed or moved mid-turn shows as the board call returns, not at
+  // turn end. Any board call, read-only included: one summary is cheaper than
+  // a verb list that goes stale. Not awaited, as above.
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId === undefined && BOARD_CALL.test(e.command)) void guarded(() => refreshWork($))
+    return result
   })
 
   // Raised whenever the context fill or a rate-limit window moves,

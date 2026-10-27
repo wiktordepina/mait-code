@@ -10,6 +10,15 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Changed
+
+- **The companion bar shows a claimed card straight away.** The mod's work
+  row used to refresh only at session start, after `/capture` and at the end
+  of each turn, so a card Claude picked up mid-turn didn't appear until the
+  turn finished. It now also refreshes as any `mc-tool-board` call Claude
+  makes returns. Board changes from the TUI or another session still show at
+  turn end.
+
 ## [0.90.0] — 2026-10-26
 
 ### Fixed
