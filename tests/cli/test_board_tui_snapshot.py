@@ -614,6 +614,60 @@ def test_detail_markdown_snapshot(snap_compare, tmp_path: Path) -> None:
     )
 
 
+def _seed_detail_run(db_path: Path) -> None:
+    """A refined card mid-way through a playbook run: one step done, one
+    skipped with a reason, one current, the rest pending. Timestamps are fixed
+    so the snapshot is stable."""
+    conn = get_connection(db_path)
+    try:
+        cid = service.add_card(
+            conn, project="mait-code", title="Step progress on board cards"
+        )
+        service.move_card(conn, cid, "refined")
+        service.edit_card(
+            conn, cid, description="Record where a card sits inside a playbook run."
+        )
+        service.start_run(
+            conn,
+            cid,
+            "work",
+            ["Refine", "Design review", "Implement", "Comment audit", "Raise PR"],
+        )
+        service.set_step(conn, cid, "1", "done")
+        service.set_step(
+            conn, cid, "2", "skipped", reason="already reviewed twice while refining"
+        )
+        service.set_step(conn, cid, "3", "in_progress")
+        conn.execute(
+            "UPDATE card_runs SET started_at = '2026-10-27T09:00:00+00:00', "
+            "updated_at = '2026-10-27T11:00:00+00:00'"
+        )
+        conn.execute(
+            "UPDATE card_comments SET created_at = '2026-10-27T10:00:00+00:00'"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_detail_run_snapshot(snap_compare, tmp_path: Path) -> None:
+    """Lock the card screen's Run section: the playbook and its start, then a
+    line per step (glyph, position, name, status, any reason), current marked."""
+    db_path = tmp_path / "board.db"
+    _seed_detail_run(db_path)
+
+    async def run_before(pilot) -> None:
+        pilot.app._focus_status("refined")
+        await pilot.press("enter")
+        await pilot.pause()
+
+    assert snap_compare(
+        BoardApp(db_path=db_path),
+        run_before=run_before,
+        terminal_size=(120, 40),
+    )
+
+
 def test_card_edit_snapshot(snap_compare, tmp_path: Path) -> None:
     """Lock the edit mode of the card screen (form fields on the same frame),
     reached in-place from view via ``e``."""

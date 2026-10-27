@@ -43,6 +43,9 @@ from mait_code.tools.board.columns import (
     IN_REVIEW,
     LINK_TYPES,
     REFINED,
+    STEP_PAUSED,
+    STEP_SKIPPED,
+    STEP_STATUSES,
     label,
 )
 from mait_code.tools.board.db import connection, get_project
@@ -344,6 +347,9 @@ def cmd_show(args):
         print(f"\nAcceptance criteria:\n{card['acceptance_criteria']}")
     if card["completion_summary"]:
         print(f"\nCompletion summary:\n{card['completion_summary']}")
+    if card["run"]:
+        print("")
+        print("\n".join(export.run_lines(card["run"])))
     if card["references"]:
         print(f"\nReferences ({len(card['references'])}):")
         for position, ref in enumerate(card["references"], 1):
@@ -665,6 +671,74 @@ def cmd_ref_list(args):
         print(f"  {position}. {ref['label']}: {ref['value']}")
 
 
+# --- Playbook runs ---
+
+
+def cmd_run_start(args):
+    with connection() as conn:
+        try:
+            service.start_run(
+                conn, args.id, args.playbook, args.steps, replace=args.replace
+            )
+        except service.CardNotFound:
+            _not_found(args.id)
+        except service.RunRefused as exc:
+            _fail(f"{exc}.")
+        _print_card(
+            conn,
+            args,
+            args.id,
+            f"Card #{args.id}: started run '{args.playbook.strip()}' "
+            f"({len(args.steps)} steps).",
+        )
+
+
+def cmd_run_step(args):
+    reason = " ".join(args.reason).strip() if args.reason else None
+    with connection() as conn:
+        try:
+            position, name = service.set_step(
+                conn, args.id, args.step, args.status, reason=reason
+            )
+        except service.CardNotFound:
+            _not_found(args.id)
+        except service.RunRefused as exc:
+            _fail(f"{exc}.")
+        _print_card(
+            conn,
+            args,
+            args.id,
+            f"Card #{args.id}: step {position} ({name}) → "
+            f"{args.status.replace('_', ' ')}.",
+        )
+
+
+def cmd_run_end(args):
+    with connection() as conn:
+        try:
+            service.end_run(conn, args.id)
+        except service.CardNotFound:
+            _not_found(args.id)
+        except service.RunRefused as exc:
+            _fail(f"{exc}.")
+        _print_card(conn, args, args.id, f"Card #{args.id}: run ended.")
+
+
+def cmd_run_show(args):
+    with connection() as conn:
+        try:
+            run = service.get_run(conn, args.id)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    if args.json:
+        print(json.dumps(run, indent=2))
+    elif run is None:
+        print(f"Card #{args.id} has no open run.")
+    else:
+        print("\n".join(export.run_lines(run)))
+
+
 def cmd_archive(args):
     with connection() as conn:
         try:
@@ -854,8 +928,8 @@ def _jira_links(references: list[dict]) -> list[dict]:
 def _session_brief(conn, session: str, project: str | None) -> dict:
     """What a status surface (the Claude Code mod) shows, in one payload.
 
-    The session's bound cards (any project or open column) with their status
-    and Jira links, the In
+    The session's bound cards (any project or open column) with their status,
+    Jira links and open playbook run, the In
     Review cards (scoped like the counts) and the global inbox count.
     """
     from mait_code.tools.inbox import service as inbox_service
@@ -870,6 +944,7 @@ def _session_brief(conn, session: str, project: str | None) -> dict:
                 "title": card["title"],
                 "status": card["status"],
                 "jira": _jira_links(card["references"]),
+                "run": card["run"],
             }
             for card in service.list_cards(conn, session=session)
         ],
@@ -1086,6 +1161,51 @@ def main():
     p_ref_list.add_argument("id", type=int, help="Card ID")
     p_ref_list.add_argument("--json", action="store_true", help="Emit JSON")
     p_ref_list.set_defaults(func=cmd_ref_list)
+
+    p_run = sub.add_parser("run", help="Record a playbook run's steps on a card")
+    run_sub = p_run.add_subparsers(dest="run_command", required=True)
+
+    p_run_start = run_sub.add_parser(
+        "start", help="Start a run: its ordered steps, all pending"
+    )
+    p_run_start.add_argument("id", type=int, help="Card ID")
+    p_run_start.add_argument(
+        "--playbook", required=True, help="The playbook's name (e.g. work)"
+    )
+    p_run_start.add_argument(
+        "--steps", nargs="+", required=True, metavar="NAME", help="Step names, in order"
+    )
+    p_run_start.add_argument(
+        "--replace", action="store_true", help="End the card's open run first"
+    )
+    p_run_start.add_argument(
+        "--json", action="store_true", help="Emit the card as JSON"
+    )
+    p_run_start.set_defaults(func=cmd_run_start)
+
+    p_run_step = run_sub.add_parser("step", help="Set one step's status")
+    p_run_step.add_argument("id", type=int, help="Card ID")
+    p_run_step.add_argument("step", help="1-based position or exact step name")
+    p_run_step.add_argument("status", choices=STEP_STATUSES, help="New status")
+    p_run_step.add_argument(
+        "--reason",
+        nargs="+",
+        help=f"Why ({STEP_SKIPPED}: required; {STEP_PAUSED}: optional)",
+    )
+    p_run_step.add_argument("--json", action="store_true", help="Emit the card as JSON")
+    p_run_step.set_defaults(func=cmd_run_step)
+
+    p_run_end = run_sub.add_parser("end", help="End the card's open run")
+    p_run_end.add_argument("id", type=int, help="Card ID")
+    p_run_end.add_argument("--json", action="store_true", help="Emit the card as JSON")
+    p_run_end.set_defaults(func=cmd_run_end)
+
+    p_run_show = run_sub.add_parser("show", help="Show the card's open run")
+    p_run_show.add_argument("id", type=int, help="Card ID")
+    p_run_show.add_argument(
+        "--json", action="store_true", help="Emit the run as JSON (null if none)"
+    )
+    p_run_show.set_defaults(func=cmd_run_show)
 
     p_bind = sub.add_parser("bind", help="Bind a Claude Code session to an open card")
     p_bind.add_argument("id", type=int, help="Card ID")

@@ -346,6 +346,21 @@ Free-form tags ride alongside a card's status. `blocked` is the first consumer: 
 | `pid` | INTEGER | The Claude Code process serving it — how a binding is known to be live and how it follows a `/clear` |
 | `bound_at` | TEXT | Timestamp of binding |
 
+**Playbook runs: `card_runs` and `card_run_steps`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `card_runs.id` | INTEGER PK | Auto-increment; a card's latest run has the highest id |
+| `card_runs.card_id` | INTEGER FK | References `cards(id)`; `ON DELETE CASCADE` |
+| `card_runs.playbook` | TEXT | The playbook's name, e.g. `work` |
+| `card_runs.started_at` / `updated_at` | TEXT | When the run started; when it or a step last changed |
+| `card_runs.ended_at` | TEXT | `NULL` while open; a partial unique index allows one open run per card |
+| `card_run_steps.run_id` | INTEGER FK | References `card_runs(id)`; `ON DELETE CASCADE` |
+| `card_run_steps.position` / `name` | INTEGER / TEXT | 1-based order and the playbook's step name; primary key `(run_id, position)` |
+| `card_run_steps.status` | TEXT | `CHECK`: `pending`, `in_progress`, `done`, `skipped`, `paused`; a partial unique index allows one `in_progress` step per run |
+| `card_run_steps.reason` | TEXT | Why a step was skipped (required) or paused (optional) |
+| `card_run_steps.started_at` / `finished_at` | TEXT | Set and cleared by the step rules in `service.set_step` |
+
 **Links table: `card_links`**
 
 | Column | Type | Description |
@@ -396,13 +411,17 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `archive` | id | Archive a card (hidden, not deleted) |
 | `bind` | id, --session? --pid? | Bind a Claude Code session (default: `$CLAUDE_CODE_SESSION_ID`/`$CLAUDE_PID`) to an open card (not Done or Archived); refused without both, and `--session` needs its own `--pid` |
 | `unbind` | id, --session? | Drop a session's binding from a card |
+| `run start` | id, --playbook, --steps…, --replace? | Start a playbook run: its ordered steps, all pending; refused while a run is open unless `--replace` |
+| `run step` | id, step, status, --reason? | Set one step (by position or exact name) to `pending`/`in_progress`/`done`/`skipped`/`paused` |
+| `run end` | id | End the card's open run, keeping it as history |
+| `run show` | id, --json? | Show the card's open run (`null` with `--json` when there is none) |
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance?, --project?, --parent? | Edit card fields; `--parent none` takes the card out of its epic |
 | `remove` | id | Delete a card permanently (cascades comments) |
 | `summary` | --all?, --project?, --session?, --json? | Per-column counts (the session-start hook reads the same counts via `service.summary_counts`); `--session ID` (with `--json`) adds that session's bound cards, the In Review cards and the inbox count |
 | `export` | id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search?, --epic? | Export one card, one epic with its members, or the whole board as markdown or JSON (stdout, or a file with `--out`) |
 
-Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) and the session-invariant (leaving `in_progress` releases every `card_sessions` binding) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
+Every query and mutation — including the done-invariant (`completed_at` is set on entering `done` and cleared on leaving) the session-invariant (entering `in_review` or closing a card releases every `card_sessions` binding) and the run rules (closing a card ends its open run) — lives in `src/mait_code/tools/board/service.py`, a presentation-agnostic layer over an open connection. The argparse handlers and the TUI both sit on top of it, so there is a single source of truth for the SQL and the workflow rules.
 
 ## Board TUI (`mait-code board`)
 

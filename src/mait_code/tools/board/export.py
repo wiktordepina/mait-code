@@ -53,6 +53,7 @@ __all__ = [
     # Formatting
     "progress_text",
     "related_text",
+    "run_lines",
 ]
 
 MARKDOWN = "markdown"
@@ -105,6 +106,31 @@ def related_text(cards: list[dict]) -> str:
     return "; ".join(f"#{c['id']} {c['title']} ({label(c['status'])})" for c in cards)
 
 
+def _when(stamp: str | None) -> str:
+    """A stored ISO timestamp as ``YYYY-MM-DD HH:MM``."""
+    return stamp[:16].replace("T", " ") if stamp else ""
+
+
+def run_lines(run: dict) -> list[str]:
+    """A playbook run as plain text: a header line, then one line per step.
+
+    ``Run: work · started 2026-10-27 21:04``, then ``  2. skipped      Design
+    review — <reason>``, the current step marked ``← current``.
+    """
+    lines = [f"Run: {run['playbook']} · started {_when(run['started_at'])}"]
+    for step in run["steps"]:
+        line = (
+            f"  {step['position']}. {step['status'].replace('_', ' '):<12} "
+            f"{step['name']}"
+        )
+        if step["reason"]:
+            line += f" — {step['reason']}"
+        if step["position"] == run["current"]:
+            line += "  ← current"
+        lines.append(line)
+    return lines
+
+
 def progress_text(progress: dict) -> str:
     """``3/7 done · 1 waiting · 2 in progress`` for an epic's ``progress``."""
     parts = [f"{progress[DONE]}/{progress['total']} done"]
@@ -119,6 +145,18 @@ def _comment_md(comment: dict) -> str:
     """One comment: an attribution line, then the body as a blockquote."""
     quoted = "\n".join(f"> {line}".rstrip() for line in comment["body"].splitlines())
     return f"**{comment['author']}** — {comment['created_at']}\n\n{quoted}"
+
+
+def _run_step_md(step: dict, current: int | None) -> str:
+    """One step as a numbered list item: name, status, and any reason."""
+    line = (
+        f"{step['position']}. **{step['name']}** — {step['status'].replace('_', ' ')}"
+    )
+    if step["reason"]:
+        line += f": {step['reason']}"
+    if step["position"] == current:
+        line += " *(current)*"
+    return line
 
 
 def card_markdown(card: dict, *, level: int = 1) -> str:
@@ -143,6 +181,14 @@ def card_markdown(card: dict, *, level: int = 1) -> str:
     ):
         if card[field]:
             blocks.append(f"{_heading(sub, title)}\n\n{card[field]}")
+
+    run = card.get("run")
+    if run:
+        steps = "\n".join(_run_step_md(step, run["current"]) for step in run["steps"])
+        blocks.append(
+            f"{_heading(sub, 'Run')}\n\n"
+            f"`{run['playbook']}`, started {_when(run['started_at'])}\n\n{steps}"
+        )
 
     if card["references"]:
         refs = "\n".join(

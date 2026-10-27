@@ -677,7 +677,7 @@ def test_summary_session_payload(monkeypatch, capsys):
 
     data = _summary(monkeypatch, capsys, "--session", LIVE.session_id)
     assert data["bound"] == [
-        {"id": mine, "title": "mine", "status": IN_PROGRESS, "jira": []}
+        {"id": mine, "title": "mine", "status": IN_PROGRESS, "jira": [], "run": None}
     ]
     assert data["in_review"] == [{"id": review, "title": "waiting"}]
     assert data["inbox"] == 1

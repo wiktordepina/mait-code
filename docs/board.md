@@ -188,6 +188,35 @@ Bindings rely on the `CLAUDE_CODE_SESSION_ID` and `CLAUDE_PID` variables Claude
 Code exports to its tools and hooks. Outside Claude Code, nothing binds and the
 board behaves exactly as before.
 
+## Playbook runs
+
+A *playbook* is a skill that drives a card through a fixed series of steps —
+refine, review, implement, raise a PR. The board records where a card is in
+such a run, so you (and the companion bar) can see it at a glance:
+
+```bash
+mc-tool-board run start 12 --playbook work --steps "Refine" "Design review" "Implement"
+mc-tool-board run step 12 1 done
+mc-tool-board run step 12 "Design review" skipped --reason "small change"
+mc-tool-board run step 12 3 in_progress
+mc-tool-board run show 12
+mc-tool-board run end 12
+```
+
+- **Steps come from the playbook.** The board stores the names it's given and
+  doesn't interpret them, so a playbook can change its steps freely. A step is
+  addressed by its position or its exact name.
+- **Each step is `pending`, `in_progress`, `done`, `skipped` or `paused`.**
+  A skip needs a reason and adds a comment to the card; a pause may carry
+  one. Only one step is in progress at a time, and any step can be redone.
+- **The current step** is the one in progress, or else the first paused one.
+  `show`, the TUI's card screen and the companion bar mark it.
+- **A run ends when the playbook says so** (`run end`), or when the card is
+  completed, archived or promoted to an epic. Finishing every step doesn't
+  end it, so the final state stays visible until the playbook has reported
+  on it. Starting a new run on a card with an open one needs `--replace`.
+  Ended runs are kept, though only the open run is shown.
+
 ## Epics and dependencies
 
 Columns say where each card stands; they don't say how cards relate. Two
@@ -281,6 +310,7 @@ Every card carries:
 | **Epic** | The [epic](#epics) the card belongs to, if any — shown as `epic:` in `show`. |
 | **Blocked by / blocks** | Its [dependency links](#dependencies) in each direction; `show` and `list` mark the blockers it's still waiting on. |
 | **Sessions** | The live Claude Code sessions working on the card, in any open column (see [parallel sessions](#parallel-sessions)). Listed by `show` and in `--json` output; left out of exports. |
+| **Run** | The open [playbook run](#playbook-runs), if any: its playbook, start time and each step's status, the current step marked. Shown by `show`, the card screen and exports, and as `run` in `--json` output. |
 | **Created by** | Only on cards raised through the [remote API](remote.md): the client that created it, shown as *via &lt;client&gt;* on the meta line and as `created by:` in `show`. Locally created cards have none. |
 | **Completion summary** | The handoff note recorded when the card reaches **Done**. Renders [markdown](#markdown-in-the-body). |
 
@@ -444,6 +474,12 @@ mc-tool-board complete ID --summary "<what was done>" [--json]            # → 
 mc-tool-board move ID <backlog|refined|in_progress|in_review|done|archived> [--json]
 mc-tool-board archive ID [--json]                                         # hide without deleting
 mc-tool-board remove ID [--json]                                          # permanent delete
+
+# Playbook runs
+mc-tool-board run start ID --playbook NAME --steps "A" "B" ... [--replace] [--json]
+mc-tool-board run step ID <position|name> <pending|in_progress|done|skipped|paused> [--reason ...] [--json]
+mc-tool-board run end ID [--json]
+mc-tool-board run show ID [--json]                                        # the open run, or null
 
 # Sessions (any open card; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)
 mc-tool-board bind ID [--session ID --pid PID] [--json]                  # bind a session (--session needs --pid)

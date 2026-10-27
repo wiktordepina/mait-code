@@ -39,6 +39,18 @@
 
 ::: mait_code.tools.board.REFINED
 
+::: mait_code.tools.board.STEP_DONE
+
+::: mait_code.tools.board.STEP_IN_PROGRESS
+
+::: mait_code.tools.board.STEP_PAUSED
+
+::: mait_code.tools.board.STEP_PENDING
+
+::: mait_code.tools.board.STEP_SKIPPED
+
+::: mait_code.tools.board.STEP_STATUSES
+
 ::: mait_code.tools.board.is_valid_status
 
 ::: mait_code.tools.board.label

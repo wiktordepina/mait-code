@@ -39,8 +39,8 @@ def test_ensure_schema_idempotent(board_db: sqlite3.Connection):
     ensure_schema(board_db)
     ensure_schema(board_db)
     versions = board_db.execute("SELECT version FROM schema_version").fetchall()
-    assert len(versions) == 6
-    assert versions[-1][0] == 6
+    assert len(versions) == 7
+    assert versions[-1][0] == 7
 
 
 def test_migration_blocked_becomes_refined_with_tag(tmp_path):
@@ -1386,7 +1386,7 @@ def test_migration_6_keeps_every_v5_row(tmp_path, monkeypatch):
     assert conn.execute("SELECT kind, parent_id FROM cards").fetchall() == [
         ("card", None)
     ]
-    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 6
+    assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 7
     conn.close()
 
 
@@ -1467,7 +1467,7 @@ def test_failed_migration_rolls_back_and_records_nothing(tmp_path, monkeypatch):
             "SELECT 1 FROM sqlite_master WHERE name = 'half_done'"
         ).fetchone()
         assert (
-            conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 6
+            conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 7
         )
     finally:
         conn.close()

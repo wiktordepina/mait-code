@@ -123,6 +123,40 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             "CREATE INDEX IF NOT EXISTS idx_card_links_to ON card_links(to_id, type)",
         ],
     ),
+    (
+        7,
+        "Add card_runs and card_run_steps (a playbook run's per-step log)",
+        [
+            # Literals, not columns constants — a migration is a frozen snapshot.
+            """CREATE TABLE IF NOT EXISTS card_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                playbook TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                ended_at TEXT
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_card_runs_card ON card_runs(card_id)",
+            # At most one open run per card; ended runs are kept as history.
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_card_runs_open "
+            "ON card_runs(card_id) WHERE ended_at IS NULL",
+            """CREATE TABLE IF NOT EXISTS card_run_steps (
+                run_id INTEGER NOT NULL REFERENCES card_runs(id) ON DELETE CASCADE,
+                position INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
+                    'pending', 'in_progress', 'done', 'skipped', 'paused'
+                )),
+                reason TEXT,
+                started_at TEXT,
+                finished_at TEXT,
+                PRIMARY KEY (run_id, position)
+            )""",
+            # At most one step in progress per run.
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_card_run_steps_active "
+            "ON card_run_steps(run_id) WHERE status = 'in_progress'",
+        ],
+    ),
 ]
 
 
