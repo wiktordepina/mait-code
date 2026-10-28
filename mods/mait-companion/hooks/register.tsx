@@ -269,9 +269,9 @@ async function tick($: EngineInterface): Promise<void> {
 function syncTicker($: EngineInterface): Promise<void> {
   // One at a time: agents and board refreshes both get here, and a sync that
   // read the atoms before another's change must not undo what that one set.
-  const run = syncing.then(() => applyTicker($))
-  syncing = run.catch(() => undefined)
-  return run
+  const queued = syncing.then(() => applyTicker($))
+  syncing = queued.catch(() => undefined)
+  return queued
 }
 
 async function applyTicker($: EngineInterface): Promise<void> {
@@ -682,9 +682,9 @@ function runLabel(steps: readonly RunStep[], t: number): { lead?: string; name: 
   }
   const finished = steps.filter(s => s.status === 'done' || s.status === 'skipped').length
   if (finished === n) return { name: `all ${n} done` }
-  const next = steps.find(s => s.status === 'pending')
-  if (finished === 0 || next === undefined) return { name: 'not started' }
-  return { lead: `${finished}/${n} done`, name: `· next ${next.name}` }
+  const upcoming = steps.find(s => s.status === 'pending')
+  if (finished === 0 || upcoming === undefined) return { name: 'not started' }
+  return { lead: `${finished}/${n} done`, name: `· next ${upcoming.name}` }
 }
 
 /** An open row's note: a done step's duration, the current one's time so far, or the reason. */
