@@ -15,7 +15,7 @@ A companion framework that extends [Claude Code](https://docs.anthropic.com/en/d
 - **[The Bridge](bridge.md)** — an opt-in link to your phone: capture into the inbox from anywhere, and get due reminders as notifications with a Done button that round-trips back. Disabled by default, with zero network calls until switched on.
 - **[Companion mod](companion-mod.md)** — an opt-in Claude Code mod that adds `/capture` straight to the inbox and a live status bar above the prompt (the cards in hand, what's waiting on you, where the session is).
 - **[Remote API](remote.md)** — a Python module a host service you run can import to read and raise board cards, search memories and list reminders; mait-code itself never opens a port.
-- **Skills** — slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), and workflow (`/commit`, `/pre-pr-review`).
+- **Skills** — slash commands for memory (`/recall`, `/remember`, `/reflect`), reminders (`/remind`, `/reminders`), the board (`/board`), capture triage (`/triage`), and workflow (`/commit`, `/pre-pr-review`, `/design-review`).
 
 ## Quick start
 
