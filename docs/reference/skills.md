@@ -14,6 +14,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
 | Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
 | Pre-PR Review | `/pre-pr-review` | Independent review of the current branch, by a reviewer that has not seen the conversation | **Implemented** |
+| Outward Comms | `/outward-comms [text]` | House style for text written on your behalf for others; rewrites given text or shapes a draft | **Implemented** |
 | Design Review | `/design-review <card>` | Independent review of a refined board card before it's built, by a reviewer that has not seen the refinement | **Implemented** |
 
 ## Implemented Skills
@@ -236,6 +237,36 @@ merge that is hard to walk back; not worth it per commit.
 **Nothing is posted to GitHub** — no review, no comment, no approval — unless you
 ask for that separately afterwards.
 
+### /outward-comms
+
+The house style for text other people read, written as you: PR and review
+comments, PR descriptions, commit messages, issue comments, chat, email and
+committed docs.
+
+**Usage:**
+```
+/outward-comms                   # Apply the style to the draft in hand
+/outward-comms <text>            # Rewrite the given text to the style
+```
+
+**How it works:**
+
+1. Reads its rules from `writing_style.md` in the data directory (see
+   [setup](../setup.md)), which you own: no em dashes, plain characters in
+   prose with glyphs only where they carry structure, no AI clichés, concise
+   and direct, and your spelling convention
+2. Rewrites the given text, or shapes the draft being written, then runs a
+   pre-send pass: dashes, non-ASCII characters, clichés, whether the answer
+   comes first
+3. Shows you the exact text and waits for your go-ahead before anything is
+   sent. That rule lives in the skill, not the editable file, because it is
+   about safety rather than style
+
+It applies to new text and doesn't rewrite existing docs unprompted. It loads
+the file with `mait-code identity show writing_style`, so a custom `data-dir`
+is followed. A `cat` of the file wouldn't do: Claude Code doesn't run skill
+preprocessing that reads under `~/.claude/` inline.
+
 ### /design-review
 
 Review a refined [board card](../board.md) with a reviewer that has seen none of
@@ -355,6 +386,8 @@ skills/
 │   └── SKILL.md     # Smart commit with conventional message
 ├── pre-pr-review/
 │   └── SKILL.md     # Cold second opinion on a branch before opening a PR
+├── outward-comms/
+│   └── SKILL.md     # House style for text written for other people
 └── design-review/
     └── SKILL.md     # Cold second opinion on a refined card before building it
 ```

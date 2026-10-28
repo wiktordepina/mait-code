@@ -522,6 +522,22 @@ unknown key, invalid value, a missing required follow-up flag, or (for
 
 ---
 
+## `mait-code identity`
+
+```bash
+mait-code identity show <name>      # print one identity file from the data dir
+```
+
+Prints a file from the configured data directory (following `data-dir` and
+`MAIT_CODE_DATA_DIR`), for skills that load one at preprocessing time:
+`/outward-comms` reads `writing_style` this way. `<name>` is the file name
+without `.md`, and only the shipped identity files can be named:
+`communication_style`, `soul_document`, `user_context` and `writing_style`.
+Anything else, and a file that doesn't exist yet, exits `1` with a message on
+stderr.
+
+---
+
 ## `mait-code board`
 
 **Synopsis**

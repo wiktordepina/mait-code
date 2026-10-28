@@ -525,6 +525,19 @@ class TestUpdateIdentityTemplates:
         assert summary.templates_copied == []
         assert summary.templates_upgraded == []
 
+    def test_leaves_edited_writing_style_alone(
+        self, fake_home: Path, fake_source: Path
+    ) -> None:
+        _install_first(fake_source)
+        style = fake_home / ".claude" / "mait-code-data" / "writing_style.md"
+        style.write_text("# my own rules\n")
+        git = _FakeGit(branch="main", tags=[])
+
+        summary = update(runner=git.run, capture=git.capture)
+
+        assert style.read_text() == "# my own rules\n"
+        assert "writing_style.md" not in summary.templates_upgraded
+
     def test_creates_missing_data_dir(
         self, fake_home: Path, fake_source: Path, tmp_path: Path
     ) -> None:
@@ -557,9 +570,13 @@ def test_superseded_digests_exclude_current_template() -> None:
     or every update would rewrite the file and report it as updated."""
     import hashlib
 
-    from mait_code.cli._install import _IDENTITY_TEMPLATES, _SUPERSEDED_TEMPLATES
+    from mait_code.cli._install import (
+        _IDENTITY_TEMPLATES,
+        _SEEDED_TEMPLATES,
+        _SUPERSEDED_TEMPLATES,
+    )
 
     repo = Path(__file__).resolve().parents[2]
-    for template, name in _IDENTITY_TEMPLATES:
+    for template, name in (*_IDENTITY_TEMPLATES, *_SEEDED_TEMPLATES):
         current = hashlib.sha256((repo / "templates" / template).read_bytes())
         assert current.hexdigest() not in _SUPERSEDED_TEMPLATES.get(name, frozenset())

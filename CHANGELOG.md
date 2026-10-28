@@ -12,6 +12,20 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
+- **`/outward-comms` and a user-owned `writing_style.md`.** A house style for
+  text written on your behalf for other people (PR and review comments,
+  commit messages, issue comments, chat, email, committed docs): no em dashes,
+  plain characters in prose with glyphs only where they carry structure, no
+  AI clichés, concise and direct. The rules live in `writing_style.md` in the
+  data directory, seeded on install and yours to edit; the skill reads it each
+  time it runs, and it isn't loaded into ordinary sessions. The skill always
+  shows the exact text and waits for your go-ahead before anything is sent.
+  The home hub shows it at the end of the System prompt view, outside the
+  session-start total.
+- **`mait-code identity show <name>`** prints an identity file from the
+  configured data directory, following a custom `data-dir`. Skills use it to
+  load a file at preprocessing time, which Claude Code won't do inline for a
+  `cat` of a path under `~/.claude/`.
 - **`/design-review N` and the `design-reviewer` agent.** A cold review of a
   refined board card before anyone builds it, by a reviewer that has seen none
   of the conversation that refined it. It finds the relevant code itself,

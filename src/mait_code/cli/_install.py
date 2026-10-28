@@ -56,7 +56,17 @@ _IDENTITY_TEMPLATES = (
     ("user_context.md", "user_context.md"),
     ("communication_styles/default.md", "communication_style.md"),
 )
-"""Identity templates as ``(path under templates/, name in the data dir)``."""
+"""Identity templates as ``(path under templates/, name in the data dir)``.
+
+Each is ``@``-imported by ``config/CLAUDE.md``, so it loads into every session.
+"""
+
+_SEEDED_TEMPLATES = (("writing_style.md", "writing_style.md"),)
+"""Templates seeded into the data dir like identity, but not ``@``-imported.
+
+A skill loads each one only when it runs (``writing_style.md`` by
+``outward-comms``), so ordinary sessions don't pay for it in context.
+"""
 
 _SUPERSEDED_TEMPLATES: dict[str, frozenset[str]] = {
     "communication_style.md": frozenset(
@@ -113,9 +123,10 @@ MEMORY_MD_STUB = """# Memory
 def sync_identity_templates(
     source_dir: Path, ddir: Path
 ) -> tuple[list[str], list[str]]:
-    """Bring the identity files in the data dir up to the shipped templates.
+    """Bring the identity and seeded files in the data dir up to the shipped templates.
 
-    A missing file is copied from its template. An existing file is
+    Covers ``_IDENTITY_TEMPLATES`` and ``_SEEDED_TEMPLATES`` alike. A missing
+    file is copied from its template. An existing file is
     replaced only when it is byte-identical to an earlier shipped version
     (see ``_SUPERSEDED_TEMPLATES``); anything the user has edited is left
     alone.
@@ -130,7 +141,7 @@ def sync_identity_templates(
     """
     copied: list[str] = []
     upgraded: list[str] = []
-    for template, name in _IDENTITY_TEMPLATES:
+    for template, name in (*_IDENTITY_TEMPLATES, *_SEEDED_TEMPLATES):
         src = source_dir / "templates" / template
         dst = ddir / name
         if not src.is_file():

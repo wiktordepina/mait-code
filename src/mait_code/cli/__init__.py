@@ -627,6 +627,48 @@ def _settings_render_json_with_approvals(snapshot) -> str:
     return _json.dumps(document, indent=2)
 
 
+identity_app = typer.Typer(
+    help="Read the identity files in the data directory.",
+    no_args_is_help=True,
+)
+app.add_typer(identity_app, name="identity")
+
+
+@identity_app.command("show")
+def identity_show(
+    name: Annotated[
+        str,
+        typer.Argument(
+            help="Which file, without .md: writing_style, soul_document, ..."
+        ),
+    ],
+) -> None:
+    """Print one identity file from the configured data directory.
+
+    For skills that read a file at preprocessing time: a command with no
+    path in it runs inline, where ``cat ~/.claude/...`` is deferred, and it
+    follows a custom ``data-dir``. Only the shipped identity and seeded
+    templates can be named, so it never prints an arbitrary path.
+    """
+    from mait_code.cli._install import _IDENTITY_TEMPLATES, _SEEDED_TEMPLATES
+    from mait_code.config import data_dir
+
+    known = sorted(
+        file.removesuffix(".md")
+        for _, file in (*_IDENTITY_TEMPLATES, *_SEEDED_TEMPLATES)
+    )
+    if name not in known:
+        print_error(f"unknown identity file {name!r}; one of: {', '.join(known)}")
+        raise typer.Exit(code=1)
+    path = data_dir() / f"{name}.md"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        print_error(f"{path} doesn't exist; run mait-code update to install it")
+        raise typer.Exit(code=1) from None
+    typer.echo(text, nl=False)
+
+
 settings_app = typer.Typer(
     help="View and edit mait-code configuration.",
     no_args_is_help=False,
