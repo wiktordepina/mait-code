@@ -61,11 +61,15 @@ _IDENTITY_TEMPLATES = (
 Each is ``@``-imported by ``config/CLAUDE.md``, so it loads into every session.
 """
 
-_SEEDED_TEMPLATES = (("writing_style.md", "writing_style.md"),)
+_SEEDED_TEMPLATES = (
+    ("writing_style.md", "writing_style.md"),
+    ("testing_strategies.md", "testing_strategies.md"),
+)
 """Templates seeded into the data dir like identity, but not ``@``-imported.
 
 A skill loads each one only when it runs (``writing_style.md`` by
-``outward-comms``), so ordinary sessions don't pay for it in context.
+``outward-comms``, ``testing_strategies.md`` by the board skill's refine
+step), so ordinary sessions don't pay for them in context.
 """
 
 _SUPERSEDED_TEMPLATES: dict[str, frozenset[str]] = {

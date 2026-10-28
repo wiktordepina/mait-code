@@ -101,6 +101,7 @@ _GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("General", ("data-dir", "theme", "dashboard-tile-timeout")),
     ("Bridge", ("bridge", "bridge-type")),
     ("Companion mod", ("mods", "status-bar-style", "jira-base-url")),
+    ("Workflow", ("pr-skill",)),
     ("Logging", ("log-level", "log-file", "log-backup-count")),
     (
         "Embeddings",

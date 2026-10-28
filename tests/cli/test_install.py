@@ -110,6 +110,9 @@ class TestInstallHappyPath:
         assert (data_dir / "writing_style.md").read_text() == (
             "# writing style template\n"
         )
+        assert (data_dir / "testing_strategies.md").read_text() == (
+            "# testing strategies template\n"
+        )
 
     @pytest.mark.parametrize(("template", "name"), _IDENTITY_TEMPLATES)
     def test_identity_template_ships_and_is_imported(

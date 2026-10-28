@@ -409,6 +409,24 @@ class TestChoices:
         assert validate("local") is None
         assert validate("openai") is not None
 
+    @pytest.mark.parametrize(
+        ("value", "ok"),
+        [
+            ("", True),
+            ("raise-pr", True),
+            ("plugin:raise-pr", True),
+            ("/raise-pr", False),
+            ("Raise PR", False),
+            ("a:b:c", False),
+            ("x" * 65, False),
+        ],
+    )
+    def test_pr_skill_validator(self, value: str, ok: bool) -> None:
+        by_key = {s.key: s for s in config.SETTINGS}
+        validate = by_key["pr-skill"].validate
+        assert validate is not None
+        assert (validate(value) is None) is ok
+
 
 # ---------------------------------------------------------------------------
 # Tier 2 derived values — pinned to their runtime path helpers (no drift)

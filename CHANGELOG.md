@@ -12,6 +12,19 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
+- **Testing strategies for refinement.** A new user-owned
+  `testing_strategies.md` in the data directory lists the ways a card can be
+  tested, shipping with `unit` and `manual`; add your own environments, each
+  optionally scoped to projects with a `Projects:` line. When the board skill
+  refines a card, it reads the file and ends the description with a
+  **Testing strategy** section naming the strategies that fit. The home hub
+  shows the file beside the writing style. Like `writing_style.md`, it's
+  seeded by the *second* `mait-code update` after upgrading, since the first
+  still runs the old code.
+- **`pr-skill` setting** (`MAIT_CODE_PR_SKILL`), in a new Workflow group in
+  the settings editor: the skill `/work` will raise pull requests with.
+  Empty means `gh pr create`.
+
 - **`/code-comments`.** Conventions for comments and docstrings: functional,
   not narrative; no ticket keys, history or drifting facts; comment the
   counter-intuitive, not the obvious; ASCII only, even in files that aren't.

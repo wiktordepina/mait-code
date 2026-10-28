@@ -488,7 +488,7 @@ def test_system_prompt_node_renders_identity_and_context() -> None:
     assert docs == 1  # only the soul document exists in this data dir
 
 
-def test_writing_style_follows_the_prompt_outside_its_total() -> None:
+def test_on_demand_files_follow_the_prompt_outside_its_total() -> None:
     from mait_code.config import data_dir
 
     ddir = data_dir()
@@ -506,9 +506,12 @@ def test_writing_style_follows_the_prompt_outside_its_total() -> None:
     (ddir / "writing_style.md").write_text(
         "# Writing Style\n\n" + "No em dashes. " * 200
     )
+    (ddir / "testing_strategies.md").write_text("## unit\n\n" + "Run it. " * 200)
     text = _run(scenario)
     assert "No em dashes" in text
-    assert "not at session start" in text
+    assert "Run it." in text
+    assert "loaded by /outward-comms, not at session start" in text
+    assert "loaded by the board's refine step, not at session start" in text
     # The file is long, but the wake-up total doesn't move.
     assert text.split("tokens total")[0] == before
 

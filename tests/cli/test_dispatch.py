@@ -637,3 +637,13 @@ def test_observations_truncates_long_day(isolated_data_dir: None, tmp_path) -> N
     result = runner.invoke(app, ["observations"])
     assert result.exit_code == 0
     assert "… and 2 more" in result.output
+
+
+def test_identity_show_prints_the_testing_strategies(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+    (tmp_path / "testing_strategies.md").write_text("## unit\n")
+    result = runner.invoke(app, ["identity", "show", "testing_strategies"])
+    assert result.exit_code == 0
+    assert result.output == "## unit\n"

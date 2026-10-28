@@ -1,7 +1,7 @@
 ---
 name: board
 description: View and drive the project kanban board. Use when the user mentions the board, asks to pick up / refine / move / complete a card, asks what's on the board, or wants to add a card to the board.
-allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*), Bash(mc-tool-board bind:*), Bash(mc-tool-board unbind:*), Bash(mc-tool-board link:*), Bash(mc-tool-board unlink:*), Bash(mc-tool-board epic:*), Bash(mc-tool-board run:*)
+allowed-tools: Bash(mc-tool-board list:*), Bash(mc-tool-board show:*), Bash(mc-tool-board next:*), Bash(mc-tool-board export:*), Bash(mc-tool-board add:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board move:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mc-tool-board complete:*), Bash(mc-tool-board block:*), Bash(mc-tool-board unblock:*), Bash(mc-tool-board tag:*), Bash(mc-tool-board untag:*), Bash(mc-tool-board ref:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board archive:*), Bash(mc-tool-board bind:*), Bash(mc-tool-board unbind:*), Bash(mc-tool-board link:*), Bash(mc-tool-board unlink:*), Bash(mc-tool-board epic:*), Bash(mc-tool-board run:*), Bash(mait-code identity show testing_strategies:*)
 ---
 
 # /board
@@ -33,6 +33,7 @@ Several Claude Code sessions can work the same project at once, so each card rec
 ### Refining
 
 - **"refine card N"**: draft a clear description and acceptance criteria, **show them to the user for approval first**, then run `mc-tool-board refine N --description "..." --acceptance "..."` (moves it to `refined`). Don't refine without confirmation.
+- **Testing strategy**: every refined description ends with this section. While drafting, load the user's strategies with `mait-code identity show testing_strategies` (run it at this point, not before). Offer the entries whose `Projects:` line names the card's project, plus the ones with no `Projects:` line; a strategy outside the file is fine if you say so. Write it as a paragraph reading exactly `**Testing strategy**`, then one bullet per chosen strategy: what it will check for this card, and why it fits. Ask the user to choose when the choice isn't obvious. Keep the heading exactly as written: playbooks such as `/work` look for it. If the command fails because the file is missing, use `unit` (the project's own test suite) and `manual` (a scripted check on a throwaway target), and tell the user to run `mait-code update` to install the file.
 - **Splitting a card during refinement**: each piece is a card born from the original — see *Cards born from other cards* below.
 
 ### Cards born from other cards

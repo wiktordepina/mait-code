@@ -141,7 +141,7 @@ View and drive the manually-driven kanban board for the current project. Claude 
 1. Preprocesses the current project's board via `mc-tool-board list` (injected before Claude sees the skill)
 2. Teaches Claude the verb vocabulary so conversational requests map to `mc-tool-board` calls:
    - "pick up the next refined card" → `mc-tool-board next --claim` (top refined card → `in_progress`)
-   - "refine card N" → draft description + acceptance criteria, confirm, then `mc-tool-board refine N ...`
+   - "refine card N" → draft description + acceptance criteria, confirm, then `mc-tool-board refine N ...`. The description ends with a **Testing strategy** section, chosen from the user's `testing_strategies.md` (read with `mait-code identity show testing_strategies`)
    - "what's next?" → `mc-tool-board next` (only *ready* cards: refined, not blocked, not waiting on another card); `next --epic N` for one initiative
    - "move it to review" → `mc-tool-board review N --pr <url>`, recording the PR on the card
    - complete / block / unblock / tag / untag / archive / move / add / edit / comment / ref via the matching subcommands

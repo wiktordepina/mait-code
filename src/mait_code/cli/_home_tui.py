@@ -1047,7 +1047,8 @@ class HomeApp(MaitApp):
             widgets.append(
                 Label(empty_state("A quiet start — nothing to surface right now."))
             )
-        widgets.extend(_writing_style_section())
+        for title, name, reader in _ON_DEMAND_FILES:
+            widgets.extend(_on_demand_section(title, name, reader))
         return widgets
 
     # -- detail builders: system -----------------------------------------------
@@ -1435,16 +1436,23 @@ def _identity_files() -> tuple[tuple[str, Path], ...]:
     )
 
 
-def _writing_style_section() -> list[Widget]:
-    """``writing_style.md``, shown after the prompt but outside it.
+_ON_DEMAND_FILES = (
+    ("Writing style", "writing_style.md", "/outward-comms"),
+    ("Testing strategies", "testing_strategies.md", "the board's refine step"),
+)
+"""Seeded data-dir files a skill reads when it runs: ``(title, file, reader)``."""
 
-    ``/outward-comms`` reads it on demand, so it carries no token badge and
-    stays out of the wake-up total.
+
+def _on_demand_section(title: str, name: str, reader: str) -> list[Widget]:
+    """A file a skill reads on demand, shown after the prompt but outside it.
+
+    It carries no token badge and stays out of the wake-up total, since it
+    isn't loaded at session start.
     """
-    path = data_dir() / "writing_style.md"
+    path = data_dir() / name
     text = _read_identity(path)
-    head = Text("Writing style  ")
-    head.append("loaded by /outward-comms, not at session start", style="dim")
+    head = Text(f"{title}  ")
+    head.append(f"loaded by {reader}, not at session start", style="dim")
     widgets: list[Widget] = [Label(head, classes="subhead")]
     if text is None:
         widgets.append(
