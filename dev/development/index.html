@@ -3059,8 +3059,10 @@ running <code>claude -p</code> (headless denies instead of prompting):</p>
   not a literal.</li>
 <li><strong>A boundary is not a subcommand.</strong> Everything after the boundary is
   permitted, flags included, so <code>Bash(git branch:*)</code> does span <code>git branch -D</code>.
-  Narrowing has to happen inside the prefix: <code>Bash(git diff --stat:*)</code>, or an
-  exact invocation with no wildcard at all.</li>
+  Narrowing has to happen inside the prefix, and even that can leak a flag:
+  <code>Bash(git diff --stat:*)</code> still permits <code>git diff --stat --output=&lt;file&gt;</code>,
+  which writes an arbitrary file. Prefer an exact invocation with no wildcard
+  at all where the skill runs a fixed command.</li>
 </ul>
 <p>What <code>:*</code> does <strong>not</strong> do is span into a longer token —
 <code>Bash(git diff:*)</code> refuses <code>git difftool --extcmd=&lt;anything&gt;</code>. Earlier revisions
