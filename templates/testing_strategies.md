@@ -6,8 +6,8 @@
 
 When a card is refined through the board skill, its description gains a
 **Testing strategy** section that names the strategies below which fit the
-card, what each will check, and why. `/work` then runs exactly those at its
-test step, rather than deciding again.
+card, what each will check, and why. A playbook such as `/work` can then run
+exactly those at its test step, rather than deciding again.
 
 Edit freely: add the environments you test in, remove what you don't use.
 Updates never overwrite your changes.

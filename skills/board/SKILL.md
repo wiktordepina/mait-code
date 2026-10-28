@@ -33,7 +33,11 @@ Several Claude Code sessions can work the same project at once, so each card rec
 ### Refining
 
 - **"refine card N"**: draft a clear description and acceptance criteria, **show them to the user for approval first**, then run `mc-tool-board refine N --description "..." --acceptance "..."` (moves it to `refined`). Don't refine without confirmation.
-- **Testing strategy**: every refined description ends with this section. While drafting, load the user's strategies with `mait-code identity show testing_strategies` (run it at this point, not before). Offer the entries whose `Projects:` line names the card's project, plus the ones with no `Projects:` line; a strategy outside the file is fine if you say so. Write it as a paragraph reading exactly `**Testing strategy**`, then one bullet per chosen strategy: what it will check for this card, and why it fits. Ask the user to choose when the choice isn't obvious. Keep the heading exactly as written: playbooks such as `/work` look for it. If the command fails because the file is missing, use `unit` (the project's own test suite) and `manual` (a scripted check on a throwaway target), and tell the user to run `mait-code update` to install the file.
+- **Testing strategy**: every refined description ends with this section.
+  - **Heading:** a paragraph reading exactly `**Testing strategy**`. Keep it exactly as written: playbooks such as `/work` look for it.
+  - **Body:** one bullet per chosen strategy, saying what it will check for this card and why it fits. Ask the user to choose when the choice isn't obvious.
+  - **Options:** while drafting (not before), load the user's strategies with `mait-code identity show testing_strategies`. Offer the entries whose `Projects:` line names the card's project, plus those with no `Projects:` line. A strategy outside the file is fine if you say so.
+  - **Missing file:** if the command fails, use `unit` (the project's own test suite) and `manual` (a scripted check on a throwaway target), and tell the user to run `mait-code update` to install the file.
 - **Splitting a card during refinement**: each piece is a card born from the original — see *Cards born from other cards* below.
 
 ### Cards born from other cards

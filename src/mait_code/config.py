@@ -251,7 +251,11 @@ def _jira_base_url(value: str) -> str | None:
     return f"must be empty or an https:// URL, got {value!r}"
 
 
-_SKILL_NAME = re.compile(r"(?:[a-z0-9-]+:)?[a-z0-9-]{1,64}")
+# Skill names are lowercase words joined by single hyphens; a plugin namespace
+# may also use dots and underscores, which plugin names are not known to forbid.
+_SKILL_NAME = re.compile(
+    r"(?:[a-z0-9]+(?:[._-][a-z0-9]+)*:)?(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*"
+)
 
 
 def _pr_skill(value: str) -> str | None:
