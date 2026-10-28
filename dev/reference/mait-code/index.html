@@ -3494,7 +3494,7 @@ show as <code>env.&lt;NAME&gt;</code> rows, followed by the tool-approval preset
 </table>
 <p>Settings fall into three groups:</p>
 <ul>
-<li><strong>Primary</strong> — written uncommented in <code>settings.toml</code>: <code>data-dir</code>, <code>log-level</code>, <code>log-file</code>, <code>theme</code>, <code>bridge</code>, <code>bridge-type</code>, <code>mods</code>, <code>status-bar-style</code>, <code>jira-base-url</code>, <code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code>, <code>bedrock-region</code>.</li>
+<li><strong>Primary</strong> — written uncommented in <code>settings.toml</code>: <code>data-dir</code>, <code>log-level</code>, <code>log-file</code>, <code>theme</code>, <code>bridge</code>, <code>bridge-type</code>, <code>mods</code>, <code>status-bar-style</code>, <code>jira-base-url</code>, <code>pr-skill</code>, <code>embedding-provider</code>, <code>embedding-model</code>, <code>bedrock-model-id</code>, <code>bedrock-region</code>.</li>
 <li><strong>Advanced</strong> — written commented-out (the built-in default applies until you opt in via <code>set</code> or by uncommenting): <code>log-backup-count</code>, <code>extraction-model</code>, <code>reflection-model</code>, <code>llm-timeout</code>, <code>reflection-batch-size</code>, <code>reflection-novelty-gate</code>, <code>git-timeout</code>, <code>dashboard-tile-timeout</code>, the review knobs <code>review-threshold</code> and <code>review-min-importance</code>, and the scoring/dedup tuning knobs <code>score-weight-recency</code>, <code>score-weight-importance</code>, <code>score-weight-relevance</code>, <code>half-life-episodic</code>, <code>half-life-semantic</code>, <code>half-life-procedural</code>, <code>dedup-string-threshold</code>, <code>dedup-vector-threshold</code>, <code>dedup-conflict-threshold</code>, <code>scope-boost-global</code>, <code>scope-boost-cross-project</code>.</li>
 <li><strong>Derived</strong> (source <code>derived</code>, not settable): <code>embedding-dim</code>, <code>memory-db-path</code>, <code>reminders-db-path</code>, <code>bridge-config-path</code>, <code>model-cache-dir</code>, <code>observations-dir</code>, <code>project-aliases-path</code>, <code>dashboard-config-path</code>.</li>
 </ul>
@@ -3605,9 +3605,11 @@ unknown key, invalid value, a missing required follow-up flag, or (for
 </span></code></pre></div>
 <p>Prints a file from the configured data directory (following <code>data-dir</code> and
 <code>MAIT_CODE_DATA_DIR</code>), for skills that load one at preprocessing time:
-<code>/outward-comms</code> reads <code>writing_style</code> this way. <code>&lt;name&gt;</code> is the file name
+<code>/outward-comms</code> reads <code>writing_style</code> this way, and the board skill's refine
+step reads <code>testing_strategies</code>. <code>&lt;name&gt;</code> is the file name
 without <code>.md</code>, and only the shipped identity files can be named:
-<code>communication_style</code>, <code>soul_document</code>, <code>user_context</code> and <code>writing_style</code>.
+<code>communication_style</code>, <code>soul_document</code>, <code>testing_strategies</code>, <code>user_context</code>
+and <code>writing_style</code>.
 Anything else, and a file that doesn't exist yet, exits <code>1</code> with a message on
 stderr.</p>
 <hr />

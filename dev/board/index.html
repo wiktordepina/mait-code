@@ -2936,6 +2936,10 @@ you're reading.</p>
 <td>The contract for <em>done</em>, usually set when refining. Renders <a href="#markdown-in-the-body">markdown</a> too.</td>
 </tr>
 <tr>
+<td><strong>Testing strategy</strong></td>
+<td>Not a field but a section at the end of the description: a paragraph reading exactly <code>**Testing strategy**</code>, then a bullet per chosen strategy. The board skill writes it when it refines a card, choosing from your <a href="../setup/#testing-strategies-claudemait-code-datatesting_strategiesmd"><code>testing_strategies.md</code></a>; <code>/work</code> reads it at its test step. Cards refined in the TUI, with <code>mc-tool-board refine</code> or through the remote API don't get one automatically.</td>
+</tr>
+<tr>
 <td><strong>References</strong></td>
 <td>An ordered list of <code>label → value</code> links — a PR, a ticket, a file, a spec. Kept out of the description so they stay tidy and clickable.</td>
 </tr>

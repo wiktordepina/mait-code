@@ -2911,7 +2911,7 @@
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
-        identity["soul_document.md&lt;br/&gt;user_context.md&lt;br/&gt;communication_style.md&lt;br/&gt;writing_style.md &lt;i&gt;(skill-loaded)&lt;/i&gt;"]
+        identity["soul_document.md&lt;br/&gt;user_context.md&lt;br/&gt;communication_style.md&lt;br/&gt;writing_style.md &lt;i&gt;(skill-loaded)&lt;/i&gt;&lt;br/&gt;testing_strategies.md &lt;i&gt;(skill-loaded)&lt;/i&gt;"]
         memory_store["memory/&lt;br/&gt;MEMORY.md &lt;i&gt;(curated)&lt;/i&gt;&lt;br/&gt;observations/ &lt;i&gt;(raw JSONL)&lt;/i&gt;&lt;br/&gt;reflections/ &lt;i&gt;(synthesised)&lt;/i&gt;"]
         other_dbs["memory.db &lt;i&gt;(SQLite)&lt;/i&gt;&lt;br/&gt;reminders.db&lt;br/&gt;board.db&lt;br/&gt;inbox.db"]
         cfg["dashboard.toml&lt;br/&gt;bridge.json&lt;br/&gt;project-aliases.json"]
@@ -4011,6 +4011,11 @@ type is never a duplicate) using two complementary measures:</p>
 <td>Jira site the status bar links card keys to</td>
 </tr>
 <tr>
+<td><code>MAIT_CODE_PR_SKILL</code></td>
+<td><em>(empty)</em></td>
+<td>Skill <code>/work</code> raises PRs with; empty means <code>gh pr create</code></td>
+</tr>
+<tr>
 <td><code>MAIT_CODE_EMBEDDING_PROVIDER</code></td>
 <td><code>local</code></td>
 <td>Embedding provider: <code>local</code> (fastembed) or <code>bedrock</code> (AWS)</td>
@@ -4120,7 +4125,7 @@ table</a> for the full list.</p>
 <li><strong>MEMORY.md</strong> — Accumulated knowledge (updates frequently)</li>
 </ol>
 <p>The first three are seeded from <code>templates/</code> on install (the communication style from <code>templates/communication_styles/default.md</code>). Install and update never overwrite your edits: a file is replaced only while it is still a byte-identical copy of an older shipped template, so untouched copies pick up template improvements and edited ones are left alone (<code>sync_identity_templates</code> in <code>cli/_install.py</code>). All four are referenced via <code>@</code> imports in <code>config/CLAUDE.md</code> and loaded into every Claude Code session.</p>
-<p><code>writing_style.md</code> is seeded and protected the same way (<code>_SEEDED_TEMPLATES</code>), but it isn't imported: the <code>outward-comms</code> skill reads it when it runs, so sessions that don't write for other people don't pay for it in context.</p>
+<p><code>writing_style.md</code> and <code>testing_strategies.md</code> are seeded and protected the same way (<code>_SEEDED_TEMPLATES</code>), but they aren't imported: <code>outward-comms</code> reads the first and the board skill's refine step the second, each when it runs, so sessions that don't need them don't pay for them in context.</p>
 <h2 id="migration-system">Migration System<a class="headerlink" href="#migration-system" title="Permanent link">&para;</a></h2>
 <p>Schema changes are managed via forward-only migrations in <code>src/mait_code/tools/memory/migrate.py</code>. Each migration has a version number, description, and body (SQL list or callable). The <code>schema_version</code> table tracks which migrations have been applied.</p>
 <p>Current migrations:</p>
@@ -4153,21 +4158,22 @@ table</a> for the full list.</p>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── user_context.md           # User profile
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── communication_style.md    # Response shaping
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>├── writing_style.md          # Outward text style (read by /outward-comms)
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>├── memory/
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│   ├── MEMORY.md             # Curated facts (loaded every session)
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   ├── observations/         # Raw JSONL session extractions
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   │   ├── YYYY-MM-DD.jsonl
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│   └── reflections/          # Reserved for synthesised insights (created on install)
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>├── models/                   # Cached embedding models (local provider only)
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── memory.db                 # SQLite FTS5 + vec0 + entities database
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>├── reminders.db              # Reminder database
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├── board.db                  # Cross-project kanban board database
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>├── inbox.db                  # Quick-capture inbox database
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>├── dashboard.toml            # Start-page tile layout
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>├── bridge.json               # Bridge channel config (may hold a token)
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>├── bridge-state.json         # Per-machine drain watermark — never sync
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>└── project-aliases.json      # Project slug alias map
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>├── testing_strategies.md     # Testing strategies refinement chooses from
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>├── memory/
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   ├── MEMORY.md             # Curated facts (loaded every session)
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   ├── observations/         # Raw JSONL session extractions
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   │   ├── YYYY-MM-DD.jsonl
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│   │   └── cursors.json      # Byte offset tracking per transcript
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>│   └── reflections/          # Reserved for synthesised insights (created on install)
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>├── models/                   # Cached embedding models (local provider only)
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>├── memory.db                 # SQLite FTS5 + vec0 + entities database
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>├── reminders.db              # Reminder database
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>├── board.db                  # Cross-project kanban board database
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>├── inbox.db                  # Quick-capture inbox database
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>├── dashboard.toml            # Start-page tile layout
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>├── bridge.json               # Bridge channel config (may hold a token)
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>├── bridge-state.json         # Per-machine drain watermark — never sync
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>└── project-aliases.json      # Project slug alias map
 </span></code></pre></div>
 <blockquote>
 <p>Rotating log files do <strong>not</strong> live in the data directory — they go to the XDG

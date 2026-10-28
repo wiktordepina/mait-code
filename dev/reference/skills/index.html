@@ -2753,7 +2753,7 @@ so the two don't drift and double-spend context.</p>
 <li>Preprocesses the current project's board via <code>mc-tool-board list</code> (injected before Claude sees the skill)</li>
 <li>Teaches Claude the verb vocabulary so conversational requests map to <code>mc-tool-board</code> calls:</li>
 <li>"pick up the next refined card" → <code>mc-tool-board next --claim</code> (top refined card → <code>in_progress</code>)</li>
-<li>"refine card N" → draft description + acceptance criteria, confirm, then <code>mc-tool-board refine N ...</code></li>
+<li>"refine card N" → draft description + acceptance criteria, confirm, then <code>mc-tool-board refine N ...</code>. The description ends with a <strong>Testing strategy</strong> section, chosen from the user's <code>testing_strategies.md</code> (read with <code>mait-code identity show testing_strategies</code>)</li>
 <li>"what's next?" → <code>mc-tool-board next</code> (only <em>ready</em> cards: refined, not blocked, not waiting on another card); <code>next --epic N</code> for one initiative</li>
 <li>"move it to review" → <code>mc-tool-board review N --pr &lt;url&gt;</code>, recording the PR on the card</li>
 <li>complete / block / unblock / tag / untag / archive / move / add / edit / comment / ref via the matching subcommands</li>
