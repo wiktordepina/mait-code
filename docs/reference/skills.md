@@ -15,6 +15,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
 | Pre-PR Review | `/pre-pr-review` | Independent review of the current branch, by a reviewer that has not seen the conversation | **Implemented** |
 | Outward Comms | `/outward-comms [text]` | House style for text written on your behalf for others; rewrites given text or shapes a draft | **Implemented** |
+| Code Comments | `/code-comments [path]` | Conventions for comments and docstrings; audits the branch's comments, or sweeps a path | **Implemented** |
 | Design Review | `/design-review <card>` | Independent review of a refined board card before it's built, by a reviewer that has not seen the refinement | **Implemented** |
 
 ## Implemented Skills
@@ -267,6 +268,42 @@ the file with `mait-code identity show writing_style`, so a custom `data-dir`
 is followed. A `cat` of the file wouldn't do: Claude Code doesn't run skill
 preprocessing that reads under `~/.claude/` inline.
 
+### /code-comments
+
+Conventions for comments and docstrings inside source files: functional, not
+narrative; no ticket keys or history; no facts that drift (line numbers,
+counts, "currently"); comment the counter-intuitive, never the obvious; ASCII
+only.
+
+**Usage:**
+```
+/code-comments                   # Audit the comments this branch adds or changes
+/code-comments src/foo/          # Sweep every comment under a path
+```
+
+**How it works:**
+
+1. *Write mode* applies the rules while a comment or docstring is written or
+   edited. It relies on the skill being triggered, which is best effort;
+   invoking it is the guaranteed path, and a playbook can run audit mode too
+2. *Audit mode* with no argument reads the branch's diff against its base and
+   checks only the comments it adds or changes, plus comments whose meaning the
+   change affects. Old violations elsewhere in a touched file are mentioned once,
+   not reported. With a path, it sweeps every comment there
+3. It matches the project's docstring convention first (config, house rules,
+   then the dominant recent pattern), with per-language guidance in
+   `reference/languages.md`
+4. Findings are reported by file and identifier, not line number, with a
+   proposed rewrite or a deletion
+
+The ASCII rule wins over matching the project: a file full of em dashes still
+gets ASCII in every comment written or touched. A comment that must name a
+non-ASCII character uses its escape or Unicode name (`U+2014 EM DASH`).
+
+It has no `allowed-tools`. It searches with Claude Code's Grep tool where the
+session has one, and otherwise with `grep` or `rg` through the shell, prompted
+or sandboxed. A `Bash(rg:*)` grant would also allow `rg --pre <cmd>`.
+
 ### /design-review
 
 Review a refined [board card](../board.md) with a reviewer that has seen none of
@@ -388,6 +425,10 @@ skills/
 │   └── SKILL.md     # Cold second opinion on a branch before opening a PR
 ├── outward-comms/
 │   └── SKILL.md     # House style for text written for other people
+├── code-comments/
+│   ├── SKILL.md     # Conventions for comments and docstrings
+│   └── reference/
+│       └── languages.md  # Per-language docstring shapes
 └── design-review/
     └── SKILL.md     # Cold second opinion on a refined card before building it
 ```

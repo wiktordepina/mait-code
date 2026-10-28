@@ -12,6 +12,15 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
+- **`/code-comments`.** Conventions for comments and docstrings: functional,
+  not narrative; no ticket keys, history or drifting facts; comment the
+  counter-intuitive, not the obvious; ASCII only, even in files that aren't.
+  With no argument it audits only the comments the current branch adds or
+  changes; given a path, it sweeps every comment there. Per-language guidance
+  ships in `reference/languages.md`. If you already have a personal
+  `~/.claude/skills/code-comments`, update moves it to
+  `code-comments.backup` and links the shipped one in its place.
+
 - **`/outward-comms` and a user-owned `writing_style.md`.** A house style for
   text written on your behalf for other people (PR and review comments,
   commit messages, issue comments, chat, email, committed docs): no em dashes,
