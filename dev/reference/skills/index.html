@@ -1375,6 +1375,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#code-comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /code-comments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#design-review" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2438,6 +2449,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#code-comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /code-comments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#design-review" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2621,6 +2643,12 @@
 <td>Outward Comms</td>
 <td><code>/outward-comms [text]</code></td>
 <td>House style for text written on your behalf for others; rewrites given text or shapes a draft</td>
+<td><strong>Implemented</strong></td>
+</tr>
+<tr>
+<td>Code Comments</td>
+<td><code>/code-comments [path]</code></td>
+<td>Conventions for comments and docstrings; audits the branch's comments, or sweeps a path</td>
 <td><strong>Implemented</strong></td>
 </tr>
 <tr>
@@ -2832,11 +2860,41 @@ committed docs.</p>
 the file with <code>mait-code identity show writing_style</code>, so a custom <code>data-dir</code>
 is followed. A <code>cat</code> of the file wouldn't do: Claude Code doesn't run skill
 preprocessing that reads under <code>~/.claude/</code> inline.</p>
+<h3 id="code-comments">/code-comments<a class="headerlink" href="#code-comments" title="Permanent link">&para;</a></h3>
+<p>Conventions for comments and docstrings inside source files: functional, not
+narrative; no ticket keys or history; no facts that drift (line numbers,
+counts, "currently"); comment the counter-intuitive, never the obvious; ASCII
+only.</p>
+<p><strong>Usage:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>/code-comments                   # Audit the comments this branch adds or changes
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>/code-comments src/foo/          # Sweep every comment under a path
+</span></code></pre></div></p>
+<p><strong>How it works:</strong></p>
+<ol>
+<li><em>Write mode</em> applies the rules while a comment or docstring is written or
+   edited. It relies on the skill being triggered, which is best effort;
+   invoking it is the guaranteed path, and a playbook can run audit mode too</li>
+<li><em>Audit mode</em> with no argument reads the branch's diff against its base and
+   checks only the comments it adds or changes, plus comments whose meaning the
+   change affects. Old violations elsewhere in a touched file are mentioned once,
+   not reported. With a path, it sweeps every comment there</li>
+<li>It matches the project's docstring convention first (config, house rules,
+   then the dominant recent pattern), with per-language guidance in
+   <code>reference/languages.md</code></li>
+<li>Findings are reported by file and identifier, not line number, with a
+   proposed rewrite or a deletion</li>
+</ol>
+<p>The ASCII rule wins over matching the project: a file full of em dashes still
+gets ASCII in every comment written or touched. A comment that must name a
+non-ASCII character uses its escape or Unicode name (<code>U+2014 EM DASH</code>).</p>
+<p>It has no <code>allowed-tools</code>. It searches with Claude Code's Grep tool where the
+session has one, and otherwise with <code>grep</code> or <code>rg</code> through the shell, prompted
+or sandboxed. A <code>Bash(rg:*)</code> grant would also allow <code>rg --pre &lt;cmd&gt;</code>.</p>
 <h3 id="design-review">/design-review<a class="headerlink" href="#design-review" title="Permanent link">&para;</a></h3>
 <p>Review a refined <a href="../../board/">board card</a> with a reviewer that has seen none of
 the conversation that refined it, before anyone builds it.</p>
 <p><strong>Usage:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>/design-review 42                # Review card #42
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>/design-review 42                # Review card #42
 </span></code></pre></div></p>
 <p><strong>Why it exists:</strong></p>
 <p>Whoever refined a card reads it for whether it says what they meant, not for
@@ -2909,44 +2967,48 @@ included, and also <strong>writes nothing to the board</strong>: what reaches th
 the user's call, made after reading the review.</p>
 <h2 id="skill-architecture">Skill Architecture<a class="headerlink" href="#skill-architecture" title="Permanent link">&para;</a></h2>
 <p>Each skill is a directory in <code>skills/</code> containing:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>skills/
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>├── recall/
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>│   └── SKILL.md     # Search memory
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>├── remember/
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>│   └── SKILL.md     # Store memory (manual)
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>├── memory-store/
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>│   └── SKILL.md     # Store memory (auto-invoked by Claude)
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>├── reflect/
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>│   └── SKILL.md     # Synthesise observations into insights
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>├── remind/
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>│   └── SKILL.md     # Set a reminder
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>├── reminders/
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>│   └── SKILL.md     # Show reminders
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>├── board/
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>│   └── SKILL.md     # View and drive the kanban board
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>├── triage/
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>│   └── SKILL.md     # Route the quick-capture inbox to the board or memory
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>├── commit/
-</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>│   └── SKILL.md     # Smart commit with conventional message
-</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>├── pre-pr-review/
-</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>│   └── SKILL.md     # Cold second opinion on a branch before opening a PR
-</span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>├── outward-comms/
-</span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>│   └── SKILL.md     # House style for text written for other people
-</span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>└── design-review/
-</span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>    └── SKILL.md     # Cold second opinion on a refined card before building it
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>skills/
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── recall/
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>│   └── SKILL.md     # Search memory
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>├── remember/
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>│   └── SKILL.md     # Store memory (manual)
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>├── memory-store/
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>│   └── SKILL.md     # Store memory (auto-invoked by Claude)
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>├── reflect/
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>│   └── SKILL.md     # Synthesise observations into insights
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>├── remind/
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>│   └── SKILL.md     # Set a reminder
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>├── reminders/
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>│   └── SKILL.md     # Show reminders
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>├── board/
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>│   └── SKILL.md     # View and drive the kanban board
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>├── triage/
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>│   └── SKILL.md     # Route the quick-capture inbox to the board or memory
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>├── commit/
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>│   └── SKILL.md     # Smart commit with conventional message
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>├── pre-pr-review/
+</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>│   └── SKILL.md     # Cold second opinion on a branch before opening a PR
+</span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>├── outward-comms/
+</span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>│   └── SKILL.md     # House style for text written for other people
+</span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>├── code-comments/
+</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>│   ├── SKILL.md     # Conventions for comments and docstrings
+</span><span id="__span-12-26"><a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>│   └── reference/
+</span><span id="__span-12-27"><a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>│       └── languages.md  # Per-language docstring shapes
+</span><span id="__span-12-28"><a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>└── design-review/
+</span><span id="__span-12-29"><a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>    └── SKILL.md     # Cold second opinion on a refined card before building it
 </span></code></pre></div>
 <p>Skills are symlinked into <code>~/.claude/skills/</code> by <code>mait-code install</code> (and refreshed by <code>mait-code update</code>, which also prunes links to removed skills) and loaded by Claude Code automatically.</p>
 <h3 id="skill-definition-format">Skill Definition Format<a class="headerlink" href="#skill-definition-format" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nn">---</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skill-name</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What the skill does, and when it should be used</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nt">argument-hint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;args&gt;&quot;</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nt">allowed-tools</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bash(mc-tool-example show), Bash(mc-tool-example show:*), Read</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="nn">---</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># /skill-name</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="l l-Scalar l-Scalar-Plain">Instructions for Claude when this skill is invoked.</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nn">---</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">skill-name</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What the skill does, and when it should be used</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nt">argument-hint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;args&gt;&quot;</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nt">allowed-tools</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bash(mc-tool-example show), Bash(mc-tool-example show:*), Read</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="nn">---</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="c1"># /skill-name</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="l l-Scalar l-Scalar-Plain">Instructions for Claude when this skill is invoked.</span>
 </span></code></pre></div>
 <p>Key fields:</p>
 <ul>
