@@ -12,6 +12,16 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
+- **`/work N`: a playbook that takes a card from refinement to a pull
+  request.** Eight steps, each recorded on the card as a playbook run so the
+  board, the TUI and the companion mod's step row show progress: refine (with
+  a testing strategy), `/design-review`, implement, `/code-comments`,
+  `/commit` plus `/pre-pr-review`, address the findings, run the agreed tests,
+  and raise the PR after asking. Any step can be skipped with a reason; a step
+  waiting on you is paused with the question. The PR is raised with your
+  `pr-skill`, or `gh pr create`. Resuming after a `/clear` or another day picks
+  up at the current step. Manual only: Claude never starts it unprompted.
+
 - **Testing strategies for refinement.** A new user-owned
   `testing_strategies.md` in the data directory lists the ways a card can be
   tested, shipping with `unit` and `manual`; add your own environments, each

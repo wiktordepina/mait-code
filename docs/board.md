@@ -219,6 +219,11 @@ mc-tool-board run end 12
   on it. Starting a new run on a card with an open one needs `--replace`.
   Ended runs are kept, though only the open run is shown.
 
+`/work N` is the playbook mait-code ships: it takes a card from refinement to
+a raised pull request in eight steps (`refine`, `design-review`, `implement`,
+`comment-audit`, `commit-review`, `address-findings`, `tests`, `raise-pr`),
+recording each one here. See the [skills reference](reference/skills.md#work).
+
 ## Epics and dependencies
 
 Columns say where each card stands; they don't say how cards relate. Two
