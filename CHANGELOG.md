@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.91.0] — 2026-10-28
+
 ### Added
 
 - **`/work N`: a playbook that takes a card from refinement to a pull
@@ -88,6 +90,11 @@ don't change the public surface. Everything is still in flux.
 
 ### Changed
 
+- **`/commit` and `/pre-pr-review` grant only the exact git commands they
+  run.** `git diff` and `git log` accept `--output=<file>`, which writes an
+  arbitrary file, so even a flag-narrowed prefix such as
+  `Bash(git diff --stat:*)` wasn't read-only. The grant guard now forbids the
+  `--output` forms.
 - **The companion bar's context gauge is a line.** The eight cells are now a
   heavy line (`━`) for the filled part and a faded light line (`─`) for the
   rest, in place of squares.
@@ -2932,7 +2939,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.90.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.91.0...HEAD
+[0.91.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.91.0
 [0.90.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.90.0
 [0.89.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.89.0
 [0.88.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.88.0
