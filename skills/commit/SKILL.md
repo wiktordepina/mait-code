@@ -1,7 +1,7 @@
 ---
 name: commit
 description: Commit changes with a generated conventional-commit message, after confirming with you. Use whenever you ask to commit, check in, or save changes — invoke this instead of running git commit directly, so messages stay conventional.
-allowed-tools: Bash(git status --porcelain:*), Bash(git diff --stat:*), Bash(git diff --cached:*), Bash(git ls-files --others --exclude-standard:*), Bash(git add:*), Bash(git commit -m:*), Bash(git commit -F:*)
+allowed-tools: Bash(git status --porcelain:*), Bash(git diff --stat), Bash(git diff --cached --stat), Bash(git diff --cached), Bash(git ls-files --others --exclude-standard:*), Bash(git add:*), Bash(git commit -m:*), Bash(git commit -F:*)
 ---
 
 # /commit
@@ -10,13 +10,13 @@ Generate a conventional commit for the current changes.
 
 ## Current state
 
-Staged changes:
+Staged changes (empty when nothing is staged):
 
-!`git diff --cached --stat 2>/dev/null || echo "No staged changes."`
+!`git diff --cached --stat`
 
-Unstaged changes:
+Unstaged changes (empty when there are none):
 
-!`git diff --stat 2>/dev/null || echo "No unstaged changes."`
+!`git diff --stat`
 
 Untracked files:
 

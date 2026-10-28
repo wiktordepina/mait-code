@@ -345,11 +345,12 @@ so the board, the TUI and the companion mod's step row show where it is:
   restart or another day picks up at the current step. A step left in progress
   by a session that ended is offered a restart, and an open run from another
   playbook is never touched without asking. What the last pre-PR review covered
-  is rebuilt from the step's finish time and the commits since.
+  is recorded as a card comment after each review, so it survives too.
 
 **No hooks.** `git push` and `gh pr create` are outside its grant, so the
-permission prompt backs up step 8's question; so is `mc-tool-board move`, which
-could archive or complete a card.
+permission prompt backs up step 8's question. `mc-tool-board move` and
+`run start` are left out too: one could archive or complete a card, the other
+replace a run.
 
 ### /design-review
 

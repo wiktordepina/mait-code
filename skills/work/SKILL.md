@@ -3,7 +3,7 @@ name: work
 description: Drive one board card through the dev flow - refine, design review, implement, comment audit, commit and pre-PR review, address findings, run the agreed tests, raise a PR - recording each step on the card. Only when the user runs /work N.
 argument-hint: "<card id>"
 disable-model-invocation: true
-allowed-tools: Bash(mc-tool-board show:*), Bash(mc-tool-board bind:*), Bash(mc-tool-board run:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board review:*), Bash(mait-code identity show testing_strategies:*), Bash(mait-code settings get pr-skill --json), Bash(git rev-parse --abbrev-ref origin/HEAD), Bash(git log --oneline:*), Bash(git diff --stat:*), Bash(git status --porcelain:*)
+allowed-tools: Bash(mc-tool-board show:*), Bash(mc-tool-board summary --json), Bash(mc-tool-board bind:*), Bash(mc-tool-board run step:*), Bash(mc-tool-board run end:*), Bash(mc-tool-board run show:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board refine:*), Bash(mc-tool-board comment:*), Bash(mc-tool-board review:*), Bash(mait-code identity show testing_strategies:*), Bash(mait-code settings get pr-skill --json), Bash(git rev-parse --abbrev-ref origin/HEAD)
 ---
 
 # /work
@@ -73,12 +73,14 @@ The same rules hold in every step:
 ## Starting
 
 1. `mc-tool-board show N --json`. Refuse an epic (`kind: "epic"`) and a card
-   that is Done or archived. Check the card's `project` is this repository's;
-   if not, ask.
+   that is Done or archived. Check the card's `project` matches the `project`
+   that `mc-tool-board summary --json` reports for this directory; if not,
+   ask.
 2. `mc-tool-board bind N`, whatever the card's column, so the card shows as
    this session's work.
 3. Look at the card's `run`:
-   - **None:** start one:
+   - **None:** start one (`run start` isn't granted, so it prompts once; a
+     grant would also let `--replace` through unasked):
 
      ```bash
      mc-tool-board run start N --playbook work --steps refine design-review implement comment-audit commit-review address-findings tests raise-pr
@@ -135,7 +137,9 @@ branch adds or changes. Fix what it finds that the user agrees with.
 
 - Invoke `/commit` to commit the work. **Do not push.**
 - Then invoke `/pre-pr-review`, which reviews the committed range cold.
-  Relay its findings as that skill says.
+  Relay its findings as that skill says, then record what it covered, so a
+  later session can tell reviewed commits from new ones:
+  `mc-tool-board comment N --author claude "Pre-PR review covered <base>...<short sha of HEAD>"`.
 - Before marking the step done, note the base and the size of the reviewed
   diff (`git diff --stat <base>...HEAD`, its last line): step 6 measures
   against it.
@@ -145,7 +149,8 @@ branch adds or changes. Fix what it finds that the user agrees with.
 Fix the findings the user wants fixed, and commit them (`/commit`, no push).
 Skip the step, with a reason, if there was nothing to fix.
 
-Then offer a second `/pre-pr-review` when any of these hold:
+Then offer a second `/pre-pr-review` when any of these hold (and record its
+coverage with a comment, as in step 5):
 
 - the fixes add files or modules;
 - the fixes change an interface (a judgement call: say that it is one);
@@ -167,17 +172,24 @@ deploy they own) pauses the step with what they need to do as the reason.
 ## Step 8: `raise-pr`
 
 1. **Summarise the run:** the steps done; the steps skipped, with their
-   reasons; whether the last pre-PR review covered the current `HEAD` (any
-   commits since it ran are unreviewed: list them); and the test results.
+   reasons; whether the last pre-PR review covered the current `HEAD` (the
+   latest "Pre-PR review covered" comment names its sha; list any commits
+   after it as unreviewed); and the test results.
 2. **Ask** whether to push and raise the PR. One yes covers both. This
    question is never skipped.
-3. On a yes:
-   1. Push the branch (`git push -u origin <branch>`). It isn't granted, so it
-      goes through the permission prompt.
-   2. Read `mait-code settings get pr-skill --json`. If `value` names a skill,
-      invoke it to raise the PR. If it's empty, or the skill doesn't exist or
-      can't be invoked, use `gh pr create` and say which you used.
-   3. Write the PR title and body with `/outward-comms`.
+3. On a yes, in this order:
+   1. Decide who raises it: `mait-code settings get pr-skill --json`. If
+      `value` names a skill that exists and can be invoked, it raises the PR.
+      If the value is empty, the skill can't be found or invoked, or the
+      command fails (no settings file, an older mait-code), use
+      `gh pr create`, and say which you used.
+   2. Draft the PR title and body with `/outward-comms`, unless the PR skill
+      writes its own.
+   3. Push the branch (`git push -u origin <branch>`), unless the PR skill
+      pushes itself. It isn't granted, so it goes through the permission
+      prompt.
+   4. Raise the PR with the PR skill, or `gh pr create` with the drafted
+      title and body.
 4. Then, in this order:
 
    ```bash
@@ -197,15 +209,19 @@ On a no, set the step `paused` with the user's reason and stop there.
 Resume at the run's current step: the one in progress, else the lowest paused
 one. If there is neither, start the first step that is still pending.
 
-- **A step in progress when /work starts** was left by a session that has
-  ended. Say what it was and offer to restart it from the top.
+- **A step in progress when /work starts** was probably left by a session
+  that has ended, but a parallel session may still be on it: check the card's
+  `sessions` in `show --json` for another live binding. If there is one, say
+  so and ask before touching the run; if not, say what the step was and offer
+  to restart it from the top.
 - **A paused step:** show its reason (the open question) and pick up from the
   answer.
 - **What lived only in the conversation is rebuilt from git and the run:**
-  - *What the last pre-PR review covered:* the `commit-review` (or a later
-    re-review's) step's finish time; commits after it are unreviewed
-    (`git log --oneline --since=<finished_at>`).
-  - *Step 6's baseline:* the diff size at the last commit before that time.
+  - *What the last pre-PR review covered:* the sha in the card's latest
+    "Pre-PR review covered" comment; commits after it are unreviewed
+    (`git log --oneline <sha>..HEAD`).
+  - *Step 6's baseline:* the diff size at that sha
+    (`git diff --stat <base>...<sha>`).
   - *Batched assumptions* from an earlier session are gone: say so rather than
     guessing at them.
 
@@ -214,8 +230,11 @@ one. If there is neither, start the first step that is still pending.
 - **No hooks.** Step 8's question is the gate. `git push` and `gh pr create`
   are deliberately outside this skill's grant, so the permission prompt is a
   second one.
-- **Grants.** The board commands are the ones the run needs. `move` is left
-  out: it can archive or complete a card, so step 3's single move goes through
-  the prompt.
+- **Grants.** The board commands are the ones the run needs, narrowed where a
+  prefix would let more through: `run start` is left out because a grant would
+  also allow `--replace`, and `move` because it can archive or complete a
+  card. Neither is granted here; another skill used earlier in the session may
+  grant it. Read-only git (`log`, `diff`) isn't granted either: `--output`
+  makes both write a file, and they run fine prompted or sandboxed.
 - **The run outlives the session.** It sits on the card, so `/clear`, a
   restart or another day picks up where it stopped, via *Resuming*.

@@ -1,7 +1,7 @@
 ---
 name: pre-pr-review
 description: Run an independent review of the current branch by a reviewer that has seen none of this session's conversation, before opening a pull request. Use when you ask for a pre-PR review, a cold second opinion on a branch, or want changes scrutinised before pushing or requesting a merge.
-allowed-tools: Bash(git log --oneline:*), Bash(git diff --stat:*), Bash(git status --porcelain:*), Bash(git branch --show-current), Bash(git rev-parse --abbrev-ref origin/HEAD)
+allowed-tools: Bash(git log --oneline -30 origin/HEAD..HEAD), Bash(git diff --stat origin/HEAD...HEAD), Bash(git status --porcelain), Bash(git branch --show-current), Bash(git rev-parse --abbrev-ref origin/HEAD)
 ---
 
 # /pre-pr-review
@@ -170,17 +170,16 @@ skill exists to prevent.
 
 ## Notes
 
-- **The `allowed-tools` patterns are deliberately narrow**, and each wildcard
-  includes a flag rather than stopping at the subcommand. A `:*` rule permits
-  *any* continuation after the prefix, flags included, so `Bash(git branch:*)`
-  would permit `git branch -D` — `git branch` is pinned to the one exact
-  invocation this skill runs. `Bash(git diff --stat:*)` is narrowed on the same
-  principle, though measurement against Claude Code 2.1.220 showed the sibling
-  it was originally guarding against (`git difftool --extcmd=<anything>`) is
-  already refused by plain `Bash(git diff:*)`: `:*` stops at a token boundary.
-  The narrower prefix is kept as it costs nothing and does not rely on that.
+- **The `allowed-tools` patterns are exact invocations**, one per command the
+  preprocessing runs. A `:*` rule permits *any* continuation after the prefix,
+  flags included: `Bash(git branch:*)` would permit `git branch -D`, and even
+  a flag-narrowed `Bash(git diff --stat:*)` permits
+  `git diff --stat --output=<file>`, which writes an arbitrary file. `git log`
+  takes `--output` too. So each command is pinned to exactly what this skill
+  runs, and the grant guard lists the `--output` forms as forbidden.
 
-  The rule of thumb: extend the prefix far enough that no dangerous sibling command
+  The rule of thumb: pin the exact invocation where you can; where a prefix is
+  unavoidable, extend it far enough that no dangerous sibling command or flag
   shares it. Verify with `perms.matches_command` against `perms.MUTATING_INVOCATIONS`
   rather than by eye — `git difftool` is not in that list, so the guard test alone
   will not save you.

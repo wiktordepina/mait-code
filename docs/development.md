@@ -397,8 +397,10 @@ Two consequences worth internalising:
   not a literal.
 - **A boundary is not a subcommand.** Everything after the boundary is
   permitted, flags included, so `Bash(git branch:*)` does span `git branch -D`.
-  Narrowing has to happen inside the prefix: `Bash(git diff --stat:*)`, or an
-  exact invocation with no wildcard at all.
+  Narrowing has to happen inside the prefix, and even that can leak a flag:
+  `Bash(git diff --stat:*)` still permits `git diff --stat --output=<file>`,
+  which writes an arbitrary file. Prefer an exact invocation with no wildcard
+  at all where the skill runs a fixed command.
 
 What `:*` does **not** do is span into a longer token —
 `Bash(git diff:*)` refuses `git difftool --extcmd=<anything>`. Earlier revisions
