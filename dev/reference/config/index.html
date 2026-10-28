@@ -2861,7 +2861,7 @@
 
         <p>One configuration knob shown by <code>mait-code settings</code>.</p>
 <p>Most settings are <em>settable</em>: backed by an environment variable, with a
-value resolved env → file → default. Two extra flavours exist:</p>
+value resolved env -&gt; file -&gt; default. Two extra flavours exist:</p>
 <ul>
 <li><strong>Derived</strong> (<code>settable=False</code>): a read-only value computed at display
   time by :attr:<code>derive</code> (e.g. database paths derived from <code>data-dir</code>).
@@ -2971,7 +2971,7 @@ embeddings (provider/model changes need a re-embed).</p>
             <td><code><span title="mait_code.config.Setting.kind">kind</span></code></td>
             <td class="doc-attribute-details">
               <div class="doc-md-description">
-                <p>Value type for typed accessors — <code>"str"</code>, <code>"int"</code> or
+                <p>Value type for typed accessors - <code>"str"</code>, <code>"int"</code> or
 <code>"float"</code>. Drives :func:<code>get_int</code> / :func:<code>get_float</code> coercion.</p>
               </div>
               <p>
@@ -3046,7 +3046,7 @@ an error message, or <code>None</code> when valid. Run by <code>doctor</code>.</
             <td class="doc-attribute-details">
               <div class="doc-md-description">
                 <p>Optional fixed set of valid values for an enum-like setting
-(e.g. <code>embedding-provider</code> → <code>("local", "bedrock")</code>). Drives
+(e.g. <code>embedding-provider</code> -&gt; <code>("local", "bedrock")</code>). Drives
 the interactive editor's picker; the matching :attr:<code>validate</code>
 enforces membership for <code>set</code> and <code>doctor</code>.</p>
               </div>
@@ -3746,13 +3746,13 @@ enforces membership for <code>set</code> and <code>doctor</code>.</p>
         <p>Return <code>(value, source)</code> for a setting.</p>
 <p>Resolution order (highest priority wins):</p>
 <ol>
-<li><strong>Environment variable</strong> — <code>source = "env"</code></li>
-<li><strong>Settings file</strong> — <code>source = "settings"</code></li>
-<li><strong>Hardcoded default</strong> — <code>source = "default"</code></li>
+<li><strong>Environment variable</strong> - <code>source = "env"</code></li>
+<li><strong>Settings file</strong> - <code>source = "settings"</code></li>
+<li><strong>Hardcoded default</strong> - <code>source = "default"</code></li>
 </ol>
 <p>Derived settings (<code>settable=False</code>) short-circuit to their computed
 value with source <code>"derived"</code>.</p>
-<p>This <em>reports</em> configuration; it does not validate it — that is
+<p>This <em>reports</em> configuration; it does not validate it - that is
 <code>doctor</code>'s job.</p>
 
 
@@ -4061,7 +4061,7 @@ resolved configuration but never mutates it.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>Tables (notably <code>[env]</code>) are not part of the flat view — read</p>
+                <p>Tables (notably <code>[env]</code>) are not part of the flat view - read</p>
               </div>
             </td>
           </tr>
@@ -4360,13 +4360,13 @@ it untouched.</p>
         <p>Inject the settings <code>[env]</code> table into :data:<code>os.environ</code>.</p>
 <p>Called from each entry point's startup path (via
 :func:<code>mait_code.logging.setup_logging</code> and the <code>mait-code</code> CLI), so
-user-defined variables — e.g. <code>AWS_PROFILE</code> for Bedrock embeddings —
+user-defined variables - e.g. <code>AWS_PROFILE</code> for Bedrock embeddings -
 are present however a tool is invoked, not only inside Claude Code
 sessions.</p>
 <p>Variables already present in the real environment are left alone, so a
-one-off <code>AWS_PROFILE=other mc-tool-…</code> override keeps working — and
+one-off <code>AWS_PROFILE=other mc-tool-...</code> override keeps working - and
 repeat calls are naturally no-ops. <code>MAIT_CODE_*</code> keys are skipped
-with a warning: first-class settings already resolve env → file →
+with a warning: first-class settings already resolve env -&gt; file -&gt;
 default, and injecting them would create a second, conflicting
 resolution path. <code>doctor</code> flags those too.</p>
 
@@ -4413,11 +4413,11 @@ resolution path. <code>doctor</code> flags those too.</p>
 
     <div class="doc doc-contents first">
 
-        <p>Return the mait-code data directory — the canonical resolver.</p>
+        <p>Return the mait-code data directory - the canonical resolver.</p>
 <p>Honours <code>$MAIT_CODE_DATA_DIR</code> when set to a non-empty value;
 otherwise <code>~/.claude/mait-code-data</code>. Computed at call time so tests
 that relocate <code>$HOME</code> are honoured.</p>
-<p>A leading <code>~</code> in the override is expanded — otherwise a value like
+<p>A leading <code>~</code> in the override is expanded - otherwise a value like
 <code>~/.claude/mait-code-data</code> (a literal, unexpanded tilde from the
 environment) would resolve relative to the cwd, scattering data into a
 stray <code>~</code> directory instead of <code>$HOME</code>.</p>
@@ -4563,7 +4563,7 @@ stray <code>~</code> directory instead of <code>$HOME</code>.</p>
 
         <p>Resolve every setting for display, and flag embedding-provider drift.</p>
 <p>Drift is detected when the env var overrides the settings file value
-for <code>embedding-provider</code> — this means the runtime provider differs
+for <code>embedding-provider</code> - this means the runtime provider differs
 from what was configured, and memories may need re-embedding.</p>
 
 

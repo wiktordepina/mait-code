@@ -6,17 +6,17 @@ embed. Any surface that carries the block-shadow wordmark must be rasterised
 through headless Chrome rather than published as SVG: a terminal fills each
 character cell edge to edge, so the block art tiles seamlessly, but an SVG export
 places glyphs on a grid whose row pitch is a few pixels taller than the glyph,
-leaving horizontal seams across the wordmark — and the SVG only renders in
+leaving horizontal seams across the wordmark - and the SVG only renders in
 *GeistMono Nerd Font Mono* on machines that have it installed. Rendering the
 rethemed SVG through Chrome (which uses the locally installed GeistMono and fills
 the cells like a terminal) and publishing the *raster* result gives every reader
 the same crisp rendering, no font required at their end.
 
-Every TUI now wears the brand banner — wordmark and all — so both generators use
+Every TUI now wears the brand banner - wordmark and all - so both generators use
 this PNG path; this module is the single home for the font retheme and the Chrome
 pipeline they share.
 
-Requirements (the doc author's machine, not CI — CI just builds the committed
+Requirements (the doc author's machine, not CI - CI just builds the committed
 PNGs): a Chromium/Chrome binary on ``PATH`` and the GeistMono Nerd Font installed.
 """
 
@@ -36,7 +36,7 @@ _FONT_STACK = "'GeistMono Nerd Font Mono', Fira Code, monospace"
 _RICH_FONT_DECL = "font-family: Fira Code, monospace;"
 _DOCS_FONT_DECL = f"font-family: {_FONT_STACK};"
 
-#: Render at 2× for crisp text on high-DPI displays.
+#: Render at 2x for crisp text on high-DPI displays.
 _SCALE = 2
 
 #: Chrome binaries to try, in order.

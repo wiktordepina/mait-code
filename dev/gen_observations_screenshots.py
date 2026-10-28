@@ -2,11 +2,11 @@
 
 The observations guide (``docs/observations.md``) embeds screenshots of the
 live browser. Those start as the very SVG artefacts the snapshot suite renders
-under ``tests/cli/__snapshots__/`` — so they stay accurate automatically: whenever
+under ``tests/cli/__snapshots__/`` - so they stay accurate automatically: whenever
 the browser's look changes, the snapshot baseline is regenerated and this script
 renders it afresh. The browser wears the brand banner, block-shadow wordmark and
 all, so the shots are rasterised through headless Chrome rather than published as
-SVG (an SVG seams across the block art — see :mod:`_screenshots` for the full why
+SVG (an SVG seams across the block art - see :mod:`_screenshots` for the full why
 and the machine requirements).
 
 Regeneration workflow::

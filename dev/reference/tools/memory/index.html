@@ -4281,7 +4281,7 @@
     <div class="doc doc-contents first">
 
         <p>Apply any pending migrations to the database.</p>
-<p>Safe to call on every connection open — checks a single integer and
+<p>Safe to call on every connection open - checks a single integer and
 returns immediately if the schema is current. Gracefully skips vec0
 migrations if the sqlite-vec extension is not loaded.</p>
 
@@ -4820,7 +4820,7 @@ current schema applied via migrations.</p>
             <td class="doc-attribute-details">
               <div class="doc-md-description">
                 <p><code>"match"</code> (record agrees with configuration), <code>"unknown"</code>
-(vectors but no record — permissive, as before the record
+(vectors but no record - permissive, as before the record
 existed), <code>"empty"</code> (no vectors yet), <code>"absent"</code> (no
 <code>memory_vec</code> table), <code>"dimension"</code> (stored or declared width
 differs) or <code>"model"</code> (recorded provider/model differs).</p>
@@ -4936,7 +4936,7 @@ differs) or <code>"model"</code> (recorded provider/model differs).</p>
     <div class="doc doc-contents first">
 
         <p>Return the provider/model/width the current settings embed with.</p>
-<p>Read live from configuration — never the import-time constants, and
+<p>Read live from configuration - never the import-time constants, and
 never by instantiating the provider (which can load a local model).</p>
 
 
@@ -5271,7 +5271,7 @@ built under a recording release, has no record.</p>
         <p>Check that <code>memory_vec</code> was built by the configured provider and model.</p>
 <p>Vectors from different models live in different spaces, so comparing a
 query embedded by one against vectors stored by another yields
-meaningless similarities — even at the same width. Search, dedup and
+meaningless similarities - even at the same width. Search, dedup and
 writes therefore consult this before embedding anything.</p>
 <p>An empty table is usable whatever the record says (nothing to disagree
 with), unless its declared width differs. Vectors with no record are
@@ -7556,7 +7556,7 @@ tests are stable for a given database state.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>to the centre, with source/target names) — or <code>None</code> if no entity</p>
+                <p>to the centre, with source/target names) - or <code>None</code> if no entity</p>
               </div>
             </td>
           </tr>
@@ -7847,7 +7847,7 @@ single-mention tail).</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p><code>mention_count</code> descending, then <code>last_seen</code> descending, then id</p>
+                <p><code>mention_count</code> descending, then <code>last_seen</code> descending, then id -</p>
               </div>
             </td>
           </tr>
@@ -7859,7 +7859,7 @@ single-mention tail).</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>— a deterministic order for rendering and tests.</p>
+                <p>a deterministic order for rendering and tests.</p>
               </div>
             </td>
           </tr>
@@ -8564,11 +8564,11 @@ contradiction-band candidates and returns only the merge target.</p>
         <p>Fold several memory entries into one consolidated entry.</p>
 <p>Inserts <code>content</code> as a single fresh entry, then supersedes every existing
 row in <code>old_ids</code> by pointing each <code>superseded_by</code> at the new id. This is
-the N→1 counterpart to :func:<code>supersede_memory</code>: use it when reflection
+the N-&gt;1 counterpart to :func:<code>supersede_memory</code>: use it when reflection
 finds two or more overlapping facts that should read as one.</p>
 <p>The new entry inherits type, class, and scope (project/branch) from the
 first <em>existing</em> row in <code>old_ids</code>. Its importance defaults to the highest
-importance among the merged rows — a merge promotes, it does not dilute —
+importance among the merged rows - a merge promotes, it does not dilute -
 unless overridden. Ids that don't exist are skipped and reported back in
 <code>not_found</code>; the merge proceeds on whatever remains. If any merged row
 is job-sourced, the new entry takes the first such row's <code>source</code>, and
@@ -8857,7 +8857,7 @@ automated run (<code>source="job"</code>) wrote. Retired rows are kept for audit
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>dicts — the ones retired when <code>apply</code> is set.</p>
+                <p>dicts - the ones retired when <code>apply</code> is set.</p>
               </div>
             </td>
           </tr>
@@ -8882,7 +8882,7 @@ automated run (<code>source="job"</code>) wrote. Retired rows are kept for audit
 
     <div class="doc doc-contents first">
 
-        <p>Retire a memory entry — drop it with no replacement.</p>
+        <p>Retire a memory entry - drop it with no replacement.</p>
 <p>Stamps <code>superseded_at</code> while leaving <code>superseded_by</code> NULL. That pair is
 the <em>retired</em> marker: the row is hidden from default surfacing (see
 :data:<code>~mait_code.tools.memory.db.LIVE_ENTRY_SQL</code>) but kept for
@@ -9115,7 +9115,7 @@ reflection output. Invalid values fall back to <code>fact</code>.</p>
             </td>
             <td class="doc-param-details">
               <div class="doc-md-description">
-                <p>Memory scope — <code>"global"</code>, <code>"project"</code>, or <code>"branch"</code>.</p>
+                <p>Memory scope - <code>"global"</code>, <code>"project"</code>, or <code>"branch"</code>.</p>
               </div>
               <p>
                   <span class="doc-param-annotation">
@@ -9236,7 +9236,7 @@ session has now confirmed it; one with a source leaves it alone.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p><code>potential_conflicts</code> — a list of <code>{"id", "content", "similarity"}</code></p>
+                <p><code>potential_conflicts</code> - a list of <code>{"id", "content", "similarity"}</code></p>
               </div>
             </td>
           </tr>
@@ -9317,7 +9317,7 @@ session has now confirmed it; one with a source leaves it alone.</p>
 
         <p>Supersede an existing memory entry with an evolved version.</p>
 <p>Inserts <code>content</code> as a fresh entry that inherits the old entry's type,
-class, and scope (project/branch), then marks the old entry superseded —
+class, and scope (project/branch), then marks the old entry superseded -
 pointing <code>superseded_by</code> at the new id and stamping <code>superseded_at</code>.
 The old row is kept for auditability but hidden from default surfacing.
 The new entry keeps the old one's <code>source</code> too, so a job-sourced fact
@@ -9625,7 +9625,7 @@ global reflection watermark (observation backlog and freshness).</p>
 
         <p>Return the number of entries above the reflection watermark.</p>
 <p>Counts the non-insight entries that a future :func:<code>reflect</code> run would
-consider — the observation backlog. With no watermark (no reflection has
+consider - the observation backlog. With no watermark (no reflection has
 ever run for the scope), every non-insight entry counts.</p>
 
 
@@ -9697,7 +9697,7 @@ ever run for the scope), every non-insight entry counts.</p>
     <div class="doc doc-contents first">
 
         <p>Return when reflection last ran for a project (or global scope).</p>
-<p>Reads <code>last_reflected_at</code> from the watermark table — the authoritative
+<p>Reads <code>last_reflected_at</code> from the watermark table - the authoritative
 record of the most recent :func:<code>reflect</code> run, regardless of whether it
 produced insights.</p>
 
@@ -9790,7 +9790,7 @@ produced insights.</p>
 
     <div class="doc doc-contents first">
 
-        <p>Reflection system — synthesise recent observations into durable insights.</p>
+        <p>Reflection system - synthesise recent observations into durable insights.</p>
 <p>Reads recent memory entries and observation logs, calls Claude to identify
 patterns and themes, stores insights back to <code>memory.db</code>, and proposes
 updates to <code>MEMORY.md</code>.</p>
@@ -10111,7 +10111,7 @@ cap a job's memories were written under.</p>
 
         <p>Return the number of entries above the reflection watermark.</p>
 <p>Counts the non-insight entries that a future :func:<code>reflect</code> run would
-consider — the observation backlog. With no watermark (no reflection has
+consider - the observation backlog. With no watermark (no reflection has
 ever run for the scope), every non-insight entry counts.</p>
 
 
@@ -10183,7 +10183,7 @@ ever run for the scope), every non-insight entry counts.</p>
     <div class="doc doc-contents ">
 
         <p>Return when reflection last ran for a project (or global scope).</p>
-<p>Reads <code>last_reflected_at</code> from the watermark table — the authoritative
+<p>Reads <code>last_reflected_at</code> from the watermark table - the authoritative
 record of the most recent :func:<code>reflect</code> run, regardless of whether it
 produced insights.</p>
 
@@ -11751,7 +11751,7 @@ gets back (see :func:<code>filter_unvetted_ops</code>).</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>structured MEMORY.md operations proposed — see</p>
+                <p>structured MEMORY.md operations proposed - see</p>
               </div>
             </td>
           </tr>
@@ -11848,10 +11848,10 @@ gets back (see :func:<code>filter_unvetted_ops</code>).</p>
         <p>Summarise a day's capture batches from its JSONL observation log.</p>
 <p>Each observe-hook run appends one record to
 <code>memory/observations/&lt;day&gt;.jsonl</code>; this reads them back as light
-summaries — when and why a capture happened and how much it extracted —
+summaries - when and why a capture happened and how much it extracted -
 without the extraction bodies (those live in <code>memory.db</code>).</p>
 <p>Best-effort by design: a missing file, an unreadable file, or a malformed
-line yields no batch rather than raising — the JSONL is supplementary
+line yields no batch rather than raising - the JSONL is supplementary
 metadata, never load-bearing.</p>
 
 
@@ -11956,7 +11956,7 @@ metadata, never load-bearing.</p>
         <p>List the raw observations, newest first, flagged against the watermark.</p>
 <p>Returns every non-insight entry (insights are reflection <em>output</em>, not
 observations), each carrying the standard entry fields plus <code>reflected</code>:
-whether the entry sits at or below the relevant reflection watermark — the
+whether the entry sits at or below the relevant reflection watermark - the
 project's own when <code>project</code> is given, the global one otherwise, matching
 :func:<code>~mait_code.tools.memory.reflect.count_unreflected</code>. With no
 watermark for the scope, nothing has been reflected yet. An entry the
@@ -12132,7 +12132,7 @@ entries carry no project and so don't contribute a name.</p>
         <p>Enumerate every project's native memory files, across all projects.</p>
 <p>Scans <code>projects_dir</code> (default :func:<code>native_projects_dir</code>) for
 <code>&lt;slug&gt;/memory/**/*.md</code>. Projects without a memory directory, or whose
-memory directory holds no markdown, are skipped — only projects with
+memory directory holds no markdown, are skipped - only projects with
 something to read appear. A missing or unreadable projects dir yields an
 empty list rather than an error.</p>
 
@@ -12241,7 +12241,7 @@ empty list rather than an error.</p>
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>string, or <code>None</code>), <code>memory_dir</code>, and <code>files</code> — <code>MEMORY.md</code></p>
+                <p>string, or <code>None</code>), <code>memory_dir</code>, and <code>files</code> - <code>MEMORY.md</code></p>
               </div>
             </td>
           </tr>
@@ -12327,13 +12327,13 @@ relocating <code>~/.claude</code>).</p>
     <div class="doc doc-contents first">
 
         <p>Best-effort reverse of Claude Code's path munging, filesystem-guided.</p>
-<p>The munge is lossy — any non-alphanumeric character became <code>-</code> — so the
+<p>The munge is lossy - any non-alphanumeric character became <code>-</code> - so the
 reverse can't be computed from the string alone. Instead this walks the
 real filesystem from <code>root</code>: at each level it re-munges every existing
 subdirectory's name (with :func:<code>munge_path</code>) and follows the one whose
 munged form the remaining slug starts with, backtracking when a branch
 dead-ends. So <code>-home-w-mait-code</code> resolves to <code>/home/w/mait.code</code>,
-<code>/home/w/mait_code</code> <strong>or</strong> <code>/home/w/mait-code</code> — whichever exists.</p>
+<code>/home/w/mait_code</code> <strong>or</strong> <code>/home/w/mait-code</code> - whichever exists.</p>
 
 
 <table>

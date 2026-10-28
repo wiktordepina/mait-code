@@ -2,11 +2,11 @@
 
 The logs guide (``docs/logs.md``) embeds screenshots of the live viewer. Those
 start as the very SVG artefacts the snapshot suite renders under
-``tests/cli/__snapshots__/`` — so they stay accurate automatically: whenever
+``tests/cli/__snapshots__/`` - so they stay accurate automatically: whenever
 the viewer's look changes, the snapshot baseline is regenerated and this script
 renders it afresh. The viewer wears the brand banner, block-shadow wordmark and
 all, so the shots are rasterised through headless Chrome rather than published
-as SVG (an SVG seams across the block art — see :mod:`_screenshots` for the
+as SVG (an SVG seams across the block art - see :mod:`_screenshots` for the
 full why and the machine requirements).
 
 Regeneration workflow::

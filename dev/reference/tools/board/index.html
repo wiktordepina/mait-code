@@ -4765,7 +4765,7 @@
     <div class="doc doc-contents first">
 
         <p>Apply any pending migrations to the database.</p>
-<p>Safe to call on every connection open — checks a single integer and returns
+<p>Safe to call on every connection open - checks a single integer and returns
 immediately if the schema is current.</p>
 <p>Safe to call from several processes at once, too: right after an upgrade the
 session-start hook, the CLI and the TUI can all open the board together. The
@@ -5247,8 +5247,8 @@ optionally carrying a <code>comments</code> list.</p>
             <td class="doc-param-details">
               <div class="doc-md-description">
                 <p>An epic dict as returned by
-:func:<code>~mait_code.tools.board.service.get_epic</code> — carrying
-<code>members</code> and <code>progress</code> — optionally with <code>comments</code> on it
+:func:<code>~mait_code.tools.board.service.get_epic</code> - carrying
+<code>members</code> and <code>progress</code> - optionally with <code>comments</code> on it
 and its members.</p>
               </div>
               <p>
@@ -5317,7 +5317,7 @@ and its members.</p>
 
     <div class="doc doc-contents first">
 
-        <p>Export a board listing as <em>fmt</em> — a JSON array or one markdown document.</p>
+        <p>Export a board listing as <em>fmt</em> - a JSON array or one markdown document.</p>
 <p>Filter arguments mirror :func:<code>~mait_code.tools.board.service.list_cards</code>.
 Epics are left out, as on the board; see :func:<code>export_epic</code>.</p>
 
@@ -5788,7 +5788,7 @@ Epics are left out, as on the board; see :func:<code>export_epic</code>.</p>
             <td class="doc-attribute-details">
               <div class="doc-md-description">
                 <p>The loop as card ids, starting and ending on the link's <em>from</em>
-card — e.g. <code>[41, 47, 52, 41]</code> for <code>41 blocks 47</code> when 47
+card - e.g. <code>[41, 47, 52, 41]</code> for <code>41 blocks 47</code> when 47
 already reaches 41 through 52.</p>
               </div>
               <p>
@@ -5896,8 +5896,8 @@ no loops. The message says which one, ready to show a user.</p>
 <p><em>created_by</em> names the client that raised the card when it arrives from
 somewhere other than a local session (see :mod:<code>mait_code.remote</code>);
 <code>None</code> means it was created locally.</p>
-<p>An epic (<code>kind=EPIC</code>) always gets :data:<code>EPIC_PROJECT</code> — pass that or
-<code>None</code> as <em>project</em> — and no parent. A card needs a real <em>project</em> and
+<p>An epic (<code>kind=EPIC</code>) always gets :data:<code>EPIC_PROJECT</code> - pass that or
+<code>None</code> as <em>project</em> - and no parent. A card needs a real <em>project</em> and
 may name its epic as <em>parent_id</em>.</p>
 <p><em>origin_id</em> names the card this one was split from or raised as a
 follow-up of, in any project. The new card joins the origin's epic unless
@@ -6116,7 +6116,7 @@ for an epic (epics are never worked directly; checked first) and
     <div class="doc doc-contents first">
 
         <p>Tag a card <code>blocked</code> in place; record <em>reason</em> as a comment if given.</p>
-<p>Blocking no longer moves the card — it keeps its real flow position and
+<p>Blocking no longer moves the card - it keeps its real flow position and
 gains a :data:<code>BLOCKED_TAG</code> tag. Raises :class:<code>CardNotFound</code> if the id is
 unknown.</p>
 
@@ -6225,8 +6225,8 @@ that is unknown or not an epic.</p>
 <code>acceptance_criteria=..</code>). <em>parent_id</em> moves the card into that epic,
 or out of any with <code>None</code>; leave it out to keep the current one. Every
 change is checked first and written in one transaction, so a refused
-field leaves the card exactly as it was — the parent included.</p>
-<p><code>kind</code> isn't editable here — use :func:<code>promote_epic</code>. Raises
+field leaves the card exactly as it was - the parent included.</p>
+<p><code>kind</code> isn't editable here - use :func:<code>promote_epic</code>. Raises
 :class:<code>CardNotFound</code> if the id (or <em>parent_id</em>) is unknown and
 :class:<code>RelationError</code> for <code>kind</code>, a <em>parent_id</em> that breaks the rules
 of :func:<code>set_parent</code>, or a <code>project</code> that would move a card to
@@ -6283,7 +6283,7 @@ if it isn't an epic.</p>
         <p>Return <em>card_id</em>'s epic if it has no open members left, else <code>None</code>.</p>
 <p>Open means neither <code>done</code> nor <code>archived</code>. An epic's status is set by
 hand, so a caller that just finished or dropped a member can remind the
-user the epic may be ready to close — it never moves the epic itself. An
+user the epic may be ready to close - it never moves the epic itself. An
 epic that is already done or archived needs no reminder: <code>None</code>.</p>
 
 
@@ -6589,7 +6589,7 @@ parent filter.</p>
             </td>
             <td class="doc-param-details">
               <div class="doc-md-description">
-                <p>Restrict to cards :func:<code>next_refined</code> could hand out —
+                <p>Restrict to cards :func:<code>next_refined</code> could hand out -
 refined, not tagged <code>blocked</code>, not waiting on a blocker, and not
 held by a live session other than <em>claimant</em>.</p>
               </div>
@@ -6725,7 +6725,7 @@ held up by an unsettled blocker). Done epics are left out unless
 Entering <code>in_review</code> releases the card's session bindings (the card is
 handed off), and entering <code>done</code> or <code>archived</code> closes it (see
 :func:<code>_on_close</code>); moves between the other columns keep them. Moving to
-<code>in_progress</code> with a <em>session</em> binds it — unless it's an epic, which
+<code>in_progress</code> with a <em>session</em> binds it - unless it's an epic, which
 never binds (its status is bookkeeping, not work). Raises
 :class:<code>CardNotFound</code> if the id is unknown.</p>
 
@@ -6757,7 +6757,7 @@ never binds (its status is bookkeeping, not work). Raises
         <p>Return the top <em>ready</em> card for <em>project</em> (priority, then oldest).</p>
 <p>Ready means refined, not tagged <code>blocked</code>, not waiting on any
 unsettled <code>blocks</code> link (see :func:<code>_attach_links</code>), and not held by a
-live session other than <em>session</em> — another session may be refining it
+live session other than <em>session</em> - another session may be refining it
 under a playbook. Given <em>epic_id</em>, the
 search spans that epic's members in every project and <em>project</em> is
 ignored.</p>
@@ -6791,7 +6791,7 @@ that is unknown or not an epic, and :class:<code>ValueError</code> when neither
 <p>Closes it as a card (see :func:<code>_on_close</code>), moves it to :data:<code>EPIC_PROJECT</code> and
 records the project it came from as a comment. Raises
 :class:<code>CardNotFound</code> for an unknown id and :class:<code>RelationError</code> if it is
-already an epic, has a parent, or has any <code>blocks</code> link — each of which
+already an epic, has a parent, or has any <code>blocks</code> link - each of which
 an epic can't carry.</p>
 
 

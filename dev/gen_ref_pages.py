@@ -4,14 +4,14 @@ Run from the repo root before ``mkdocs build``:
 
     uv run python docs/gen_ref_pages.py
 
-For every entry in :data:`REFERENCE_MODULES` (grouped by section —
-Core, Bridge, Tools, Hooks — each a list of ``(dotted_name, display)`` pairs):
+For every entry in :data:`REFERENCE_MODULES` (grouped by section -
+Core, Bridge, Tools, Hooks - each a list of ``(dotted_name, display)`` pairs):
 
   1. Locate the source file: package ``__init__.py`` if the entry is a
      package, otherwise the single-file module.
   2. Parse ``__all__`` from the source.
   3. Scan the source text for ``# Section`` comments interleaved inside
-     the ``__all__`` list — those become H2 headings on the reference
+     the ``__all__`` list - those become H2 headings on the reference
      page.
   4. Write the reference page at a nested path mirroring the dotted
      name. ``context`` lands at ``reference/context.md``;
@@ -22,10 +22,10 @@ A short ``docs/reference/index.md`` is regenerated alongside, grouped
 by the same Core/Tools/Hooks sections that define the data.
 
 Contract: every module listed must export ``__all__``. A missing one
-raises — the generator will not silently under-document.
+raises - the generator will not silently under-document.
 
 CI integration: ``--check`` exits non-zero if any generated file
-differs from what is checked in. That is the drift detector — the
+differs from what is checked in. That is the drift detector - the
 nav lives in ``mkdocs.yml``, but the per-module reference pages are
 authored here.
 
@@ -116,7 +116,7 @@ def _output_path(name: str) -> Path:
     """Return the output reference page path for a module name.
 
     Dotted module names become nested directory paths so the URL
-    mirrors the dotted hierarchy — ``tools.memory`` writes to
+    mirrors the dotted hierarchy - ``tools.memory`` writes to
     ``docs/reference/tools/memory.md`` and renders at
     ``/reference/tools/memory/``.
     """
@@ -166,7 +166,7 @@ def _parse_sections(source: str, known: list[str]) -> list[Section]:
 
     Args:
         source: Raw source text of the module.
-        known: The set of symbol names parsed via AST — used to filter
+        known: The set of symbol names parsed via AST - used to filter
             out unrelated lines inside the ``__all__`` block.
 
     Returns:

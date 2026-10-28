@@ -2425,7 +2425,7 @@
             </td>
             <td class="doc-returns-details">
               <div class="doc-md-description">
-                <p>HEAD, or on a default branch (<code>main</code>/<code>master</code>) — work on default</p>
+                <p>HEAD, or on a default branch (<code>main</code>/<code>master</code>) - work on default</p>
               </div>
             </td>
           </tr>
@@ -2626,13 +2626,13 @@ lifetime.</p>
 
     <div class="doc doc-contents first">
 
-        <p>Apply Claude Code's path-to-slug sanitiser: every non-alphanumeric → <code>-</code>.</p>
+        <p>Apply Claude Code's path-to-slug sanitiser: every non-alphanumeric -&gt; <code>-</code>.</p>
 <p>Mirrors Claude Code's own <code>cwd.replace(/[^a-zA-Z0-9]/g, "-")</code>. An absolute
 path's leading <code>/</code> therefore becomes the leading <code>-</code> of the slug. Used
 both to find a project's native-memory dir (forward) and to reverse a slug
 back to a path (see :func:<code>mait_code.tools.memory.native.resolve_slug</code>).</p>
 <p>The 200-char truncation-plus-hash that Claude Code applies to very long
-paths is <strong>not</strong> reproduced here — such projects are unresolvable and fall
+paths is <strong>not</strong> reproduced here - such projects are unresolvable and fall
 back to their raw slug.</p>
 
 
