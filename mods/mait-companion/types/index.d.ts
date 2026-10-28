@@ -4,8 +4,29 @@ export type JiraRef = { key: string; href: string | null }
 /** A board card as the bar shows it. */
 export type Card = { id: number; title: string }
 
-/** A card bound to this session, with its Jira references. */
-export type BoundCard = Card & { jira: readonly JiraRef[] }
+/** A playbook step's state, as the board records it. */
+export type StepStatus = 'pending' | 'in_progress' | 'done' | 'skipped' | 'paused'
+
+/** One step of a playbook run; times are epoch milliseconds, absent when unset or unreadable. */
+export type RunStep = {
+  position: number
+  name: string
+  status: StepStatus
+  /** Why it was skipped or paused. */
+  reason?: string
+  startedAt?: number
+  finishedAt?: number
+}
+
+/** A card's open playbook run: its steps in order. */
+export type PlaybookRun = { steps: readonly RunStep[] }
+
+/** A card bound to this session, with its Jira references and open run. */
+export type BoundCard = Card & {
+  jira: readonly JiraRef[]
+  /** Null when the card has no open run, or one the bar can't read. */
+  run: PlaybookRun | null
+}
 
 /** The colour roles the bar draws with: `mait-code settings get theme --palette`. */
 export type Palette = {
@@ -70,7 +91,7 @@ export type AgentRun = {
   workflow?: true
 }
 
-/** Row 3: what is live right now; the row exists only while something is. */
+/** The agents row: what is live right now; the row exists only while something is. */
 export type EventData = {
   agents: readonly AgentRun[]
 }
@@ -84,9 +105,14 @@ declare module 'claude-code' {
       work: WorkData
       session: SessionData
       events: EventData
-      /** Whether row 3 lists each agent on a line of its own. */
+      /** Whether the agents row lists each agent on a line of its own. */
       agentsOpen: boolean
-      /** Epoch milliseconds, ticked while agents run so their elapsed time moves. */
+      /** Which cards' step rows list each step, by card id. */
+      stepsOpen: Record<number, boolean>
+      /**
+       * Epoch milliseconds, ticked while agents run or a step is in progress,
+       * so their elapsed times move.
+       */
       now: number
       /** `null` until mait-code answers; the bar draws nothing without it. */
       palette: Palette | null

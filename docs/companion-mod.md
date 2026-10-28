@@ -12,14 +12,16 @@ prompt itself:
 - **`/capture <text>`** files a thought to the [quick-capture inbox](board.md)
   immediately, with no model turn. It's the same as `mc-tool-inbox add`, but
   you don't have to leave the prompt. `/capture` with no text prints its usage.
-- **A status bar above the prompt**: up to three rows on your theme's panel
-  colour. The top row is the work in hand and what's waiting on you; the
-  second is where the session is and what it's using; the third appears only
+- **A status bar above the prompt**: rows on your theme's panel colour. The
+  top row is the work in hand and what's waiting on you; the second is where
+  the session is and what it's using. Below them, a step row appears for each
+  bound card with a [playbook run](board.md#playbook-runs), and a last row
   while subagents are running.
 
 ```text
  #162  Ship the mait-companion mod     jira  PLAT-4821  PLAT-4830   in review  #158   inbox  3
- ▣ mait-code  ⎇ feat/two-rows ±3 ↑1      ✦ opus 5.5   142k/1M  ■■■■■■■■ 14%   5h·7d  63·41%
+ ▣ mait-code  ⎇ feat/two-rows ±3 ↑1      ✦ opus 5.5   142k/1M  ━─────── 14%   5h·7d  63·41%
+ ≣ ▸ #162  ✓  ↷  ▶  ○  ○  3/5 Implement · 6m
  ⋔ ▸ 3 agents  Explore ×2 · pre-pr-reviewer · 1m12s
 ```
 
@@ -43,14 +45,40 @@ The second row:
 | `▣` project | The folder name of the session's project root | Never, in a session with a project |
 | `⎇` branch | The branch checked out, or the short commit on a detached HEAD. After it, `±3` counts uncommitted changes, and `↑1↓2` the commits ahead of and behind the upstream; each is left out at zero | Not in a git repository |
 | `✦` model | The model in use, shortened (`opus 5.5`), in coloured text rather than a block | Claude Code doesn't say |
-| Context | Tokens used over the window's size (`142k/1M`), then an eight-cell gauge (filled squares in full ink, the rest faded) and the percentage | Claude Code hasn't measured it yet |
+| Context | Tokens used over the window's size (`142k/1M`), then an eight-cell gauge (a heavy line in full ink for the filled part, a faded light line for the rest) and the percentage | Claude Code hasn't measured it yet |
 | `5h·7d` | How much of the five-hour and seven-day rate-limit windows you've used, in that order, coloured by the fuller. At 80% or more it counts down to the reset (`↻41m`) | You're not on a subscription, or there's no reading yet |
 
 Context and the windows are green below 50%, amber below 80% and red above
 that. Project and branch are always drawn in the quieter slim style, because
 they're there to orient you rather than to warn.
 
-The third row is the subagents this session has started and that haven't
+Each bound card with an open [playbook run](board.md#playbook-runs) gets a
+step row. Collapsed, it shows the card, a rail with one block per step, and
+where the run has got to:
+
+- `3/5 Implement · 6m`: the step in progress and how long it has been running.
+  A paused step shows its reason instead, or "waiting for you".
+- `2/5 done · next Implement`: between steps.
+- `all 5 done` or `not started`.
+
+| Glyph | Step |
+| --- | --- |
+| `○` | pending |
+| `▶` | in progress |
+| `✓` | done |
+| `↷` | skipped |
+| `‖` | paused |
+| `!` | pending, behind a step that has already started |
+
+A `!` step also raises a chip on the right (`! Comment audit pending`, or
+`! 2 steps pending`). It can mean a step was missed or one was reset to be
+redone; the bar can't tell which. Click `▸ #162` to open the row: each step on
+its own line, in two columns from 100 cells wide, with the time a done step
+took, the time so far on the current one, and the reason for a skipped or
+paused one. Times include any time a step spent paused. In the `slim` style,
+or when the row is too short for blocks, the rail is drawn as coloured glyphs.
+
+The last row is the subagents this session has started and that haven't
 reported back yet. Collapsed, it's one line: how many, their types, and how
 long the oldest has been running. Click `▸ 3 agents` (or focus the bar with
 `ctrl+x tab` and press Enter on it) to open it: each agent's task, the tool
@@ -122,8 +150,8 @@ style once, when a session starts.
 
 The mod is a thin client: it calls the `mc-tool-*` and `mait-code` CLIs and
 draws what they return, and holds no data of its own. The only thing it
-changes is the inbox, through the inbox CLI, when you `/capture`. It runs
-nothing in the background. The bar refreshes at these points only:
+changes is the inbox, through the inbox CLI, when you `/capture`. The bar
+refreshes at these points only:
 
 - when a session starts
 - after each of your turns (not after each subagent's)
@@ -132,11 +160,13 @@ nothing in the background. The bar refreshes at these points only:
 - after a `/capture`
 - whenever Claude Code reports new context or rate-limit figures (those
   segments only; compactions included)
-- as a subagent starts, calls a tool or reports back (the third row only)
+- as a subagent starts, calls a tool or reports back (the agents row only)
 
 Each refresh is one call to `mc-tool-board summary --json --session <id>` and
-two or three `git` calls for the branch and its state. Its one timer runs only
-while subagents are, moving their running times on every five seconds.
+two or three `git` calls for the branch and its state. Its one timer moves
+running times on: every five seconds while subagents are running, every thirty
+while only a playbook step is in progress, and not at all otherwise. The timer
+calls nothing; it only redraws.
 
 It is built to **fail closed**. If a CLI is missing, its output can't be read,
 or a Claude Code API it relies on changes, the affected segments draw nothing and `/capture`

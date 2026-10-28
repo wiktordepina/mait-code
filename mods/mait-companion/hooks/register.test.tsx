@@ -491,7 +491,7 @@ test('no Jira block without keys', async ($, on) => {
   await ui.unmount()
 })
 
-// --- row 3: agents in flight -------------------------------------------------------
+// --- the agents row: agents in flight ----------------------------------------------
 
 type Listed = { id: string; status: string }
 
@@ -511,7 +511,7 @@ const finish = (agentId?: string) => ({
   ...(agentId ? { agentId } : {}),
 })
 
-test('a running agent opens row 3, collapsed, and its time moves', async ($, on) => {
+test('a running agent opens the agents row, collapsed, and its time moves', async ($, on) => {
   engine(on)
   agentEngine(on)
   const clock = mock.clock(on, { now: 1_000_000 })
@@ -550,7 +550,7 @@ test('the toggle lists each agent on a line of its own, and folds it again', asy
   await ui.unmount()
 })
 
-test('an agent leaves row 3 when it reports, without a board refresh', async ($, on) => {
+test('an agent leaves the agents row when it reports, without a board refresh', async ($, on) => {
   const calls = engine(on)
   agentEngine(on)
   mock.clock(on)
@@ -581,7 +581,7 @@ test('a main turn drops agents the engine finished without a report', async ($, 
   await ui.unmount()
 })
 
-test('teammates are left out of row 3', async ($, on) => {
+test('teammates are left out of the agents row', async ($, on) => {
   engine(on)
   agentEngine(on)
   mock.clock(on)
@@ -624,7 +624,7 @@ test('an agent handing back reads as reporting', async ($, on) => {
   await ui.unmount()
 })
 
-test('collapsed, row 3 counts agents by type and shows the longest-running time', async ($, on) => {
+test('collapsed, the agents row counts agents by type and shows the longest-running time', async ($, on) => {
   engine(on)
   agentEngine(on)
   const clock = mock.clock(on, { now: 0 })
@@ -669,11 +669,11 @@ test('context fills an eight-cell gauge, with tokens over the window as its labe
   await start($)
   const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /^ 412k\/1M $/ })).toBeDefined()
-  const filled = await ui.find({ type: 'Text', text: /^ ■■■$/ })
+  const filled = await ui.find({ type: 'Text', text: /^ ━━━$/ })
   expect(filled?.props.backgroundColor).toBe(PALETTE.success)
   expect(filled?.props.color).toBe(PALETTE.background)
-  // The empty cells are the same squares, halfway from the ink to the block.
-  const empty = await ui.find({ type: 'Text', text: /^■■■■■$/ })
+  // The empty cells are a light line, halfway from the ink to the block.
+  const empty = await ui.find({ type: 'Text', text: /^─────$/ })
   expect(empty?.props.backgroundColor).toBe(PALETTE.success)
   expect(empty?.props.color).toBe('#4b7642')
   expect((await ui.find({ type: 'Text', text: /^ 41% $/ }))?.props.backgroundColor).toBe(PALETTE.success)
@@ -687,8 +687,8 @@ test('a full gauge draws no empty cells, an empty one no filled', async ($, on) 
     world.context = { tokens: 10_000 * percent, percent }
     await start($)
     const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
-    expect(await ui.findAll({ type: 'Text', text: /■/ })).toHaveLength(filled && empty ? 2 : 1)
-    expect(await ui.find({ type: 'Text', text: new RegExp(`^ ?■{${filled || empty}}$`) })).toBeDefined()
+    expect(await ui.findAll({ type: 'Text', text: /[━─]/ })).toHaveLength(filled && empty ? 2 : 1)
+    expect(await ui.find({ type: 'Text', text: new RegExp(`^ ?${filled ? '━' : '─'}{${filled || empty}}$`) })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -697,10 +697,10 @@ test('slim draws the gauge in the fill colour on the panel, the rest faded towar
   engine(on, { ...WHERE, style: 'slim', context: { tokens: 412_000, percent: 41 } })
   await start($)
   const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
-  const filled = await ui.find({ type: 'Text', text: /^ 412k\/1M ■■■$/ })
+  const filled = await ui.find({ type: 'Text', text: /^ 412k\/1M ━━━$/ })
   expect(filled?.props.backgroundColor).toBe(PALETTE.panel)
   expect(filled?.props.color).toBe(PALETTE.success)
-  expect((await ui.find({ type: 'Text', text: /^■■■■■$/ }))?.props.color).toBe('#527e4e')
+  expect((await ui.find({ type: 'Text', text: /^─────$/ }))?.props.color).toBe('#527e4e')
   expect((await ui.find({ type: 'Text', text: /^ 41% $/ }))?.props.color).toBe(PALETTE.success)
   await ui.unmount()
 })
@@ -808,7 +808,7 @@ test('the model is coloured text on the panel, never a block, in both styles', a
   }
 })
 
-// --- row 3: the ticker and the engine's list ------------------------------------------
+// --- the agents row: the ticker and the engine's list -------------------------------
 
 test('agents spawned together start one ticker, and it stops when the last reports', async ($, on) => {
   engine(on)
@@ -848,4 +848,305 @@ test('a main turn drops an agent the engine no longer lists, but keeps a workflo
   expect(await ui.find({ type: 'Text', text: /^Still going$/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /^In a workflow$/ })).toBeDefined()
   await ui.unmount()
+})
+
+// --- step rows: playbook runs -------------------------------------------------------
+
+const T0 = Date.parse('2026-10-28T10:00:00Z')
+/** `min` minutes after T0, as the board writes it: microseconds and an offset. */
+const at = (min: number) => new Date(T0 + min * 60_000).toISOString().replace(/\.\d{3}Z$/, '.123456+00:00')
+
+type StepSpec = [name: string, status: string, times?: { started?: number; finished?: number; reason?: string }]
+
+/** An open run as `summary --json` carries it, steps numbered from 1. */
+const run = (...steps: StepSpec[]) => ({
+  id: 1, playbook: 'work', started_at: at(0), updated_at: at(0), ended_at: null, current: null,
+  steps: steps.map(([name, status, o = {}], i) => ({
+    position: i + 1, name, status, reason: o.reason ?? null,
+    started_at: o.started === undefined ? null : at(o.started),
+    finished_at: o.finished === undefined ? null : at(o.finished),
+  })),
+})
+
+const working = (id: number, r: unknown) => ({ ...card(id), jira: [], run: r })
+
+const ON_TRACK = run(
+  ['Refine', 'done', { started: 0, finished: 24 }],
+  ['Design review', 'skipped', { reason: 'docs only' }],
+  ['Implement', 'in_progress', { started: 33 }],
+  ['Commit', 'pending'],
+  ['Raise PR', 'pending'],
+)
+
+test('a run gets a collapsed step row: rail, current step and its time', async ($, on) => {
+  engine(on, { summary: { bound: [working(285, ON_TRACK)], in_review: [], inbox: 0 } })
+  mock.clock(on, { now: T0 + 39.5 * 60_000 })
+  await start($)
+  for (const surface of SURFACES) {
+    const ui = await $.ui.mount({ ...BAR, surface })
+    expect((await ui.find({ key: 'steps:toggle:285' }))?.props.label).toBe('▸ #285')
+    const rail = (await ui.findAll({ type: 'Text', text: /^ . $/ })).filter(t => t.text !== ' ≣ ')
+    expect(rail.map(t => t.text)).toEqual([' ✓ ', ' ↷ ', ' ▶ ', ' ○ ', ' ○ '])
+    // Done faded toward the panel in its own ink; skipped and pending on surface.
+    expect(rail[0]?.props.color).toBe(PALETTE.success)
+    expect(rail[0]?.props.backgroundColor).not.toBe(PALETTE.success)
+    expect(rail[0]?.props.backgroundColor).not.toBe(PALETTE.panel)
+    expect(rail[1]?.props.backgroundColor).toBe(PALETTE.surface)
+    expect(rail[2]?.props.backgroundColor).toBe(PALETTE.primary)
+    expect(rail[2]?.props.color).toBe(PALETTE.background)
+    expect(rail[3]?.props.backgroundColor).toBe(PALETTE.surface)
+    expect(await ui.find({ type: 'Text', text: /^ 3\/5 $/ })).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^Implement$/ }))?.props.color).toBe(PALETTE.primary)
+    expect(await ui.find({ type: 'Text', text: /^ · 6m $/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /pending/ })).toBeUndefined()
+    await ui.unmount()
+  }
+})
+
+test('the step row sits after the session row and above the agents row', async ($, on) => {
+  engine(on, { root: '/home/me/mait-code', summary: { bound: [working(285, ON_TRACK)], in_review: [], inbox: 0 } })
+  agentEngine(on)
+  mock.clock(on, { now: T0 })
+  await start($)
+  await $.agent.spawn({ prompt: 'a', description: 'd', subagentType: 'Explore' })
+  const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
+  const project = texts.findIndex(t => /mait-code/.test(t))
+  const steps = texts.indexOf(' ≣ ')
+  const agents = texts.indexOf(' ⋔ ')
+  expect(project).toBeGreaterThanOrEqual(0)
+  expect(steps).toBeGreaterThan(project)
+  expect(agents).toBeGreaterThan(steps)
+  await ui.unmount()
+})
+
+test('no step row for a card without a run', async ($, on) => {
+  engine(on, { summary: { bound: [working(42, null)], in_review: [], inbox: 0 } })
+  await start($)
+  const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /#42/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: ' ≣ ' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('a paused step shows its reason, or that it waits for you', async ($, on) => {
+  const world: World = {}
+  engine(on, world)
+  mock.clock(on, { now: T0 })
+  for (const [reason, shown] of [['needs a decision', ' · needs a decision '], [undefined, ' · waiting for you ']] as const) {
+    world.summary = {
+      bound: [working(7, run(['Refine', 'done'], ['Raise PR', 'paused', { started: 0, reason }]))], in_review: [], inbox: 0,
+    }
+    await start($)
+    const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+    expect(await ui.find({ type: 'Text', text: ' 2/2 ' })).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^Raise PR$/ }))?.props.color).toBe(PALETTE.accent)
+    expect(await ui.find({ type: 'Text', text: shown })).toBeDefined()
+    await ui.unmount()
+  }
+})
+
+test('with no current step the row says done, between steps, or not started', async ($, on) => {
+  const world: World = {}
+  engine(on, world)
+  mock.clock(on, { now: T0 })
+  const cases: [ReturnType<typeof run>, string, string | undefined][] = [
+    [run(['Refine', 'done'], ['Implement', 'skipped', { reason: 'r' }]), ' all 2 done', undefined],
+    [run(['Refine', 'done'], ['Implement', 'pending'], ['Raise PR', 'pending']), '· next Implement', ' 1/3 done '],
+    // A skipped step counts as started.
+    [run(['Refine', 'skipped', { reason: 'r' }], ['Implement', 'pending']), '· next Implement', ' 1/2 done '],
+    [run(['Refine', 'pending'], ['Implement', 'pending']), ' not started', undefined],
+  ]
+  for (const [r, name, lead] of cases) {
+    world.summary = { bound: [working(7, r)], in_review: [], inbox: 0 }
+    await start($)
+    const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+    expect(await ui.find({ type: 'Text', text: name })).toBeDefined()
+    if (lead) expect(await ui.find({ type: 'Text', text: lead })).toBeDefined()
+    await ui.unmount()
+  }
+})
+
+test('a step left pending behind a started one shows ! in the rail and a chip', async ($, on) => {
+  const world: World = {}
+  engine(on, world)
+  mock.clock(on, { now: T0 })
+  world.summary = {
+    bound: [working(7, run(['Refine', 'done'], ['Comment audit', 'pending'], ['Commit', 'in_progress', { started: 0 }], ['Raise PR', 'pending']))],
+    in_review: [], inbox: 0,
+  }
+  await start($)
+  let ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  const chip = await ui.find({ type: 'Text', text: ' ! Comment audit pending ' })
+  expect(chip?.props.backgroundColor).toBe(PALETTE.warning)
+  expect((await ui.find({ type: 'Text', text: ' ! ' }))?.props.backgroundColor).toBe(PALETTE.warning)
+  // Pending after the current step is no gap.
+  expect((await ui.findAll({ type: 'Text', text: ' ○ ' })).length).toBe(1)
+  await ui.unmount()
+
+  world.summary = {
+    bound: [working(7, run(['Refine', 'pending'], ['Comment audit', 'pending'], ['Commit', 'done']))], in_review: [], inbox: 0,
+  }
+  await start($)
+  ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: ' ! 2 steps pending ' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('open, the steps fill two columns at 100 cells, one a line below that', async ($, on) => {
+  engine(on, { summary: { bound: [working(285, ON_TRACK)], in_review: [], inbox: 0 } })
+  mock.clock(on, { now: T0 + 39.5 * 60_000 })
+  await start($)
+  const order = async (bodyColumns: number) => {
+    const ui = await $.ui.mount({ ...BAR, props: { ...BAR.props, bodyColumns }, surface: 'terminal' })
+    if ((await ui.find({ key: 'steps:toggle:285' }))?.props.label === '▸ #285') await ui.press({ key: 'steps:toggle:285' })
+    expect((await ui.find({ key: 'steps:toggle:285' }))?.props.label).toBe('▾ #285')
+    const numbers = (await ui.findAll({ type: 'Text', text: /^\d $/ })).map(t => t.text.trim())
+    const notes = (await ui.findAll({ type: 'Text', text: /^  \S/ })).map(t => t.text.trim())
+    await ui.unmount()
+    return { numbers, notes }
+  }
+  // Down the first column, then the second.
+  expect((await order(100)).numbers).toEqual(['1', '4', '2', '5', '3'])
+  const narrow = await order(99)
+  expect(narrow.numbers).toEqual(['1', '2', '3', '4', '5'])
+  // A done step's duration, a skip's reason, the current step's time; nothing for pending ones.
+  expect(narrow.notes).toEqual(['24m', 'docs only', '6m'])
+})
+
+test('each run opens and folds on its own toggle', async ($, on) => {
+  engine(on, {
+    summary: {
+      bound: [working(1, run(['Alpha', 'in_progress', { started: 0 }])), working(2, run(['Beta', 'pending']))],
+      in_review: [], inbox: 0,
+    },
+  })
+  mock.clock(on, { now: T0 })
+  await start($)
+  const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  await ui.press({ key: 'steps:toggle:2' })
+  expect((await ui.find({ key: 'steps:toggle:1' }))?.props.label).toBe('▸ #1')
+  expect((await ui.find({ key: 'steps:toggle:2' }))?.props.label).toBe('▾ #2')
+  expect(await ui.find({ type: 'Text', text: '1 ' })).toBeDefined()
+  expect(await ui.findAll({ type: 'Text', text: /^Alpha$/ })).toHaveLength(1)
+  expect(await ui.findAll({ type: 'Text', text: /^Beta$/ })).toHaveLength(1)
+  await ui.press({ key: 'steps:toggle:2' })
+  expect(await ui.find({ type: 'Text', text: /^Beta$/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('slim draws the rail as coloured glyphs, as does blocks when the row is short', async ($, on) => {
+  const world: World = { summary: { bound: [working(7, ON_TRACK)], in_review: [], inbox: 0 }, style: 'slim' }
+  engine(on, world)
+  mock.clock(on, { now: T0 })
+  await start($)
+  let ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: '▶ ' }))?.props.color).toBe(PALETTE.primary)
+  expect((await ui.find({ type: 'Text', text: '▶ ' }))?.props.backgroundColor).toBe(PALETTE.panel)
+  await ui.unmount()
+
+  // Fifteen steps leave too little of 80 cells for blocks.
+  world.style = 'blocks'
+  world.summary = {
+    bound: [working(7, run(['One', 'pending'], ['Two', 'done'], ...Array.from({ length: 13 }, (_, i): StepSpec => [`S${i}`, 'pending'])))],
+    in_review: [], inbox: 0,
+  }
+  await start($)
+  ui = await $.ui.mount({ ...BAR, props: { ...BAR.props, bodyColumns: 80 }, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: ' ✓ ' })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: '✓ ' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: ' ! One pending ' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('a run it cannot read costs only its own step row', async ($, on) => {
+  engine(on, {
+    summary: {
+      bound: [
+        working(1, { steps: 'nope' }),
+        working(2, run(['Refine', 'thinking'])),
+        working(3, { steps: [{ position: '1', name: 'Refine', status: 'done' }] }),
+        working(4, run(['Refine', 'in_progress', { started: 0 }])),
+      ],
+      in_review: [], inbox: 0,
+    },
+  })
+  mock.clock(on, { now: T0 })
+  await start($)
+  const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  for (const id of [1, 2, 3, 4]) expect(await ui.find({ type: 'Text', text: new RegExp(`#${id}`) })).toBeDefined()
+  expect(await ui.findAll({ type: 'Text', text: ' ≣ ' })).toHaveLength(1)
+  expect(await ui.find({ key: 'steps:toggle:4' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('an unreadable time drops only its note', async ($, on) => {
+  const r = run(['Refine', 'in_progress', { started: 0 }])
+  r.steps[0]!.started_at = 'yesterday'
+  engine(on, { summary: { bound: [working(7, r)], in_review: [], inbox: 0 } })
+  mock.clock(on, { now: T0 })
+  await start($)
+  const ui = await $.ui.mount({ ...BAR, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /^Refine$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: / · / })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('a step in progress ticks every 30s, agents every 5s, and it stops when neither runs', async ($, on) => {
+  const world: World = { summary: { bound: [working(7, run(['Refine', 'in_progress', { started: 0 }]))], in_review: [], inbox: 0 } }
+  engine(on, world)
+  agentEngine(on)
+  const periods: number[] = []
+  let live = 0
+  on('clock.every', ($, e, next) => {
+    periods.push(e.ms)
+    live++
+    return new Promise((_, reject) => next.signal.addEventListener('abort', () => { live--; reject(new Error('cancelled')) })) as never
+  })
+  on('clock.now', () => ({ value: T0 }))
+  await start($)
+  expect(periods).toEqual([30_000])
+  await $.agent.spawn({ prompt: 'a', description: 'd', subagentType: 'Explore' })
+  expect(periods).toEqual([30_000, 5_000])
+  await $.turn.complete(finish('ag-1'))
+  expect(periods).toEqual([30_000, 5_000, 30_000])
+  world.summary = { bound: [working(7, run(['Refine', 'done']))], in_review: [], inbox: 0 }
+  await $.turn.complete(finish())
+  expect(live).toBe(0)
+})
+
+test('a board refresh racing an agent spawn leaves the agents\' 5s ticker', async ($, on) => {
+  engine(on, { summary: { bound: [working(7, run(['Refine', 'in_progress', { started: 0 }]))], in_review: [], inbox: 0 } })
+  agentEngine(on)
+  const live = new Map<number, number>()
+  let n = 0
+  on('clock.every', ($, e, next) => {
+    const id = ++n
+    live.set(id, e.ms)
+    return new Promise((_, reject) => next.signal.addEventListener('abort', () => { live.delete(id); reject(new Error('cancelled')) })) as never
+  })
+  on('clock.now', () => ({ value: T0 }))
+  // Once armed: the next sync that reads the agents (none yet) is held before
+  // it reads the work, while an agent spawns and sets its own ticker.
+  let stage: 'off' | 'armed' | 'read' | 'held' = 'off'
+  let release = () => {}
+  const held = new Promise<void>(r => { release = r })
+  on('state.get', async ($, e, next) => {
+    const { key } = e as { key: string }
+    if (stage === 'armed' && key === 'events') stage = 'read'
+    else if (stage === 'read' && key === 'work') { stage = 'held'; await held }
+    return next(e)
+  })
+  await start($)
+  stage = 'armed'
+  await $.tool.call({ tool: 'Bash', command: 'mc-tool-board show 7' } as never)
+  const settle = async () => { for (let i = 0; i < 20; i++) await new Promise(r => setTimeout(r, 0)) }
+  await settle()
+  expect(stage).toBe('held')
+  const spawned = $.agent.spawn({ prompt: 'a', description: 'd', subagentType: 'Explore' })
+  await settle()
+  release()
+  await spawned
+  await settle()
+  expect([...live.values()]).toEqual([5_000])
 })
