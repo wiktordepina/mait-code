@@ -23,6 +23,13 @@ don't change the public surface. Everything is still in flux.
 - **Board schema v7.** The remote API checks the schema version exactly, so a
   host such as maitre-d needs upgrading to this release at the same time. Card
   dicts now carry a `run` key, which a host may pass straight through.
+- **Playbook step rows in the companion mod.** Each bound card with an open
+  run gets a row in the status bar, between the session row and the agents
+  row: a rail with one block per step, the current step and how long it has
+  been running (or a paused step's reason), and a chip when a step is left
+  pending behind one that has started. Click it to list every step with its
+  time or reason. The mod's timer now also runs, every thirty seconds, while a
+  step is in progress.
 
 ### Changed
 

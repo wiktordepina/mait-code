@@ -2,7 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type {
-  AgentRun, BarStyle, BoundCard, Card, EventData, JiraRef, Palette, RateWindow, SessionData, WorkData,
+  AgentRun, BarStyle, BoundCard, Card, EventData, JiraRef, Palette, PlaybookRun, RateWindow, RunStep, SessionData,
+  StepStatus, WorkData,
 } from '../types'
 
 // A thin client of the mc-tool-* and mait-code CLIs: every capability and
@@ -19,6 +20,13 @@ const NO_WORK: WorkData = { bound: [], inReview: [], inbox: 0 }
 const NO_EVENTS: EventData = { agents: [] }
 /** How often a running agent's elapsed time moves on screen. */
 const TICK_MS = 5_000
+/** How often, with no agent running, an in-progress step's minutes move. */
+const STEP_TICK_MS = 30_000
+/** Cells the step row keeps beside a blocks rail; short of them the rail draws slim. */
+const RAIL_ROOM = 40
+/** The width at which an open step row sets its steps in two columns. */
+const TWO_COLUMNS = 100
+const STEP_STATUSES: ReadonlySet<string> = new Set(['pending', 'in_progress', 'done', 'skipped', 'paused'])
 /** A Bash command that runs the board CLI, however it is wrapped. */
 const BOARD_CALL = /(^|[^\w-])mc-tool-board(?![\w-])/
 
@@ -28,6 +36,7 @@ const palette = atom({ plugin: 'mait-companion', key: 'palette' } as const, null
 const style = atom({ plugin: 'mait-companion', key: 'style' } as const, 'blocks')
 const events = atom({ plugin: 'mait-companion', key: 'events' } as const, NO_EVENTS)
 const agentsOpen = atom({ plugin: 'mait-companion', key: 'agentsOpen' } as const, false)
+const stepsOpen = atom({ plugin: 'mait-companion', key: 'stepsOpen' } as const, {})
 const now = atom({ plugin: 'mait-companion', key: 'now' } as const, 0)
 
 // --- reading ------------------------------------------------------------------
@@ -82,14 +91,44 @@ function jira(v: unknown): JiraRef[] {
   })
 }
 
+/** A board timestamp as epoch milliseconds; its microseconds cut to what Date.parse takes. */
+function when(v: unknown): number | undefined {
+  if (typeof v !== 'string') return undefined
+  const t = Date.parse(v.replace(/(\.\d{3})\d+/, '$1'))
+  return Number.isFinite(t) ? t : undefined
+}
+
+/** A card's open run; one it can't read is null, costing its step row and nothing else. */
+function playbookRun(v: unknown): PlaybookRun | null {
+  if (!isRecord(v) || !Array.isArray(v.steps) || v.steps.length === 0) return null
+  const steps: RunStep[] = []
+  for (const s of v.steps) {
+    if (!isRecord(s) || typeof s.position !== 'number' || typeof s.name !== 'string') return null
+    if (typeof s.status !== 'string' || !STEP_STATUSES.has(s.status)) return null
+    steps.push({
+      position: s.position,
+      name: s.name,
+      status: s.status as StepStatus,
+      ...(typeof s.reason === 'string' && s.reason ? { reason: s.reason } : {}),
+      ...(when(s.started_at) === undefined ? {} : { startedAt: when(s.started_at) }),
+      ...(when(s.finished_at) === undefined ? {} : { finishedAt: when(s.finished_at) }),
+    })
+  }
+  return { steps: steps.sort((a, b) => a.position - b.position) }
+}
+
 function boundCards(v: unknown): BoundCard[] | undefined {
   const base = cards(v)
   if (base === undefined || !Array.isArray(v)) return undefined
-  return base.map((c, i) => ({ ...c, jira: jira((v[i] as Record<string, unknown>).jira) }))
+  return base.map((c, i) => {
+    const raw = v[i] as Record<string, unknown>
+    return { ...c, jira: jira(raw.jira), run: playbookRun(raw.run) }
+  })
 }
 
 // One aggregate call per refresh. Anything unreadable empties the card
-// segments rather than showing stale ones.
+// segments rather than showing stale ones. A step in progress keeps the
+// ticker going, so the refresh also starts or stops it.
 async function refreshWork($: EngineInterface): Promise<void> {
   const id = await quiet(() => $.session.id())
   const out = id === undefined
@@ -99,6 +138,7 @@ async function refreshWork($: EngineInterface): Promise<void> {
   const inReview = isRecord(out) ? cards(out.in_review) : undefined
   const inbox = isRecord(out) && typeof out.inbox === 'number' ? out.inbox : undefined
   await update($, work, () => (bound && inReview && inbox !== undefined ? { bound, inReview, inbox } : NO_WORK))
+  await syncTicker($)
 }
 
 /**
@@ -211,27 +251,31 @@ async function openLink($: EngineInterface, href: string): Promise<void> {
 
 const LIVE: ReadonlySet<string> = new Set(['pending', 'running', 'waiting'])
 
-// A module variable, not state: a reload drops the old environment's timers
-// with it, and session.start starts a fresh one if agents are still running.
+// Module variables, not state: a reload drops the old environment's timers
+// with them, and session.start starts a fresh one if anything is still running.
 let ticker: Timer | undefined
+let tickerMs: number | undefined
 
 async function tick($: EngineInterface): Promise<void> {
   const t = await $.clock.now()
   await update($, now, () => t)
 }
 
-/** Tick `now` while any agent runs, so elapsed times move; stop when none does. */
+/**
+ * Tick `now` so elapsed times move: every five seconds while any agent runs,
+ * every thirty while only a step is in progress, not at all otherwise.
+ */
 async function syncTicker($: EngineInterface): Promise<void> {
-  const running = (await read($, events)).agents.length > 0
-  if (running && ticker === undefined) {
-    // Claimed before the first await: agents spawned together each get here,
-    // and only the first may start a timer.
-    ticker = $.clock.every(TICK_MS, () => { void guarded(() => tick($)) })
-    await tick($)
-  } else if (!running && ticker !== undefined) {
-    ticker.cancel()
-    ticker = undefined
-  }
+  const agents = (await read($, events)).agents.length > 0
+  const stepping = (await read($, work)).bound.some(c => c.run?.steps.some(s => s.status === 'in_progress'))
+  const period = agents ? TICK_MS : stepping ? STEP_TICK_MS : undefined
+  if (period === tickerMs) return
+  // Claimed before the first await: agents spawned together each get here,
+  // and only the first may start a timer.
+  ticker?.cancel()
+  tickerMs = period
+  ticker = period === undefined ? undefined : $.clock.every(period, () => { void guarded(() => tick($)) })
+  if (ticker !== undefined) await tick($)
 }
 
 async function setAgents($: EngineInterface, fn: (agents: readonly AgentRun[]) => readonly AgentRun[]): Promise<void> {
@@ -276,7 +320,7 @@ export const register: Register = on => {
   })
 
   // Cards are bound, moved and completed by skills mid-turn. A subagent's turn
-  // is its report: it leaves row 3, and the main turn refreshes the rest.
+  // is its report: it leaves the agents row, and the main turn refreshes the rest.
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     const { agentId } = e
@@ -338,9 +382,11 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // One blank row, then up to three full-width rows on the theme's panel
-  // colour: the work (cards; Jira, in review, inbox), the session (project,
-  // branch; model, context, rate limits), and the subagents running.
+  // One blank row, then full-width rows on the theme's panel colour: the work
+  // (cards; Jira, in review, inbox), the session (project, branch; model,
+  // context, rate limits), a step row per bound card with a playbook run, and
+  // the subagents running. The step rows change once a step, the agents row on
+  // every tool call, so the most restless row sits at the bottom.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const c = await read($, palette)
@@ -397,7 +443,7 @@ export const register: Register = on => {
         </Box>
       )
     }
-    // Row 3 is drawn slim whatever the style: it changes too often for blocks.
+    // The agents row is drawn slim whatever the style: it changes too often for blocks.
     // Collapsed, one line of what the engine's own agent list can't say at a
     // glance: the mix of types and the longest-running time. Open, each agent's
     // task, current tool and time, grouped by type (no heading when all share one).
@@ -454,13 +500,199 @@ export const register: Register = on => {
         ...runs.map((a, i) => line(a, i === runs.length - 1)),
       ])]
     }
+    // A step row follows the bar style, unlike the agents row: it changes once
+    // a step, not once a tool call. Collapsed, the rail and where the run has
+    // got to; open, each step with its time or reason.
+    const runs = async () => {
+      const bound = (await read($, work)).bound
+      const withRuns = bound.filter((card): card is BoundCard & { run: PlaybookRun } => card.run !== null)
+      if (withRuns.length === 0) return []
+      const open = await read($, stepsOpen)
+      const t = await read($, now)
+      const width = e.props.bodyColumns
+      const text = (key: string, value: string, ink: Partial<Chunk> & { fg: string }) => (
+        <Text
+          key={key}
+          backgroundColor={ink.bg ?? bg}
+          color={ink.fg}
+          bold={ink.bold}
+          dimColor={ink.dim}
+          wrap="truncate-end"
+        >
+          {value}
+        </Text>
+      )
+      return withRuns.flatMap(card => {
+        const { steps } = card.run
+        const gaps = gapSteps(steps)
+        const isOpen = open[card.id] === true
+        const look = (s: RunStep) => stepLook(s, gaps.includes(s), c)
+        const blocks = barStyle === 'blocks' && 3 * steps.length + RAIL_ROOM <= width
+        const rail = blocks
+          ? steps.map(s => {
+            // Strong steps on their colour, done ones faded toward the panel, the rest on surface.
+            const k = look(s)
+            const block = k.strong ? { bg: k.colour, fg: c.background }
+              : k.faint ? { bg: c.surface, fg: mix(c.foreground, c.surface, 0.5) }
+              : { bg: mix(k.colour, bg, 0.7), fg: k.colour }
+            return text(`steps:${card.id}:rail:${s.position}`, ` ${k.glyph} `, { ...block, bold: true })
+          })
+          : steps.map(s => {
+            const k = look(s)
+            return text(`steps:${card.id}:rail:${s.position}`, `${k.glyph} `, {
+              fg: k.faint ? c.foreground : k.colour, dim: k.faint, bold: !k.faint,
+            })
+          })
+        const label = runLabel(steps, t)
+        const header = (
+          <Box key={`steps:${card.id}`} width={width} backgroundColor={bg} justifyContent="space-between">
+            <Box flexShrink={1}>
+              <Box flexShrink={0} backgroundColor={bg}>
+                {text(`steps:${card.id}:glyph`, ' ≣ ', { fg: c.accent, bold: true })}
+                <Box key={`steps:${card.id}:toggle-box`} backgroundColor={bg} flexShrink={0}>
+                  <Button
+                    key={`steps:toggle:${card.id}`}
+                    plain
+                    label={`${isOpen ? '▾' : '▸'} #${card.id}`}
+                    hover={{ underline: true }}
+                    onPress={() => { void guarded(() => update($, stepsOpen, v => ({ ...v, [card.id]: !v[card.id] }))) }}
+                  />
+                </Box>
+                {text(`steps:${card.id}:pad`, ' ', { fg: c.foreground })}
+                {rail}
+              </Box>
+              {label.lead ? text(`steps:${card.id}:lead`, ` ${label.lead} `, { fg: c.foreground, bold: true }) : null}
+              {text(`steps:${card.id}:name`, label.lead ? label.name : ` ${label.name}`, {
+                fg: label.colour === undefined ? c.foreground : look(label.colour).colour, bold: label.colour !== undefined,
+              })}
+              {label.note ? text(`steps:${card.id}:note`, ` · ${label.note} `, { fg: c.foreground, dim: true }) : null}
+            </Box>
+            <Box flexShrink={0}>
+              {gaps.length === 0 ? null : text(
+                `steps:${card.id}:gap`,
+                ` ! ${gaps.length === 1 ? gaps[0]!.name : `${gaps.length} steps`} pending `,
+                barStyle === 'blocks' ? { bg: c.warning, fg: c.background, bold: true } : { fg: c.warning, bold: true },
+              )}
+            </Box>
+          </Box>
+        )
+        if (!isOpen) return [header]
+        const cell = (s: RunStep) => {
+          const k = look(s)
+          const note = stepNote(s, t)
+          return [
+            text(`steps:${card.id}:${s.position}:n`, `${s.position} `, { fg: c.foreground, dim: true }),
+            text(`steps:${card.id}:${s.position}:g`, `${k.glyph} `, { fg: k.faint ? c.foreground : k.colour, dim: k.faint }),
+            text(`steps:${card.id}:${s.position}:name`, s.name, {
+              fg: k.faint ? c.foreground : k.current || k.gap ? k.colour : c.foreground,
+              dim: k.faint, bold: k.current || k.gap,
+            }),
+            ...(note ? [text(`steps:${card.id}:${s.position}:note`, `  ${note}`, { fg: c.foreground, dim: true })] : []),
+          ]
+        }
+        const indent = text(`steps:${card.id}:indent`, '     ', { fg: c.foreground })
+        if (width < TWO_COLUMNS) {
+          return [header, ...steps.map(s => (
+            <Box key={`steps:${card.id}:line:${s.position}`} width={width} backgroundColor={bg}>
+              {indent}
+              <Box flexShrink={1}>{cell(s)}</Box>
+            </Box>
+          ))]
+        }
+        // Down the first column, then the second.
+        const tall = Math.ceil(steps.length / 2)
+        const column = Math.floor((width - 5) / 2)
+        return [header, ...steps.slice(0, tall).map((s, r) => {
+          const beside = steps[r + tall]
+          return (
+            <Box key={`steps:${card.id}:line:${s.position}`} width={width} backgroundColor={bg}>
+              {indent}
+              <Box width={column} flexShrink={0}>{cell(s)}</Box>
+              {beside === undefined ? null : <Box width={column} flexShrink={0}>{cell(beside)}</Box>}
+            </Box>
+          )
+        })]
+      })
+    }
     return (
       <Box marginTop={1} flexDirection="column" width={e.props.bodyColumns}>
         {rows.map(row)}
+        {await runs()}
         {await live()}
       </Box>
     )
   })
+}
+
+// --- step rows: where a playbook run has got to ---------------------------------
+
+/** The board TUI's step glyphs, and `!` for a step left pending behind later ones. */
+const STEP_GLYPHS: Record<StepStatus, string> = {
+  pending: '○', in_progress: '▶', done: '✓', skipped: '↷', paused: '‖',
+}
+
+/** The step in progress, else the lowest paused one: the board's own rule. */
+function currentStep(steps: readonly RunStep[]): RunStep | undefined {
+  return steps.find(s => s.status === 'in_progress') ?? steps.find(s => s.status === 'paused')
+}
+
+/**
+ * Pending steps before the furthest one that has started (skipped counts).
+ * A missed step and one reset to be redone look the same, so neither is named
+ * as missed.
+ */
+function gapSteps(steps: readonly RunStep[]): RunStep[] {
+  const furthest = steps.findLastIndex(s => s.status !== 'pending')
+  return steps.filter((s, i) => i < furthest && s.status === 'pending')
+}
+
+type StepLook = { glyph: string; colour: string; strong: boolean; faint: boolean; current: boolean; gap: boolean }
+
+/** How a step is drawn: strong ones on their colour, faint ones toward the panel. */
+function stepLook(s: RunStep, gap: boolean, c: Palette): StepLook {
+  const base = { strong: false, faint: false, current: false, gap }
+  if (gap) return { ...base, glyph: '!', colour: c.warning, strong: true }
+  switch (s.status) {
+    case 'in_progress': return { ...base, glyph: STEP_GLYPHS.in_progress, colour: c.primary, strong: true, current: true }
+    case 'paused': return { ...base, glyph: STEP_GLYPHS.paused, colour: c.accent, strong: true, current: true }
+    case 'done': return { ...base, glyph: STEP_GLYPHS.done, colour: c.success }
+    default: return { ...base, glyph: STEP_GLYPHS[s.status], colour: c.surface, faint: true }
+  }
+}
+
+/**
+ * The collapsed row's words: `4/8 Implement · 6m`, `3/8 done · next Implement`,
+ * `all 8 done` or `not started`. `colour` names the step whose look colours the name.
+ */
+function runLabel(steps: readonly RunStep[], t: number): { lead?: string; name: string; note?: string; colour?: RunStep } {
+  const n = steps.length
+  const current = currentStep(steps)
+  if (current) {
+    const note = current.status === 'paused'
+      ? current.reason ?? 'waiting for you'
+      : current.startedAt === undefined ? undefined : minutes(t - current.startedAt)
+    return { lead: `${current.position}/${n}`, name: current.name, note, colour: current }
+  }
+  const finished = steps.filter(s => s.status === 'done' || s.status === 'skipped').length
+  if (finished === n) return { name: `all ${n} done` }
+  const next = steps.find(s => s.status === 'pending')
+  if (finished === 0 || next === undefined) return { name: 'not started' }
+  return { lead: `${finished}/${n} done`, name: `· next ${next.name}` }
+}
+
+/** An open row's note: a done step's duration, the current one's time so far, or the reason. */
+function stepNote(s: RunStep, t: number): string | undefined {
+  if (s.status === 'skipped' || s.status === 'paused') return s.reason
+  if (s.startedAt === undefined) return undefined
+  if (s.status === 'in_progress') return minutes(t - s.startedAt)
+  if (s.status === 'done' && s.finishedAt !== undefined) return minutes(s.finishedAt - s.startedAt)
+  return undefined
+}
+
+/** 72_000 -> 1m, 4_380_000 -> 1h13m; never negative. */
+function minutes(ms: number): string {
+  const m = Math.max(0, Math.floor(ms / 60_000))
+  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}m`
 }
 
 // --- segments: what the bar says ---------------------------------------------
