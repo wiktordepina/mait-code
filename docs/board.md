@@ -306,6 +306,7 @@ Every card carries:
 | **Priority** | `low`, `medium` (default), or `high`. Drives pick-up order. |
 | **Description** | The "what and why". Renders [markdown](#markdown-in-the-body), and plain text works just as well. |
 | **Acceptance criteria** | The contract for *done*, usually set when refining. Renders [markdown](#markdown-in-the-body) too. |
+| **Testing strategy** | Not a field but a section at the end of the description: a paragraph reading exactly `**Testing strategy**`, then a bullet per chosen strategy. The board skill writes it when it refines a card, choosing from your [`testing_strategies.md`](setup.md#testing-strategies-claudemait-code-datatesting_strategiesmd); `/work` reads it at its test step. Cards refined in the TUI, with `mc-tool-board refine` or through the remote API don't get one automatically. |
 | **References** | An ordered list of `label → value` links — a PR, a ticket, a file, a spec. Kept out of the description so they stay tidy and clickable. |
 | **Tags** | Free-form labels that ride alongside status (`blocked`, `urgent`, …). |
 | **Comments** | A threaded log — your notes and Claude's, each timestamped. |

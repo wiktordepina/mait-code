@@ -251,6 +251,22 @@ def _jira_base_url(value: str) -> str | None:
     return f"must be empty or an https:// URL, got {value!r}"
 
 
+# Skill names are lowercase words joined by single hyphens; a plugin namespace
+# may also use dots and underscores, which plugin names are not known to forbid.
+_SKILL_NAME = re.compile(
+    r"(?:[a-z0-9]+(?:[._-][a-z0-9]+)*:)?(?=.{1,64}$)[a-z0-9]+(?:-[a-z0-9]+)*"
+)
+
+
+def _pr_skill(value: str) -> str | None:
+    if value == "" or _SKILL_NAME.fullmatch(value):
+        return None
+    return (
+        "must be empty or a skill name such as raise-pr or plugin:raise-pr "
+        f"(no leading /), got {value!r}"
+    )
+
+
 def _bridge_type(value: str) -> str | None:
     """Validate the channel selector against the registered channels.
 
@@ -336,6 +352,13 @@ SETTINGS: tuple[Setting, ...] = (
         "",
         help="Jira site the status bar links card keys to (https://acme.atlassian.net).",
         validate=_jira_base_url,
+    ),
+    Setting(
+        "pr-skill",
+        "MAIT_CODE_PR_SKILL",
+        "",
+        help="Skill /work uses to raise a PR (e.g. raise-pr); empty means gh pr create.",
+        validate=_pr_skill,
     ),
     Setting(
         "embedding-provider",

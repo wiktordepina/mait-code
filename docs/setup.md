@@ -67,7 +67,7 @@ mait-code install --from "$PWD" --embedding-provider local
 
 1. Validates the source path is a mait-code clone.
 2. Creates `~/.claude/mait-code-data/` with memory subdirectories (`memory/observations/`, `memory/reflections/`).
-3. Copies identity templates (`soul_document.md`, `user_context.md`, `communication_style.md`) and the writing style (`writing_style.md`) — never overwrites a file you have edited. An untouched copy of an older template is replaced with the current one.
+3. Copies identity templates (`soul_document.md`, `user_context.md`, `communication_style.md`) and the files skills read on demand (`writing_style.md`, `testing_strategies.md`) — never overwrites a file you have edited. An untouched copy of an older template is replaced with the current one.
 4. Bootstraps `memory/MEMORY.md` with a placeholder if missing.
 5. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file to `CLAUDE.md.backup`).
 6. Symlinks every `skills/*` directory into `~/.claude/skills/`.
@@ -178,6 +178,20 @@ hub shows it at the end of **Identity ▸ System prompt**, outside the
 session-start total. Install seeds it once and
 never overwrites your edits.
 
+### Testing Strategies (`~/.claude/mait-code-data/testing_strategies.md`)
+
+The ways a card's work can be tested. When the board skill refines a card, it
+reads this file and writes a **Testing strategy** section into the
+description, naming the strategies that fit and what each will check; `/work`
+runs exactly those at its test step. It ships with `unit` (the project's own
+test suite) and `manual` (a scripted check on a throwaway target).
+
+Add the environments you test in, each as a `##` heading with what it proves
+and how to run it. A `Projects:` line under the heading limits a strategy to
+the projects it names; without one, it's offered everywhere. Like the writing
+style, it's read on demand rather than at session start, and shown at the end
+of **Identity ▸ System prompt**.
+
 ## Verification
 
 After installation, verify everything works:
@@ -190,7 +204,7 @@ ls -la ~/.claude/CLAUDE.md
 
 # Check data directory
 ls ~/.claude/mait-code-data/
-# Should contain: soul_document.md  user_context.md  communication_style.md  writing_style.md  memory/
+# Should contain: soul_document.md  user_context.md  communication_style.md  writing_style.md  testing_strategies.md  memory/
 
 # Check settings
 cat ~/.claude/settings.json | python3 -m json.tool

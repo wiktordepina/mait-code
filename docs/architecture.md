@@ -42,7 +42,7 @@ graph TD
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
-        identity["soul_document.md<br/>user_context.md<br/>communication_style.md<br/>writing_style.md <i>(skill-loaded)</i>"]
+        identity["soul_document.md<br/>user_context.md<br/>communication_style.md<br/>writing_style.md <i>(skill-loaded)</i><br/>testing_strategies.md <i>(skill-loaded)</i>"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
         other_dbs["memory.db <i>(SQLite)</i><br/>reminders.db<br/>board.db<br/>inbox.db"]
         cfg["dashboard.toml<br/>bridge.json<br/>project-aliases.json"]
@@ -538,6 +538,7 @@ Primary knobs:
 | `MAIT_CODE_MODS` | `disabled` | The [companion mod](companion-mod.md): `enabled` or `disabled` |
 | `MAIT_CODE_STATUS_BAR_STYLE` | `blocks` | How the mod's status bar draws: `blocks` or `slim` |
 | `MAIT_CODE_JIRA_BASE_URL` | *(empty)* | Jira site the status bar links card keys to |
+| `MAIT_CODE_PR_SKILL` | *(empty)* | Skill `/work` raises PRs with; empty means `gh pr create` |
 | `MAIT_CODE_EMBEDDING_PROVIDER` | `local` | Embedding provider: `local` (fastembed) or `bedrock` (AWS) |
 | `MAIT_CODE_EMBEDDING_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Model for local embedding provider |
 | `MAIT_CODE_BEDROCK_REGION` | `eu-west-2` | AWS region for Bedrock embedding provider |
@@ -591,7 +592,7 @@ Four files compose the companion's identity:
 
 The first three are seeded from `templates/` on install (the communication style from `templates/communication_styles/default.md`). Install and update never overwrite your edits: a file is replaced only while it is still a byte-identical copy of an older shipped template, so untouched copies pick up template improvements and edited ones are left alone (`sync_identity_templates` in `cli/_install.py`). All four are referenced via `@` imports in `config/CLAUDE.md` and loaded into every Claude Code session.
 
-`writing_style.md` is seeded and protected the same way (`_SEEDED_TEMPLATES`), but it isn't imported: the `outward-comms` skill reads it when it runs, so sessions that don't write for other people don't pay for it in context.
+`writing_style.md` and `testing_strategies.md` are seeded and protected the same way (`_SEEDED_TEMPLATES`), but they aren't imported: `outward-comms` reads the first and the board skill's refine step the second, each when it runs, so sessions that don't need them don't pay for them in context.
 
 ## Migration System
 
@@ -629,6 +630,7 @@ Adding a new migration:
 ├── user_context.md           # User profile
 ├── communication_style.md    # Response shaping
 ├── writing_style.md          # Outward text style (read by /outward-comms)
+├── testing_strategies.md     # Testing strategies refinement chooses from
 ├── memory/
 │   ├── MEMORY.md             # Curated facts (loaded every session)
 │   ├── observations/         # Raw JSONL session extractions

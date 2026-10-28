@@ -440,7 +440,7 @@ show as `env.<NAME>` rows, followed by the tool-approval presets.
 
 Settings fall into three groups:
 
-- **Primary** — written uncommented in `settings.toml`: `data-dir`, `log-level`, `log-file`, `theme`, `bridge`, `bridge-type`, `mods`, `status-bar-style`, `jira-base-url`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`.
+- **Primary** — written uncommented in `settings.toml`: `data-dir`, `log-level`, `log-file`, `theme`, `bridge`, `bridge-type`, `mods`, `status-bar-style`, `jira-base-url`, `pr-skill`, `embedding-provider`, `embedding-model`, `bedrock-model-id`, `bedrock-region`.
 - **Advanced** — written commented-out (the built-in default applies until you opt in via `set` or by uncommenting): `log-backup-count`, `extraction-model`, `reflection-model`, `llm-timeout`, `reflection-batch-size`, `reflection-novelty-gate`, `git-timeout`, `dashboard-tile-timeout`, the review knobs `review-threshold` and `review-min-importance`, and the scoring/dedup tuning knobs `score-weight-recency`, `score-weight-importance`, `score-weight-relevance`, `half-life-episodic`, `half-life-semantic`, `half-life-procedural`, `dedup-string-threshold`, `dedup-vector-threshold`, `dedup-conflict-threshold`, `scope-boost-global`, `scope-boost-cross-project`.
 - **Derived** (source `derived`, not settable): `embedding-dim`, `memory-db-path`, `reminders-db-path`, `bridge-config-path`, `model-cache-dir`, `observations-dir`, `project-aliases-path`, `dashboard-config-path`.
 
@@ -530,9 +530,11 @@ mait-code identity show <name>      # print one identity file from the data dir
 
 Prints a file from the configured data directory (following `data-dir` and
 `MAIT_CODE_DATA_DIR`), for skills that load one at preprocessing time:
-`/outward-comms` reads `writing_style` this way. `<name>` is the file name
+`/outward-comms` reads `writing_style` this way, and the board skill's refine
+step reads `testing_strategies`. `<name>` is the file name
 without `.md`, and only the shipped identity files can be named:
-`communication_style`, `soul_document`, `user_context` and `writing_style`.
+`communication_style`, `soul_document`, `testing_strategies`, `user_context`
+and `writing_style`.
 Anything else, and a file that doesn't exist yet, exits `1` with a message on
 stderr.
 

@@ -525,18 +525,19 @@ class TestUpdateIdentityTemplates:
         assert summary.templates_copied == []
         assert summary.templates_upgraded == []
 
-    def test_leaves_edited_writing_style_alone(
-        self, fake_home: Path, fake_source: Path
+    @pytest.mark.parametrize("name", ["writing_style.md", "testing_strategies.md"])
+    def test_leaves_edited_seeded_file_alone(
+        self, name: str, fake_home: Path, fake_source: Path
     ) -> None:
         _install_first(fake_source)
-        style = fake_home / ".claude" / "mait-code-data" / "writing_style.md"
-        style.write_text("# my own rules\n")
+        seeded = fake_home / ".claude" / "mait-code-data" / name
+        seeded.write_text("# my own rules\n")
         git = _FakeGit(branch="main", tags=[])
 
         summary = update(runner=git.run, capture=git.capture)
 
-        assert style.read_text() == "# my own rules\n"
-        assert "writing_style.md" not in summary.templates_upgraded
+        assert seeded.read_text() == "# my own rules\n"
+        assert name not in summary.templates_upgraded
 
     def test_creates_missing_data_dir(
         self, fake_home: Path, fake_source: Path, tmp_path: Path
