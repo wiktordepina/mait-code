@@ -491,7 +491,7 @@ test('no Jira block without keys', async ($, on) => {
   await ui.unmount()
 })
 
-// --- row 3: agents in flight -------------------------------------------------------
+// --- the agents row: agents in flight ----------------------------------------------
 
 type Listed = { id: string; status: string }
 
@@ -511,7 +511,7 @@ const finish = (agentId?: string) => ({
   ...(agentId ? { agentId } : {}),
 })
 
-test('a running agent opens row 3, collapsed, and its time moves', async ($, on) => {
+test('a running agent opens the agents row, collapsed, and its time moves', async ($, on) => {
   engine(on)
   agentEngine(on)
   const clock = mock.clock(on, { now: 1_000_000 })
@@ -550,7 +550,7 @@ test('the toggle lists each agent on a line of its own, and folds it again', asy
   await ui.unmount()
 })
 
-test('an agent leaves row 3 when it reports, without a board refresh', async ($, on) => {
+test('an agent leaves the agents row when it reports, without a board refresh', async ($, on) => {
   const calls = engine(on)
   agentEngine(on)
   mock.clock(on)
@@ -581,7 +581,7 @@ test('a main turn drops agents the engine finished without a report', async ($, 
   await ui.unmount()
 })
 
-test('teammates are left out of row 3', async ($, on) => {
+test('teammates are left out of the agents row', async ($, on) => {
   engine(on)
   agentEngine(on)
   mock.clock(on)
@@ -624,7 +624,7 @@ test('an agent handing back reads as reporting', async ($, on) => {
   await ui.unmount()
 })
 
-test('collapsed, row 3 counts agents by type and shows the longest-running time', async ($, on) => {
+test('collapsed, the agents row counts agents by type and shows the longest-running time', async ($, on) => {
   engine(on)
   agentEngine(on)
   const clock = mock.clock(on, { now: 0 })
@@ -808,7 +808,7 @@ test('the model is coloured text on the panel, never a block, in both styles', a
   }
 })
 
-// --- row 3: the ticker and the engine's list ------------------------------------------
+// --- the agents row: the ticker and the engine's list -------------------------------
 
 test('agents spawned together start one ticker, and it stops when the last reports', async ($, on) => {
   engine(on)
@@ -887,7 +887,13 @@ test('a run gets a collapsed step row: rail, current step and its time', async (
     expect((await ui.find({ key: 'steps:toggle:285' }))?.props.label).toBe('▸ #285')
     const rail = (await ui.findAll({ type: 'Text', text: /^ . $/ })).filter(t => t.text !== ' ≣ ')
     expect(rail.map(t => t.text)).toEqual([' ✓ ', ' ↷ ', ' ▶ ', ' ○ ', ' ○ '])
+    // Done faded toward the panel in its own ink; skipped and pending on surface.
+    expect(rail[0]?.props.color).toBe(PALETTE.success)
+    expect(rail[0]?.props.backgroundColor).not.toBe(PALETTE.success)
+    expect(rail[0]?.props.backgroundColor).not.toBe(PALETTE.panel)
+    expect(rail[1]?.props.backgroundColor).toBe(PALETTE.surface)
     expect(rail[2]?.props.backgroundColor).toBe(PALETTE.primary)
+    expect(rail[2]?.props.color).toBe(PALETTE.background)
     expect(rail[3]?.props.backgroundColor).toBe(PALETTE.surface)
     expect(await ui.find({ type: 'Text', text: /^ 3\/5 $/ })).toBeDefined()
     expect((await ui.find({ type: 'Text', text: /^Implement$/ }))?.props.color).toBe(PALETTE.primary)
@@ -1086,7 +1092,7 @@ test('an unreadable time drops only its note', async ($, on) => {
   await ui.unmount()
 })
 
-test('a step in progress ticks every 30s, agents every 5s, and nothing stops it', async ($, on) => {
+test('a step in progress ticks every 30s, agents every 5s, and it stops when neither runs', async ($, on) => {
   const world: World = { summary: { bound: [working(7, run(['Refine', 'in_progress', { started: 0 }]))], in_review: [], inbox: 0 } }
   engine(on, world)
   agentEngine(on)
@@ -1107,4 +1113,40 @@ test('a step in progress ticks every 30s, agents every 5s, and nothing stops it'
   world.summary = { bound: [working(7, run(['Refine', 'done']))], in_review: [], inbox: 0 }
   await $.turn.complete(finish())
   expect(live).toBe(0)
+})
+
+test('a board refresh racing an agent spawn leaves the agents\' 5s ticker', async ($, on) => {
+  engine(on, { summary: { bound: [working(7, run(['Refine', 'in_progress', { started: 0 }]))], in_review: [], inbox: 0 } })
+  agentEngine(on)
+  const live = new Map<number, number>()
+  let n = 0
+  on('clock.every', ($, e, next) => {
+    const id = ++n
+    live.set(id, e.ms)
+    return new Promise((_, reject) => next.signal.addEventListener('abort', () => { live.delete(id); reject(new Error('cancelled')) })) as never
+  })
+  on('clock.now', () => ({ value: T0 }))
+  // Once armed: the next sync that reads the agents (none yet) is held before
+  // it reads the work, while an agent spawns and sets its own ticker.
+  let stage: 'off' | 'armed' | 'read' | 'held' = 'off'
+  let release = () => {}
+  const held = new Promise<void>(r => { release = r })
+  on('state.get', async ($, e, next) => {
+    const { key } = e as { key: string }
+    if (stage === 'armed' && key === 'events') stage = 'read'
+    else if (stage === 'read' && key === 'work') { stage = 'held'; await held }
+    return next(e)
+  })
+  await start($)
+  stage = 'armed'
+  await $.tool.call({ tool: 'Bash', command: 'mc-tool-board show 7' } as never)
+  const settle = async () => { for (let i = 0; i < 20; i++) await new Promise(r => setTimeout(r, 0)) }
+  await settle()
+  expect(stage).toBe('held')
+  const spawned = $.agent.spawn({ prompt: 'a', description: 'd', subagentType: 'Explore' })
+  await settle()
+  release()
+  await spawned
+  await settle()
+  expect([...live.values()]).toEqual([5_000])
 })

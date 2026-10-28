@@ -105,7 +105,7 @@ declare module 'claude-code' {
       work: WorkData
       session: SessionData
       events: EventData
-      /** Whether row 3 lists each agent on a line of its own. */
+      /** Whether the agents row lists each agent on a line of its own. */
       agentsOpen: boolean
       /** Which cards' step rows list each step, by card id. */
       stepsOpen: Record<number, boolean>

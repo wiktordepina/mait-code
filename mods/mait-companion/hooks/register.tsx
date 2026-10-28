@@ -255,6 +255,7 @@ const LIVE: ReadonlySet<string> = new Set(['pending', 'running', 'waiting'])
 // with them, and session.start starts a fresh one if anything is still running.
 let ticker: Timer | undefined
 let tickerMs: number | undefined
+let syncing: Promise<void> = Promise.resolve()
 
 async function tick($: EngineInterface): Promise<void> {
   const t = await $.clock.now()
@@ -265,13 +266,19 @@ async function tick($: EngineInterface): Promise<void> {
  * Tick `now` so elapsed times move: every five seconds while any agent runs,
  * every thirty while only a step is in progress, not at all otherwise.
  */
-async function syncTicker($: EngineInterface): Promise<void> {
+function syncTicker($: EngineInterface): Promise<void> {
+  // One at a time: agents and board refreshes both get here, and a sync that
+  // read the atoms before another's change must not undo what that one set.
+  const run = syncing.then(() => applyTicker($))
+  syncing = run.catch(() => undefined)
+  return run
+}
+
+async function applyTicker($: EngineInterface): Promise<void> {
   const agents = (await read($, events)).agents.length > 0
   const stepping = (await read($, work)).bound.some(c => c.run?.steps.some(s => s.status === 'in_progress'))
   const period = agents ? TICK_MS : stepping ? STEP_TICK_MS : undefined
   if (period === tickerMs) return
-  // Claimed before the first await: agents spawned together each get here,
-  // and only the first may start a timer.
   ticker?.cancel()
   tickerMs = period
   ticker = period === undefined ? undefined : $.clock.every(period, () => { void guarded(() => tick($)) })
@@ -503,7 +510,7 @@ export const register: Register = on => {
     // A step row follows the bar style, unlike the agents row: it changes once
     // a step, not once a tool call. Collapsed, the rail and where the run has
     // got to; open, each step with its time or reason.
-    const runs = async () => {
+    const stepRows = async () => {
       const bound = (await read($, work)).bound
       const withRuns = bound.filter((card): card is BoundCard & { run: PlaybookRun } => card.run !== null)
       if (withRuns.length === 0) return []
@@ -617,7 +624,7 @@ export const register: Register = on => {
     return (
       <Box marginTop={1} flexDirection="column" width={e.props.bodyColumns}>
         {rows.map(row)}
-        {await runs()}
+        {await stepRows()}
         {await live()}
       </Box>
     )
