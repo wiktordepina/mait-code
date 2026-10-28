@@ -1047,6 +1047,7 @@ class HomeApp(MaitApp):
             widgets.append(
                 Label(empty_state("A quiet start — nothing to surface right now."))
             )
+        widgets.extend(_writing_style_section())
         return widgets
 
     # -- detail builders: system -----------------------------------------------
@@ -1432,6 +1433,28 @@ def _identity_files() -> tuple[tuple[str, Path], ...]:
         ("Communication style", ddir / "communication_style.md"),
         ("Curated memory (MEMORY.md)", ddir / "memory" / "MEMORY.md"),
     )
+
+
+def _writing_style_section() -> list[Widget]:
+    """``writing_style.md``, shown after the prompt but outside it.
+
+    ``/outward-comms`` reads it on demand, so it carries no token badge and
+    stays out of the wake-up total.
+    """
+    path = data_dir() / "writing_style.md"
+    text = _read_identity(path)
+    head = Text("Writing style  ")
+    head.append("loaded by /outward-comms, not at session start", style="dim")
+    widgets: list[Widget] = [Label(head, classes="subhead")]
+    if text is None:
+        widgets.append(
+            Label(
+                empty_state(f"{path.name} isn't installed yet — run mait-code update.")
+            )
+        )
+    else:
+        widgets.append(Markdown(text, parser_factory=md_parser, open_links=False))
+    return widgets
 
 
 def _read_identity(path: Path) -> str | None:

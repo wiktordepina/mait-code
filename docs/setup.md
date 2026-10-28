@@ -67,7 +67,7 @@ mait-code install --from "$PWD" --embedding-provider local
 
 1. Validates the source path is a mait-code clone.
 2. Creates `~/.claude/mait-code-data/` with memory subdirectories (`memory/observations/`, `memory/reflections/`).
-3. Copies identity templates (`soul_document.md`, `user_context.md`, `communication_style.md`) — never overwrites a file you have edited. An untouched copy of an older template is replaced with the current one.
+3. Copies identity templates (`soul_document.md`, `user_context.md`, `communication_style.md`) and the writing style (`writing_style.md`) — never overwrites a file you have edited. An untouched copy of an older template is replaced with the current one.
 4. Bootstraps `memory/MEMORY.md` with a placeholder if missing.
 5. Symlinks `CLAUDE.md` into `~/.claude/` (backs up any existing file to `CLAUDE.md.backup`).
 6. Symlinks every `skills/*` directory into `~/.claude/skills/`.
@@ -164,6 +164,20 @@ Shapes how responses are written:
 
 Drop the markers, add your own, or rewrite it entirely — it's your copy.
 
+### Writing Style (`~/.claude/mait-code-data/writing_style.md`)
+
+The rules `/outward-comms` applies to text written on your behalf for other
+people: PR and review comments, commit messages, issue comments, chat, email and
+committed docs. No em dashes, plain characters in prose (glyphs only where they
+carry structure), no AI clichés, concise and direct, and your spelling
+convention.
+
+Unlike the files above it isn't loaded into every session: the skill reads it
+each time it runs, so an edit takes effect the next time you use it. The home
+hub shows it at the end of **Identity ▸ System prompt**, outside the
+session-start total. Install seeds it once and
+never overwrites your edits.
+
 ## Verification
 
 After installation, verify everything works:
@@ -176,7 +190,7 @@ ls -la ~/.claude/CLAUDE.md
 
 # Check data directory
 ls ~/.claude/mait-code-data/
-# Should contain: soul_document.md  user_context.md  communication_style.md  memory/
+# Should contain: soul_document.md  user_context.md  communication_style.md  writing_style.md  memory/
 
 # Check settings
 cat ~/.claude/settings.json | python3 -m json.tool

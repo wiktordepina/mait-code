@@ -488,6 +488,31 @@ def test_system_prompt_node_renders_identity_and_context() -> None:
     assert docs == 1  # only the soul document exists in this data dir
 
 
+def test_writing_style_follows_the_prompt_outside_its_total() -> None:
+    from mait_code.config import data_dir
+
+    ddir = data_dir()
+    ddir.mkdir(parents=True, exist_ok=True)
+
+    async def scenario():
+        app = HomeApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            return await _show(app, pilot, "identity:sysprompt")
+
+    missing = _run(scenario)
+    assert "isn't installed yet" in missing
+    before = missing.split("tokens total")[0]
+    (ddir / "writing_style.md").write_text(
+        "# Writing Style\n\n" + "No em dashes. " * 200
+    )
+    text = _run(scenario)
+    assert "No em dashes" in text
+    assert "not at session start" in text
+    # The file is long, but the wake-up total doesn't move.
+    assert text.split("tokens total")[0] == before
+
+
 # --- launch + reload ---
 
 

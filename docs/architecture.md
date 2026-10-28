@@ -16,7 +16,7 @@ graph TD
     subgraph claude_code ["Claude Code"]
         CLAUDE_MD["CLAUDE.md<br/><i>identity + rules</i><br/>@soul_doc, @user_ctx, @MEMORY"]
         HOOKS["Hooks<br/>SessionStart, PreCompact, SessionEnd"]
-        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders<br/>/board, /triage<br/>/commit, /pre-pr-review, /design-review"]
+        SKILLS["Skills<br/>/recall, /remember, /reflect, memory-store<br/>/remind, /reminders<br/>/board, /triage<br/>/commit, /pre-pr-review, /design-review<br/>/outward-comms"]
     end
 
     subgraph mait_code ["mait-code (Python)"]
@@ -42,7 +42,7 @@ graph TD
     end
 
     subgraph data_dir ["~/.claude/mait-code-data/"]
-        identity["soul_document.md<br/>user_context.md<br/>communication_style.md"]
+        identity["soul_document.md<br/>user_context.md<br/>communication_style.md<br/>writing_style.md <i>(skill-loaded)</i>"]
         memory_store["memory/<br/>MEMORY.md <i>(curated)</i><br/>observations/ <i>(raw JSONL)</i><br/>reflections/ <i>(synthesised)</i>"]
         other_dbs["memory.db <i>(SQLite)</i><br/>reminders.db<br/>board.db<br/>inbox.db"]
         cfg["dashboard.toml<br/>bridge.json<br/>project-aliases.json"]
@@ -591,6 +591,8 @@ Four files compose the companion's identity:
 
 The first three are seeded from `templates/` on install (the communication style from `templates/communication_styles/default.md`). Install and update never overwrite your edits: a file is replaced only while it is still a byte-identical copy of an older shipped template, so untouched copies pick up template improvements and edited ones are left alone (`sync_identity_templates` in `cli/_install.py`). All four are referenced via `@` imports in `config/CLAUDE.md` and loaded into every Claude Code session.
 
+`writing_style.md` is seeded and protected the same way (`_SEEDED_TEMPLATES`), but it isn't imported: the `outward-comms` skill reads it when it runs, so sessions that don't write for other people don't pay for it in context.
+
 ## Migration System
 
 Schema changes are managed via forward-only migrations in `src/mait_code/tools/memory/migrate.py`. Each migration has a version number, description, and body (SQL list or callable). The `schema_version` table tracks which migrations have been applied.
@@ -626,6 +628,7 @@ Adding a new migration:
 ├── soul_document.md          # Companion identity
 ├── user_context.md           # User profile
 ├── communication_style.md    # Response shaping
+├── writing_style.md          # Outward text style (read by /outward-comms)
 ├── memory/
 │   ├── MEMORY.md             # Curated facts (loaded every session)
 │   ├── observations/         # Raw JSONL session extractions

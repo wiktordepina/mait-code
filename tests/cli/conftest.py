@@ -92,6 +92,7 @@ def fake_source(tmp_path: Path) -> Path:
     (templates / "communication_styles" / "default.md").write_text(
         "# communication style template\n"
     )
+    (templates / "writing_style.md").write_text("# writing style template\n")
 
     (src / "skills").mkdir()
     (src / "agents").mkdir()

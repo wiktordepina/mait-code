@@ -486,6 +486,40 @@ def test_settings_get_env_resolves_after_set(fake_home) -> None:
 
 
 # ---------------------------------------------------------------------------
+# identity show
+# ---------------------------------------------------------------------------
+
+
+def test_identity_show_prints_the_file_from_the_configured_data_dir(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+    (tmp_path / "writing_style.md").write_text("# Writing Style\n\nNo em dashes.\n")
+    result = runner.invoke(app, ["identity", "show", "writing_style"])
+    assert result.exit_code == 0
+    assert result.output == "# Writing Style\n\nNo em dashes.\n"
+
+
+def test_identity_show_fails_on_a_missing_file(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+    result = runner.invoke(app, ["identity", "show", "writing_style"])
+    assert result.exit_code == 1
+    assert "mait-code update" in result.output
+
+
+@pytest.mark.parametrize("name", ["passwd", "../settings", "memory/MEMORY"])
+def test_identity_show_refuses_anything_but_a_shipped_template(
+    name: str, tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MAIT_CODE_DATA_DIR", str(tmp_path))
+    result = runner.invoke(app, ["identity", "show", name])
+    assert result.exit_code == 1
+    assert "unknown identity file" in result.output
+
+
+# ---------------------------------------------------------------------------
 # board / graph — non-TTY text fallbacks
 # ---------------------------------------------------------------------------
 
