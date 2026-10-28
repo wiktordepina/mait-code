@@ -2212,14 +2212,16 @@ prompt itself:</p>
 <li><strong><code>/capture &lt;text&gt;</code></strong> files a thought to the <a href="../board/">quick-capture inbox</a>
   immediately, with no model turn. It's the same as <code>mc-tool-inbox add</code>, but
   you don't have to leave the prompt. <code>/capture</code> with no text prints its usage.</li>
-<li><strong>A status bar above the prompt</strong>: up to three rows on your theme's panel
-  colour. The top row is the work in hand and what's waiting on you; the
-  second is where the session is and what it's using; the third appears only
+<li><strong>A status bar above the prompt</strong>: rows on your theme's panel colour. The
+  top row is the work in hand and what's waiting on you; the second is where
+  the session is and what it's using. Below them, a step row appears for each
+  bound card with a <a href="../board/#playbook-runs">playbook run</a>, and a last row
   while subagents are running.</li>
 </ul>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a> #162  Ship the mait-companion mod     jira  PLAT-4821  PLAT-4830   in review  #158   inbox  3
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a> ▣ mait-code  ⎇ feat/two-rows ±3 ↑1      ✦ opus 5.5   142k/1M  ■■■■■■■■ 14%   5h·7d  63·41%
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a> ⋔ ▸ 3 agents  Explore ×2 · pre-pr-reviewer · 1m12s
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a> ▣ mait-code  ⎇ feat/two-rows ±3 ↑1      ✦ opus 5.5   142k/1M  ━─────── 14%   5h·7d  63·41%
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a> ≣ ▸ #162  ✓  ↷  ▶  ○  ○  3/5 Implement · 6m
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> ⋔ ▸ 3 agents  Explore ×2 · pre-pr-reviewer · 1m12s
 </span></code></pre></div>
 <p>In the default style each segment is a badge: its label on the surface colour,
 joined to its value on the segment's own colour, with a cell of panel between
@@ -2283,7 +2285,7 @@ badges so each label reads with its own value.</p>
 </tr>
 <tr>
 <td>Context</td>
-<td>Tokens used over the window's size (<code>142k/1M</code>), then an eight-cell gauge (filled squares in full ink, the rest faded) and the percentage</td>
+<td>Tokens used over the window's size (<code>142k/1M</code>), then an eight-cell gauge (a heavy line in full ink for the filled part, a faded light line for the rest) and the percentage</td>
 <td>Claude Code hasn't measured it yet</td>
 </tr>
 <tr>
@@ -2296,7 +2298,57 @@ badges so each label reads with its own value.</p>
 <p>Context and the windows are green below 50%, amber below 80% and red above
 that. Project and branch are always drawn in the quieter slim style, because
 they're there to orient you rather than to warn.</p>
-<p>The third row is the subagents this session has started and that haven't
+<p>Each bound card with an open <a href="../board/#playbook-runs">playbook run</a> gets a
+step row. Collapsed, it shows the card, a rail with one block per step, and
+where the run has got to:</p>
+<ul>
+<li><code>3/5 Implement · 6m</code>: the step in progress and how long it has been running.
+  A paused step shows its reason instead, or "waiting for you".</li>
+<li><code>2/5 done · next Implement</code>: between steps.</li>
+<li><code>all 5 done</code> or <code>not started</code>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Glyph</th>
+<th>Step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>○</code></td>
+<td>pending</td>
+</tr>
+<tr>
+<td><code>▶</code></td>
+<td>in progress</td>
+</tr>
+<tr>
+<td><code>✓</code></td>
+<td>done</td>
+</tr>
+<tr>
+<td><code>↷</code></td>
+<td>skipped</td>
+</tr>
+<tr>
+<td><code>‖</code></td>
+<td>paused</td>
+</tr>
+<tr>
+<td><code>!</code></td>
+<td>pending, behind a step that has already started</td>
+</tr>
+</tbody>
+</table>
+<p>A <code>!</code> step also raises a chip on the right (<code>! Comment audit pending</code>, or
+<code>! 2 steps pending</code>). It can mean a step was missed or one was reset to be
+redone; the bar can't tell which. Click <code>▸ #162</code> to open the row: each step on
+its own line, in two columns from 100 cells wide, with the time a done step
+took, the time so far on the current one, and the reason for a skipped or
+paused one. Times include any time a step spent paused. In the <code>slim</code> style,
+or when the row is too short for blocks, the rail is drawn as coloured glyphs.</p>
+<p>The last row is the subagents this session has started and that haven't
 reported back yet. Collapsed, it's one line: how many, their types, and how
 long the oldest has been running. Click <code>▸ 3 agents</code> (or focus the bar with
 <code>ctrl+x tab</code> and press Enter on it) to open it: each agent's task, the tool
@@ -2347,8 +2399,8 @@ style once, when a session starts.</p>
 <h2 id="how-it-behaves">How it behaves<a class="headerlink" href="#how-it-behaves" title="Permanent link">&para;</a></h2>
 <p>The mod is a thin client: it calls the <code>mc-tool-*</code> and <code>mait-code</code> CLIs and
 draws what they return, and holds no data of its own. The only thing it
-changes is the inbox, through the inbox CLI, when you <code>/capture</code>. It runs
-nothing in the background. The bar refreshes at these points only:</p>
+changes is the inbox, through the inbox CLI, when you <code>/capture</code>. The bar
+refreshes at these points only:</p>
 <ul>
 <li>when a session starts</li>
 <li>after each of your turns (not after each subagent's)</li>
@@ -2357,11 +2409,13 @@ nothing in the background. The bar refreshes at these points only:</p>
 <li>after a <code>/capture</code></li>
 <li>whenever Claude Code reports new context or rate-limit figures (those
   segments only; compactions included)</li>
-<li>as a subagent starts, calls a tool or reports back (the third row only)</li>
+<li>as a subagent starts, calls a tool or reports back (the agents row only)</li>
 </ul>
 <p>Each refresh is one call to <code>mc-tool-board summary --json --session &lt;id&gt;</code> and
-two or three <code>git</code> calls for the branch and its state. Its one timer runs only
-while subagents are, moving their running times on every five seconds.</p>
+two or three <code>git</code> calls for the branch and its state. Its one timer moves
+running times on: every five seconds while subagents are running, every thirty
+while only a playbook step is in progress, and not at all otherwise. The timer
+calls nothing; it only redraws.</p>
 <p>It is built to <strong>fail closed</strong>. If a CLI is missing, its output can't be read,
 or a Claude Code API it relies on changes, the affected segments draw nothing and <code>/capture</code>
 reports that it failed. Your session is never broken. <code>/capture</code> registers
