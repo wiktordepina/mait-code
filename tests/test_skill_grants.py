@@ -36,6 +36,9 @@ FORBIDDEN = {
     "git rebase -i HEAD~3": "rewrites history",
     "git commit --amend": "rewrites the previous commit",
     "git difftool --extcmd=rm": "arbitrary command execution",
+    "git diff --stat --output=/tmp/x": "--output writes an arbitrary file",
+    "git diff --cached --output=/tmp/x": "--output writes an arbitrary file",
+    "git log --oneline --output=/tmp/x": "--output writes an arbitrary file",
     "git checkout -- .": "discards working-tree changes",
 }
 

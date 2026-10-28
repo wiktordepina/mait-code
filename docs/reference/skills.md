@@ -16,6 +16,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Pre-PR Review | `/pre-pr-review` | Independent review of the current branch, by a reviewer that has not seen the conversation | **Implemented** |
 | Outward Comms | `/outward-comms [text]` | House style for text written on your behalf for others; rewrites given text or shapes a draft | **Implemented** |
 | Code Comments | `/code-comments [path]` | Conventions for comments and docstrings; audits the branch's comments, or sweeps a path | **Implemented** |
+| Work | `/work <card>` | Drive a card through the dev flow, refinement to pull request, recording each step on the card (manual only) | **Implemented** |
 | Design Review | `/design-review <card>` | Independent review of a refined board card before it's built, by a reviewer that has not seen the refinement | **Implemented** |
 
 ## Implemented Skills
@@ -304,6 +305,53 @@ It has no `allowed-tools`. It searches with Claude Code's Grep tool where the
 session has one, and otherwise with `grep` or `rg` through the shell, prompted
 or sandboxed. A `Bash(rg:*)` grant would also allow `rg --pre <cmd>`.
 
+### /work
+
+Drive one board card from wherever it is to a raised pull request, in the
+conversation, one step at a time. Manual only: Claude never starts it on its
+own.
+
+**Usage:**
+```
+/work 42                         # Take card #42 through the flow, or resume it
+```
+
+**The steps**, written to the card as a [playbook run](../board.md#playbook-runs)
+so the board, the TUI and the companion mod's step row show where it is:
+
+| # | Step | Does |
+|---|---|---|
+| 1 | `refine` | Refine the card (Backlog), or only add a missing Testing strategy section (otherwise) |
+| 2 | `design-review` | `/design-review` |
+| 3 | `implement` | Move the card to In Progress if needed; build it on a topic branch |
+| 4 | `comment-audit` | `/code-comments` over the branch's changed comments |
+| 5 | `commit-review` | `/commit` without pushing, then `/pre-pr-review` |
+| 6 | `address-findings` | Fix the findings; offers a second review if the fixes add files, change an interface or grow the diff by more than ~30% |
+| 7 | `tests` | Run exactly the strategies in the card's Testing strategy section |
+| 8 | `raise-pr` | Summarise the run, ask, then push and raise the PR |
+
+**How it behaves:**
+
+- **Skippable steps.** Any step can be skipped with a reason, which the board
+  records in the run and as a card comment. Step 8's question is never skipped.
+- **Checkpoints.** It stops and asks at once when the work contradicts the
+  card; small assumptions are batched and reported when the step ends. A step
+  waiting on you is marked `paused`, with the question as its reason.
+- **Raising the PR.** One yes covers the push and the PR. The PR is raised
+  with the skill named by the `pr-skill` setting, or `gh pr create` when it's
+  empty or the skill can't be invoked, and its text follows `/outward-comms`.
+  Then the run is ended and the card moves to In Review, in that order.
+- **Resuming.** The run lives on the card, so `/work N` after a `/clear`, a
+  restart or another day picks up at the current step. A step left in progress
+  by a session that ended is offered a restart, and an open run from another
+  playbook is never touched without asking. What the last pre-PR review covered
+  is recorded as a card comment after each review, so it survives too.
+
+**No hooks.** `git push` and `gh pr create` are outside its grant, so the
+permission prompt backs up step 8's question. `mc-tool-board move` and
+`run start` are left out too: one could archive or complete a card, the other
+replace a run.
+
 ### /design-review
 
 Review a refined [board card](../board.md) with a reviewer that has seen none of
@@ -429,8 +477,10 @@ skills/
 │   ├── SKILL.md     # Conventions for comments and docstrings
 │   └── reference/
 │       └── languages.md  # Per-language docstring shapes
-└── design-review/
-    └── SKILL.md     # Cold second opinion on a refined card before building it
+├── design-review/
+│   └── SKILL.md     # Cold second opinion on a refined card before building it
+└── work/
+    └── SKILL.md     # Drive a card from refinement to a pull request
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `mait-code install` (and refreshed by `mait-code update`, which also prunes links to removed skills) and loaded by Claude Code automatically.
