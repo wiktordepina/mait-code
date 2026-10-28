@@ -111,7 +111,7 @@ UNGRANTED = ("code-comments",)
 
 @pytest.mark.parametrize("skill", UNGRANTED)
 def test_ungranted_skills_have_no_allowed_tools(skill: str) -> None:
-    """A search grant is never needed, and ``Bash(rg:*)`` would also permit
-    ``rg --pre <cmd>``, which runs an arbitrary command."""
+    """No ``allowed-tools`` key at all: its searches are read-only, and a
+    ``Bash(rg:*)`` grant would also permit ``rg --pre <cmd>``."""
     frontmatter = (SKILLS_DIR / skill / "SKILL.md").read_text().split("---")[1]
     assert "allowed-tools" not in frontmatter

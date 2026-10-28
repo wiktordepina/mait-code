@@ -15,8 +15,8 @@ How comments get written in the user's code. Two modes:
   below for its two scopes.
 
 Write mode relies on the skill being triggered, which is best effort. The
-guaranteed paths are invoking `/code-comments` and a playbook's comment-audit
-step, which runs audit mode over the branch.
+guaranteed path is invoking `/code-comments`; a playbook can also run audit
+mode over the branch as one of its steps.
 
 Related: `/outward-comms` governs prose that other people read. This skill
 governs text inside source files. Rule 7 below covers the one overlap on its
@@ -42,14 +42,22 @@ first, in this order, stopping at the first answer:
    ask which style to use. Do not silently pick one.
 
 Detection is cheap, so do it rather than assume. Search the code (see
-*Searching* below for how):
+*Searching* below for how); each pattern is a regex to use as written:
 
-| Looking for | Pattern | Files |
-|---|---|---|
-| Google docstrings | `Args:\|Returns:\|Raises:` | `*.py` |
-| Sphinx / reST docstrings | `:param \|:returns?:\|:raises?` | `*.py` |
-| NumPy docstrings | `Parameters\n\s*-{3,}` (multiline) | `*.py` |
-| A declared convention | `convention\|docstring\|pydocstyle\|darglint` | `pyproject.toml`, `setup.cfg` |
+```text
+# Google docstrings, in *.py
+Args:|Returns:|Raises:
+
+# Sphinx / reST docstrings, in *.py
+:param |:returns?:|:raises?
+
+# NumPy docstrings, in *.py; spans lines, so it needs multiline mode
+# (the Grep tool's multiline option, rg -U, or grep -Pzo)
+Parameters\n\s*-{3,}
+
+# a declared convention, in pyproject.toml and setup.cfg
+convention|docstring|pydocstyle|darglint
+```
 
 **Mixed repo:** follow the file you are editing. Mention the inconsistency to
 the user once, as an observation, and leave the rest of the repo alone unless
@@ -74,8 +82,10 @@ diary, or a record of the conversation that produced it.
 * History and transitions: "used to", "previously", "we changed this to",
   "originally", "as of the refactor", "the old implementation", "now uses",
   "temporary until we migrate", "left over from"
-* Comparison to an alternative that isn't in the code: "unlike the v1 client",
-  "this replaces the batch job"
+* Comparison to an earlier version or a replaced system: "unlike the v1
+  client", "this replaces the batch job". Naming an option that was weighed
+  and rejected, to justify the one in the code, is not history and is fine:
+  `# urllib3 directly: requests' session pooling is not fork-safe`
 * Attribution and dialogue: names, dates, "as discussed", "per review
   feedback", "the user asked for", "TODO(someone)"
 * Apology or self-commentary: "this is ugly but", "sorry about this", "hacky"
@@ -270,7 +280,7 @@ Two scopes:
   branch adds or changes, and any comment in the same function or block whose
   meaning the change affects. Old violations elsewhere in a touched file are
   out of scope: mention them once, as an observation, and offer a separate
-  pass. A playbook's comment-audit step uses this scope.
+  pass. This is the scope a playbook should use when it audits a branch.
 * **A path:** a sweep of every comment in that file or directory. Only when
   asked: it inflates a diff and buries the real change.
 
@@ -280,14 +290,23 @@ shell commands, so those run prompted or sandboxed, which is fine for a
 read-only search. Don't add an `rg` grant: `Bash(rg:*)` would also permit
 `rg --pre <cmd>`, which runs an arbitrary command.
 
-**Grep first, then read.** These patterns catch the mechanical breaches:
+**Grep first, then read.** These patterns catch the mechanical breaches. Each
+is a regex to use as written; the history and ephemeral ones are
+case-insensitive:
 
-| Breach | Pattern (case-insensitive where marked) |
-|---|---|
-| Ticket keys, PR and issue refs, commit SHAs | `(#[0-9]+\|[A-Z]{2,10}-[0-9]{1,6}\|\b[0-9a-f]{7,40}\b)` |
-| History narration (i) | `used to\|previously\|formerly\|originally\|legacy\|as of \|now (uses\|we)\|no longer\|left over\|temporar\|workaround\|deprecated in favour\|before this\|old (impl\|version\|code)` |
-| Ephemeral references (i) | `\b(line\|lines\|L) ?[0-9]+\|at the time of writing\|currently\|for now\|see above\|see below\|the (two\|three\|four\|five) ` |
-| Non-ASCII | `[^\x00-\x7F]` |
+```text
+# ticket keys, PR and issue refs, commit SHAs
+(#[0-9]+|[A-Z]{2,10}-[0-9]{1,6}|\b[0-9a-f]{7,40}\b)
+
+# history narration (case-insensitive)
+used to|previously|formerly|originally|legacy|as of |now (uses|we)|no longer|left over|temporar|workaround|deprecated in favour|before this|old (impl|version|code)
+
+# ephemeral references (case-insensitive)
+\b(line|lines|L) ?[0-9]+|at the time of writing|currently|for now|see above|see below|the (two|three|four|five) 
+
+# non-ASCII
+[^\x00-\x7F]
+```
 
 Grep is a first pass, not the verdict. `currently` inside a string literal is
 fine, a SHA-shaped hex string might be a real fixture, and a comment can break

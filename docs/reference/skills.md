@@ -284,8 +284,8 @@ only.
 **How it works:**
 
 1. *Write mode* applies the rules while a comment or docstring is written or
-   edited. It relies on the skill being triggered, which is best effort; invoking
-   it, or a playbook's comment-audit step, is the guaranteed path
+   edited. It relies on the skill being triggered, which is best effort;
+   invoking it is the guaranteed path, and a playbook can run audit mode too
 2. *Audit mode* with no argument reads the branch's diff against its base and
    checks only the comments it adds or changes, plus comments whose meaning the
    change affects. Old violations elsewhere in a touched file are mentioned once,

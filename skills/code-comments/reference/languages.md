@@ -178,10 +178,11 @@ for wiring a reader cannot infer from the resource graph.
 
 ```hcl
 variable "retention_days" {
-  # 400 is the ceiling the log group's own quota allows without a support case
+  # CloudWatch accepts only its own fixed set of retention periods; anything
+  # else fails at apply, long after plan looked clean
   type        = number
   default     = 30
-  description = "CloudWatch retention for the task's logs. Values above 400 are rejected at apply time."
+  description = "CloudWatch retention for the task's logs, in days. Must be one of the periods CloudWatch accepts (1, 3, 5, 7, 14, 30, 60, 90, ...)."
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_exec" {
