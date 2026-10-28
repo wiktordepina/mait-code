@@ -16,7 +16,7 @@ _injected = False
 def setup_ssl() -> None:
     """Inject the OS trust store into Python's ssl module.
 
-    Safe to call multiple times — only injects once. Fails silently
+    Safe to call multiple times - only injects once. Fails silently
     if truststore is unavailable or injection fails.
     """
     global _injected

@@ -1,4 +1,4 @@
-"""The channel registry — the one place that knows every transport.
+"""The channel registry - the one place that knows every transport.
 
 Adding a channel is: write a :class:`~mait_code.bridge.base.BridgeChannel`
 subclass, then register it here. The gate, settings form, drain service and

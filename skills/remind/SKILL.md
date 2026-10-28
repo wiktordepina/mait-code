@@ -23,6 +23,6 @@ When the user invokes `/remind <when> <what>`:
 
 ## Examples
 
-- `/remind in 30 minutes check CI pipeline` → `mc-tool-reminders set "in 30 minutes" check CI pipeline`
-- `/remind tomorrow 9am prepare standup notes` → `mc-tool-reminders set "tomorrow 9am" prepare standup notes`
-- `/remind friday EOD submit timesheet` → `mc-tool-reminders set "friday EOD" submit timesheet`
+- `/remind in 30 minutes check CI pipeline` -> `mc-tool-reminders set "in 30 minutes" check CI pipeline`
+- `/remind tomorrow 9am prepare standup notes` -> `mc-tool-reminders set "tomorrow 9am" prepare standup notes`
+- `/remind friday EOD submit timesheet` -> `mc-tool-reminders set "friday EOD" submit timesheet`

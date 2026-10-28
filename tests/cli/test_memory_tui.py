@@ -1,9 +1,9 @@
 """Tests for the Textual ``mait-code memory`` browser.
 
 Driven by Textual's headless pilot (``App.run_test()`` wrapped in
-``asyncio.run`` — no pytest-asyncio), mirroring ``test_board_tui.py``. The app
+``asyncio.run`` - no pytest-asyncio), mirroring ``test_board_tui.py``. The app
 takes a ``db_path`` so each scenario points at an isolated temp store. Entries
-are seeded with direct SQL inserts — not ``store_memory`` — so the tests never
+are seeded with direct SQL inserts - not ``store_memory`` - so the tests never
 touch the embedding path and timestamps stay fixed.
 """
 
@@ -89,7 +89,7 @@ def _group_labels(app: MemoryApp) -> list[str]:
 
 
 def _banner_subtitle(app: MemoryApp) -> str:
-    """The masthead's view-name line — where the live match count now lives."""
+    """The masthead's view-name line - where the live match count now lives."""
     return str(app.query_one("#brand-subtitle", Static).render())
 
 
@@ -275,7 +275,7 @@ class TestFiltering:
 
     def test_filter_refreshes_detail_pane(self, store_path: Path) -> None:
         """The detail pane must follow a rebuild even when the cursor lands on
-        the same line index — Tree emits no NodeHighlighted then, so the pane
+        the same line index - Tree emits no NodeHighlighted then, so the pane
         went stale (showed the pre-filter memory) until the explicit render."""
         self._seed_mixed(store_path)
 
@@ -373,7 +373,7 @@ class TestFiltering:
             async with app.run_test() as pilot:
                 await pilot.pause()  # the tree holds focus on boot
                 monkeypatch.setattr(app, "exit", lambda *a, **k: calls.append(True))
-                await pilot.press("escape")  # nothing to back out of → quit
+                await pilot.press("escape")  # nothing to back out of -> quit
                 await pilot.pause()
 
         _run(scenario)

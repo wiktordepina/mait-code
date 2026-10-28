@@ -2,7 +2,7 @@
 
 The home guide (``docs/home.md``) embeds screenshots of the live hub. Those start
 as the very SVG artefacts the snapshot suite renders under
-``tests/cli/__snapshots__/`` — so they stay accurate automatically: whenever the
+``tests/cli/__snapshots__/`` - so they stay accurate automatically: whenever the
 hub's look changes, the snapshot baseline is regenerated and this script renders
 it afresh. The hub's hero is the block-shadow wordmark, so the shots are
 rasterised through headless Chrome (see :mod:`_screenshots` for why and the

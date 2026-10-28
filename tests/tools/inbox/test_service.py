@@ -1,7 +1,7 @@
 """Unit tests for the inbox service layer.
 
 These exercise :mod:`mait_code.tools.inbox.service` directly on a temp
-connection — the function-level analogue of the end-to-end CLI tests in
+connection - the function-level analogue of the end-to-end CLI tests in
 ``test_inbox.py``.
 """
 

@@ -146,7 +146,7 @@ def uninstall(
         skills_removed = remove_skill_symlinks(source_dir, cdir)
         agents_removed = remove_agent_symlinks(source_dir, cdir)
 
-    # 4. settings.json — best-effort clean.
+    # 4. settings.json - best-effort clean.
     settings_path = cdir / "settings.json"
     settings_cleaned = False
     if settings_path.exists():
@@ -154,7 +154,7 @@ def uninstall(
             cleaned = unmerge_settings(read_settings_file(settings_path))
             write_settings_file(settings_path, cleaned)
             settings_cleaned = True
-        except Exception as exc:  # noqa: BLE001 — uninstall tolerates settings IO failures
+        except Exception as exc:  # noqa: BLE001 - uninstall tolerates settings IO failures
             warnings.append(f"could not clean {settings_path}: {exc}")
 
     # 5. Remove centralised settings file.

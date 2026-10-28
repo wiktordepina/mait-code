@@ -832,7 +832,7 @@ class TestCmdCanonicalizeProjects:
         from mait_code.tools.memory.cli import cmd_canonicalize_projects
 
         self._setup(tmp_path, monkeypatch)
-        # Seed under the old slug via raw SQL — store_memory would canonicalise
+        # Seed under the old slug via raw SQL - store_memory would canonicalise
         # it on the way in, which is not what we're exercising here.
         mem_db.execute(
             "INSERT INTO memory_entries (content, entry_type, project, scope) "
@@ -1153,7 +1153,7 @@ class TestCmdRelationships:
         cody = upsert_entity(conn, "Cody", "concept")
         aws = upsert_entity(conn, "AWS", "service")
         # Wiktor is the source of one relationship and the target of another,
-        # so both the outgoing (→) and incoming (←) render branches are hit.
+        # so both the outgoing and incoming arrow render branches are hit.
         upsert_relationship(conn, wiktor, cody, "owns", "the whippet")
         upsert_relationship(conn, aws, wiktor, "managed_by", "")
         return wiktor
@@ -1462,7 +1462,7 @@ class TestCmdRestoreBranches:
 
         obs_dir = tmp_path / "data" / "memory" / "observations"
         obs_dir.mkdir(parents=True)
-        # Endpoints are not declared, so they're auto-upserted — and that
+        # Endpoints are not declared, so they're auto-upserted - and that
         # upsert raises, exercising the relationship-endpoint error branch.
         record = {
             "extraction": {
@@ -1657,7 +1657,7 @@ class TestCmdReflectDrain:
 
         def fake_reflect(conn, **kwargs):
             calls["n"] += 1
-            # First batch is full (keep draining), second is short (stop) —
+            # First batch is full (keep draining), second is short (stop) -
             # neither yields insights, so the "Drain complete" branch fires.
             processed = 3 if calls["n"] == 1 else 1
             return {
@@ -1697,7 +1697,7 @@ class TestCmdReflectDrain:
                     "memory_diff": None,
                     "batch_info": {"processed": 3},
                 }
-            # Second pass is skipped — break without the "skipped" notice
+            # Second pass is skipped - break without the "skipped" notice
             # (that notice only prints on the very first iteration).
             return {
                 "skipped": True,
@@ -1835,7 +1835,7 @@ class TestMain:
     def test_requires_subcommand(self, monkeypatch):
         from mait_code.tools.memory.cli import main
 
-        # The subparser is required=True — a bare call is a usage error.
+        # The subparser is required=True - a bare call is a usage error.
         monkeypatch.setattr("sys.argv", ["mc-tool-memory"])
         with pytest.raises(SystemExit):
             main()

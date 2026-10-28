@@ -32,9 +32,9 @@ __all__ = [
 ]
 
 # -- Brand -------------------------------------------------------------------
-PRIMARY = "#4fb6c7"  # cyan — the house accent, seeded from the original console.py
+PRIMARY = "#4fb6c7"  # cyan - the house accent, seeded from the original console.py
 SECONDARY = "#7aa2f7"  # blue
-ACCENT = "#c792ea"  # violet — secondary emphasis
+ACCENT = "#c792ea"  # violet - secondary emphasis
 
 # -- Neutrals ----------------------------------------------------------------
 FOREGROUND = "#d7dae0"
@@ -56,7 +56,7 @@ def rich_colour(value: str | None, fallback: str) -> str:
 
     House and built-in themes store ``#rrggbb`` (Rich-safe as-is). Textual's
     *ansi* themes store names like ``ansi_yellow`` that Rich rejects with a
-    ``MissingStyle`` — strip the prefix to Rich's own ``yellow`` / ``green`` /
+    ``MissingStyle`` - strip the prefix to Rich's own ``yellow`` / ``green`` /
     ``red``, which render through the terminal's ANSI palette, exactly what an
     ansi theme intends. Anything missing or otherwise unrecognised falls back to
     the given house hex, so a span style is never malformed.

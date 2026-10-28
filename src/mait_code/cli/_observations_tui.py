@@ -78,8 +78,8 @@ def _scope_label(entry: dict) -> str:
 def _group_by_day(entries: list[dict]) -> dict[str, list[dict]]:
     """Bucket entries by capture day (newest day first).
 
-    Entry order within a day is preserved — the list query already sorts
-    newest-first — and the day keys are sorted descending rather than trusting
+    Entry order within a day is preserved - the list query already sorts
+    newest-first - and the day keys are sorted descending rather than trusting
     insertion order, so a backfilled timestamp can't misplace a group.
     """
     by_day: dict[str, list[dict]] = {}
@@ -89,7 +89,7 @@ def _group_by_day(entries: list[dict]) -> dict[str, list[dict]]:
 
 
 class ObservationsApp(MaitApp):
-    """Master–detail, read-only browser over the raw observation tier."""
+    """Master-detail, read-only browser over the raw observation tier."""
 
     TITLE = "mait-code observations"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_observations.tcss"]
@@ -125,7 +125,7 @@ class ObservationsApp(MaitApp):
 
     def on_mount(self) -> None:
         # As in the memory browser: the detail pane holds no focusable editor
-        # widget — the container keeps focus so a long body can be scrolled
+        # widget - the container keeps focus so a long body can be scrolled
         # from the keyboard (Tab or `2` to reach it, arrows to read).
         tree: Tree[dict | str] = self.query_one("#list", Tree)
         tree.show_root = False
@@ -150,7 +150,7 @@ class ObservationsApp(MaitApp):
     # -- theme helpers ---------------------------------------------------------
 
     def _marker_colours(self) -> dict[bool, str]:
-        """``reflected`` → a Rich-safe marker colour from the active theme."""
+        """``reflected`` -> a Rich-safe marker colour from the active theme."""
         theme = self.get_theme(self.theme)
         return {
             False: palette.rich_colour(
@@ -166,7 +166,7 @@ class ObservationsApp(MaitApp):
     def _leaf_label(self, entry: dict, colours: dict[bool, str]) -> Text:
         """One tree row: standing marker, dimmed type, first content line.
 
-        No project here — a leaf is already the row most prone to clipping in
+        No project here - a leaf is already the row most prone to clipping in
         the narrow nav pane, and its scope renders in the detail pane the
         moment it's highlighted. The day node carries the project instead.
         """
@@ -189,7 +189,7 @@ class ObservationsApp(MaitApp):
     def _rebuild_tree(self) -> None:
         """Re-populate the tree from the filtered observations.
 
-        Days with anything pending open expanded — the backlog is the point of
+        Days with anything pending open expanded - the backlog is the point of
         this surface; fully-reflected days stay collapsed behind their counts.
         With a text filter every day expands, since the matches are the point.
         Boot lands the cursor on the newest observation so the detail pane
@@ -214,7 +214,7 @@ class ObservationsApp(MaitApp):
                 if self._project is None and len(day_projects) == 1
                 else ""
             )
-            # The gap before the project rides the end of the count run — the
+            # The gap before the project rides the end of the count run - the
             # tree renderer trims a styled run's leading whitespace.
             gap = "  " if project else ""
             label = Text(no_wrap=True)
@@ -229,7 +229,7 @@ class ObservationsApp(MaitApp):
             if project:
                 label.append(project, style="dim")
             # Day nodes carry their date string as data; leaves carry their
-            # entry dict — the highlight handler tells them apart by type.
+            # entry dict - the highlight handler tells them apart by type.
             group = tree.root.add(label, data=day, expand=filtering or pending > 0)
             for entry in entries:
                 leaf = group.add_leaf(self._leaf_label(entry, colours), data=entry)
@@ -291,7 +291,7 @@ class ObservationsApp(MaitApp):
         )
 
     async def _show_day_detail(self, day: str, node: TreeNode[dict | str]) -> None:
-        """The day's capture batches — the JSONL metadata the rows don't carry."""
+        """The day's capture batches - the JSONL metadata the rows don't carry."""
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
         count = len(node.children)
@@ -314,7 +314,7 @@ class ObservationsApp(MaitApp):
                     f"{n} {category}" for category, n in batch["counts"].items()
                 )
                 # Project and counts merge into a single dim run that starts
-                # with a word, with the gap riding the end of the trigger run —
+                # with a word, with the gap riding the end of the trigger run -
                 # a run that *begins* with whitespace gets it trimmed (the
                 # run-whitespace gotcha).
                 tail = " — ".join(p for p in (batch["project"], counts) if p)
@@ -369,7 +369,7 @@ class ObservationsApp(MaitApp):
 
         The hierarchical escape, as in the memory browser: from the filter or
         the detail pane it returns focus to the tree, and from the tree
-        (nothing left to back out of) it exits — so escape always eventually
+        (nothing left to back out of) it exits - so escape always eventually
         leaves, like ``q``.
         """
         if self.query_one("#list", Tree).has_focus:
@@ -386,7 +386,7 @@ class ObservationsApp(MaitApp):
             ProjectFilterScreen(projects, self._project)
         )
         if result is None:
-            return  # escape/cancel — leave the active filter as-is
+            return  # escape/cancel - leave the active filter as-is
         # A project name filters to it; the ALL_PROJECTS sentinel clears it.
         self._project = result if isinstance(result, str) else None
         self._load_observations()
@@ -394,7 +394,7 @@ class ObservationsApp(MaitApp):
         self.action_focus_list()
 
     def action_reload(self) -> None:
-        """Re-read the store — picks up observations captured since launch."""
+        """Re-read the store - picks up observations captured since launch."""
         self._load_observations()
         self._rebuild_tree()
         self.notify("Observations reloaded", title="Observations")

@@ -4,8 +4,8 @@ The Bridge moves captures *in* (a phone, another machine) and notifications
 *out* (due reminders) over a pluggable transport. Everything transport-specific
 lives behind :class:`BridgeChannel`; the gate, the settings form, the inbox
 drain and the reminders publish are all written against this interface, so a new
-transport (MQTT, a Telegram bot, …) is *only* a new subclass plus a line in the
-registry — no change to the callers.
+transport (MQTT, a Telegram bot, ...) is *only* a new subclass plus a line in the
+registry - no change to the callers.
 
 This module is deliberately dependency-light: the dataclasses and the abstract
 base only. Concrete channels (:mod:`~mait_code.bridge.ntfy`,
@@ -48,7 +48,7 @@ class ConfigField:
         key: Stable identifier; the storage key within the channel's config.
         label: Human label shown beside the input.
         help: One-line hint rendered under the input.
-        kind: ``"str"`` | ``"int"`` | ``"bool"`` — drives input styling/coercion.
+        kind: ``"str"`` | ``"int"`` | ``"bool"`` - drives input styling/coercion.
         secret: ``True`` masks the value in displays (tokens, passwords).
         required: ``True`` means the channel cannot operate without it; a blank
             required field is what ``doctor`` warns about when the gate is on.
@@ -66,7 +66,7 @@ class ConfigField:
 
 @dataclass(frozen=True)
 class TestResult:
-    """Outcome of :meth:`BridgeChannel.test_connection` — shown inline in the form.
+    """Outcome of :meth:`BridgeChannel.test_connection` - shown inline in the form.
 
     Attributes:
         ok: Whether the probe round-trip succeeded.
@@ -141,7 +141,7 @@ class BridgeChannel(ABC):
     and implement the two transport verbs (:meth:`drain` inbound,
     :meth:`publish` outbound). Register a subclass in
     :mod:`~mait_code.bridge.registry` and it becomes selectable everywhere the
-    gate, form and hooks already handle — with no change to those callers.
+    gate, form and hooks already handle - with no change to those callers.
 
     Class attributes:
         type_id: Stable, lowercase identifier (the ``bridge-type`` value).
@@ -175,7 +175,7 @@ class BridgeChannel(ABC):
         """Attempt a lightweight round-trip and report the outcome.
 
         Must never raise: connection/credential failures come back as a
-        ``TestResult(ok=False, …)`` so the form can show them inline.
+        ``TestResult(ok=False, ...)`` so the form can show them inline.
         """
 
     @abstractmethod
@@ -189,4 +189,4 @@ class BridgeChannel(ABC):
 
     @abstractmethod
     def publish(self, message: OutboundMessage) -> None:
-        """Publish an outbound notification. (Reminders half — #78.)"""
+        """Publish an outbound notification. (Reminders half - #78.)"""

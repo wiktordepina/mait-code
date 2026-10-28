@@ -372,7 +372,7 @@ def test_vec_delete_trigger(memory_db: sqlite3.Connection):
     ).fetchone()[0]
     assert count == 1
 
-    # Delete entry — trigger should remove embedding
+    # Delete entry - trigger should remove embedding
     memory_db.execute("DELETE FROM memory_entries WHERE id = ?", (entry_id,))
     memory_db.commit()
 
@@ -387,10 +387,10 @@ def _rewind_to_version_11_with_legacy_rows(conn: sqlite3.Connection) -> None:
     conn.executemany(
         "INSERT INTO memory_entities (name, entity_type) VALUES (?, ?)",
         [
-            ("svc", "tool"),  # canonical — untouched
-            ("box", "infrastructure"),  # legacy — service
-            ("widget", "component"),  # legacy — concept
-            ("mystery", "blob"),  # unmapped legacy — unknown
+            ("svc", "tool"),  # canonical - untouched
+            ("box", "infrastructure"),  # legacy - service
+            ("widget", "component"),  # legacy - concept
+            ("mystery", "blob"),  # unmapped legacy - unknown
         ],
     )
     ids = {
@@ -484,7 +484,7 @@ def test_migration_vec0_error_skips_gracefully():
         # A single migration that simulates the missing extension.
         fake_migrations = [(1, "needs vec0", _vec0_body)]
         with patch.object(migrate_mod, "MIGRATIONS", fake_migrations):
-            # Must not raise — the error is swallowed and the loop breaks.
+            # Must not raise - the error is swallowed and the loop breaks.
             migrate_mod.ensure_schema(conn)
 
         # Nothing was recorded since the migration was skipped.

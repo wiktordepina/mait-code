@@ -1,4 +1,4 @@
-"""Memory tool — persistent, scope-aware memory storage with embeddings and search.
+"""Memory tool - persistent, scope-aware memory storage with embeddings and search.
 
 The mait-code memory store is a SQLite-backed log of observations, decisions,
 and other facts that survive across sessions. Entries are scoped by project

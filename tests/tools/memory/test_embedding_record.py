@@ -83,7 +83,7 @@ class TestRecord:
         assert read_embedding_record(memory_db) is None
 
     def test_configured_record_reads_live(self, monkeypatch):
-        """Settings changed after import are seen — no import-time constant."""
+        """Settings changed after import are seen - no import-time constant."""
         monkeypatch.setenv("MAIT_CODE_EMBEDDING_PROVIDER", "bedrock")
         monkeypatch.setenv("MAIT_CODE_BEDROCK_MODEL_ID", "amazon.titan-embed-text-v1")
         assert configured_record() == EmbeddingRecord(

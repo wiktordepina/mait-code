@@ -1,7 +1,7 @@
 """Tests for the Textual ``mait-code logs`` TUI.
 
 Driven by Textual's headless pilot (``App.run_test()`` wrapped in
-``asyncio.run`` — no pytest-asyncio), mirroring the board TUI tests. The app
+``asyncio.run`` - no pytest-asyncio), mirroring the board TUI tests. The app
 takes a ``log_path`` so each scenario points at isolated temp files; the
 parsing layer is covered directly in ``test_logs.py``, so here we only check
 the filter wiring on top of it.
@@ -137,13 +137,13 @@ def test_level_cycle_raises_the_severity_floor(log_path: Path) -> None:
         app = LogsApp(log_path=log_path)
         async with app.run_test() as pilot:
             await pilot.pause()
-            await pilot.press("l", "l")  # all → debug → info
+            await pilot.press("l", "l")  # all -> debug -> info
             await pilot.pause()
             assert _leaf_count(app) == 3  # the debug line drops out
-            await pilot.press("l", "l")  # → warning → error
+            await pilot.press("l", "l")  # -> warning -> error
             await pilot.pause()
             assert _leaf_count(app) == 1
-            await pilot.press("l")  # → back to all
+            await pilot.press("l")  # -> back to all
             await pilot.pause()
             assert _leaf_count(app) == 4
 

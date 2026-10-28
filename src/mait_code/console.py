@@ -3,7 +3,7 @@
 A single themed :class:`~rich.console.Console` so colour handling is
 consistent and correct across commands. Rich auto-disables colour when
 stdout is not a TTY, when ``NO_COLOR`` is set (non-empty, any value),
-when ``TERM=dumb``, and it honours ``FORCE_COLOR`` — so commands print
+when ``TERM=dumb``, and it honours ``FORCE_COLOR`` - so commands print
 *through* this console rather than hand-rolling ANSI escapes. A global
 ``--no-color`` flag flips :attr:`console.no_color <rich.console.Console.no_color>`.
 
@@ -35,7 +35,7 @@ __all__ = [
 
 #: Semantic styles shared across status, doctor and settings output. The
 #: ``ok``/``warn``/``fail`` keys deliberately match the doctor check levels,
-#: so ``[ok]…[/ok]`` markup and ``style="warn"`` both resolve here. Colours come
+#: so ``[ok]...[/ok]`` markup and ``style="warn"`` both resolve here. Colours come
 #: from :mod:`mait_code.tui.palette` &mdash; the single source of truth shared with
 #: the TUI theme &mdash; so plain CLI output and the TUIs read as one product.
 #: ``muted`` stays the terminal-relative ``dim`` attribute rather than a fixed
@@ -55,7 +55,7 @@ THEME = Theme(
 console = Console(theme=THEME, highlight=False)
 
 #: The stderr twin of :data:`console`, for errors and warnings. Same theme,
-#: so ``[fail]`` markup resolves identically, but writes to stderr — keeping
+#: so ``[fail]`` markup resolves identically, but writes to stderr - keeping
 #: diagnostics off stdout so piped/JSON consumers stay clean. Colour is still
 #: auto-disabled when stderr is not a TTY (or ``NO_COLOR`` is set).
 err_console = Console(theme=THEME, highlight=False, stderr=True)
@@ -65,11 +65,11 @@ GLYPH = {"ok": "✓", "warn": "●", "fail": "✗"}
 
 
 def print_error(message: str) -> None:
-    """Print a themed error line to stderr: a red-bold ``✗`` and the message.
+    """Print a themed error line to stderr: a red-bold U+2717 BALLOT X and the message.
 
     The single funnel for user-facing error output so every command surfaces
     failures the same way the ``doctor`` checks do. ``message`` is treated as
-    plain text — it is escaped before rendering, since it usually carries an
+    plain text - it is escaped before rendering, since it usually carries an
     exception string or a filesystem path that may contain ``[`` and would
     otherwise be misread as rich markup.
     """
@@ -79,9 +79,9 @@ def print_error(message: str) -> None:
 
 
 def print_warning(message: str) -> None:
-    """Print a themed warning line to stderr: an amber ``●`` and the message.
+    """Print a themed warning line to stderr: an amber U+25CF BLACK CIRCLE and the message.
 
-    Like :func:`print_error` but for non-fatal advisories — a skipped step, a
+    Like :func:`print_error` but for non-fatal advisories - a skipped step, a
     preserved file, a degraded mode. ``message`` is escaped, not interpreted.
     """
     err_console.print(
@@ -90,7 +90,7 @@ def print_warning(message: str) -> None:
 
 
 def print_success(message: str) -> None:
-    """Print a themed success headline to stdout: a green ``✓`` and the message.
+    """Print a themed success headline to stdout: a green U+2713 CHECK MARK and the message.
 
     The positive counterpart to :func:`print_error`, for the one-line "it
     worked" headline a command leads with (install/update/uninstall). Detail

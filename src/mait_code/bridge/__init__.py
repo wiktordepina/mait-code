@@ -1,10 +1,10 @@
-"""The Bridge — pluggable capture-in / notify-out transport.
+"""The Bridge - pluggable capture-in / notify-out transport.
 
 Revives the terminal-bound inbox (and, in a follow-up, reminders) by fixing the
 *transport* rather than the tools: a self-hosted channel drained daemon-free by
 the session-start hook and routed by ``/triage``. The transport is abstracted
 behind :class:`~mait_code.bridge.base.BridgeChannel`, so a new channel (ntfy
-today; MQTT, Telegram, … later) is a subclass plus a registry line — the gate,
+today; MQTT, Telegram, ... later) is a subclass plus a registry line - the gate,
 settings form and hooks are written against the interface, not any one channel.
 
 Off by default: :func:`~mait_code.bridge.config.bridge_enabled` gates every

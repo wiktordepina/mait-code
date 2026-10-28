@@ -35,7 +35,7 @@ class _FakeGit:
         self.tags = tags if tags is not None else []
         # Successive `git rev-parse HEAD` answers: the first is captured
         # before the advance, the second after. Defaulting to two distinct
-        # shas means an advance is treated as "moved" → reinstall, which is
+        # shas means an advance is treated as "moved" -> reinstall, which is
         # what most tests expect. Pass equal values to simulate a no-op.
         self.heads = heads if heads is not None else ["HEAD_BEFORE", "HEAD_AFTER"]
         self._head_idx = 0
@@ -168,7 +168,7 @@ class TestUpdateReinstall:
         self, fake_home: Path, fake_source: Path
     ) -> None:
         # The reinstall must target only the local package so unchanged deps
-        # are not needlessly rebuilt — never a blanket `--reinstall`.
+        # are not needlessly rebuilt - never a blanket `--reinstall`.
         _install_first(fake_source)
         git = _FakeGit(branch="main", tags=[])
 
@@ -223,7 +223,7 @@ class TestUpdateReinstall:
     ) -> None:
         # The summary must report the version of the freshly-checked-out
         # source (0.0.0 in the fixture), not this test process's own
-        # mait_code.__version__ — during a real update the running
+        # mait_code.__version__ - during a real update the running
         # interpreter still holds the pre-update version.
         import mait_code
 
@@ -255,7 +255,7 @@ class TestUpdateIdempotency:
         self, fake_home: Path, fake_source: Path
     ) -> None:
         _install_first(fake_source)
-        # Same sha before and after the advance → nothing moved.
+        # Same sha before and after the advance -> nothing moved.
         git = _FakeGit(branch="main", tags=[], heads=["same", "same"])
 
         summary = update(no_pull=True, runner=git.run, capture=git.capture)
@@ -354,7 +354,7 @@ class TestUpdateReadsProviderFromSettings:
         with pytest.raises(ValueError, match="mait-code install"):
             update(no_pull=True, runner=git.run, capture=git.capture)
 
-        # Bailed before reinstalling — no chance to drop the bedrock extra.
+        # Bailed before reinstalling - no chance to drop the bedrock extra.
         assert not git.ran(["uv", "tool", "install"])
 
     def test_unknown_provider_value_raises(

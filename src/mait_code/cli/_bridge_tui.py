@@ -1,8 +1,8 @@
-"""Interactive Bridge configuration — a Textual TUI.
+"""Interactive Bridge configuration - a Textual TUI.
 
 A single-screen form: the enable toggle (the corporate-safety gate, off by
-default), a channel-type selector, and the selected channel's own config inputs
-— rendered from :meth:`BridgeChannel.config_schema` so the form is generic over
+default), a channel-type selector, and the selected channel's own config inputs -
+ rendered from :meth:`BridgeChannel.config_schema` so the form is generic over
 channels, never hard-coded to ntfy. A "Test connection" button probes the
 *in-form* values before saving; "Save" persists the gate + type to the settings
 file and the channel config to ``bridge.json``.
@@ -132,7 +132,7 @@ class BridgeApp(MaitApp):
         container.mount(*widgets)
 
     def on_select_changed(self, event: Select.Changed) -> None:
-        # Select posts a Changed for its initial value on mount — ignore that
+        # Select posts a Changed for its initial value on mount - ignore that
         # and any no-op re-selection of the current type.
         if not self._form_ready or event.value == self._type:
             return
@@ -190,7 +190,7 @@ class BridgeApp(MaitApp):
         values = self._field_values()
         msg = self.query_one("#msg", Static)
 
-        # Refuse to save an enabled Bridge with required fields blank — the
+        # Refuse to save an enabled Bridge with required fields blank - the
         # drain would only no-op and warn. A disabled Bridge saves freely.
         if gate == "enabled":
             missing = bridge_config.missing_required(self._type, values)

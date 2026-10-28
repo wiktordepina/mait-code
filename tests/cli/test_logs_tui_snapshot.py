@@ -46,7 +46,7 @@ def _utc() -> object:
 
 
 def _ts(d: int, hh: int, mm: int = 0, ss: int = 0) -> float:
-    """A June 2026 UTC timestamp — the fixture's whole story is one week."""
+    """A June 2026 UTC timestamp - the fixture's whole story is one week."""
     return float(calendar.timegm((2026, 6, d, hh, mm, ss, 0, 0, 0)))
 
 
@@ -127,7 +127,7 @@ def _seed_logs(tmp_path: Path) -> Path:
         },
     ]
     lines = [json.dumps(entry) for entry in day4]
-    lines.insert(4, "not json {{{")  # malformed line — skipped, never rendered
+    lines.insert(4, "not json {{{")  # malformed line - skipped, never rendered
     active.write_text("\n".join(lines) + "\n")
 
     day1 = [
@@ -168,8 +168,8 @@ def _seed_logs(tmp_path: Path) -> Path:
 def test_logs_snapshot(snap_compare, tmp_path: Path) -> None:
     """Lock the boot view: the newest day expanded with level-coloured rows
     and its error/warning tallies, the older day collapsed behind its counts,
-    and the newest line's full record — fields, error message and stack trace
-    — in the detail pane."""
+    and the newest line's full record - fields, error message and stack trace -
+    in the detail pane."""
     active = _seed_logs(tmp_path)
     assert snap_compare(LogsApp(log_path=active), terminal_size=(120, 40))
 
@@ -182,7 +182,7 @@ def test_logs_empty_snapshot(snap_compare, tmp_path: Path) -> None:
 
 
 def test_logs_filter_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the filtered view: ``/`` → board — every day expands to the
+    """Lock the filtered view: ``/`` -> board - every day expands to the
     matches and the subtitle reports the narrowed count."""
     active = _seed_logs(tmp_path)
 
@@ -197,7 +197,7 @@ def test_logs_filter_snapshot(snap_compare, tmp_path: Path) -> None:
 
 
 def test_logs_level_filter_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the severity floor: four presses of ``l`` cycle to ≥ error, the
+    """Lock the severity floor: four presses of ``l`` cycle to >= error, the
     quiet day drops out entirely, and the subtitle carries the floor."""
     active = _seed_logs(tmp_path)
 
@@ -213,12 +213,12 @@ def test_logs_level_filter_snapshot(snap_compare, tmp_path: Path) -> None:
 
 def test_logs_day_detail_snapshot(snap_compare, tmp_path: Path) -> None:
     """Lock the day-group detail: cursor on the day node shows the day's
-    shape — lines per level and per tool."""
+    shape - lines per level and per tool."""
     active = _seed_logs(tmp_path)
 
     async def run_before(pilot) -> None:
         # Boot lands the cursor on the first leaf via call_after_refresh, so
-        # settle first — pressing immediately would race that deferred move.
+        # settle first - pressing immediately would race that deferred move.
         await pilot.pause()
         # One step up from the first leaf is its day node.
         await pilot.press("up")

@@ -1,4 +1,4 @@
-"""CLI tool for the quick-capture inbox — capture now, triage later.
+"""CLI tool for the quick-capture inbox - capture now, triage later.
 
 A single frictionless holding pen (``inbox.db``) for thoughts you don't want to
 classify upfront. One verb (``add``) dumps an item; the ``/triage`` skill later

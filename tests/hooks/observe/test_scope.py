@@ -46,7 +46,7 @@ class TestResolveScope:
 
     def test_decisions_respect_llm_scope(self):
         """Decisions honour a valid LLM scope; project is only the fallback default."""
-        # LLM says branch for a decision — should be trusted
+        # LLM says branch for a decision - should be trusted
         item = {"content": "x", "scope": "branch"}
         assert resolve_scope(item, "decisions", "proj", "feature/a") == "branch"
 

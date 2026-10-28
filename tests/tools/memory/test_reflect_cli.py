@@ -176,7 +176,7 @@ def test_cmd_reflect_drain_multiple_batches(tmp_path):
                 "memory_diff": None,
                 "batch_info": {"processed": 3, "watermark": call_count * 3},
             }
-        # Third call: fewer than batch_size — signals end
+        # Third call: fewer than batch_size - signals end
         return {
             "skipped": False,
             "reason": None,

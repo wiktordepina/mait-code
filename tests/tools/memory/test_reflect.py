@@ -143,20 +143,20 @@ def test_update_watermark_per_project(memory_db):
 
 
 def test_novelty_gate_v2_no_watermark(db_with_entries):
-    """No watermark means all entries are unreflected — should pass."""
+    """No watermark means all entries are unreflected - should pass."""
     assert check_novelty_gate_v2(db_with_entries, min_new=3) is True
 
 
 def test_novelty_gate_v2_enough_unreflected(db_with_entries):
     """Entries after watermark >= min_new."""
-    # Set watermark to ID 2 — entries 3, 4, 5 are unreflected
+    # Set watermark to ID 2 - entries 3, 4, 5 are unreflected
     update_watermark(db_with_entries, 2)
     assert check_novelty_gate_v2(db_with_entries, min_new=3) is True
 
 
 def test_novelty_gate_v2_not_enough(db_with_entries):
     """Entries after watermark < min_new."""
-    # Set watermark to ID 4 — only entry 5 is unreflected
+    # Set watermark to ID 4 - only entry 5 is unreflected
     update_watermark(db_with_entries, 4)
     assert check_novelty_gate_v2(db_with_entries, min_new=3) is False
 
@@ -810,7 +810,7 @@ def test_reflect_skipped_novelty_gate(memory_db):
 
 
 def test_reflect_skipped_no_data(memory_db):
-    """No entries at all — should skip."""
+    """No entries at all - should skip."""
     result = reflect(memory_db, days=7, min_new=0)
     assert result["skipped"] is True
     assert "no unreflected entries" in result["reason"]
@@ -972,7 +972,7 @@ def test_reflect_includes_project_and_branch_context(db_with_entries, tmp_path):
 
 
 def test_reflect_idempotent(db_with_entries):
-    """Running reflect twice with no new entries — second call should skip."""
+    """Running reflect twice with no new entries - second call should skip."""
     llm_response = "INSIGHT: Some insight"
 
     with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
@@ -980,7 +980,7 @@ def test_reflect_idempotent(db_with_entries):
 
     assert result1["skipped"] is False
 
-    # Second call — same data, watermark set
+    # Second call - same data, watermark set
     with patch("mait_code.tools.memory.reflect.call_claude", return_value=llm_response):
         result2 = reflect(db_with_entries, days=7, min_new=0)
 
@@ -1226,7 +1226,7 @@ def test_read_observation_logs_skips_non_date_filenames(tmp_path):
     obs_dir = tmp_path / "memory" / "observations"
     obs_dir.mkdir(parents=True)
 
-    # Stem "notes" can't be parsed as %Y-%m-%d → ValueError → skip.
+    # Stem "notes" can't be parsed as %Y-%m-%d -> ValueError -> skip.
     (obs_dir / "notes.jsonl").write_text(
         json.dumps(
             {"extraction": {"facts": [{"content": "Misnamed fact", "importance": 5}]}}

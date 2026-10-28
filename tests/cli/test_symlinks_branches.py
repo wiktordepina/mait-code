@@ -7,7 +7,7 @@ path, the missing-source no-ops, the early returns in
 ``remove_claude_md_symlink``, and the dangling-symlink handling in
 ``_remove_links_into``.
 
-All filesystem effects land under ``tmp_path`` — no real ``~/.claude``
+All filesystem effects land under ``tmp_path`` - no real ``~/.claude``
 is touched.
 """
 
@@ -82,7 +82,7 @@ def test_symlink_agents_ignores_gitkeep_and_dirs(tmp_path: Path) -> None:
     agents_src = source / "agents"
     agents_src.mkdir(parents=True)
     (agents_src / ".gitkeep").write_text("")
-    (agents_src / "subdir").mkdir()  # not a file — skipped
+    (agents_src / "subdir").mkdir()  # not a file - skipped
     (agents_src / "real.md").write_text("agent\n")
     claude_dir = tmp_path / "claude"
 
@@ -218,7 +218,7 @@ def test_remove_agent_symlinks_dangling_into_source(tmp_path: Path) -> None:
     agents_dst.mkdir(parents=True)
     symlink_agents(source, claude_dir)
 
-    # Break the target so resolve() fails — the symlink dangles.
+    # Break the target so resolve() fails - the symlink dangles.
     target.unlink()
     assert (agents_dst / "gone.md").is_symlink()
 

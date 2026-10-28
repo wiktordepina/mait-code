@@ -7,13 +7,13 @@ file-based logging for the ``mait_code`` namespace. Uses a
 Log lines are structured JSON Lines (one JSON object per line) with a
 deterministic, ECS-inspired schema. Core fields on every line:
 
-* ``ts`` — epoch seconds as a float (``LogRecord.created``)
-* ``level`` — ``debug`` / ``info`` / ``warning`` / ``error`` (lowercase)
-* ``logger`` — logger name with the ``mait_code.`` prefix stripped
-* ``msg`` — the rendered message
-* ``tool`` — entry-point name (e.g. ``mc-tool-board``), captured at
+* ``ts`` - epoch seconds as a float (``LogRecord.created``)
+* ``level`` - ``debug`` / ``info`` / ``warning`` / ``error`` (lowercase)
+* ``logger`` - logger name with the ``mait_code.`` prefix stripped
+* ``msg`` - the rendered message
+* ``tool`` - entry-point name (e.g. ``mc-tool-board``), captured at
   ``setup_logging()`` from ``sys.argv[0]``
-* ``pid`` — process id
+* ``pid`` - process id
 
 Invocation events (from :func:`log_invocation`) add ``event``
 (``invoked``/``completed``/``failed``/``exited``), ``duration_ms`` and
@@ -23,10 +23,10 @@ line at top level; core fields win on collision.
 
 Configuration via environment variables (settable in settings.json env):
 
-* ``MAIT_CODE_LOG_LEVEL`` — DEBUG, INFO, WARNING, ERROR (default: INFO)
-* ``MAIT_CODE_LOG_FILE``  — override log file path
+* ``MAIT_CODE_LOG_LEVEL`` - DEBUG, INFO, WARNING, ERROR (default: INFO)
+* ``MAIT_CODE_LOG_FILE``  - override log file path
 
-Log output goes to file only — never stdout/stderr — so it cannot
+Log output goes to file only - never stdout/stderr - so it cannot
 interfere with hook JSON output or tool results.
 """
 
@@ -56,7 +56,7 @@ _SENSITIVE_PARAMS = {"content", "query", "what", "description", "prompt", "messa
 
 _TRUNCATE_LEN = 80
 
-# Attributes present on every vanilla LogRecord — anything else on a record's
+# Attributes present on every vanilla LogRecord - anything else on a record's
 # __dict__ arrived via ``extra={...}`` and is merged into the JSON line.
 # Built dynamically so new stdlib attributes (e.g. taskName) are covered.
 _STANDARD_RECORD_ATTRS = set(logging.LogRecord("", 0, "", 0, "", (), None).__dict__) | {
@@ -126,7 +126,7 @@ def log_file_path() -> Path:
 def setup_logging() -> None:
     """Configure the ``mait_code`` logger hierarchy with a daily-rotating file handler.
 
-    Safe to call multiple times — subsequent calls are no-ops.
+    Safe to call multiple times - subsequent calls are no-ops.
 
     Also injects the settings ``[env]`` table into the process environment
     (:func:`mait_code.config.apply_env`): every tool and hook entry point
@@ -149,7 +149,7 @@ def setup_logging() -> None:
     # Rotate at midnight rather than by size. In short-lived hook/CLI
     # processes the rollover is checked on the first emit using the log file's
     # mtime, so the previous day's file is rolled to mait-code.jsonl.YYYY-MM-DD
-    # before the first write of a new day — no long-running process needed.
+    # before the first write of a new day - no long-running process needed.
     handler = TimedRotatingFileHandler(
         log_path,
         when="midnight",

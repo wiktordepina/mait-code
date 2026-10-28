@@ -55,7 +55,7 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
             # Data migration: 'blocked' is no longer a valid status. Tag each
             # blocked card, then move it to refined (its pre-block column was
             # never stored, so refined matches the old unblock behaviour). The
-            # 'blocked' literal is hardcoded, not imported from columns — a
+            # 'blocked' literal is hardcoded, not imported from columns - a
             # migration is a frozen snapshot and must not drift when the
             # constants later change.
             "INSERT OR IGNORE INTO card_tags (card_id, tag) "
@@ -103,11 +103,11 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
         6,
         "Add cards.kind and cards.parent_id (epics) and card_links (blocks)",
         [
-            # Literals, not columns constants — a migration is a frozen snapshot.
+            # Literals, not columns constants - a migration is a frozen snapshot.
             "ALTER TABLE cards ADD COLUMN kind TEXT NOT NULL DEFAULT 'card' "
             "CHECK (kind IN ('card', 'epic'))",
             # With foreign keys on, an added REFERENCES column must default to
-            # NULL — which is what an unparented card is.
+            # NULL - which is what an unparented card is.
             "ALTER TABLE cards ADD COLUMN parent_id INTEGER "
             "REFERENCES cards(id) ON DELETE SET NULL",
             "CREATE INDEX IF NOT EXISTS idx_cards_parent ON cards(parent_id)",
@@ -127,7 +127,7 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
         7,
         "Add card_runs and card_run_steps (a playbook run's per-step log)",
         [
-            # Literals, not columns constants — a migration is a frozen snapshot.
+            # Literals, not columns constants - a migration is a frozen snapshot.
             """CREATE TABLE IF NOT EXISTS card_runs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
@@ -178,7 +178,7 @@ def _is_applied(conn: sqlite3.Connection, version: int) -> bool:
 def ensure_schema(conn: sqlite3.Connection) -> None:
     """Apply any pending migrations to the database.
 
-    Safe to call on every connection open — checks a single integer and returns
+    Safe to call on every connection open - checks a single integer and returns
     immediately if the schema is current.
 
     Safe to call from several processes at once, too: right after an upgrade the

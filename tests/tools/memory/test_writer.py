@@ -97,7 +97,7 @@ class TestStoreMemory:
         original = "Tool invocations in skill instructions execute within allowed-tools permission scope"
         store_memory(memory_db, original, "fact", 8)
 
-        # Paraphrase with extra words — string similarity ~0.87, under 0.90
+        # Paraphrase with extra words - string similarity ~0.87, under 0.90
         paraphrase = "Tool invocations in skill instructions execute within the allowed-tools permission scope, unlike preprocessing"
 
         # Mock vector search to return high similarity
@@ -253,7 +253,7 @@ class TestConflictBand:
     def test_above_vector_threshold_merges_not_conflicts(
         self, memory_db: sqlite3.Connection
     ):
-        """At/above the dedup threshold it's a duplicate — merge, no conflict list."""
+        """At/above the dedup threshold it's a duplicate - merge, no conflict list."""
         original = store_memory(memory_db, "The cache TTL is 60 seconds", "fact", 5)
 
         with patch(
@@ -354,7 +354,7 @@ class TestSupersede:
         supersede_memory(memory_db, old["id"], "Cody is a brindle whippet")
 
         # Re-stating the OLD (now superseded) content must not dedup into the
-        # hidden superseded row — it's excluded as a candidate.
+        # hidden superseded row - it's excluded as a candidate.
         assert find_duplicate(memory_db, content, "fact") is None
 
 
@@ -647,7 +647,7 @@ class TestFtsCandidates:
         assert any("an existing fact" == content for _, content in hits)
 
     def test_like_fallback_when_fts_missing(self, memory_db: sqlite3.Connection):
-        """A missing FTS table forces the OperationalError → LIKE fallback."""
+        """A missing FTS table forces the OperationalError -> LIKE fallback."""
         from mait_code.tools.memory.writer import _fts_candidates
 
         store_memory(memory_db, "deploy pipeline broke today", "event", 5)
@@ -686,7 +686,7 @@ class TestVectorCandidateProjectFilter:
             "mait_code.tools.memory.writer.embed_text",
             return_value=[0.0] * 768,
         ):
-            # project=None — the project-scoped entry must be filtered out.
+            # project=None - the project-scoped entry must be filtered out.
             results = _vector_candidates(memory_db, "scoped neighbour", "fact")
 
         assert results == []

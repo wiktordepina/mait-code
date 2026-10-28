@@ -20,7 +20,7 @@ class ThemedGraphView(GraphView):
     """A GraphView whose canvas wears the theme background.
 
     netext emits its strips (and blank filler rows) with no background
-    colour, and rendered lines bypass the CSS compositor — unstyled cells
+    colour, and rendered lines bypass the CSS compositor - unstyled cells
     fall through to the *terminal's* default background instead of the
     theme's, leaving mismatched rectangles around the rendered graph.
     Laying the widget's resolved background under every line closes the gap.

@@ -1,4 +1,4 @@
-"""Tests for the board export layer — rendering, exporters, and the CLI subcommand."""
+"""Tests for the board export layer - rendering, exporters, and the CLI subcommand."""
 
 import argparse
 import json

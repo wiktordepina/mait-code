@@ -25,7 +25,7 @@ import mait_code.tui.banner as banner_mod
 from mait_code.cli._doctor import Check, DoctorReport
 from mait_code.cli._home_tui import HomeApp
 
-#: The clock memory decay is read against — a fortnight after the seeds below.
+#: The clock memory decay is read against - a fortnight after the seeds below.
 _PINNED_NOW = datetime(2026, 6, 15, 12, 0, tzinfo=UTC)
 
 
@@ -46,7 +46,7 @@ def _pin_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(banner_mod, "installed_version", lambda: "0.0.0")
     # The start page's authoring hint renders dashboard_path(); the real one
     # sits under the per-test tmp dir, whose name changes every run. Pin it to
-    # the canonical display path (which doesn't exist → the default layout).
+    # the canonical display path (which doesn't exist -> the default layout).
     monkeypatch.setattr(
         dashboard_mod,
         "dashboard_path",

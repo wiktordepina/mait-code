@@ -7,15 +7,15 @@ memory retrieval results::
 
 Where:
 
-* ``recency`` — exponential decay; half-life depends on ``memory_class``:
+* ``recency`` - exponential decay; half-life depends on ``memory_class``:
 
   - episodic (events, tasks): 3-day half-life (fast decay)
   - semantic (facts, preferences, insights): 90-day half-life (slow decay)
   - procedural (workflows, how-tos): 180-day half-life (slowest decay)
   - fallback: 7-day half-life
 
-* ``importance`` — normalised to 0.0-1.0 from the 1-10 scale.
-* ``relevance`` — 0.0-1.0, from FTS5 BM25 or semantic similarity (caller
+* ``importance`` - normalised to 0.0-1.0 from the 1-10 scale.
+* ``relevance`` - 0.0-1.0, from FTS5 BM25 or semantic similarity (caller
   provides).
 """
 
@@ -140,7 +140,7 @@ def scope_boost(
         ``SCOPE_BOOST_CROSS_PROJECT`` (default ``0.3``) across projects, and
         ``1.0`` when no query context is provided (backward compat).
     """
-    # No query context — no boost applied
+    # No query context - no boost applied
     if query_project is None:
         return 1.0
 

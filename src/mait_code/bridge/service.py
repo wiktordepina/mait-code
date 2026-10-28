@@ -1,10 +1,10 @@
-"""Bridge orchestration — inbound drain and outbound reminder publish.
+"""Bridge orchestration - inbound drain and outbound reminder publish.
 
 ``mc-tool-inbox drain`` and the session-start hook drain a channel into the
 inbox (:func:`run_drain`); ``mc-tool-reminders check`` and the hook publish due
 reminders outward (:func:`publish_due_reminders`). Both check the gate *first*,
 before any channel is built or touched, so a disabled Bridge makes exactly zero
-network calls — the corporate-safety guarantee, provable with the loopback
+network calls - the corporate-safety guarantee, provable with the loopback
 double.
 
 The drain also handles the round-trip: a ``dismiss`` control message (from a
@@ -180,7 +180,7 @@ def publish_due_reminders() -> PublishOutcome:
                 )
                 published.append(reminder["id"])
         except ValueError as exc:
-            # Config-shaped problem (e.g. no notify topic) — not an error state.
+            # Config-shaped problem (e.g. no notify topic) - not an error state.
             logger.warning("bridge: not publishing — %s", exc)
             return PublishOutcome("unconfigured", detail=str(exc))
         except Exception as exc:  # best-effort

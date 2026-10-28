@@ -8,11 +8,11 @@ log viewer and the home hub share.
 
 Parsing is deliberately forgiving: the logs are append-only files written by
 short-lived processes, so a truncated final line or a stray non-JSON line is
-expected weather, not an error — malformed lines are skipped, never raised.
+expected weather, not an error - malformed lines are skipped, never raised.
 Every parsed entry is normalised to carry the core schema fields (``ts``,
 ``level``, ``logger``, ``msg``, ``tool``, ``pid``) with sane defaults, so
 consumers can index without guarding; extra fields (``event``, ``args``,
-``stack``, …) ride along as-is.
+``stack``, ...) ride along as-is.
 
 Day grouping and display times use *local* time, matching how the rotation
 suffix is stamped by ``TimedRotatingFileHandler``.
@@ -63,7 +63,7 @@ MAX_LINES_PER_FILE = 5000
 def default_log_path() -> Path:
     """The active log file path, as the writing side resolves it.
 
-    Delegates to :func:`mait_code.logging.log_file_path` — one resolution
+    Delegates to :func:`mait_code.logging.log_file_path` - one resolution
     (the ``log-file`` setting, else ``<state-dir>/mait-code.jsonl``) shared by
     writer and reader.
     """
@@ -76,7 +76,7 @@ def log_files(active: Path) -> list[Path]:
     """The log files on disk for *active*: itself plus its rotated siblings.
 
     Rotated files sort newest first after the active file. Files that don't
-    exist are excluded — an empty list means nothing has ever been logged.
+    exist are excluded - an empty list means nothing has ever been logged.
     """
     files: list[Path] = []
     if active.is_file():
@@ -92,7 +92,7 @@ def log_files(active: Path) -> list[Path]:
 
 
 def _parse_line(line: str) -> dict | None:
-    """One JSONL line → a normalised entry dict, or ``None`` if malformed."""
+    """One JSONL line -> a normalised entry dict, or ``None`` if malformed."""
     line = line.strip()
     if not line:
         return None
@@ -144,7 +144,7 @@ def read_log_entries(
                     total += 1
                     tail.append(line)
         except OSError:
-            continue  # vanished or unreadable mid-listing — skip, don't crash
+            continue  # vanished or unreadable mid-listing - skip, don't crash
         clipped = clipped or total > max_lines_per_file
         entries.extend(e for e in (_parse_line(line) for line in tail) if e)
     entries.sort(key=lambda e: e["ts"], reverse=True)
@@ -177,7 +177,7 @@ def group_by_day(entries: list[dict]) -> dict[str, list[dict]]:
 def level_at_least(level: str, minimum: str) -> bool:
     """Whether *level* is at or above *minimum* severity.
 
-    Unknown levels read as ``info`` — a line with a mangled level shouldn't
+    Unknown levels read as ``info`` - a line with a mangled level shouldn't
     vanish from every severity view.
     """
     info = LEVELS.index("info")

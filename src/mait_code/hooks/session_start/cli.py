@@ -1,4 +1,4 @@
-"""Session start hook — injects companion context at the beginning of each session."""
+"""Session start hook - injects companion context at the beginning of each session."""
 
 import json
 import logging
@@ -32,7 +32,7 @@ def _drain_bridge() -> None:
 
 
 def _sync_session_bindings(event: dict) -> None:
-    """Keep board card ↔ session bindings pointing at this session.
+    """Keep board card <-> session bindings pointing at this session.
 
     A ``resume`` keeps its session id under a new Claude Code process, so its
     bindings take the new pid. A ``/clear`` keeps the process under a new id,

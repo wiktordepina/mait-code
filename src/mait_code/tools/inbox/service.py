@@ -1,14 +1,14 @@
 """Presentation-agnostic inbox operations shared by the CLI (and any future TUI).
 
-Pure functions over an open ``sqlite3.Connection`` — queries and mutations. The
+Pure functions over an open ``sqlite3.Connection`` - queries and mutations. The
 caller owns the connection lifecycle: the argparse CLI opens one per command via
 :func:`~mait_code.tools.inbox.db.connection`.
 
 The inbox is a single frictionless "capture now, sort later" holding pen. Items
-carry an optional ``project`` (the capture context — a routing hint), but the
+carry an optional ``project`` (the capture context - a routing hint), but the
 store itself is global: triage drains items out to the board, tasks, decisions,
 or memory, keeping the inbox near-empty. Mutations raise :class:`ItemNotFound`
-for a missing id rather than printing and exiting — that ``print``/``sys.exit``
+for a missing id rather than printing and exiting - that ``print``/``sys.exit``
 is a CLI concern the caller layers on top.
 """
 
@@ -57,7 +57,7 @@ def list_items(conn: sqlite3.Connection, *, project: str | None = None) -> list[
     Args:
         conn: Open inbox connection.
         project: Restrict to one capture-context project, or ``None`` for the
-            whole inbox (the default — capture is global).
+            whole inbox (the default - capture is global).
     """
     if project is None:
         rows = conn.execute(

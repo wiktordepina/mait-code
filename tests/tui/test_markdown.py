@@ -16,8 +16,8 @@ class TestMarkdownParser:
     def test_single_newlines_become_hardbreak_tokens(self) -> None:
         """Single newlines must surface as ``hardbreak`` tokens, not
         ``softbreak``. Textual's Markdown widget keys off the token *type* and
-        renders a softbreak as a space, so this token rewrite — not markdown-it's
-        render-only ``breaks`` option — is what keeps a plain-text body's
+        renders a softbreak as a space, so this token rewrite - not markdown-it's
+        render-only ``breaks`` option - is what keeps a plain-text body's
         line-per-item newlines as line breaks. A regression here is invisible in
         a unit that only checks HTML output, but collapses plain notes into a
         wall of text in the TUI."""

@@ -2,7 +2,7 @@
 
 Skill frontmatter is governed by the same matcher as the tool-approval
 catalogue, but nothing was checking it. #100 found several skills holding the
-full write surface of a store they only read from — ``recall`` could
+full write surface of a store they only read from - ``recall`` could
 ``mc-tool-memory delete``, ``reminders`` could ``set`` and ``dismiss``, and
 ``commit`` held an unrestricted ``Bash(git *)``.
 
@@ -85,7 +85,7 @@ def test_grants_use_the_boundary_aware_colon_form(skill: str) -> None:
     """The space form is a real wildcard (measured on 2.1.220), not a literal.
 
     Both forms behave identically, so this is a consistency rule rather than a
-    security one — but it keeps every grant in the shape the docs describe.
+    security one - but it keeps every grant in the shape the docs describe.
     """
     space_form = [p for p in GRANTS[skill] if re.search(r" \*\)$", p)]
     assert space_form == []

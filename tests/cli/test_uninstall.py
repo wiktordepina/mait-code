@@ -112,7 +112,7 @@ class TestUninstall:
         self, fake_home: Path, fake_source: Path
     ) -> None:
         # Set up a settings.json with both mait-code and user entries
-        # before install — install will merge, uninstall should strip
+        # before install - install will merge, uninstall should strip
         # only mait-code's.
         settings_path = fake_home / ".claude" / "settings.json"
         settings_path.parent.mkdir(parents=True, exist_ok=True)

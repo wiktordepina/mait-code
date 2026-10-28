@@ -139,7 +139,7 @@ def read_record(*, path: Path | None = None) -> InstallRecord:
         # v1 stored a single ``installed_at`` (really "last touched").
         # The true first-install date is unrecoverable, so seed both
         # timestamps from it; the next ``update`` writes a proper v2
-        # record. Upgraded in-memory only — reads stay side-effect free.
+        # record. Upgraded in-memory only - reads stay side-effect free.
         _require(raw, {"source_dir", "installed_at"}, target)
         return InstallRecord(
             source_dir=raw["source_dir"],

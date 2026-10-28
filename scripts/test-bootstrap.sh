@@ -11,7 +11,7 @@
 # Run from the repo root:
 #   ./scripts/test-bootstrap.sh
 #
-# Requires Docker on the host. Not invoked by CI in v1 — run locally
+# Requires Docker on the host. Not invoked by CI in v1 - run locally
 # before merging changes to bootstrap.sh.
 
 set -euo pipefail
@@ -44,7 +44,7 @@ docker run --rm \
 
         echo "::group::run bootstrap from local source"
         # Use file:// URL so the bootstrap clones from the mounted
-        # local copy rather than github.com — this lets us validate
+        # local copy rather than github.com - this lets us validate
         # PR changes without needing them merged to main first.
         bash /mait-code-src/scripts/bootstrap.sh \
             --repo-url "file:///mait-code-src" \

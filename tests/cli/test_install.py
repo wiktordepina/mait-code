@@ -81,7 +81,7 @@ class TestVerifySource:
             verify_source(tmp_path)
 
     def test_rejects_missing_package_dir(self, tmp_path: Path) -> None:
-        # Right project name in pyproject, but no src/mait_code package — the
+        # Right project name in pyproject, but no src/mait_code package - the
         # final structural check rejects it as "not a mait-code clone".
         (tmp_path / "pyproject.toml").write_text('[project]\nname = "mait-code"\n')
         with pytest.raises(ValueError, match="src/mait_code is missing"):
@@ -416,7 +416,7 @@ class TestSettingsHelpers:
 
     def test_unmerge_ignores_non_list_hook_section(self) -> None:
         # A hook section whose value isn't a list is left untouched (the
-        # `continue` guard) — we only filter list-shaped entry collections.
+        # `continue` guard) - we only filter list-shaped entry collections.
         settings = {"hooks": {"Weird": "not-a-list"}}
         cleaned = unmerge_settings(settings)
         assert cleaned["hooks"]["Weird"] == "not-a-list"

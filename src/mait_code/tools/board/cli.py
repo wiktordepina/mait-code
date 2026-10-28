@@ -1,14 +1,14 @@
-"""CLI tool for the board — create, refine, pick up, move, and complete cards.
+"""CLI tool for the board - create, refine, pick up, move, and complete cards.
 
 A single cross-project kanban board stored in ``board.db``. Cards carry a
-``project`` field and move through a fixed workflow: backlog → refined →
-in_progress → in_review → done, with a hidden ``archived`` side-state. ``blocked`` is a tag
+``project`` field and move through a fixed workflow: backlog -> refined ->
+in_progress -> in_review -> done, with a hidden ``archived`` side-state. ``blocked`` is a tag
 carried in place (via ``block``/``unblock``), not a column.
 
-Cards relate to each other two ways. An *epic* (``add --epic``, ``epic …``) is
+Cards relate to each other two ways. An *epic* (``add --epic``, ``epic ...``) is
 an umbrella over member cards in any project, named by each member's
 ``--parent``; epics stay off ``list`` and ``next``. ``link A blocks B`` records
-that B can't start until A is done — ``next`` and ``list --ready`` skip a card
+that B can't start until A is done - ``next`` and ``list --ready`` skip a card
 while it waits.
 
 Run from inside a Claude Code session, ``move N in_progress`` and
@@ -18,8 +18,8 @@ card from the rest; ``next`` and ``list --ready`` pass over a card another live
 session holds.
 
 The handlers here are thin: argument parsing, the not-found/exit helper, and
-presentation (text vs ``--json``). Every query and mutation — including the
-done-invariant — lives in :mod:`mait_code.tools.board.service`, the shared core
+presentation (text vs ``--json``). Every query and mutation - including the
+done-invariant - lives in :mod:`mait_code.tools.board.service`, the shared core
 the interactive TUI sits on too.
 """
 
@@ -122,7 +122,7 @@ def _remind_epic(conn, card_id: int) -> None:
     """Note on stderr when *card_id*'s epic has no open members left.
 
     stderr so a ``--json`` caller's stdout stays one parseable document. The
-    epic itself is never moved — its status is set by hand.
+    epic itself is never moved - its status is set by hand.
     """
     epic_id = service.epic_without_open_members(conn, card_id)
     if epic_id is None:
@@ -143,7 +143,7 @@ def _note_closed_epic(conn, card_id: int) -> None:
     """Note on stderr when *card_id* inherited an epic that is done or archived.
 
     ``--from`` joins the origin's epic unasked, and an open card under a closed
-    initiative is easy to miss — redirect it with ``edit --parent``.
+    initiative is easy to miss - redirect it with ``edit --parent``.
     """
     card = service.get_card(conn, card_id)
     epic = card and card["parent"] and service.get_card(conn, card["parent"]["id"])

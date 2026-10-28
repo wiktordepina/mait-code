@@ -1,8 +1,8 @@
-"""ntfy channel — the first concrete Bridge transport.
+"""ntfy channel - the first concrete Bridge transport.
 
 `ntfy <https://ntfy.sh>`_ is plain HTTP pub/sub: publishing is a POST, draining
 is a polled GET of a topic's cached NDJSON stream. Because the server caches
-messages, mait-code stays daemon-free — the drain reads what accumulated since
+messages, mait-code stays daemon-free - the drain reads what accumulated since
 the last watermark and stops. Self-hostable as a single container, which is the
 intended deployment (a private topic on the home server).
 
@@ -32,7 +32,7 @@ _TIMEOUT = 15  # seconds; a poll should be quick or not block a session
 
 # A non-default User-Agent. ntfy servers commonly sit behind Cloudflare, whose
 # Browser Integrity Check rejects the literal ``Python-urllib/*`` UA with a 403
-# (Cloudflare error 1010) — which looks exactly like an auth failure. Any real
+# (Cloudflare error 1010) - which looks exactly like an auth failure. Any real
 # UA sails through, so send one on every request.
 _USER_AGENT = "mait-code-bridge (mait-code)"
 
@@ -159,7 +159,7 @@ class NtfyChannel(BridgeChannel):
                 continue
             event = json.loads(line)
             msg_id = str(event.get("id", ""))
-            # ntfy's `since=<id>` is inclusive of the marker message — skip it
+            # ntfy's `since=<id>` is inclusive of the marker message - skip it
             # so a re-drain from the same watermark yields nothing.
             if since and msg_id == since:
                 continue
@@ -179,7 +179,7 @@ class NtfyChannel(BridgeChannel):
         body back to the *capture* topic, where the next drain acts on it.
 
         Raises:
-            ValueError: If no notify topic is configured — outbound needs one.
+            ValueError: If no notify topic is configured - outbound needs one.
         """
         if not self.notify_topic:
             raise ValueError("ntfy: notify topic is not configured")

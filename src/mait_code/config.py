@@ -8,7 +8,7 @@ changing it requires re-embedding stored memories. Both the running code
 default is defined exactly once.
 
 Internal flags (e.g. ``MAIT_CODE_NESTED``) and structural constants
-(``MAIT_CODE_HOOK_PREFIX``) are deliberately excluded — they are not
+(``MAIT_CODE_HOOK_PREFIX``) are deliberately excluded - they are not
 user-facing settings.
 """
 
@@ -78,7 +78,7 @@ class Setting:
     """One configuration knob shown by ``mait-code settings``.
 
     Most settings are *settable*: backed by an environment variable, with a
-    value resolved env → file → default. Two extra flavours exist:
+    value resolved env -> file -> default. Two extra flavours exist:
 
     * **Derived** (``settable=False``): a read-only value computed at display
       time by :attr:`derive` (e.g. database paths derived from ``data-dir``).
@@ -97,7 +97,7 @@ class Setting:
             embeddings (provider/model changes need a re-embed).
         secret: ``True`` when the value should be masked in output.
         help: One-line description.
-        kind: Value type for typed accessors — ``"str"``, ``"int"`` or
+        kind: Value type for typed accessors - ``"str"``, ``"int"`` or
             ``"float"``. Drives :func:`get_int` / :func:`get_float` coercion.
         settable: ``False`` marks a derived, display-only value.
         advanced: ``True`` writes the knob commented-out in the settings file.
@@ -107,7 +107,7 @@ class Setting:
         validate: Optional callable taking the raw string value and returning
             an error message, or ``None`` when valid. Run by ``doctor``.
         choices: Optional fixed set of valid values for an enum-like setting
-            (e.g. ``embedding-provider`` → ``("local", "bedrock")``). Drives
+            (e.g. ``embedding-provider`` -> ``("local", "bedrock")``). Drives
             the interactive editor's picker; the matching :attr:`validate`
             enforces membership for ``set`` and ``doctor``.
     """
@@ -127,7 +127,7 @@ class Setting:
 
 
 # ---------------------------------------------------------------------------
-# Derived-value helpers (Tier 2 display-only settings). Pure — no mkdir — so
+# Derived-value helpers (Tier 2 display-only settings). Pure - no mkdir - so
 # `mait-code settings` stays read-only. Each mirrors a runtime path helper;
 # tests in test_config.py pin them together to guard against drift.
 # ---------------------------------------------------------------------------
@@ -184,7 +184,7 @@ def _log_level(value: str) -> str | None:
 
 
 # Valid embedding backends. Kept in step with ``cli._install.EMBEDDING_PROVIDERS``
-# (pinned by a test) — config stays the leaf, so the constant lives here.
+# (pinned by a test) - config stays the leaf, so the constant lives here.
 _EMBEDDING_PROVIDERS = ("local", "bedrock")
 
 
@@ -677,14 +677,14 @@ def resolve(setting: Setting) -> tuple[str, str]:
 
     Resolution order (highest priority wins):
 
-    1. **Environment variable** — ``source = "env"``
-    2. **Settings file** — ``source = "settings"``
-    3. **Hardcoded default** — ``source = "default"``
+    1. **Environment variable** - ``source = "env"``
+    2. **Settings file** - ``source = "settings"``
+    3. **Hardcoded default** - ``source = "default"``
 
     Derived settings (``settable=False``) short-circuit to their computed
     value with source ``"derived"``.
 
-    This *reports* configuration; it does not validate it — that is
+    This *reports* configuration; it does not validate it - that is
     ``doctor``'s job.
     """
     if not setting.settable and setting.derive is not None:
@@ -828,13 +828,13 @@ def _cross_field_errors() -> list[str]:
 
 
 def data_dir() -> Path:
-    """Return the mait-code data directory — the canonical resolver.
+    """Return the mait-code data directory - the canonical resolver.
 
     Honours ``$MAIT_CODE_DATA_DIR`` when set to a non-empty value;
     otherwise ``~/.claude/mait-code-data``. Computed at call time so tests
     that relocate ``$HOME`` are honoured.
 
-    A leading ``~`` in the override is expanded — otherwise a value like
+    A leading ``~`` in the override is expanded - otherwise a value like
     ``~/.claude/mait-code-data`` (a literal, unexpanded tilde from the
     environment) would resolve relative to the cwd, scattering data into a
     stray ``~`` directory instead of ``$HOME``.
@@ -869,7 +869,7 @@ def read_settings_file(path: Path | None = None) -> dict[str, str]:
     Returns:
         A flat ``{key: value}`` dict with kebab-case keys and string
         values. Returns ``{}`` if the file is missing or malformed.
-        Tables (notably ``[env]``) are not part of the flat view — read
+        Tables (notably ``[env]``) are not part of the flat view - read
         the env table with :func:`read_env_table`.
     """
     if path is None:
@@ -921,14 +921,14 @@ def apply_env() -> list[str]:
 
     Called from each entry point's startup path (via
     :func:`mait_code.logging.setup_logging` and the ``mait-code`` CLI), so
-    user-defined variables — e.g. ``AWS_PROFILE`` for Bedrock embeddings —
+    user-defined variables - e.g. ``AWS_PROFILE`` for Bedrock embeddings -
     are present however a tool is invoked, not only inside Claude Code
     sessions.
 
     Variables already present in the real environment are left alone, so a
-    one-off ``AWS_PROFILE=other mc-tool-…`` override keeps working — and
+    one-off ``AWS_PROFILE=other mc-tool-...`` override keeps working - and
     repeat calls are naturally no-ops. ``MAIT_CODE_*`` keys are skipped
-    with a warning: first-class settings already resolve env → file →
+    with a warning: first-class settings already resolve env -> file ->
     default, and injecting them would create a second, conflicting
     resolution path. ``doctor`` flags those too.
 
@@ -957,7 +957,7 @@ _injected_env: set[str] = set()
 
 Provenance displays need to tell "the user's shell carries this variable"
 (source ``env``, it wins) apart from "we injected it at startup" (source
-``settings``) — by display time both are in :data:`os.environ`.
+``settings``) - by display time both are in :data:`os.environ`.
 """
 
 
@@ -980,15 +980,15 @@ def _render_settings_toml(
 
     Four groups are written in order:
 
-    1. **Primary** settable knobs — uncommented (placeholder defaults stay
+    1. **Primary** settable knobs - uncommented (placeholder defaults stay
        commented unless an explicit value is provided).
-    2. **Advanced** settable knobs — written *active* when *values* carries
+    2. **Advanced** settable knobs - written *active* when *values* carries
        an explicit value (an opt-in via ``settings set``), otherwise
        commented-out showing the default as the example, so the hardcoded
        default stays authoritative until the user opts a line in.
-    3. **Derived** read-only values — informational comments only; never an
+    3. **Derived** read-only values - informational comments only; never an
        assignable line.
-    4. **The ``[env]`` table** of custom environment variables — written
+    4. **The ``[env]`` table** of custom environment variables - written
        last because everything after a TOML table header belongs to that
        table. An empty table renders as a commented example.
     """
@@ -1023,7 +1023,7 @@ def _render_settings_toml(
         for setting in advanced:
             lines.append(f"# {setting.help}")
             if setting.key in values:
-                # Explicitly opted in (e.g. via `settings set`) — write active.
+                # Explicitly opted in (e.g. via `settings set`) - write active.
                 lines.append(f'{setting.key} = "{values[setting.key]}"')
             else:
                 lines.append(f'# {setting.key} = "{setting.default}"')
@@ -1064,7 +1064,7 @@ _BARE_KEY_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 def _toml_key(name: str) -> str:
-    """Render a TOML key — bare when possible, quoted otherwise."""
+    """Render a TOML key - bare when possible, quoted otherwise."""
     return name if _BARE_KEY_RE.match(name) else _toml_str(name)
 
 
@@ -1121,7 +1121,7 @@ def write_settings_file(
 
 
 # ---------------------------------------------------------------------------
-# Settings view — read-only snapshot for `mait-code settings`.
+# Settings view - read-only snapshot for `mait-code settings`.
 # ---------------------------------------------------------------------------
 
 
@@ -1163,7 +1163,7 @@ def collect_settings() -> SettingsSnapshot:
     """Resolve every setting for display, and flag embedding-provider drift.
 
     Drift is detected when the env var overrides the settings file value
-    for ``embedding-provider`` — this means the runtime provider differs
+    for ``embedding-provider`` - this means the runtime provider differs
     from what was configured, and memories may need re-embedding.
 
     Returns:

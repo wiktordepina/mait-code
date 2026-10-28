@@ -1,4 +1,4 @@
-"""Reflection system — synthesise recent observations into durable insights.
+"""Reflection system - synthesise recent observations into durable insights.
 
 Reads recent memory entries and observation logs, calls Claude to identify
 patterns and themes, stores insights back to ``memory.db``, and proposes
@@ -70,7 +70,7 @@ Omit this section entirely if nothing warrants changing.\
 
 
 # ---------------------------------------------------------------------------
-# Watermark — idempotent reflection tracking
+# Watermark - idempotent reflection tracking
 # ---------------------------------------------------------------------------
 
 
@@ -156,7 +156,7 @@ def count_unreflected(
     """Return the number of entries above the reflection watermark.
 
     Counts the non-insight entries that a future :func:`reflect` run would
-    consider — the observation backlog. With no watermark (no reflection has
+    consider - the observation backlog. With no watermark (no reflection has
     ever run for the scope), every non-insight entry counts.
 
     Args:
@@ -187,7 +187,7 @@ def get_last_reflected_at(
 ) -> datetime | None:
     """Return when reflection last ran for a project (or global scope).
 
-    Reads ``last_reflected_at`` from the watermark table — the authoritative
+    Reads ``last_reflected_at`` from the watermark table - the authoritative
     record of the most recent :func:`reflect` run, regardless of whether it
     produced insights.
 
@@ -289,7 +289,7 @@ def get_unreflected_entries(
 
 
 # ---------------------------------------------------------------------------
-# Deprecated — kept for backward compatibility, no longer called by reflect()
+# Deprecated - kept for backward compatibility, no longer called by reflect()
 # ---------------------------------------------------------------------------
 
 
@@ -757,7 +757,7 @@ def generate_memory_diff(
     """Render proposed MEMORY.md operations as a readable before/after diff.
 
     Additions show as ``+``, retirements as ``-``, rewrites as the old line
-    (``~``) followed by its replacement (``→``), and merges as one ``-`` per
+    (``~``) followed by its replacement (marked U+2192 RIGHTWARDS ARROW), and merges as one ``-`` per
     folded db entry followed by the single consolidated ``+`` line. Each op that
     names backing db entries is annotated with the store-level verb applied to
     them.
@@ -826,7 +826,7 @@ def reflect(
 
     Returns:
         A dict with keys ``skipped``, ``reason``, ``insights``, ``ops`` (the
-        structured MEMORY.md operations proposed — see
+        structured MEMORY.md operations proposed - see
         :func:`parse_reflection_response`), ``dropped_ops`` (ops withheld by
         :func:`filter_unvetted_ops`, each with a ``reason``), ``stored``,
         ``memory_diff``, and

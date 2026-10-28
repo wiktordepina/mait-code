@@ -12,7 +12,7 @@ IN_REVIEW = "in_review"
 DONE = "done"
 ARCHIVED = "archived"
 
-#: The tag value that marks a card blocked. ``blocked`` is no longer a status —
+#: The tag value that marks a card blocked. ``blocked`` is no longer a status -
 #: it is carried as a tag alongside a card's real flow position, so a blocked
 #: card keeps its column. The ``block``/``unblock`` verbs are thin aliases over
 #: this tag.
@@ -25,7 +25,7 @@ CARD = "card"
 EPIC = "epic"
 KINDS: tuple[str, ...] = (CARD, EPIC)
 
-#: The reserved project every epic carries — an initiative can span several
+#: The reserved project every epic carries - an initiative can span several
 #: repos, so it belongs to none of them. Never a real project: the service
 #: refuses it for a card, and ``list_projects`` leaves it out. No leading dash,
 #: so ``--project @epic`` isn't mistaken for a flag.

@@ -6,9 +6,9 @@ diverge on validation, env shadowing, or destructive follow-ups. The function
 is deliberately TTY-free and side-effects are confined to well-known helpers,
 so it can be unit-tested in full against a temp ``$HOME``.
 
-The pipeline is: resolve the key → validate → persist the TOML →
+The pipeline is: resolve the key -> validate -> persist the TOML ->
 *enforce* (sync an already-mirrored ``settings.json`` env entry and warn on a
-shell export that still shadows the change) → run the required follow-up
+shell export that still shadows the change) -> run the required follow-up
 (re-embed on a migration key, relocate the data directory for ``data-dir``).
 """
 
@@ -40,7 +40,7 @@ __all__ = [
 
 
 class SettingError(ValueError):
-    """A setting could not be applied — unknown/derived key or invalid value."""
+    """A setting could not be applied - unknown/derived key or invalid value."""
 
 
 @dataclass
@@ -51,7 +51,7 @@ class ApplyOutcome:
         key: The setting that was changed.
         old_value: Its resolved value before the change.
         new_value: The value written to the settings file.
-        followup: The required follow-up — ``"reindex"``, ``"move-data"`` or
+        followup: The required follow-up - ``"reindex"``, ``"move-data"`` or
             ``None`` when the change applies on the next invocation.
         followup_done: ``True`` when the follow-up was actually carried out.
         warnings: Human-readable warnings (e.g. a shell export still shadows
@@ -80,7 +80,7 @@ def apply_setting(
         key: Kebab-case setting key (e.g. ``log-level``).
         value: The new value, as a string.
         reindex: For a migration key, whether to re-embed now. ``None`` (and
-            no *confirm*) means undecided — an error, since the caller must
+            no *confirm*) means undecided - an error, since the caller must
             choose explicitly.
         move_data: For ``data-dir``, whether to relocate the data directory.
         confirm: A yes/no prompt used by the interactive editor to decide a
@@ -182,7 +182,7 @@ def validation_error(setting: config.Setting, value: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Enforcement — keep settings.json in step; warn on shell shadowing
+# Enforcement - keep settings.json in step; warn on shell shadowing
 # ---------------------------------------------------------------------------
 
 
@@ -266,7 +266,7 @@ def sync_mods(enabled: bool) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Follow-ups — reindex on migration, move on data-dir
+# Follow-ups - reindex on migration, move on data-dir
 # ---------------------------------------------------------------------------
 
 
@@ -329,7 +329,7 @@ def _run_followup(
 
 
 # ---------------------------------------------------------------------------
-# Custom [env] variables — the shared write path for `settings set/unset
+# Custom [env] variables - the shared write path for `settings set/unset
 # env.<NAME>` and the interactive editor's Custom env group.
 # ---------------------------------------------------------------------------
 

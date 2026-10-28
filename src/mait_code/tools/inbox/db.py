@@ -28,7 +28,7 @@ def get_project() -> str:
     """Return the current project identifier (basename of git root or cwd).
 
     Delegates to ``mait_code.context.get_project()``, falling back to the
-    current directory name. On the inbox this is only a capture-context hint —
+    current directory name. On the inbox this is only a capture-context hint -
     the store itself is global.
     """
     from mait_code.context import get_project as _get_project

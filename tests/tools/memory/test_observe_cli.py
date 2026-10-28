@@ -1,4 +1,4 @@
-"""Tests for ``mc-tool-memory observe`` — extraction from prepared text.
+"""Tests for ``mc-tool-memory observe`` - extraction from prepared text.
 
 These drive ``main()`` end to end against a temp data directory: only the
 LLM call and the ``claude`` PATH lookup are patched.

@@ -375,7 +375,7 @@ def _race(db_path, *calls) -> list[BaseException | None]:
         try:
             barrier.wait()
             call(conn)
-        except BaseException as exc:  # noqa: BLE001 — returned for the asserts
+        except BaseException as exc:  # noqa: BLE001 - returned for the asserts
             results[i] = exc
         finally:
             conn.close()

@@ -1,10 +1,10 @@
-"""Interactive ``mait-code settings`` editor — a Textual TUI.
+"""Interactive ``mait-code settings`` editor - a Textual TUI.
 
-A full-screen master–detail app: a settings list on the left, an inline edit
+A full-screen master-detail app: a settings list on the left, an inline edit
 form on the right that adapts to the highlighted setting (a radio set for
 enums, a validated input for free text, read-only for derived values). Every
 write delegates to :func:`~mait_code.cli._settings_edit.apply_setting`, so the
-TUI owns none of the validation/persist/enforce/follow-up logic — it is pure
+TUI owns none of the validation/persist/enforce/follow-up logic - it is pure
 presentation over the shared core.
 
 Destructive follow-ups are confirmed in a modal: a ``data-dir`` move runs
@@ -58,7 +58,7 @@ _WEIGHTS_KEY = "__weights__"
 """Sentinel list-row key for the grouped scoring-weight editor."""
 
 _ENV_PREFIX = "env:"
-"""Row-key prefix for custom [env] variables — dynamic rows."""
+"""Row-key prefix for custom [env] variables - dynamic rows."""
 
 _ENV_ADD_KEY = "env:+"
 """Sentinel row key for the 'add variable' leaf ('+' can't start a name)."""
@@ -66,7 +66,7 @@ _ENV_ADD_KEY = "env:+"
 _ENV_GROUP_LABEL = "Custom env"
 
 _PERM_PREFIX = "perm:"
-"""Row-key prefix for tool-approval presets — dynamic rows."""
+"""Row-key prefix for tool-approval presets - dynamic rows."""
 
 _PERM_GROUP_LABEL = "Tool approvals"
 
@@ -180,7 +180,7 @@ def _env_display_value(name: str, table_value: str) -> tuple[str, bool]:
     """Return an [env] row's effective value (masked if secret-looking).
 
     The second element is ``True`` when the real environment carries the
-    variable — it wins over the table, so the row is shadowed. Values
+    variable - it wins over the table, so the row is shadowed. Values
     injected at startup by ``apply_env()`` don't count as shadowing.
     """
     value, source = config._env_effective(name, table_value)
@@ -210,7 +210,7 @@ def _env_leaf_label(name: str, table_value: str) -> Text:
 def _preset_leaf_label(state: perms.PresetState) -> Text:
     """One-line tree label for a tool-approval preset: name + on/partial/off.
 
-    No origin to name — every preset this surface manages lives in the one
+    No origin to name - every preset this surface manages lives in the one
     settings file, which the group's detail pane spells out.
     """
     name = state.preset.label
@@ -229,7 +229,7 @@ def _preset_leaf_label(state: perms.PresetState) -> Text:
 def _leaf_label(key: str, value_width: int = _VALUE_WIDTH) -> Text:
     """Build a tree leaf's one-line label: padded key + inline current value.
 
-    Defaults (and derived values) render dimmed; the migration ⚠ marker rides
+    Defaults (and derived values) render dimmed; the migration warning-sign marker rides
     next to the key, included in the padding so values stay column-aligned.
     """
     label = Text(no_wrap=True)
@@ -332,7 +332,7 @@ class WeightsScreen(ModalScreen[bool]):
 
 
 class SettingsApp(MaitApp):
-    """Master–detail editor for the mait-code settings registry."""
+    """Master-detail editor for the mait-code settings registry."""
 
     TITLE = "mait-code settings"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_settings.tcss"]
@@ -356,8 +356,8 @@ class SettingsApp(MaitApp):
     def _mount_env_group(self, tree: Tree[str]) -> None:
         """(Re)build the Custom env group from the settings [env] table.
 
-        Dynamic rows — they come from the file's [env] table, not the
-        registry — plus a trailing 'add variable' leaf, so the group is
+        Dynamic rows - they come from the file's [env] table, not the
+        registry - plus a trailing 'add variable' leaf, so the group is
         always present even when the table is empty.
         """
         if self._env_group is not None:
@@ -385,7 +385,7 @@ class SettingsApp(MaitApp):
     def _mount_perm_group(self, tree: Tree[str]) -> None:
         """(Re)build the Tool approvals group from the catalogue and disk state.
 
-        Dynamic rows like Custom env — the on/off state lives in Claude Code's
+        Dynamic rows like Custom env - the on/off state lives in Claude Code's
         settings files, not in mait-code's registry, so the labels are resolved
         from disk on every build. Nested one level deeper than the rest of the
         tree so the catalogue's own grouping survives.
@@ -433,7 +433,7 @@ class SettingsApp(MaitApp):
         yield Footer()
 
     def on_mount(self) -> None:
-        # The detail pane scrolls but shouldn't be a Tab stop — Tab should land
+        # The detail pane scrolls but shouldn't be a Tab stop - Tab should land
         # straight on the editor widget, not the container around it.
         self.query_one("#detail", VerticalScroll).can_focus = False
         tree: Tree[str] = self.query_one("#list", Tree)
@@ -489,7 +489,7 @@ class SettingsApp(MaitApp):
         """Summary for the Tool approvals node: the settings file and its health.
 
         A malformed settings file is reported here rather than silently reading
-        as "nothing enabled" — the rules in it are still in force.
+        as "nothing enabled" - the rules in it are still in force.
         """
         snapshot = perms.read_allow()
         path = perms.settings_path()
@@ -578,7 +578,7 @@ class SettingsApp(MaitApp):
             return
 
         if setting.key == "theme":
-            # The valid set is every registered theme — known only at runtime,
+            # The valid set is every registered theme - known only at runtime,
             # so it can't live in the (Textual-free) config schema as `choices`.
             widgets.append(
                 RadioSet(
@@ -610,7 +610,7 @@ class SettingsApp(MaitApp):
         detail = self.query_one("#detail", VerticalScroll)
         table_value = config.read_env_table().get(name, "")
         source = _env_source_text(name, table_value)
-        # Text() for static copy — "[env]" (and arbitrary user values) must
+        # Text() for static copy - "[env]" (and arbitrary user values) must
         # not be parsed as console markup.
         await detail.mount(
             Label(Text(name), classes="title"),
@@ -621,7 +621,7 @@ class SettingsApp(MaitApp):
                 ),
                 classes="help",
             ),
-            # The unmasked table value — it has to be editable; the tree
+            # The unmasked table value - it has to be editable; the tree
             # label stays masked for secret-looking names.
             Input(value=table_value, id="editor"),
             Static(Text(source), id="source"),
@@ -692,7 +692,7 @@ class SettingsApp(MaitApp):
         return "source: not enabled"
 
     async def _show_env_add_detail(self) -> None:
-        """Detail pane for adding a new [env] variable — name + value form."""
+        """Detail pane for adding a new [env] variable - name + value form."""
         detail = self.query_one("#detail", VerticalScroll)
         await detail.mount(
             Label("add [env] variable", classes="title"),
@@ -715,7 +715,7 @@ class SettingsApp(MaitApp):
     # -- editing -----------------------------------------------------------
 
     def _theme_names(self) -> list[str]:
-        """Every registered theme name, sorted — the theme picker's options."""
+        """Every registered theme name, sorted - the theme picker's options."""
         return sorted(self.available_themes)
 
     def _editor_value(self, setting: config.Setting) -> str | None:
@@ -747,7 +747,7 @@ class SettingsApp(MaitApp):
                     )
             return
         if self._current_key.startswith(_ENV_PREFIX):
-            return  # env values are free text — nothing to validate live
+            return  # env values are free text - nothing to validate live
         if self._current_key.startswith(_PERM_PREFIX):
             return  # preset panes have no text input to validate
         editors = self.query("#editor")
@@ -792,7 +792,7 @@ class SettingsApp(MaitApp):
         """Escape steps back to the list; pressed on the list itself, it quits.
 
         From the editor pane it returns focus to the settings tree; from the
-        tree (nothing left to back out of) it exits — so escape always
+        tree (nothing left to back out of) it exits - so escape always
         eventually leaves, like ``q``.
         """
         if self.query_one("#list", Tree).has_focus:
@@ -879,7 +879,7 @@ class SettingsApp(MaitApp):
         if run_reindex_after:
             self._run_reindex_suspended()
 
-        # Apply a theme change live too — apply_setting persisted it, so the
+        # Apply a theme change live too - apply_setting persisted it, so the
         # theme_changed_signal write is a no-op; this just recolours the editor.
         if key == "theme":
             self.theme = value
@@ -928,7 +928,7 @@ class SettingsApp(MaitApp):
             return
 
         if not outcome.changed:
-            # Already present — say where, rather than a bare "no change" that
+            # Already present - say where, rather than a bare "no change" that
             # reads as a failure.
             note = f"✓ already in {_short_path(outcome.path)}"
             self.query_one("#msg", Static).update(Text(note))

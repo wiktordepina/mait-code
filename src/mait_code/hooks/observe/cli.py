@@ -1,4 +1,4 @@
-"""Observation hook — extracts knowledge from conversation events.
+"""Observation hook - extracts knowledge from conversation events.
 
 Triggered by PreCompact and SessionEnd hooks. Reads the session transcript
 incrementally, calls Claude Haiku for structured extraction, and stores
@@ -137,8 +137,8 @@ def _run():
 
     # The path from the stdin event can point at a transcript that no longer
     # exists on disk (e.g. a brand-new or already-cleaned session at
-    # precompact/session-end). That's an expected, non-actionable condition —
-    # this window simply has nothing to observe — so skip cleanly rather than
+    # precompact/session-end). That's an expected, non-actionable condition -
+    # this window simply has nothing to observe - so skip cleanly rather than
     # letting open() raise and surface as a generic ERROR.
     if not Path(transcript_path).is_file():
         logger.warning("transcript not found, skipping: %s", transcript_path)
@@ -162,7 +162,7 @@ def _run():
     extraction = extract_observations(conversation_text, project=project, branch=branch)
     if extraction is None:
         # Transport failure (LLM timed out or errored). Leave the cursor where
-        # it is so the next session re-attempts this window — unless we've
+        # it is so the next session re-attempts this window - unless we've
         # failed here repeatedly, in which case advance past the poison window.
         failures = record_failure(transcript_path, byte_offset)
         if failures >= MAX_EXTRACTION_FAILURES:
@@ -175,7 +175,7 @@ def _run():
         return
 
     # The model responded. The dict may be empty (routine conversation, or an
-    # unparseable response) — either way the window is handled, so advance.
+    # unparseable response) - either way the window is handled, so advance.
     # set_cursor also clears any recorded failure state for this transcript.
     if extraction:
         record_extraction(extraction, args.trigger, project=project, branch=branch)

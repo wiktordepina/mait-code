@@ -2,7 +2,7 @@
 
 Two layers:
 
-* unit tests pin down ``validate_hook_output`` itself — including the exact
+* unit tests pin down ``validate_hook_output`` itself - including the exact
   0.25.3 regression (``hookSpecificOutput`` with no ``hookEventName``); and
 * integration tests drive each real hook's ``main()`` and push its actual
   stdout through the validator, so a new or changed hook is held to the
@@ -59,7 +59,7 @@ def _reset_logging_state():
                 }
             }
         ),
-        # No hookSpecificOutput — other documented top-level keys are not our concern.
+        # No hookSpecificOutput - other documented top-level keys are not our concern.
         json.dumps({"continue": True, "systemMessage": "noted"}),
     ],
 )
@@ -129,7 +129,7 @@ def test_session_start_output_is_valid(monkeypatch, capsys):
 
 
 def test_session_start_emits_nothing_when_empty(monkeypatch, capsys):
-    """With no sections the hook prints nothing — still contract-valid."""
+    """With no sections the hook prints nothing - still contract-valid."""
     monkeypatch.setattr(session_start_context, "reminders_section", lambda: "")
     monkeypatch.setattr(session_start_context, "board_section", lambda: "")
     monkeypatch.setattr(session_start_context, "inbox_section", lambda: "")

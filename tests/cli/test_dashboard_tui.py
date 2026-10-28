@@ -239,7 +239,7 @@ def test_quit_with_unsaved_changes_asks_first(config_file: Path) -> None:
             await pilot.press("escape")
             await pilot.pause()
             modal_shown = isinstance(app.screen, ConfirmScreen)
-            await pilot.press("escape")  # dismiss as "No" — stay in the app
+            await pilot.press("escape")  # dismiss as "No" - stay in the app
             await pilot.pause()
             still_running = app.is_running
             return modal_shown, still_running

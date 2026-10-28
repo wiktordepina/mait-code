@@ -1,7 +1,7 @@
 """Shared yes/no confirmation modal for mait-code TUIs.
 
 :class:`ConfirmScreen` is the modal the settings editor opens before a
-re-embed or a data-dir move, and the home hub opens before a reindex —
+re-embed or a data-dir move, and the home hub opens before a reindex -
 extracted here so the surfaces stay pixel-consistent instead of each
 carrying a copy. Styling rides the shared ``.modal-dialog`` classes in
 ``app.tcss``.

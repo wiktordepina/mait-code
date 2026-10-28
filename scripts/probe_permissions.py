@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Measure Claude Code's ``allowed-tools`` matcher and report drift.
 
-Everything mait-code asserts about ``Bash(...)`` permission patterns —
+Everything mait-code asserts about ``Bash(...)`` permission patterns -
 ``cli/_permissions.matches_command``, the catalogue's prefix discipline, and
-the skill grants guarded by ``tests/test_skill_grants.py`` — rests on
+the skill grants guarded by ``tests/test_skill_grants.py`` - rests on
 *undocumented* matcher behaviour, measured against Claude Code 2.1.220. The
 test suite pins our **model** of the matcher, not the matcher itself, so an
 upgrade can change the rules while the suite stays green.
@@ -24,7 +24,7 @@ during the original investigation:
 
 1. **A nested ``claude`` inherits the parent session's permission posture** and
    auto-approves everything. Run from inside a Claude Code session without
-   scrubbing the environment and every cell returns PERMITTED — including
+   scrubbing the environment and every cell returns PERMITTED - including
    nonsense like ``gitfoo`` under ``Bash(git status:*)``. See :data:`SCRUB`.
 2. **Sandboxing looks like approval.** An ungranted command that Claude Code
    can contain runs with no prompt and its writes are discarded, so "no prompt"
@@ -63,7 +63,7 @@ SCRUB = (
     "CLAUDE_EFFORT",
 )
 
-#: A grant that permits nothing else under test — the neutral control.
+#: A grant that permits nothing else under test - the neutral control.
 NEUTRAL_RULE = "Bash(echo hello)"
 
 PERMITTED = "PERMITTED"
@@ -88,7 +88,7 @@ class Case:
 
 
 #: The matcher cases. Every command here must be *refused* when ungranted, or
-#: it cannot distinguish a real grant from sandboxed execution — the baseline
+#: it cannot distinguish a real grant from sandboxed execution - the baseline
 #: pass checks exactly that before any of these are trusted.
 CASES: tuple[Case, ...] = (
     # An exact rule is exact.
@@ -127,7 +127,7 @@ CASES: tuple[Case, ...] = (
 
 #: Operator-awareness is checked separately, by :func:`check_operators`, because
 #: the baseline gate cannot measure it. Under the neutral rule a compound
-#: command comes back PERMITTED — with nothing matching, Claude Code appears to
+#: command comes back PERMITTED - with nothing matching, Claude Code appears to
 #: sandbox the whole thing, and sandboxed execution is indistinguishable from a
 #: grant here. The differential below needs no baseline: the *same rule* permits
 #: the simple command and refuses the compound one.

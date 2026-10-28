@@ -113,7 +113,7 @@ def test_main_dispatches_subcommand(mock_conn: sqlite3.Connection, capsys, monke
 
 
 def test_main_requires_a_subcommand(monkeypatch):
-    # The subparser is ``required=True`` — a bare invocation is a usage error.
+    # The subparser is ``required=True`` - a bare invocation is a usage error.
     monkeypatch.setattr("sys.argv", ["mc-tool-inbox"])
 
     from mait_code.tools.inbox.cli import main

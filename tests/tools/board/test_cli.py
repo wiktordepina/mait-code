@@ -1,4 +1,4 @@
-"""Tests for the board CLI's thin layer — not-found branches, residual text-output
+"""Tests for the board CLI's thin layer - not-found branches, residual text-output
 paths, and ``main()`` argparse dispatch.
 
 The bulk of the per-handler behaviour lives in ``test_board.py`` and
@@ -68,7 +68,7 @@ def _ns(**kwargs):
     return argparse.Namespace(**kwargs)
 
 
-# --- not-found → exit(1) on the mutating handlers ---
+# --- not-found -> exit(1) on the mutating handlers ---
 #
 # Each of these handlers catches CardNotFound and routes through _not_found,
 # which prints to stderr and exits 1. The happy paths are covered elsewhere;
@@ -486,7 +486,7 @@ def test_main_summary_dispatch(mock_conn, capsys, monkeypatch):
 
 
 def test_main_requires_a_subcommand(monkeypatch):
-    # The top-level subparser is required=True — a bare invocation is a usage error.
+    # The top-level subparser is required=True - a bare invocation is a usage error.
     monkeypatch.setattr("sys.argv", ["mc-tool-board"])
     from mait_code.tools.board.cli import main
 

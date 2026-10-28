@@ -6,7 +6,7 @@ Supports two providers:
 * ``bedrock``: AWS Bedrock Titan/Cohere models (for corporate environments).
 
 The provider is configured via the ``MAIT_CODE_EMBEDDING_PROVIDER``
-environment variable. Degrades gracefully if the provider fails to load —
+environment variable. Degrades gracefully if the provider fails to load -
 callers always receive ``None`` instead of exceptions.
 """
 
@@ -152,7 +152,7 @@ class BedrockProvider(EmbeddingProvider):
 
 
 def _get_provider_name() -> str:
-    """Return the configured provider name (env → settings file → default)."""
+    """Return the configured provider name (env -> settings file -> default)."""
     return config_get("embedding-provider").lower()
 
 
@@ -174,7 +174,7 @@ def _get_embedding_model() -> str:
     return config_get("embedding-model")
 
 
-# Module-level "constants" — computed from env vars at import time.
+# Module-level "constants" - computed from env vars at import time.
 EMBEDDING_DIM: int = _get_embedding_dim()
 EMBEDDING_MODEL: str = _get_embedding_model()
 
@@ -322,7 +322,7 @@ def _parse_vec_table_dim(conn) -> int | None:
 
 
 # ---------------------------------------------------------------------------
-# Embedding record — which provider/model built ``memory_vec``
+# Embedding record - which provider/model built ``memory_vec``
 # ---------------------------------------------------------------------------
 
 #: ``memory_meta`` keys holding the embedding record.
@@ -357,7 +357,7 @@ class VectorStatus:
     Attributes:
         usable: ``True`` when vector search, dedup and writes may proceed.
         state: ``"match"`` (record agrees with configuration), ``"unknown"``
-            (vectors but no record — permissive, as before the record
+            (vectors but no record - permissive, as before the record
             existed), ``"empty"`` (no vectors yet), ``"absent"`` (no
             ``memory_vec`` table), ``"dimension"`` (stored or declared width
             differs) or ``"model"`` (recorded provider/model differs).
@@ -376,7 +376,7 @@ class VectorStatus:
 def configured_record() -> EmbeddingRecord:
     """Return the provider/model/width the current settings embed with.
 
-    Read live from configuration — never the import-time constants, and
+    Read live from configuration - never the import-time constants, and
     never by instantiating the provider (which can load a local model).
     """
     return EmbeddingRecord(
@@ -412,7 +412,7 @@ def read_embedding_record(conn: sqlite3.Connection) -> EmbeddingRecord | None:
 def _embedding_source() -> EmbeddingRecord:
     """Return what this process actually embeds with.
 
-    The loaded provider when there is one — it is kept for the life of the
+    The loaded provider when there is one - it is kept for the life of the
     process, so if settings changed after it loaded, it (not the settings)
     made the vectors. The configured model otherwise: the next embed will
     load exactly that.
@@ -448,7 +448,7 @@ def vectors_usable(conn: sqlite3.Connection) -> VectorStatus:
 
     Vectors from different models live in different spaces, so comparing a
     query embedded by one against vectors stored by another yields
-    meaningless similarities — even at the same width. Search, dedup and
+    meaningless similarities - even at the same width. Search, dedup and
     writes therefore consult this before embedding anything.
 
     An empty table is usable whatever the record says (nothing to disagree

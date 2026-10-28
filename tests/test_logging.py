@@ -375,7 +375,7 @@ class TestLogInvocation:
 
 class TestSetupLoggingAppliesEnv:
     def test_injects_env_table_at_startup(self):
-        """setup_logging is the shared startup path — it applies [env]."""
+        """setup_logging is the shared startup path - it applies [env]."""
         from mait_code.cli._paths import settings_path
 
         sp = settings_path()

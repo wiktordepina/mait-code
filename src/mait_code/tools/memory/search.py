@@ -405,7 +405,7 @@ def hybrid_search(
     for r in fts_results:
         entry_id = r["id"]
         if entry_id in vec_by_id:
-            # Found by both — use vector similarity as relevance
+            # Found by both - use vector similarity as relevance
             r["relevance"] = vec_by_id.pop(entry_id)["similarity"]
         else:
             r["relevance"] = 0.3

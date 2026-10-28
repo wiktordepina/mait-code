@@ -1,4 +1,4 @@
-"""Auto-format hook — formats code after edits."""
+"""Auto-format hook - formats code after edits."""
 
 from mait_code.logging import log_invocation, setup_logging
 

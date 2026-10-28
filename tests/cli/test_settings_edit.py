@@ -29,7 +29,7 @@ runner = CliRunner()
 
 
 # ---------------------------------------------------------------------------
-# apply_setting — validation / rejection
+# apply_setting - validation / rejection
 # ---------------------------------------------------------------------------
 
 
@@ -62,7 +62,7 @@ class TestApplyRejects:
 
 
 # ---------------------------------------------------------------------------
-# apply_setting — persistence
+# apply_setting - persistence
 # ---------------------------------------------------------------------------
 
 
@@ -90,7 +90,7 @@ class TestApplyPersists:
 
 
 # ---------------------------------------------------------------------------
-# enforcement — settings.json mirror sync + shell-shadow warning
+# enforcement - settings.json mirror sync + shell-shadow warning
 # ---------------------------------------------------------------------------
 
 
@@ -211,7 +211,7 @@ class TestMoveDataDir:
             move_data_dir(old, new)
 
     def test_moves_into_existing_empty_target(self, tmp_path: Path) -> None:
-        # An existing but *empty* target is acceptable — it is rmdir'd so the
+        # An existing but *empty* target is acceptable - it is rmdir'd so the
         # rename/copy lands cleanly rather than nesting under it.
         old = tmp_path / "old"
         old.mkdir()
@@ -283,7 +283,7 @@ class TestGetCommand:
 
 
 # ---------------------------------------------------------------------------
-# Custom [env] variables — set_env_var / unset_env_var and the CLI on top
+# Custom [env] variables - set_env_var / unset_env_var and the CLI on top
 # ---------------------------------------------------------------------------
 
 

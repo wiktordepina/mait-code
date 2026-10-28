@@ -1,9 +1,9 @@
 """A shared, context-aware help screen for mait-code TUIs.
 
-:class:`HelpScreen` renders a key→description cheat-sheet from rows the app
+:class:`HelpScreen` renders a key->description cheat-sheet from rows the app
 captures off its *live* active bindings (see
 :meth:`~mait_code.tui.app.MaitApp.action_help`). Because the rows come from the
-real bindings rather than a hand-kept list, every app — and every new binding —
+real bindings rather than a hand-kept list, every app - and every new binding -
 shows up automatically and never drifts.
 """
 

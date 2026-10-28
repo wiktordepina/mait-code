@@ -4,7 +4,7 @@ Single source of truth for where mait-code stores its install record,
 settings file, log files, and how to locate the user's Claude Code
 directory and data directory under XDG conventions.
 
-The helpers honour environment overrides — useful for tests (which
+The helpers honour environment overrides - useful for tests (which
 override ``HOME``, ``XDG_DATA_HOME``, ``XDG_CONFIG_HOME``,
 ``XDG_STATE_HOME``, and ``MAIT_CODE_DATA_DIR`` via the ``fake_home``
 fixture) and for users who want to relocate any of these paths.

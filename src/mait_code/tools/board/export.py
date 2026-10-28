@@ -1,13 +1,13 @@
 """Render cards as portable markdown or JSON exports.
 
 The rendering layer shared by the CLI ``export`` subcommand and the board
-TUI's export binding. Three scopes — a single card, an epic with its members,
-or a whole board listing — in two formats:
+TUI's export binding. Three scopes - a single card, an epic with its members,
+or a whole board listing - in two formats:
 
 - **markdown**: a readable document. Stored markdown in ``description``,
   ``acceptance_criteria`` and ``completion_summary`` is embedded verbatim,
   so what was authored round-trips unchanged.
-- **json**: full fidelity, matching the ``show --json`` shape — every card
+- **json**: full fidelity, matching the ``show --json`` shape - every card
   carries its ``tags``, ``references`` and ``comments``. Live session
   bindings (``sessions``) are left out: they name running processes, which
   mean nothing once the document leaves this machine.
@@ -18,7 +18,7 @@ with :func:`export_epic` to keep it.
 
 Like :mod:`~mait_code.tools.board.service`, functions here take an open
 ``sqlite3.Connection`` and raise :class:`~mait_code.tools.board.service.CardNotFound`
-rather than printing — presentation concerns stay with the caller.
+rather than printing - presentation concerns stay with the caller.
 """
 
 from __future__ import annotations
@@ -98,7 +98,7 @@ def _meta_lines(card: dict) -> list[str]:
 
 
 def related_text(cards: list[dict]) -> str:
-    """``#76 title (Refined); #80 …`` for a list of related-card summaries.
+    """``#76 title (Refined); #80 ...`` for a list of related-card summaries.
 
     Each card's status rides along, so a blocker list reads as which are
     still open and which are done or archived.
@@ -114,8 +114,9 @@ def _when(stamp: str | None) -> str:
 def run_lines(run: dict) -> list[str]:
     """A playbook run as plain text: a header line, then one line per step.
 
-    ``Run: work · started 2026-10-27 21:04``, then ``  2. skipped      Design
-    review — <reason>``, the current step marked ``← current``.
+    ``Run: work``, a U+00B7 MIDDLE DOT, then ``started 2026-10-27 21:04``; then
+    ``  2. skipped      Design review``, an em dash and the reason; the current
+    step is marked ``current`` behind a U+2190 LEFTWARDS ARROW.
     """
     lines = [f"Run: {run['playbook']} · started {_when(run['started_at'])}"]
     for step in run["steps"]:
@@ -132,7 +133,7 @@ def run_lines(run: dict) -> list[str]:
 
 
 def progress_text(progress: dict) -> str:
-    """``3/7 done · 1 waiting · 2 in progress`` for an epic's ``progress``."""
+    """``3/7 done``, ``1 waiting``, ``2 in progress`` (U+00B7-separated) for ``progress``."""
     parts = [f"{progress[DONE]}/{progress['total']} done"]
     if progress["waiting"]:
         parts.append(f"{progress['waiting']} waiting")
@@ -239,8 +240,8 @@ def epic_markdown(epic: dict) -> str:
 
     Args:
         epic: An epic dict as returned by
-            :func:`~mait_code.tools.board.service.get_epic` — carrying
-            ``members`` and ``progress`` — optionally with ``comments`` on it
+            :func:`~mait_code.tools.board.service.get_epic` - carrying
+            ``members`` and ``progress`` - optionally with ``comments`` on it
             and its members.
 
     Returns:
@@ -319,7 +320,7 @@ def export_board(
     include_archived: bool = False,
     search: str | None = None,
 ) -> str:
-    """Export a board listing as *fmt* — a JSON array or one markdown document.
+    """Export a board listing as *fmt* - a JSON array or one markdown document.
 
     Filter arguments mirror :func:`~mait_code.tools.board.service.list_cards`.
     Epics are left out, as on the board; see :func:`export_epic`.

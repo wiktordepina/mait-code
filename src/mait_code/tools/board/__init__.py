@@ -1,10 +1,10 @@
-"""Board tool — a manually-driven kanban board across projects.
+"""Board tool - a manually-driven kanban board across projects.
 
 A single SQLite board (``board.db``) of cards tagged by ``project``. The CLI
 (``main``) handles create / refine / pick-up / move / complete operations, all
 sitting on the presentation-agnostic :mod:`~mait_code.tools.board.service` core
-that the interactive TUI shares. Columns are fixed: backlog → refined →
-in_progress → in_review → done, plus a hidden archived state. ``blocked`` is a tag carried
+that the interactive TUI shares. Columns are fixed: backlog -> refined ->
+in_progress -> in_review -> done, plus a hidden archived state. ``blocked`` is a tag carried
 in place, not a column. In Progress cards can be bound to the Claude Code
 sessions working on them (see :mod:`~mait_code.tools.board.sessions`).
 """

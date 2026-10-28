@@ -1,4 +1,4 @@
-"""Auto-format hook — placeholder, not currently registered.
+"""Auto-format hook - placeholder, not currently registered.
 
 Entry point exists (``mc-hook-format`` in pyproject.toml) but is not wired
 into ``~/.claude/settings.json``. Reserved for a future PostToolUse hook

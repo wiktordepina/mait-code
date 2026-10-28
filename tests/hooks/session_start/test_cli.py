@@ -1,4 +1,4 @@
-"""Tests for the session-start hook — section builders and context assembly.
+"""Tests for the session-start hook - section builders and context assembly.
 
 The builders read each tool's store layer directly, so these tests seed real
 temp databases (the root conftest points ``MAIT_CODE_DATA_DIR`` at ``tmp_path``)
@@ -196,7 +196,7 @@ def test_main_silent_when_nothing(monkeypatch, capsys, project):
     assert capsys.readouterr().out == ""
 
 
-# --- card ↔ session bindings ---
+# --- card <-> session bindings ---
 
 
 def _bound_card(

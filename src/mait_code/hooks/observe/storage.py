@@ -204,7 +204,7 @@ def confine_extraction(extraction: dict, *, branch: str | None) -> dict:
 
     - the ``preferences`` category is dropped;
     - every memory item's scope is pinned to ``branch`` (when it asked for
-      that and there is a branch) or ``project`` — never ``global``;
+      that and there is a branch) or ``project`` - never ``global``;
     - importance is capped at :data:`MAX_CONFINED_IMPORTANCE`.
 
     Entities and relationships pass through: the knowledge graph has no scope
@@ -221,7 +221,7 @@ def confine_extraction(extraction: dict, *, branch: str | None) -> dict:
         A new extraction dict with the caps applied; the input is not modified.
 
     Raises:
-        ValueError: If a category is not a list of objects — a malformed
+        ValueError: If a category is not a list of objects - a malformed
             reply from the model.
     """
     for key, value in extraction.items():
@@ -261,8 +261,8 @@ def record_extraction(
 ) -> dict[str, dict[str, int]]:
     """Log an extraction and store its memories, entities and relationships.
 
-    The shared tail of every extraction path — the observe hook and
-    ``mc-tool-memory observe`` — so the two can't drift apart.
+    The shared tail of every extraction path - the observe hook and
+    ``mc-tool-memory observe`` - so the two can't drift apart.
 
     Args:
         extraction: Parsed extraction dict returned by the LLM.

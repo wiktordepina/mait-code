@@ -1,22 +1,22 @@
 """Dashboard config and tile data for the home hub's start page.
 
-The hub's landing view is a user-authored widget grid — the sampler/wtfutil
+The hub's landing view is a user-authored widget grid - the sampler/wtfutil
 pattern. A ``dashboard.toml`` in the data dir declares the grid: a column
 count and an ordered list of tiles, each either a **built-in widget** (a
 glanceable readout over one of the stores) or an **arbitrary shell command**
-whose stdout becomes the tile body. No config means the default layout — the
+whose stdout becomes the tile body. No config means the default layout - the
 page is never blank.
 
 This module is the pure half: parsing, validation, the default layout, the
 built-in collectors, and the subprocess runner for command tiles. Everything
-Textual — the grid container, the worker plumbing, the styling — lives in
+Textual - the grid container, the worker plumbing, the styling - lives in
 :mod:`mait_code.cli._home_tui`, which renders the :class:`TileLine` batches
 this module produces.
 
 Loading is tolerant by design (modelled on
 :func:`mait_code.config.read_settings_file`): a malformed file or a bad tile
 falls back or is skipped, with the problem carried in
-:attr:`DashboardConfig.warnings` for the hub to surface — never an exception.
+:attr:`DashboardConfig.warnings` for the hub to surface - never an exception.
 The built-in collectors, by contrast, *do* raise on a broken store; the hub
 catches per tile and renders an error state, so one broken store costs one
 tile, not the page.
@@ -71,7 +71,7 @@ _LIST_LIMIT = 3
 class TileSpec:
     """One tile in the grid: a built-in widget or a shell command.
 
-    Exactly one of :attr:`widget` and :attr:`command` is set — the loader
+    Exactly one of :attr:`widget` and :attr:`command` is set - the loader
     skips (with a warning) any ``[[tile]]`` entry that declares both or
     neither.
 
@@ -96,10 +96,10 @@ class DashboardConfig:
     """The parsed dashboard: grid shape, tiles, and any loader warnings.
 
     Attributes:
-        columns: Grid width, ``1``–:data:`MAX_COLUMNS`.
+        columns: Grid width, ``1``-:data:`MAX_COLUMNS`.
         tiles: The tiles, in authored order.
         warnings: Human-readable problems the loader worked around (malformed
-            file, unknown widget, …) — surfaced by the hub, never raised.
+            file, unknown widget, ...) - surfaced by the hub, never raised.
         authored: ``True`` when a readable ``dashboard.toml`` supplied the
             layout; ``False`` means the built-in default is showing (the hub
             uses this to hint where the file lives).
@@ -114,8 +114,8 @@ class DashboardConfig:
 class TileLine(NamedTuple):
     """One rendered line of a tile body.
 
-    *style* is semantic, not visual — ``""`` (body), ``"dim"`` or ``"warn"``
-    — so this module stays free of Textual and the hub maps styles onto the
+    *style* is semantic, not visual - ``""`` (body), ``"dim"`` or ``"warn"`` -
+    so this module stays free of Textual and the hub maps styles onto the
     active theme.
     """
 
@@ -139,7 +139,7 @@ class CommandResult:
 
 
 def dashboard_path() -> Path:
-    """Where ``dashboard.toml`` lives — under the data dir, beside settings."""
+    """Where ``dashboard.toml`` lives - under the data dir, beside settings."""
     return data_dir() / "dashboard.toml"
 
 
@@ -265,7 +265,7 @@ def _parse_tiles_indexed(
 
 # ---------------------------------------------------------------------------
 # Built-in widgets. Each collector reads its store fresh and raises on a
-# broken one — the hub catches per tile.
+# broken one - the hub catches per tile.
 # ---------------------------------------------------------------------------
 
 
@@ -444,8 +444,8 @@ def _tile_velocity() -> list[TileLine]:
 def _parse_stamp(raw: object) -> datetime | None:
     """A stored timestamp as an aware UTC datetime, or ``None`` if unreadable.
 
-    Stores disagree on format — the board writes tz-aware ISO strings, memory
-    writes naive ``YYYY-MM-DD HH:MM:SS`` — so parse tolerantly and treat naive
+    Stores disagree on format - the board writes tz-aware ISO strings, memory
+    writes naive ``YYYY-MM-DD HH:MM:SS`` - so parse tolerantly and treat naive
     stamps as UTC.
     """
     if not isinstance(raw, str):
@@ -459,7 +459,7 @@ def _parse_stamp(raw: object) -> datetime | None:
     return moment
 
 
-#: Built-in widget key → (display title, collector). The collector raises on a
+#: Built-in widget key -> (display title, collector). The collector raises on a
 #: broken store; the hub catches per tile and renders an error state.
 BUILTIN_WIDGETS: dict[str, tuple[str, Callable[[], list[TileLine]]]] = {
     "reminders": ("Reminders", _tile_reminders),
@@ -499,7 +499,7 @@ def run_command_tile(command: str, timeout: int) -> CommandResult:
             ``dashboard-tile-timeout`` setting).
 
     Returns:
-        Success with clipped stdout, or failure with a one-line diagnosis —
+        Success with clipped stdout, or failure with a one-line diagnosis -
         never raises.
     """
     try:
@@ -526,7 +526,7 @@ def run_command_tile(command: str, timeout: int) -> CommandResult:
 
 
 # ---------------------------------------------------------------------------
-# Editable model — the setup TUI's working copy, round-tripped via tomlkit
+# Editable model - the setup TUI's working copy, round-tripped via tomlkit
 # so hand-authored comments and formatting survive an edit.
 # ---------------------------------------------------------------------------
 
@@ -634,7 +634,7 @@ class EditableDashboard:
         import tomlkit
 
         doc = self._doc if self._doc is not None else _fresh_doc()
-        # Only pin `columns` in the file when it matters — an authored value
+        # Only pin `columns` in the file when it matters - an authored value
         # stays put, and a non-default one gets written; a default on a fresh
         # file stays implicit so the scaffold reads minimal.
         if self.columns != 2 or "columns" in doc:

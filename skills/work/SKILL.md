@@ -87,7 +87,7 @@ The same rules hold in every step:
      ```
 
    - **An open `work` run:** ask whether to resume it or start again
-     (`run start … --replace`, which ends the old run; it stays in history).
+     (`run start ... --replace`, which ends the old run; it stays in history).
      To resume, see *Resuming*.
    - **An open run from another playbook:** say whose it is and ask before
      touching it. Never replace it unasked.
@@ -98,11 +98,11 @@ Depends on the card's column:
 
 - **Backlog:** refine it the way the board skill does: draft a description
   and acceptance criteria, show them, and on approval
-  `mc-tool-board refine N --description … --acceptance …`.
+  `mc-tool-board refine N --description ... --acceptance ...`.
 - **Refined, In Progress or In Review:** the card is already refined. If its
   description has the Testing strategy section (below), skip the step with the
   reason "already refined". If not, add only that section, with approval, using
-  `mc-tool-board edit N --description …`, then mark the step done.
+  `mc-tool-board edit N --description ...`, then mark the step done.
 
 **The Testing strategy section is required before step 1 ends.** It is a
 paragraph in the description reading exactly `**Testing strategy**`, followed
@@ -123,7 +123,7 @@ run; this step does. If the card changed materially, re-read it before step 3.
 - If the card is in Backlog or Refined, move it to In Progress:
   `mc-tool-board move N in_progress` (this keeps the session bound).
 - Work on a topic branch, never on the default branch. Create one if needed
-  (`feat/…`, `fix/…`, following the repository's habit).
+  (`feat/...`, `fix/...`, following the repository's habit).
 - Build against the acceptance criteria and follow the repository's own
   conventions (`CLAUDE.md`, `CONTRIBUTING.md`). Run its checks as you go.
 - At the end of the step, report the batched assumptions.

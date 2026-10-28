@@ -134,7 +134,7 @@ def test_parse_extraction_braces_with_malformed_json():
     """A brace-delimited block that still isn't valid JSON falls through to None.
 
     The direct parse fails, the regex fallback matches the ``{...}`` span, but
-    ``json.loads`` raises again on the malformed contents — exercising the
+    ``json.loads`` raises again on the malformed contents - exercising the
     fallback's own decode-error guard rather than the no-match path.
     """
     raw = "Here you go: {facts: not valid json, missing quotes}"
@@ -165,7 +165,7 @@ def test_extract_observations_mocked():
 
 
 def test_extract_observations_haiku_failure():
-    """A transport failure (call_haiku returns None) propagates as None — retryable."""
+    """A transport failure (call_haiku returns None) propagates as None - retryable."""
     with patch("mait_code.hooks.observe.extractor.call_haiku", return_value=None):
         result = extract_observations("USER: hello")
     assert result is None

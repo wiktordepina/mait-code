@@ -25,7 +25,7 @@ Present the results above clearly. If the search returned no results, suggest br
 
 Results are scoped to the current project and branch by default. To refine, run any of these via Bash:
 
-- `mc-tool-memory search <query> --mode vector` — semantic search; reach for this when keyword matching misses the intent (default mode is `hybrid`; `fts` is keyword-only)
-- `mc-tool-memory search <query> --type <type>` — restrict to one entry type (`fact`, `preference`, `decision`, `insight`, `event`, `task`, `relationship`, `procedure`)
-- `mc-tool-memory search <query> --scope all` — search across all projects, not just the current one
-- `mc-tool-memory list --since 7d` (e.g. `24h`, `1w`) or `--include-superseded` — recent or historical entries rather than a query
+- `mc-tool-memory search <query> --mode vector` - semantic search; reach for this when keyword matching misses the intent (default mode is `hybrid`; `fts` is keyword-only)
+- `mc-tool-memory search <query> --type <type>` - restrict to one entry type (`fact`, `preference`, `decision`, `insight`, `event`, `task`, `relationship`, `procedure`)
+- `mc-tool-memory search <query> --scope all` - search across all projects, not just the current one
+- `mc-tool-memory list --since 7d` (e.g. `24h`, `1w`) or `--include-superseded` - recent or historical entries rather than a query

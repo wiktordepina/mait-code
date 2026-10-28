@@ -457,7 +457,7 @@ class TestDoctorCommand:
         install(source_dir=fake_source)
         result = runner.invoke(app, ["doctor"])
         # `uv-on-path` may fail in a sandboxed test env, so don't assert
-        # full success — just that a non-clean run exits 1 with --json
+        # full success - just that a non-clean run exits 1 with --json
         # we can verify shape regardless.
         assert result.exit_code in (0, 1)
 
@@ -486,7 +486,7 @@ class TestDoctorCommand:
         self, fake_home: Path, fake_source: Path
     ) -> None:
         # `--no-color` must flip the stderr (error/warning) console too, not
-        # just the stdout one — otherwise errors stay coloured under --no-color.
+        # just the stdout one - otherwise errors stay coloured under --no-color.
         from mait_code.console import console, err_console
 
         install(source_dir=fake_source)
@@ -514,7 +514,7 @@ class TestDoctorNestedLlm:
         return next(c for c in report.checks if c.name == "nested-llm")
 
     def test_left_out_by_default(self, fake_home: Path) -> None:
-        # The hub and dashboard call run_doctor() — they must not pay for a
+        # The hub and dashboard call run_doctor() - they must not pay for a
         # model call.
         report = run_doctor()
         assert all(c.name != "nested-llm" for c in report.checks)

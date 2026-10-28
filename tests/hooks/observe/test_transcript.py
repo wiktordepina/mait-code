@@ -143,7 +143,7 @@ def test_read_new_lines_trims_partial_final_line(tmp_path: Path):
     """A trailing line without a newline is held back until it completes."""
     path = tmp_path / "partial.jsonl"
     first = json.dumps({"type": "user", "message": {"content": "complete"}}) + "\n"
-    # Second line has no trailing newline — it's still being written.
+    # Second line has no trailing newline - it's still being written.
     partial = json.dumps({"type": "user", "message": {"content": "partial"}})
     path.write_text(first + partial)
 

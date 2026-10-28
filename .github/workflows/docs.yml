@@ -60,7 +60,7 @@ jobs:
       # `dev` alias) and the release.yml-dispatched run on the new v-tag
       # (which deploys the version + `latest`). `actions/deploy-pages`
       # keys on the SHA, so two deployments for one SHA race in the
-      # Pages backend — non-deterministically the dev artefact can win,
+      # Pages backend - non-deterministically the dev artefact can win,
       # leaving the new version invisible. Skip the push-to-main deploy
       # when HEAD is tagged `v*`; the release dispatch produces the
       # canonical artefact for that SHA.
@@ -129,7 +129,7 @@ jobs:
       # with `--ref v<version>` after creating a release, because
       # GITHUB_TOKEN-created releases don't fire downstream triggers.
       # That dispatch arrives here as `workflow_dispatch` on
-      # `refs/tags/v*` with no `deploy_version` input — accept it
+      # `refs/tags/v*` with no `deploy_version` input - accept it
       # alongside the `release`-event and direct tag-push paths so the
       # new version's docs actually publish.
       - name: Deploy release (tag push or release.yml dispatch)

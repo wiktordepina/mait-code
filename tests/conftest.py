@@ -19,7 +19,7 @@ def _isolate_mait_settings(
     First, **every** inherited ``MAIT_CODE_*`` env var is cleared. ``config.resolve``
     checks env before settings file before default, so any knob a developer exports
     in their shell (``MAIT_CODE_THEME``, ``MAIT_CODE_EMBEDDING_PROVIDER``,
-    ``MAIT_CODE_LOG_LEVEL``, …) would otherwise bleed straight into the suite —
+    ``MAIT_CODE_LOG_LEVEL``, ...) would otherwise bleed straight into the suite -
     a local "red" that's actually green on a clean CI runner. Clearing them up front
     pins every setting to its default regardless of the dev's shell. Tests that need
     a specific value set it via their own ``monkeypatch``, which runs after this
@@ -29,18 +29,18 @@ def _isolate_mait_settings(
 
     Three things are then pointed at throwaway dirs under ``tmp_path``:
 
-    * ``XDG_CONFIG_HOME`` — ``config.resolve`` / ``collect_settings`` read
+    * ``XDG_CONFIG_HOME`` - ``config.resolve`` / ``collect_settings`` read
       ``$XDG_CONFIG_HOME/mait-code/settings.toml`` (cached at module level).
       Without isolation a real settings file on the dev's machine bleeds in, so
-      "unset → default" assertions flip to ``source == "settings"``.
-    * ``XDG_STATE_HOME`` — where logs land. ``@log_invocation`` calls
+      "unset -> default" assertions flip to ``source == "settings"``.
+    * ``XDG_STATE_HOME`` - where logs land. ``@log_invocation`` calls
       ``setup_logging()``, which adds a ``TimedRotatingFileHandler`` to the
       global ``mait_code`` logger. Without isolation every test that drives a
       decorated ``main()`` writes into the dev's real ``mait-code.log`` (with
       pytest's argv logged as the "command"). ``_setup_done`` is reset and the
       handlers swapped so logging re-initialises against the temp dir per test
       and never leaks a handler pointing at the real log.
-    * ``MAIT_CODE_DATA_DIR`` — the data dir (DBs, model cache). Belt-and-braces
+    * ``MAIT_CODE_DATA_DIR`` - the data dir (DBs, model cache). Belt-and-braces
       so a test that reaches ``get_data_dir()`` without a tool fixture can't
       touch the real stores. The dev's own ``MAIT_CODE_DATA_DIR`` is otherwise
       inherited by the pytest process.
@@ -53,7 +53,7 @@ def _isolate_mait_settings(
 
     # Snapshot the process environment and restore it wholesale afterwards:
     # the code under test mutates os.environ directly (config.apply_env,
-    # set_env_var), which monkeypatch can't see — without this, an injected
+    # set_env_var), which monkeypatch can't see - without this, an injected
     # variable leaks into later tests as a phantom "shell export".
     saved_environ = os.environ.copy()
 
@@ -96,7 +96,7 @@ def _block_real_embedding_model(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep every test off the real fastembed model.
 
     Loading it means a download from HuggingFace into the test's throwaway
-    data dir — on every run, and once per worker under xdist — and the
+    data dir - on every run, and once per worker under xdist - and the
     provider singleton would then leak real vectors into later tests. With
     the model refused, the provider fails and search degrades to keyword-only,
     which is what tests that don't stub embeddings expect. Tests of the

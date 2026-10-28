@@ -1,13 +1,13 @@
-"""The mait-code brand moment — wordmark, signature glyph, companion voice.
+"""The mait-code brand moment - wordmark, signature glyph, companion voice.
 
-Pure data and string/Rich helpers (no Textual import — safe anywhere, like
+Pure data and string/Rich helpers (no Textual import - safe anywhere, like
 :mod:`~mait_code.tui.palette`). The wordmark is a block-shadow rendering of the
-name — bold filled glyphs for a confident brand moment — with a plain-text
+name - bold filled glyphs for a confident brand moment - with a plain-text
 fallback for terminals too narrow to hold the art. :func:`wordmark_text`
 paints it in the house treatment: a horizontal brand-palette gradient across
 the fills, the drop shadow dimmed toward the background so it reads as depth.
 
-The signature glyph (:data:`GLYPH`) is the companion's marker — it leads
+The signature glyph (:data:`GLYPH`) is the companion's marker - it leads
 every empty-state line (via :func:`empty_state`) so a quiet screen still
 sounds like the companion rather than a bare "no data".
 """
@@ -31,13 +31,13 @@ __all__ = [
     "wordmark_text",
 ]
 
-#: The companion's signature glyph — a small spark, not a logo.
+#: The companion's signature glyph - a small spark, not a logo.
 GLYPH = "✦"
 
 #: One-line self-description, rendered beside or under the wordmark.
 TAGLINE = "your coding companion"
 
-#: Block-shadow wordmark, six rows tall — filled glyphs with a drop shadow for
+#: Block-shadow wordmark, six rows tall - filled glyphs with a drop shadow for
 #: a bold brand statement. Rendered in the theme's primary colour.
 WORDMARK = (
     "███╗   ███╗ █████╗ ██╗████████╗    ██████╗ ██████╗ ██████╗ ███████╗\n"
@@ -48,7 +48,7 @@ WORDMARK = (
     "╚═╝     ╚═╝╚═╝  ╚═╝╚═╝   ╚═╝       ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝"
 )
 
-#: Half-height wordmark, three rows tall — the full :data:`WORDMARK` collapsed
+#: Half-height wordmark, three rows tall - the full :data:`WORDMARK` collapsed
 #: 2:1 into half-block glyphs. A lighter brand moment for surfaces that can't
 #: spare seven rows for a masthead (the board wears this so the columns keep
 #: their height). Carries the same hyphen bar across its middle row.
@@ -71,7 +71,7 @@ WORDMARK_COMPACT_WIDTH = 50
 def wordmark(width: int, *, compact: bool = False) -> str:
     """Return the wordmark that fits in *width* columns.
 
-    The block-shadow art when there's room, otherwise the plain-text name —
+    The block-shadow art when there's room, otherwise the plain-text name -
     a wrapped wordmark is worse than no wordmark. With *compact* set, the
     half-height :data:`WORDMARK_COMPACT` stands in for the full art, degrading
     to the same plain-text fallback below its (narrower) width threshold.
@@ -81,8 +81,8 @@ def wordmark(width: int, *, compact: bool = False) -> str:
     return WORDMARK if width >= WORDMARK_WIDTH else WORDMARK_PLAIN
 
 
-#: The glyphs forming the wordmark's drop shadow — everything that isn't a
-#: solid ``█`` fill (or the half-blocks of the compact art, which are all fill).
+#: The glyphs forming the wordmark's drop shadow - everything that isn't a
+#: solid U+2588 FULL BLOCK fill (or the half-blocks of the compact art, which are all fill).
 _SHADOW_GLYPHS = frozenset("╔╗╚╝║═")
 
 #: How far shadow glyphs are blended toward the background (0 = the fill
@@ -128,15 +128,15 @@ def wordmark_text(
 ) -> Text:
     """The wordmark for *width*, painted in the horizon + depth treatment.
 
-    A Rich :class:`~rich.text.Text` carrying a per-column three-stop gradient
-    — *primary* → *secondary* → *accent* — across the glyph fills, with the
+    A Rich :class:`~rich.text.Text` carrying a per-column three-stop gradient -
+    *primary* -> *secondary* -> *accent* - across the glyph fills, with the
     box-drawing drop shadow additionally blended toward *background* so it
     sits behind the letters instead of competing with them. The same width
     thresholds as :func:`wordmark` apply; below them the plain-text name is
     returned wearing the same gradient.
 
     Colours are ``#rrggbb`` strings, typically the active theme's. A slot the
-    blend maths can't work on — an ansi theme's named colour, say — falls back
+    blend maths can't work on - an ansi theme's named colour, say - falls back
     to the house palette for that slot, so the brand moment never crashes on
     an exotic theme.
     """

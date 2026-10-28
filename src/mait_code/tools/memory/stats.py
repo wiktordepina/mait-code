@@ -1,4 +1,4 @@
-"""Memory store statistics — shared by the ``stats`` CLI command and the home TUI.
+"""Memory store statistics - shared by the ``stats`` CLI command and the home TUI.
 
 Pure SQL counts plus cheap config reads. Deliberately does **not** probe
 embedding-provider availability (:func:`~mait_code.tools.memory.embeddings.is_available`

@@ -19,7 +19,7 @@ nothing here writes. The only subprocesses are the user's own command tiles
 file) and ``e`` (reindex): after a confirm it drops out via
 :meth:`App.suspend` so ``run_reindex`` can embed the entries missing a vector
 with its normal terminal progress, then home reloads with the fresh embedding
-counts. The one other write is the System → Companion mod toggle, which goes
+counts. The one other write is the System -> Companion mod toggle, which goes
 through the same ``apply_setting`` path as ``mait-code settings``.
 
 The brand debuts here too: the
@@ -182,16 +182,16 @@ def _kv_rows(
     key_style: str = "bold",
     value_style: str = "dim",
 ) -> list[Widget]:
-    """Key→value rows with the values aligned into one column.
+    """Key->value rows with the values aligned into one column.
 
     Keys are padded to the widest key in the batch, so the value column lines up
-    vertically — the monospace equivalent of a borderless two-column table.
+    vertically - the monospace equivalent of a borderless two-column table.
     """
     width = max((len(key) for key, _ in rows), default=0)
     out: list[Widget] = []
     for key, value in rows:
         # Padding rides the (styled) key run; a trailing-padded run keeps its
-        # spaces, unlike a leading-padded one — the run-whitespace gotcha.
+        # spaces, unlike a leading-padded one - the run-whitespace gotcha.
         line = Text(f"{key.ljust(width)}  ", style=key_style)
         line.append(value, style=value_style)
         out.append(Label(line))
@@ -205,7 +205,7 @@ class _Badges:
     """A point-in-time count of each store, for the tree's node badges.
 
     Read once per tree build. Best-effort: a store that raises leaves its
-    counts at zero rather than breaking the sidebar — the detail pane is where
+    counts at zero rather than breaking the sidebar - the detail pane is where
     a broken store surfaces its error.
     """
 
@@ -240,7 +240,7 @@ class _Badges:
                 cards = service.list_cards(conn)
             finally:
                 conn.close()
-        except Exception:  # noqa: BLE001 — a broken store just zeroes its badge
+        except Exception:  # noqa: BLE001 - a broken store just zeroes its badge
             return
         live = [c for c in cards if c["status"] != "done"]
         self.board_live = len(live)
@@ -298,7 +298,7 @@ class _Badges:
 
 
 class HomeApp(MaitApp):
-    """The companion's front door — a tree-navigable hub over every store."""
+    """The companion's front door - a tree-navigable hub over every store."""
 
     TITLE = "mait-code"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_home.tcss"]
@@ -328,7 +328,7 @@ class HomeApp(MaitApp):
     def on_mount(self) -> None:
         tree: Tree[NodeSpec] = self.query_one("#tree", Tree)
         # Enter posts NodeSelected without auto-expanding (see on_tree_node_selected),
-        # so a launch leaf launches and a category toggles — no double action.
+        # so a launch leaf launches and a category toggles - no double action.
         tree.auto_expand = False
         tree.guide_depth = 2
         tree.root.data = NodeSpec("home")
@@ -354,7 +354,7 @@ class HomeApp(MaitApp):
             name: str, spec: NodeSpec, badge: str = "", style: str = "dim"
         ) -> TreeNode[NodeSpec]:
             # The gap rides the end of the name run, not the start of the badge
-            # run — the tree renderer trims a styled run's leading whitespace.
+            # run - the tree renderer trims a styled run's leading whitespace.
             label = Text(f"{name}  ") if badge else Text(name)
             if badge:
                 label.append(badge, style=style)
@@ -366,7 +366,7 @@ class HomeApp(MaitApp):
             parent.add_leaf(name, data=spec)
 
         def launch_leaf(parent: TreeNode[NodeSpec], name: str, spec: NodeSpec) -> None:
-            # A dedicated "open this TUI" leaf: the ↗ glyph and the accent hue
+            # A dedicated "open this TUI" leaf: the U+2197 NORTH EAST ARROW glyph and the accent hue
             # mark it as a hand-off, distinct from the plain detail leaves. The
             # category itself stays a normal expand/collapse node.
             parent.add_leaf(Text(f"↗ {name}", style=accent), data=spec)
@@ -404,7 +404,7 @@ class HomeApp(MaitApp):
         )
         leaf(memory, "By type", NodeSpec("memory:by_type"))
         # "Due for review" carries a warn-styled count when memories have
-        # decayed past the resurfacing threshold — the nudge to keep curated
+        # decayed past the resurfacing threshold - the nudge to keep curated
         # memory fresh (see mait_code.tools.memory.review). The trailing gap
         # rides the name run, since the tree trims a styled run's leading space.
         if b.mem_due:
@@ -521,7 +521,7 @@ class HomeApp(MaitApp):
         builder = self._detail_builders().get(key)
         try:
             widgets = builder() if builder else [Label(empty_state("Nothing here."))]
-        except Exception as exc:  # noqa: BLE001 — a broken store mustn't kill home
+        except Exception as exc:  # noqa: BLE001 - a broken store mustn't kill home
             widgets = [
                 Label(empty_state(f"This view hit a snag: {exc}"), classes="overdue")
             ]
@@ -580,7 +580,7 @@ class HomeApp(MaitApp):
             try:
                 body = self._tile_text(dashboard.builtin_tile_lines(spec.widget))
                 error = False
-            except Exception as exc:  # noqa: BLE001 — one broken store, one tile
+            except Exception as exc:  # noqa: BLE001 - one broken store, one tile
                 body = Text(
                     f"couldn't read: {exc}", style=self._level_colours()["warn"]
                 )
@@ -597,7 +597,7 @@ class HomeApp(MaitApp):
         return tile
 
     def _tile_text(self, lines: list[dashboard.TileLine]) -> Text:
-        """Semantic tile lines → one Rich body in the active theme's colours."""
+        """Semantic tile lines -> one Rich body in the active theme's colours."""
         styles = {"": "", "dim": "dim", "warn": self._level_colours()["warn"]}
         text = Text()
         for i, line in enumerate(lines):
@@ -1003,7 +1003,7 @@ class HomeApp(MaitApp):
     def _detail_sysprompt(self) -> list[Widget]:
         from mait_code.hooks.session_start.context import build_session_context
 
-        # Read each identity document once — the text feeds both the token
+        # Read each identity document once - the text feeds both the token
         # estimate and the rendered body.
         identity = [
             (title, path, _read_identity(path)) for title, path in _identity_files()
@@ -1214,7 +1214,7 @@ class HomeApp(MaitApp):
     # -- theme helpers ---------------------------------------------------------
 
     def _level_colours(self) -> dict[str, str]:
-        """Doctor levels → Rich-parseable colours from the active theme.
+        """Doctor levels -> Rich-parseable colours from the active theme.
 
         Normalised through :func:`_rich_colour`, so the ``ansi`` themes (whose
         ``ansi_yellow``-style names Rich can't parse) render instead of crashing,
@@ -1243,7 +1243,7 @@ class HomeApp(MaitApp):
     # -- actions ---------------------------------------------------------------
 
     def _refresh(self) -> None:
-        """Re-read every store — rebuilds the badges, health line, and detail."""
+        """Re-read every store - rebuilds the badges, health line, and detail."""
         tree: Tree[NodeSpec] = self.query_one("#tree", Tree)
         current = tree.cursor_node
         key = current.data.detail if current and current.data else "home"
@@ -1252,7 +1252,7 @@ class HomeApp(MaitApp):
         self.call_after_refresh(self._show_detail, key)
 
     def action_reload(self) -> None:
-        """Re-read every store — refreshes the badges and the current detail."""
+        """Re-read every store - refreshes the badges and the current detail."""
         self._refresh()
         self.notify("Home reloaded", title="Home")
 
@@ -1262,13 +1262,13 @@ class HomeApp(MaitApp):
 
         Usually that means embedding the entries missing a vector, but the
         reindex rebuilds every vector when the stored ones came from another
-        model (or there's no record and a re-embedded sample disagrees) —
+        model (or there's no record and a re-embedded sample disagrees) -
         the prompt says so, since on Bedrock a rebuild costs money.
         """
         try:
             missing = self._memory_stats().unembedded
             status = self._vector_status()
-        except Exception as exc:  # noqa: BLE001 — a broken store mustn't kill home
+        except Exception as exc:  # noqa: BLE001 - a broken store mustn't kill home
             self.notify(
                 f"Couldn't read the memory store: {exc}",
                 title="Reindex",
@@ -1476,7 +1476,7 @@ def _read_identity(path: Path) -> str | None:
 def _estimate_tokens(text: str) -> int:
     """Rough token estimate: ~4 characters per token for English prose.
 
-    A deliberate heuristic, not a tokenizer — mait-code ships no model SDK and
+    A deliberate heuristic, not a tokenizer - mait-code ships no model SDK and
     works offline. Close enough to gauge the budget the identity stack spends at
     session start; the true count is whatever Claude's tokenizer lands on.
     """
@@ -1502,7 +1502,7 @@ def _health_line(colours: dict[str, str]) -> Text:
     """The doctor verdict as one line: a level glyph and the check counts.
 
     A sibling of ``_doctor._verdict``, rebuilt here because the console's
-    semantic ``ok``/``warn``/``fail`` styles don't resolve inside Textual —
+    semantic ``ok``/``warn``/``fail`` styles don't resolve inside Textual -
     *colours* maps those levels to concrete theme colours instead.
     """
     from mait_code.console import GLYPH as LEVEL_GLYPH
@@ -1524,7 +1524,7 @@ def _health_line(colours: dict[str, str]) -> Text:
             (f"{n_warn} warning{'s' if n_warn != 1 else ''}", colours["warn"])
         )
     segments.append((f"{n_ok} passed", colours["ok"]))
-    # Separators trail the run before them — see the run-whitespace note in
+    # Separators trail the run before them - see the run-whitespace note in
     # _detail_board_by_project.
     for i, (text, style) in enumerate(segments):
         line.append(f"{text}{' · ' if i < len(segments) - 1 else '  '}", style=style)

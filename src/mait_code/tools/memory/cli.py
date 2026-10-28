@@ -583,7 +583,7 @@ def _embed_missing(conn):
     """Embed the entries that lack a vector, in id order, 64 per commit.
 
     Each committed batch shrinks the missing set, so the query pages
-    itself — no OFFSET bookkeeping. Returns the count written.
+    itself - no OFFSET bookkeeping. Returns the count written.
 
     Raises:
         ReindexError: if a batch fails to embed.
@@ -677,7 +677,7 @@ def run_reindex(db_path=None, *, missing_only=False) -> int:
             configured ``{data_dir}/memory.db``).
         missing_only: Embed only the entries that lack a vector instead
             of re-embedding everything. When the stored vectors came from
-            another model (or width) the table is rebuilt in full anyway —
+            another model (or width) the table is rebuilt in full anyway -
             topping up would mix embedding spaces. With no record of the
             model, a re-embedded sample decides: a match adopts the
             configured model, anything else rebuilds.

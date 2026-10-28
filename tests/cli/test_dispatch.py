@@ -2,7 +2,7 @@
 
 The subcommand *implementations* (install/update/uninstall/status/doctor/
 settings) are exercised by their own focused test modules. This module fills
-the gaps in :mod:`mait_code.cli` itself — the thin dispatch layer that decides,
+the gaps in :mod:`mait_code.cli` itself - the thin dispatch layer that decides,
 per command, whether to launch a Textual TUI (on a TTY) or fall back to text.
 
 Every TUI launcher is patched so nothing interactive ever runs: the tests
@@ -79,7 +79,7 @@ def force_tty(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # ---------------------------------------------------------------------------
-# version — fallbacks when the package metadata is unavailable
+# version - fallbacks when the package metadata is unavailable
 # ---------------------------------------------------------------------------
 
 
@@ -130,7 +130,7 @@ class TestVersionFallback:
 
 
 # ---------------------------------------------------------------------------
-# --no-color — root callback toggles the shared consoles
+# --no-color - root callback toggles the shared consoles
 # ---------------------------------------------------------------------------
 
 
@@ -140,7 +140,7 @@ class TestNoColor:
         warnings/errors are decoloured too."""
         from mait_code.console import console, err_console
 
-        # ``home`` off a TTY prints text and exits 0 — a cheap subcommand to
+        # ``home`` off a TTY prints text and exits 0 - a cheap subcommand to
         # carry the root flag through the callback.
         result = runner.invoke(app, ["--no-color", "home"])
         assert result.exit_code == 0
@@ -157,7 +157,7 @@ def test_bare_invocation_on_tty_opens_home_loop(
     monkeypatch: pytest.MonkeyPatch, force_tty: None
 ) -> None:
     """With no subcommand and a real terminal, ``mait-code`` is the front
-    door — it runs the home loop instead of printing help.
+    door - it runs the home loop instead of printing help.
 
     The root callback is invoked directly with a context whose
     ``invoked_subcommand`` is ``None`` (the bare-invocation case).
@@ -258,7 +258,7 @@ class TestTuiLaunchRouting:
 
 
 # ---------------------------------------------------------------------------
-# settings — TTY branch opens the interactive editor
+# settings - TTY branch opens the interactive editor
 # ---------------------------------------------------------------------------
 
 
@@ -290,7 +290,7 @@ class TestSettingsTuiRouting:
 
 
 # ---------------------------------------------------------------------------
-# _run_home_loop — every HomeTarget routes to its TUI launcher
+# _run_home_loop - every HomeTarget routes to its TUI launcher
 # ---------------------------------------------------------------------------
 
 
@@ -354,7 +354,7 @@ class TestHomeLoopTargets:
 
 
 # ---------------------------------------------------------------------------
-# settings set — followup-message branches
+# settings set - followup-message branches
 # ---------------------------------------------------------------------------
 
 
@@ -436,7 +436,7 @@ class TestSettingsSetFollowups:
 
 
 # ---------------------------------------------------------------------------
-# settings set env.<NAME> — warnings loop after a successful env write
+# settings set env.<NAME> - warnings loop after a successful env write
 # ---------------------------------------------------------------------------
 
 
@@ -464,7 +464,7 @@ def test_settings_set_env_emits_warnings(
 
 
 # ---------------------------------------------------------------------------
-# main — exception passthrough (pretty exceptions disabled)
+# main - exception passthrough (pretty exceptions disabled)
 # ---------------------------------------------------------------------------
 
 
@@ -520,7 +520,7 @@ def test_identity_show_refuses_anything_but_a_shipped_template(
 
 
 # ---------------------------------------------------------------------------
-# board / graph — non-TTY text fallbacks
+# board / graph - non-TTY text fallbacks
 # ---------------------------------------------------------------------------
 
 
@@ -618,7 +618,7 @@ class TestGraphFallback:
 
 def test_observations_truncates_long_day(isolated_data_dir: None, tmp_path) -> None:
     """A day with more than five observations prints the first five and an
-    ``… and N more`` line — the truncation branch."""
+    ``and N more`` line, led by an ellipsis glyph: the truncation branch."""
     from mait_code.tools.memory.db import get_connection
 
     conn = get_connection(tmp_path / "memory.db")

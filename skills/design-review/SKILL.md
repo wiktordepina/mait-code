@@ -65,8 +65,8 @@ If you find yourself writing "we decided", stop: that sentence is the failure th
    Ask how any new card orders against N and its siblings before linking `blocks`. `mc-tool-board link` is deliberately outside this skill's grant, so a link also goes through the permission prompt.
 
 6. **Write only what the user approves.** Nothing reaches the board until they say so. Then:
-   - fold the approved resolutions into the card with `mc-tool-board edit N --description … --acceptance …`, keeping any section headed **Testing strategy** under exactly that heading (a playbook may read it);
-   - add a comment saying what the review changed: `mc-tool-board comment N --author claude "Design review folded in: …"`;
+   - fold the approved resolutions into the card with `mc-tool-board edit N --description ... --acceptance ...`, keeping any section headed **Testing strategy** under exactly that heading (a playbook may read it);
+   - add a comment saying what the review changed: `mc-tool-board comment N --author claude "Design review folded in: ..."`;
    - add the approved cards.
 
    Don't move the card, and don't touch its playbook run: a playbook that calls this skill records its own step.

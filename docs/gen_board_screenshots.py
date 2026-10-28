@@ -2,13 +2,13 @@
 
 The board guide (``docs/board.md``) embeds screenshots of the live TUI. Those
 start as the very SVG artefacts the snapshot suite renders under
-``tests/cli/__snapshots__/`` — so they stay accurate automatically: whenever the
+``tests/cli/__snapshots__/`` - so they stay accurate automatically: whenever the
 board's look changes, the snapshot baseline is regenerated and this script
 renders it afresh.
 
 The board now wears the brand banner, block-shadow wordmark and all, so the shots
 are rasterised through headless Chrome rather than published as SVG (an SVG seams
-across the block art — see :mod:`_screenshots` for the full why and the machine
+across the block art - see :mod:`_screenshots` for the full why and the machine
 requirements). The card-detail shots sit at a normal width with the masthead
 behind the modal. The Initiatives view is its own snapshot suite but documents
 inside the board guide, so its shots publish here too.

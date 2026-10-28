@@ -1,4 +1,4 @@
-"""Tests for :mod:`mait_code.cli._logs` — the JSONL log read-side helpers.
+"""Tests for :mod:`mait_code.cli._logs` - the JSONL log read-side helpers.
 
 Timestamps are written and asserted in UTC (the ``TZ`` fixture pins the
 process zone), since :func:`entry_day` / :func:`entry_time` render local time.

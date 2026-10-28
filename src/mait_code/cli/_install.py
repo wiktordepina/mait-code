@@ -75,7 +75,7 @@ step), so ordinary sessions don't pay for them in context.
 _SUPERSEDED_TEMPLATES: dict[str, frozenset[str]] = {
     "communication_style.md": frozenset(
         {
-            # 0.77.0 — attention markers only, no side-effect markers.
+            # 0.77.0 - attention markers only, no side-effect markers.
             "661b40da6b7d3977a1650e635043d909060a937d213f442062fb6a5c0aa38d50",
             # Side-effect markers with the earlier state-change glyphs.
             "e79ed2302a987317de0b9c98e4b2efe09452169935b5c5967d374049f3892885",
@@ -224,13 +224,13 @@ def install(
     cdir = (claude_dir if claude_dir is not None else default_claude_dir()).resolve()
     ddir = (data_dir if data_dir is not None else default_data_dir()).resolve()
 
-    # 1. Data directory layout (memory/graph is deliberately not created —
+    # 1. Data directory layout (memory/graph is deliberately not created -
     # it's dead code per the docs audit).
     ddir.mkdir(parents=True, exist_ok=True)
     (ddir / "memory" / "observations").mkdir(parents=True, exist_ok=True)
     (ddir / "memory" / "reflections").mkdir(parents=True, exist_ok=True)
 
-    # 2. Copy templates — never overwrite an edited one.
+    # 2. Copy templates - never overwrite an edited one.
     templates_copied, templates_upgraded = sync_identity_templates(source_dir, ddir)
 
     # 3. MEMORY.md stub if missing.

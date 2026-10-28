@@ -86,7 +86,7 @@ class TestSwitching:
 
     @pytest.mark.parametrize("initial_view", [INITIATIVES, None])
     def test_escape_leaves_the_board(self, board_path: Path, initial_view) -> None:
-        """Escape quits from Initiatives however it was reached — from the hub
+        """Escape quits from Initiatives however it was reached - from the hub
         that lands back on the hub; ``i`` is the way to the kanban."""
 
         async def scenario():
@@ -675,7 +675,7 @@ class TestDiagram:
             "show_table": True,
             "toggle_ready": False,
         }
-        assert focused == "deps"  # → reaches the diagram, so its arrows scroll
+        assert focused == "deps"  # -> reaches the diagram, so its arrows scroll
 
     def test_draws_linked_members_and_stubs_and_counts_the_rest(
         self, board_path: Path
@@ -772,7 +772,7 @@ class TestDiagram:
     def test_epic_after_a_linkless_one_draws_without_hanging(
         self, board_path: Path
     ) -> None:
-        """Graph view, linked epic → linkless (diagram hidden) → linked again.
+        """Graph view, linked epic -> linkless (diagram hidden) -> linked again.
 
         The re-shown view starts unsized; it must draw once laid out, not spin
         retrying before the layout pass that would size it.

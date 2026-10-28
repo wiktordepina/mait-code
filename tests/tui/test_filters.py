@@ -4,8 +4,8 @@
 ``Select`` modal (the log viewer's tool/day filters);
 :class:`~mait_code.tui.filters.ProjectFilterScreen` is its project-flavoured
 subclass (the memory, observations and board browsers). The contract worth
-pinning is the three-way outcome — a choice, the :data:`ALL_CHOICES` sentinel
-that *clears* the filter, and the ``None`` that escape dismisses with — kept
+pinning is the three-way outcome - a choice, the :data:`ALL_CHOICES` sentinel
+that *clears* the filter, and the ``None`` that escape dismisses with - kept
 distinct so "all" never collapses into "cancel".
 
 Driven like ``test_app.py`` (``asyncio.run`` + headless pilot); each modal is
@@ -73,8 +73,8 @@ def test_pick_choice_applies() -> None:
 
 
 def test_all_label_clears_to_sentinel() -> None:
-    # Opened on a concrete value, picking "All …" resolves to ALL_CHOICES —
-    # the clear signal — not to None.
+    # Opened on a concrete value, picking "All ..." resolves to ALL_CHOICES -
+    # the clear signal - not to None.
     async def scenario():
         return await _drive(
             ChoiceFilterScreen("Filter by tool", ["board", "memory"], current="board"),
@@ -89,7 +89,7 @@ def test_all_label_clears_to_sentinel() -> None:
 
 def test_escape_cancels_distinct_from_all() -> None:
     # The modal opens with its dropdown expanded, so the first escape collapses
-    # it and the second reaches the screen's cancel binding — escape dismisses
+    # it and the second reaches the screen's cancel binding - escape dismisses
     # with None (leave the filter as-is), never the ALL_CHOICES clear signal.
     async def _escape_twice(app: MaitApp, pilot: Pilot) -> None:
         await pilot.press("escape")

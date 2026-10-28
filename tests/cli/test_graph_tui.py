@@ -1,10 +1,10 @@
 """Tests for the Textual ``mait-code graph`` TUI.
 
 Driven by Textual's headless pilot (``App.run_test()`` wrapped in
-``asyncio.run`` — no pytest-asyncio), mirroring the logs TUI tests. The app
+``asyncio.run`` - no pytest-asyncio), mirroring the logs TUI tests. The app
 takes a ``db_path`` so each scenario points at an isolated seeded database;
 the query layer is covered directly in ``test_entities.py``, so here we check
-the interaction wiring on top of it: re-centring, the graph ⇄ table toggle,
+the interaction wiring on top of it: re-centring, the graph <-> table toggle,
 the deferred graph application, and the zoom workaround.
 """
 
@@ -59,7 +59,7 @@ def test_table_row_select_recentres(tmp_path: Path) -> None:
             await pilot.press("t")
             await pilot.pause()
             app.query_one("#table").focus()
-            await pilot.press("enter")  # first row: alpha ─depends_on─▶ forge
+            await pilot.press("enter")  # first row: alpha -depends_on-> forge
             await pilot.pause()
             assert app._centre_name() == "forge"
 

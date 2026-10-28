@@ -2,15 +2,15 @@
 
 Two small JSON files under the data dir, kept separate on purpose:
 
-* ``bridge.json`` — the *user's* channel config (server, topics, token), keyed
+* ``bridge.json`` - the *user's* channel config (server, topics, token), keyed
   per channel type so divergent schemas coexist. This is the tier that could
   one day sync between machines.
-* ``bridge-state.json`` — the *machine's* drain watermark. Per-machine and
+* ``bridge-state.json`` - the *machine's* drain watermark. Per-machine and
   never synced: two laptops draining the same topic each track their own
   position.
 
 The enable gate (``bridge``) and channel selector (``bridge-type``) are
-first-class settings in :mod:`mait_code.config`, so they resolve env → file →
+first-class settings in :mod:`mait_code.config`, so they resolve env -> file ->
 default and are visible to ``doctor`` like every other knob.
 """
 
@@ -54,7 +54,7 @@ _STATE_FILE = "bridge-state.json"
 
 
 def bridge_enabled() -> bool:
-    """Whether the Bridge is switched on. Off by default — the safety spine."""
+    """Whether the Bridge is switched on. Off by default - the safety spine."""
     return _config.get_bool("bridge")
 
 

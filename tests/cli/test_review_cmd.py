@@ -1,7 +1,7 @@
 """Tests for the ``mait-code review`` command's non-TTY fallback.
 
 The TUI itself is covered in ``test_review_tui.py``; here we only check the
-routing — a non-TTY invocation (which is what ``CliRunner`` provides) prints
+routing - a non-TTY invocation (which is what ``CliRunner`` provides) prints
 the due-for-review list as text instead of launching Textual.
 """
 
@@ -53,9 +53,9 @@ def test_review_lists_due(tmp_path: Path) -> None:
     _seed(
         tmp_path / "memory.db",
         [
-            # Episodic, reviewed long ago → far past the 3-day half-life → due.
+            # Episodic, reviewed long ago -> far past the 3-day half-life -> due.
             ("stale but important fact", 8, "episodic", "2020-01-01 00:00:00"),
-            # Trivia below the importance floor → must not surface.
+            # Trivia below the importance floor -> must not surface.
             ("trivia that can decay", 2, "episodic", "2020-01-01 00:00:00"),
         ],
     )

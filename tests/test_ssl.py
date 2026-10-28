@@ -7,7 +7,7 @@ from mait_code.ssl import setup_ssl
 
 
 class TestSetupSsl:
-    """Tests for setup_ssl — OS trust store injection."""
+    """Tests for setup_ssl - OS trust store injection."""
 
     def setup_method(self):
         """Reset the module-level flag before each test."""

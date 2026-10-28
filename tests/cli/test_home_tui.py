@@ -2,7 +2,7 @@
 
 The root conftest points ``MAIT_CODE_DATA_DIR`` at a per-test tmp dir, so every
 store the hub reads is seeded through the same connections the app uses. The
-doctor and version are pinned — the health line and brand header must not
+doctor and version are pinned - the health line and brand header must not
 depend on the developer's real ``~/.claude`` or the package version.
 """
 
@@ -154,7 +154,7 @@ def test_board_detail_lists_live_cards_and_launch_hint() -> None:
     text = _run(scenario)
     assert "In progress" in text and "Work the thing" in text
     assert "Next up" in text and "Refine the spec" in text
-    # The launch hint now points at the dedicated "↗ Open board" leaf.
+    # The launch hint now points at the dedicated "Open board" leaf.
     assert "Open board" in text and "launch the full board" in text
 
 
@@ -260,7 +260,7 @@ def _seed_memory_reviewed_at(
     """Seed a semantic memory with an explicit review anchor.
 
     ``recency_score`` uses the real wall-clock, so tests pass absolute
-    timestamps (far-past → robustly due, now → robustly fresh) to stay
+    timestamps (far-past -> robustly due, now -> robustly fresh) to stay
     time-independent.
     """
     from mait_code.tools.memory.db import get_connection
@@ -373,9 +373,9 @@ def test_rich_colour_normalises_theme_colours() -> None:
     from mait_code.tui.palette import rich_colour
 
     assert rich_colour("#abcdef", "#000") == "#abcdef"  # hex passes through
-    assert rich_colour("ansi_yellow", "#000") == "yellow"  # ansi → Rich name
+    assert rich_colour("ansi_yellow", "#000") == "yellow"  # ansi -> Rich name
     assert rich_colour("ansi_bright_red", "#000") == "bright_red"
-    assert rich_colour(None, "#000") == "#000"  # unset → fallback
+    assert rich_colour(None, "#000") == "#000"  # unset -> fallback
     assert rich_colour("", "#000") == "#000"
 
 
@@ -390,7 +390,7 @@ def test_home_renders_under_ansi_theme() -> None:
             app.theme = "ansi-dark"
             await pilot.pause()
             # Reload re-renders the health line and rebuilds the tree (launch
-            # leaves carry the accent) with the active theme's colours — the
+            # leaves carry the accent) with the active theme's colours - the
             # exact path that crashed on mount under an ansi theme.
             app.action_reload()
             await pilot.pause()
@@ -484,7 +484,7 @@ def test_system_prompt_node_renders_identity_and_context() -> None:
     assert "Communication style" in text
     assert "isn't written yet" in text  # missing files speak, not error
     assert "Session context" in text
-    assert "A quiet start" in text  # empty stores → silent context, voiced
+    assert "A quiet start" in text  # empty stores -> silent context, voiced
     assert docs == 1  # only the soul document exists in this data dir
 
 
@@ -527,9 +527,9 @@ def test_selecting_a_launch_leaf_sets_the_target() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
-            # Root child 0 is the "↗ Set up start page" leaf; Board follows.
+            # Root child 0 is the "Set up start page" leaf; Board follows.
             board = tree.root.children[1]  # Board section (expands, no launch)
-            open_board = board.children[0]  # "↗ Open board" launch leaf
+            open_board = board.children[0]  # "Open board" launch leaf
             app.on_tree_node_selected(Tree.NodeSelected(open_board))
             await pilot.pause()
             return app.target
@@ -546,7 +546,7 @@ def test_initiatives_leaf_sets_its_target() -> None:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
             board = tree.root.children[1]
-            leaf = board.children[1]  # "↗ Open initiatives", after "Open board"
+            leaf = board.children[1]  # "Open initiatives", after "Open board"
             app.on_tree_node_selected(Tree.NodeSelected(leaf))
             await pilot.pause()
             return app.target
@@ -919,7 +919,7 @@ def test_home_dashboard_grid_honours_columns_and_span(
 def test_home_dashboard_reload_rebuilds_the_grid(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    """`r` re-reads dashboard.toml — an edit lands without leaving the hub."""
+    """`r` re-reads dashboard.toml - an edit lands without leaving the hub."""
     import mait_code.cli._dashboard as dashboard_mod
 
     path = tmp_path / "dashboard.toml"
@@ -947,7 +947,7 @@ def test_home_dashboard_reload_rebuilds_the_grid(
 
 
 def test_home_tree_offers_start_page_setup_leaf() -> None:
-    """The root carries the '↗ Set up start page' hand-off above the sections,
+    """The root carries the 'Set up start page' hand-off above the sections,
     and selecting it exits home with the DASHBOARD target."""
 
     async def scenario():
@@ -965,7 +965,7 @@ def test_home_tree_offers_start_page_setup_leaf() -> None:
     assert target is HomeTarget.DASHBOARD
 
 
-# --- System → Companion mod toggle ---
+# --- System -> Companion mod toggle ---
 
 
 def _mods_node(app: HomeApp):

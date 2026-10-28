@@ -1,7 +1,7 @@
 """Unit tests for the board service layer.
 
 These exercise :mod:`mait_code.tools.board.service` directly on a temp
-connection — the function-level analogue of the end-to-end CLI tests in
+connection - the function-level analogue of the end-to-end CLI tests in
 ``test_board.py``. The focus is the shared invariants the TUI relies on:
 the done-stamp, ``CardNotFound`` on missing ids, ordering, and the
 archived-exclusion in summaries.
@@ -340,7 +340,7 @@ def test_block_card_tags_in_place(board_db: sqlite3.Connection):
     cid = _insert(board_db, "x", status=REFINED)
     service.block_card(board_db, cid, reason="waiting on review")
     card = service.get_card(board_db, cid)
-    # Status is unchanged — blocking is now an in-place tag, not a move.
+    # Status is unchanged - blocking is now an in-place tag, not a move.
     assert card["status"] == REFINED
     assert BLOCKED_TAG in card["tags"]
     comments = service.get_comments(board_db, cid)

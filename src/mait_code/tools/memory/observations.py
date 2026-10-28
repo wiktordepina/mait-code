@@ -1,4 +1,4 @@
-"""Observation queries — the raw extraction tier, for browsing surfaces.
+"""Observation queries - the raw extraction tier, for browsing surfaces.
 
 The observe hook stores what it extracts from sessions as ordinary
 ``memory_entries`` rows (facts, preferences, decisions, events); reflection
@@ -8,7 +8,7 @@ observations with their reflected/pending standing against the watermark,
 enumerate the projects they span, and summarise the daily JSONL capture logs
 the hook also writes.
 
-``memory.db`` is the source of truth throughout — the watermark is defined
+``memory.db`` is the source of truth throughout - the watermark is defined
 over its entry IDs. The JSONL files under ``memory/observations/`` only
 contribute per-capture metadata (trigger, counts) that the rows don't carry,
 and are read best-effort.
@@ -56,7 +56,7 @@ def list_observations(
 
     Returns every non-insight entry (insights are reflection *output*, not
     observations), each carrying the standard entry fields plus ``reflected``:
-    whether the entry sits at or below the relevant reflection watermark — the
+    whether the entry sits at or below the relevant reflection watermark - the
     project's own when ``project`` is given, the global one otherwise, matching
     :func:`~mait_code.tools.memory.reflect.count_unreflected`. With no
     watermark for the scope, nothing has been reflected yet. An entry the
@@ -135,11 +135,11 @@ def daily_batches(day: str) -> list[dict]:
 
     Each observe-hook run appends one record to
     ``memory/observations/<day>.jsonl``; this reads them back as light
-    summaries — when and why a capture happened and how much it extracted —
+    summaries - when and why a capture happened and how much it extracted -
     without the extraction bodies (those live in ``memory.db``).
 
     Best-effort by design: a missing file, an unreadable file, or a malformed
-    line yields no batch rather than raising — the JSONL is supplementary
+    line yields no batch rather than raising - the JSONL is supplementary
     metadata, never load-bearing.
 
     Args:

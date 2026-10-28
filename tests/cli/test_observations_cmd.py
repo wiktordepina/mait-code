@@ -1,7 +1,7 @@
 """Tests for the ``mait-code observations`` command's non-TTY fallback.
 
 The TUI itself is covered by the snapshot tests; here we only check the
-routing — a non-TTY invocation (which is what ``CliRunner`` provides) prints
+routing - a non-TTY invocation (which is what ``CliRunner`` provides) prints
 the day-grouped summary instead of launching Textual.
 """
 

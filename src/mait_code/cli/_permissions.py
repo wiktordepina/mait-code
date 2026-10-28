@@ -8,7 +8,7 @@ without reading. This module owns a small, hand-curated catalogue of such rules
 plus the read/merge machinery to write them into the user's settings file.
 
 **One file, deliberately.** Claude Code unions ``permissions.allow`` across
-three files — ``~/.claude/settings.json``, ``<repo>/.claude/settings.json`` and
+three files - ``~/.claude/settings.json``, ``<repo>/.claude/settings.json`` and
 ``<repo>/.claude/settings.local.json``. This module reads and writes the first
 of those and nothing else.
 
@@ -30,7 +30,7 @@ while the project file keeps the rule in force.
 
 More importantly, a grant can no longer be confined to one repository. For the
 ``read-only`` tier that costs nothing. For ``writes-workspace`` it is a real
-widening — enabling ``uv run pytest`` lets every repo you subsequently open run
+widening - enabling ``uv run pytest`` lets every repo you subsequently open run
 its own ``conftest.py`` unprompted, where the previous per-repo default did not.
 The UI says so at the point of opting in; restoring the capability properly
 means an explicit ``--project <path>`` argument, a named target rather than an
@@ -47,7 +47,7 @@ Two consequences drive what is in the catalogue:
   continuation like any other, so narrowing has to happen in the prefix itself.
 
 **The boundary is native, and the trailing space is belt-and-braces.** Every
-pattern here is written as a pair — ``Bash(cmd)`` for the bare invocation and
+pattern here is written as a pair - ``Bash(cmd)`` for the bare invocation and
 ``Bash(cmd :*)`` for anything with arguments. The original rationale was that
 ``:*`` was a *raw* string prefix, so ``Bash(git diff:*)`` would also reach
 ``git difftool --extcmd=<cmd>`` and the trailing space was the only thing
@@ -66,7 +66,7 @@ between the catalogue and arbitrary code execution.
 guard test fails if the boundary is ever dropped.
 
 :func:`matches_command` models the measured semantics, staying pessimistic only
-where measurement ran out — the catalogue is guarded against the worst case a
+where measurement ran out - the catalogue is guarded against the worst case a
 real matcher might plausibly do, not the friendliest.
 """
 
@@ -118,7 +118,7 @@ TIERS = ("read-only", "writes-workspace")
 """Valid :attr:`Preset.tier` values.
 
 ``read-only`` touches nothing on disk. ``writes-workspace`` may rewrite tracked
-files in the repo or drop caches — reversible through git, but not read-only,
+files in the repo or drop caches - reversible through git, but not read-only,
 so the UI labels it and the user opts in knowing that.
 """
 
@@ -128,7 +128,7 @@ class Preset:
     """One opt-in bundle of ``permissions.allow`` rules.
 
     Attributes:
-        id: Stable kebab-case identifier — the key the TUI and tests address a
+        id: Stable kebab-case identifier - the key the TUI and tests address a
             preset by. Never reuse or renumber; the settings files store the
             patterns, not the id, so a rename silently orphans nothing but does
             break any user-facing reference.
@@ -171,7 +171,7 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
         ),
         # The trailing space states the word boundary explicitly. Measured against
         # 2.1.220 `:*` already stops at a token boundary, so 'git difftool' is
-        # refused either way — the space makes that independent of an undocumented
+        # refused either way - the space makes that independent of an undocumented
         # matcher detail. The first pattern covers bare `git diff`, which the
         # space-terminated prefix would otherwise miss.
         patterns=("Bash(git diff)", "Bash(git diff :*)"),
@@ -403,7 +403,7 @@ MUTATING_VERBS: tuple[str, ...] = (
 )
 """Command tokens that must never appear in a ``read-only`` preset's pattern.
 
-A blunt instrument on purpose — it catches a mutating subcommand slipping into
+A blunt instrument on purpose - it catches a mutating subcommand slipping into
 the catalogue by inattention, which is the realistic failure mode.
 """
 
@@ -421,7 +421,7 @@ MUTATING_INVOCATIONS: tuple[str, ...] = (
     "git difftool --extcmd=rm",
     "git difftool -x rm",
     # Real binaries that share a prefix with a genuinely read-only command. Which
-    # of these exist is machine-dependent — that is the point. A prefix rule with
+    # of these exist is machine-dependent - that is the point. A prefix rule with
     # no word boundary is hostage to whatever happens to be installed, so the
     # catalogue is guarded against the ones we know and shaped so the rest cannot
     # apply either. `static-sh` is a shell; `tailscale` reconfigures a VPN;
@@ -498,7 +498,7 @@ def preset_groups() -> tuple[tuple[str, tuple[Preset, ...]], ...]:
 def settings_path() -> Path:
     """Return the one settings file this module reads and writes.
 
-    Always ``~/.claude/settings.json`` — resolved from ``$HOME``, never from
+    Always ``~/.claude/settings.json`` - resolved from ``$HOME``, never from
     the process's working directory, so every entry point behaves identically
     whichever directory it was launched from.
     """
@@ -516,7 +516,7 @@ class PermissionsFileError(RuntimeError):
     Raised rather than swallowed so a malformed file is reported to the user
     instead of being silently replaced. :func:`mait_code.cli._settings.
     read_settings_file` returns ``{}`` on a parse error, which is the right
-    behaviour at install time and exactly the wrong behaviour here — it would
+    behaviour at install time and exactly the wrong behaviour here - it would
     turn "your JSON has a trailing comma" into "your settings are gone".
     """
 
@@ -579,13 +579,13 @@ def matches_command(pattern: str, command: str) -> bool:
     method and results are recorded under "Granting ``allowed-tools``" in
     ``docs/development.md``):
 
-    - ``Bash(cmd)`` — exact match only. ``Bash(git push)`` does not permit
+    - ``Bash(cmd)`` - exact match only. ``Bash(git push)`` does not permit
       ``git push --dry-run``.
-    - ``Bash(cmd:*)`` — prefix match **at a token boundary**. It permits any
+    - ``Bash(cmd:*)`` - prefix match **at a token boundary**. It permits any
       continuation after the boundary, so ``Bash(git branch:*)`` does span
       ``git branch -D``; it does not permit a longer token, so ``git branchfoo``
       is refused.
-    - ``Bash(cmd *)`` — the older space form. Indistinguishable from ``cmd:*``
+    - ``Bash(cmd *)`` - the older space form. Indistinguishable from ``cmd:*``
       on every probe pair tested, and modelled identically here. It is a real
       wildcard, not the literal text ``cmd *``: ``Bash(git *)`` permits
       ``git push``.
@@ -597,8 +597,8 @@ def matches_command(pattern: str, command: str) -> bool:
     catalogue guard errs toward rejecting a pattern.
 
     Shell operators are not modelled. The real matcher decomposes a compound
-    command and requires every part to be permitted — ``Bash(git push:*)``
-    refuses ``git push --dry-run || git commit -m x`` — so treating the whole
+    command and requires every part to be permitted - ``Bash(git push:*)``
+    refuses ``git push --dry-run || git commit -m x`` - so treating the whole
     string as one command over-matches here, which is the safe direction for a
     guard.
 
@@ -624,7 +624,7 @@ class PresetState:
     Attributes:
         preset: The catalogue entry.
         enabled: ``True`` when *every* pattern of the preset is present.
-        partial: ``True`` when some but not all of them are — usually a
+        partial: ``True`` when some but not all of them are - usually a
             hand-edited file, and worth showing rather than rounding to "off".
     """
 
@@ -678,7 +678,7 @@ def resolve_states() -> tuple[PresetState, ...]:
 # --------------------------------------------------------------------------
 
 _BACKED_UP: set[Path] = set()
-"""Files already backed up in this process — the backup is once per file.
+"""Files already backed up in this process - the backup is once per file.
 
 Module state so a session of toggling presets leaves one backup per settings
 file rather than one per keystroke.
@@ -724,7 +724,7 @@ def _backup(path: Path) -> Path | None:
 def _write_allow(path: Path, document: dict[str, Any], allow: list[str]) -> None:
     """Persist *allow* into *document*'s permissions block and write it out.
 
-    Unrelated keys — top-level and inside ``permissions`` — are preserved,
+    Unrelated keys - top-level and inside ``permissions`` - are preserved,
     and an empty result drops the key rather than leaving ``"allow": []``.
     """
     permissions = document.get("permissions")
@@ -745,7 +745,7 @@ def enable_preset(preset_id: str) -> WriteOutcome:
 
     Idempotent: patterns already present are left alone rather than duplicated,
     and a preset that is already fully enabled writes nothing at all. Existing
-    rules keep their order — new patterns are appended.
+    rules keep their order - new patterns are appended.
 
     Args:
         preset_id: A catalogue preset id.
