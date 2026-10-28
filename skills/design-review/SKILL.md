@@ -2,7 +2,7 @@
 name: design-review
 description: Run a cold design review of a refined board card, by a reviewer that has seen none of the conversation that refined it, before anyone builds it. Use when you ask for a design review of a card, a second opinion on a refinement, or want a card scrutinised before picking it up.
 argument-hint: "<card id>"
-allowed-tools: Bash(mc-tool-board show:*), Bash(mc-tool-board edit:*), Bash(mc-tool-board add:*), Bash(mc-tool-board comment:*)
+allowed-tools: Bash(mc-tool-board show:*), Bash(mc-tool-board summary --json), Bash(mc-tool-board edit:*), Bash(mc-tool-board add:*), Bash(mc-tool-board comment:*)
 ---
 
 # /design-review
@@ -41,7 +41,10 @@ If you find yourself writing "we decided", stop: that sentence is the failure th
    - `kind` is `"epic"`: refuse. Epics aren't built directly; offer to review one of its refined members instead.
    - `status` is `done` or `archived`: refuse. There is nothing left to build.
    - `status` is `backlog`, or `acceptance_criteria` is empty: warn that the reviewer will have little to judge, and suggest refining first. Go ahead only if the user says so.
-   - `refined`, `in_progress` or `in_review`: go ahead.
+   - `status` is `in_review`: warn that the card is already built, so a design review mostly churns it. Go ahead only if the user says so.
+   - `refined` or `in_progress`: go ahead.
+
+   Then check the card belongs to this repository. One board serves several projects, and the reviewer reviews whatever code it is pointed at. Compare the card's `project` with the `project` that `mc-tool-board summary --json` reports for the current directory. If they differ, stop and ask: the user may be in the wrong repository, or may want the review run from the card's own.
 
 2. **Spawn one `design-reviewer` agent** via the Agent tool (`subagent_type: "design-reviewer"`). A fresh Agent call inherits no context; never `SendMessage` an earlier reviewer, which would carry its first review into the second.
 
@@ -62,7 +65,7 @@ If you find yourself writing "we decided", stop: that sentence is the failure th
    Ask how any new card orders against N and its siblings before linking `blocks`. `mc-tool-board link` is deliberately outside this skill's grant, so a link also goes through the permission prompt.
 
 6. **Write only what the user approves.** Nothing reaches the board until they say so. Then:
-   - fold the approved resolutions into the card with `mc-tool-board edit N --description … --acceptance …`, keeping any section headed **Testing strategy** under exactly that heading (`/work` reads it);
+   - fold the approved resolutions into the card with `mc-tool-board edit N --description … --acceptance …`, keeping any section headed **Testing strategy** under exactly that heading (a playbook may read it);
    - add a comment saying what the review changed: `mc-tool-board comment N --author claude "Design review folded in: …"`;
    - add the approved cards.
 
@@ -70,7 +73,7 @@ If you find yourself writing "we decided", stop: that sentence is the failure th
 
 ## Notes
 
-- **The grant covers applying an approved review, not deciding one.** `show` reads the card; `edit`, `add` and `comment` apply what the user approved in step 6. The skill must not write before that approval; the grant makes the approved writes quiet, it doesn't approve them. `link`, `move`, `refine` and `remove` are left out.
+- **The grant covers applying an approved review, not deciding one.** `show` reads the card and `summary --json` names this repository's project; `edit`, `add` and `comment` apply what the user approved in step 6. The skill must not write before that approval; the grant makes the approved writes quiet, it doesn't approve them. `link`, `move`, `refine` and `remove` are left out.
 - **The reviewer's `Bash` is not pattern-restricted.** Agent definitions list tool names, not permission patterns, and the reviewer needs a shell for `mc-tool-board show` and the odd probe. Its read-only constraint, board included, is enforced by its brief and the usual permission prompts. A board write from the reviewer is a bug in the review, not a step to approve.
 - **Session-only.** Nothing is posted anywhere.
 - **A clean review is a result.** If the reviewer finds nothing, say so plainly rather than manufacturing concerns.

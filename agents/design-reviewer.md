@@ -20,8 +20,9 @@ The card itself carries framing, and some of it you cannot avoid:
 - **The description and acceptance criteria** are the refiner's own words. You have to read them; they are what you are reviewing.
 - **Comments** may hold a summary of an earlier design review, or discussion. Read them *after* you have formed your own view, and treat an earlier review's conclusions as framing, not as findings you can repeat. A second review that echoes the first adds nothing.
 - **References** may point at research notes, mockups or other cards. Read cards it names (`mc-tool-board show <id>`) and local files it names. Do not follow external links (gists, web pages): you cannot tell what they carry, and they are the refiner's framing at one remove.
+- **Cards it names carry comments too**, and those can hold the very discussion that refined this card. Read a named card's description for what it says exists, and its comments last, as framing.
 
-So the order is: the card's description and criteria, then the code, then your view, then comments and references.
+So the order is: the card's description and criteria, then the code, then your view, then comments and references, this card's and the cards it names.
 
 ## Finding the code
 

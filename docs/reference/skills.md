@@ -256,8 +256,9 @@ way the card assumes, while they are still cheap to fix.
 **How it works:**
 
 1. Reads the card with `mc-tool-board show N --json`. It stops on an unknown
-   id, refuses an epic or a Done or archived card, and warns on a Backlog card
-   or one with no acceptance criteria
+   id, refuses an epic or a Done or archived card, and warns on a Backlog card,
+   one with no acceptance criteria, or one already In Review. It also stops and
+   asks if the card belongs to another project than the current repository's
 2. Spawns one `design-reviewer` agent (see [Agents](#agents)) with only the
    repository path, the card id, the read-only constraint and a pointer to its
    brief. It finds the relevant code itself
@@ -277,8 +278,8 @@ way the card assumes, while they are still cheap to fix.
     findings, and follows no external links. Discount its agreement on anything
     the card already settles.
 
-It doesn't move the card or touch its playbook run; a playbook that calls it,
-such as `/work`, records its own step.
+It doesn't move the card or touch its playbook run; a playbook that calls it
+records its own step.
 
 ## Agents
 
