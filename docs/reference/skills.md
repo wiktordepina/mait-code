@@ -275,8 +275,13 @@ way the card assumes, while they are still cheap to fix.
     Its comments may summarise an earlier review, and its references may point at
     research. The reviewer reads the description and the code first, then
     comments and references, treats an earlier review as framing rather than
-    findings, and follows no external links. Discount its agreement on anything
-    the card already settles.
+    findings, and follows no external links. It is also told not to read the
+    mait-code data directory or Claude Code's transcripts, which record past
+    sessions' discussion. Discount its agreement on anything the card already
+    settles.
+
+**Cost:** one measured run on a large refined card took ~56k subagent tokens
+and ~2.5 minutes.
 
 It doesn't move the card or touch its playbook run; a playbook that calls it
 records its own step.

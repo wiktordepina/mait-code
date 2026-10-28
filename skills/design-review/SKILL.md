@@ -17,7 +17,7 @@ Everything below protects that one property.
 
 ## What the reviewer *does* inherit
 
-Isolation is not total, and overstating it is worse than not having it. The reviewer holds the system prompt: the project `CLAUDE.md`, the user's identity documents and `MEMORY.md`, which carries past decisions and feedback. It also reads the card, and the card is the refiner's framing: its description, its comments (which may summarise an earlier design review) and its references. The agent's brief tells it to form its view from the description and the code before reading comments and references, to treat an earlier review as framing, and not to follow external links. It has not seen the conversation, and that is the guarantee. Discount its agreement on anything the card or the project's conventions already settle.
+Isolation is not total, and overstating it is worse than not having it. The reviewer holds the system prompt: the project `CLAUDE.md`, the user's identity documents and `MEMORY.md`, which carries past decisions and feedback. It also reads the card, and the card is the refiner's framing: its description, its comments (which may summarise an earlier design review) and its references. The agent's brief tells it to form its view from the description and the code before reading comments and references, to treat an earlier review as framing, not to follow external links, and not to read the stores of past sessions (the mait-code data directory, Claude Code transcripts). It has not seen the conversation, and that is the guarantee. Discount its agreement on anything the card or the project's conventions already settle.
 
 ## The contamination rule
 
@@ -76,4 +76,5 @@ If you find yourself writing "we decided", stop: that sentence is the failure th
 - **The grant covers applying an approved review, not deciding one.** `show` reads the card and `summary --json` names this repository's project; `edit`, `add` and `comment` apply what the user approved in step 6. The skill must not write before that approval; the grant makes the approved writes quiet, it doesn't approve them. `link`, `move`, `refine` and `remove` are left out.
 - **The reviewer's `Bash` is not pattern-restricted.** Agent definitions list tool names, not permission patterns, and the reviewer needs a shell for `mc-tool-board show` and the odd probe. Its read-only constraint, board included, is enforced by its brief and the usual permission prompts. A board write from the reviewer is a bug in the review, not a step to approve.
 - **Session-only.** Nothing is posted anywhere.
+- **Cost.** One measured run, on a large refined card with eight steps and ten criteria (#285): ~56k subagent tokens and ~2.5 minutes. Cheaper than a pre-PR review of a mid-sized branch, and worth it on any card that will take more than an afternoon to build.
 - **A clean review is a result.** If the reviewer finds nothing, say so plainly rather than manufacturing concerns.
