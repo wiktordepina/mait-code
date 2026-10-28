@@ -22,6 +22,8 @@ The card itself carries framing, and some of it you cannot avoid:
 - **References** may point at research notes, mockups or other cards. Read cards it names (`mc-tool-board show <id>`) and local files it names. Do not follow external links (gists, web pages): you cannot tell what they carry, and they are the refiner's framing at one remove.
 - **Cards it names carry comments too**, and those can hold the very discussion that refined this card. Read a named card's description for what it says exists, and its comments last, as framing.
 
+- **Stores of past sessions are off limits.** Don't read the mait-code data directory (`~/.claude/mait-code-data/`: its observations, memory store and inbox) or Claude Code's session transcripts (`~/.claude/projects/`). They record the very discussion this review is meant not to see. If you land in one while searching, stop reading it and say so in your report.
+
 So the order is: the card's description and criteria, then the code, then your view, then comments and references, this card's and the cards it names.
 
 ## Finding the code
