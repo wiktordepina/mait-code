@@ -871,14 +871,14 @@ function compact(n: number): string {
 type Chunk = { text: string; bg?: string; fg: string; bold?: boolean; dim?: boolean; href?: string; raw?: true }
 
 /**
- * ` ■■■■■■■■ 41% `: the filled cells in `fg`, the rest halfway to `bg`, so the
- * gauge is one solid shape whose level reads by colour, not by glyph. Square
- * blocks because fonts that lack ▰▱ substitute them at the wrong size.
+ * ` ━━━───── 41% `: a heavy line for the filled cells in `fg`, a light one for
+ * the rest halfway to `bg`, so the level reads by weight and by colour. Box
+ * drawing lines because every terminal font draws them one cell wide.
  */
 function gaugeChunks(lead: string, filled: number, value: string, bg: string, fg: string): Chunk[] {
   return [
-    { text: ` ${lead}${'■'.repeat(filled)}`, bg, fg, bold: true, raw: true },
-    { text: '■'.repeat(8 - filled), bg, fg: mix(fg, bg, 0.5), bold: true, raw: true },
+    { text: ` ${lead}${'━'.repeat(filled)}`, bg, fg, bold: true, raw: true },
+    { text: '─'.repeat(8 - filled), bg, fg: mix(fg, bg, 0.5), bold: true, raw: true },
     { text: ` ${value} `, bg, fg, bold: true, raw: true },
   ].filter(ch => ch.text !== '')
 }

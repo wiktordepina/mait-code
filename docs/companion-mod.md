@@ -20,7 +20,7 @@ prompt itself:
 
 ```text
  #162  Ship the mait-companion mod     jira  PLAT-4821  PLAT-4830   in review  #158   inbox  3
- ▣ mait-code  ⎇ feat/two-rows ±3 ↑1      ✦ opus 5.5   142k/1M  ■■■■■■■■ 14%   5h·7d  63·41%
+ ▣ mait-code  ⎇ feat/two-rows ±3 ↑1      ✦ opus 5.5   142k/1M  ━─────── 14%   5h·7d  63·41%
  ≣ ▸ #162  ✓  ↷  ▶  ○  ○  3/5 Implement · 6m
  ⋔ ▸ 3 agents  Explore ×2 · pre-pr-reviewer · 1m12s
 ```
@@ -45,7 +45,7 @@ The second row:
 | `▣` project | The folder name of the session's project root | Never, in a session with a project |
 | `⎇` branch | The branch checked out, or the short commit on a detached HEAD. After it, `±3` counts uncommitted changes, and `↑1↓2` the commits ahead of and behind the upstream; each is left out at zero | Not in a git repository |
 | `✦` model | The model in use, shortened (`opus 5.5`), in coloured text rather than a block | Claude Code doesn't say |
-| Context | Tokens used over the window's size (`142k/1M`), then an eight-cell gauge (filled squares in full ink, the rest faded) and the percentage | Claude Code hasn't measured it yet |
+| Context | Tokens used over the window's size (`142k/1M`), then an eight-cell gauge (a heavy line in full ink for the filled part, a faded light line for the rest) and the percentage | Claude Code hasn't measured it yet |
 | `5h·7d` | How much of the five-hour and seven-day rate-limit windows you've used, in that order, coloured by the fuller. At 80% or more it counts down to the reset (`↻41m`) | You're not on a subscription, or there's no reading yet |
 
 Context and the windows are green below 50%, amber below 80% and red above

@@ -33,6 +33,9 @@ don't change the public surface. Everything is still in flux.
 
 ### Changed
 
+- **The companion bar's context gauge is a line.** The eight cells are now a
+  heavy line (`━`) for the filled part and a faded light line (`─`) for the
+  rest, in place of squares.
 - **A session can be bound to a card in any open column.** A binding now
   means "this session is working on this card", not "this card is In
   Progress". `bind N` works on Backlog, Refined, In Progress and In Review
