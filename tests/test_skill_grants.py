@@ -103,15 +103,15 @@ def test_grants_are_scoped_past_the_bare_executable(skill: str) -> None:
     assert bare == []
 
 
-#: Skills that run nothing through the shell they couldn't run ungranted, so
-#: they carry no ``allowed-tools`` at all. The guards above only see skills
-#: with a ``Bash(...)`` grant, so absence has to be pinned on its own.
+#: Skills whose shell commands are all read-only, so they run fine ungranted
+#: and carry no ``allowed-tools`` at all. The grant guards only see skills with
+#: a ``Bash(...)`` grant, so absence has to be pinned on its own.
 UNGRANTED = ("code-comments",)
 
 
 @pytest.mark.parametrize("skill", UNGRANTED)
 def test_ungranted_skills_have_no_allowed_tools(skill: str) -> None:
-    """``code-comments`` searches with the Grep tool; ``Bash(rg:*)`` would also
-    permit ``rg --pre <cmd>``, which runs an arbitrary command."""
+    """A search grant is never needed, and ``Bash(rg:*)`` would also permit
+    ``rg --pre <cmd>``, which runs an arbitrary command."""
     frontmatter = (SKILLS_DIR / skill / "SKILL.md").read_text().split("---")[1]
     assert "allowed-tools" not in frontmatter

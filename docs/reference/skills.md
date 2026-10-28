@@ -300,8 +300,9 @@ The ASCII rule wins over matching the project: a file full of em dashes still
 gets ASCII in every comment written or touched. A comment that must name a
 non-ASCII character uses its escape or Unicode name (`U+2014 EM DASH`).
 
-It has no `allowed-tools`: it searches with Claude Code's Grep tool, since a
-`Bash(rg:*)` grant would also allow `rg --pre <cmd>`.
+It has no `allowed-tools`. It searches with Claude Code's Grep tool where the
+session has one, and otherwise with `grep` or `rg` through the shell, prompted
+or sandboxed. A `Bash(rg:*)` grant would also allow `rg --pre <cmd>`.
 
 ### /design-review
 

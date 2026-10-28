@@ -41,7 +41,8 @@ first, in this order, stopping at the first answer:
    is split near evenly between two styles with no config to break the tie,
    ask which style to use. Do not silently pick one.
 
-Detection is cheap, so do it rather than assume. Search with the Grep tool:
+Detection is cheap, so do it rather than assume. Search the code (see
+*Searching* below for how):
 
 | Looking for | Pattern | Files |
 |---|---|---|
@@ -257,7 +258,7 @@ never the literal: `U+2014 EM DASH`, `"\u2014"`.
 The other exceptions are narrow: a verbatim quoted error string or log line,
 an identifier or literal that genuinely contains the character, a proper noun.
 
-Check a file with the Grep tool, pattern `[^\x00-\x7F]`.
+Check a file by searching it for `[^\x00-\x7F]`.
 
 ## Audit mode
 
@@ -273,8 +274,13 @@ Two scopes:
 * **A path:** a sweep of every comment in that file or directory. Only when
   asked: it inflates a diff and buries the real change.
 
-**Grep first, then read.** Search with the Grep tool rather than `rg` through
-the shell. These patterns catch the mechanical breaches:
+**Searching.** Use Claude Code's Grep tool where the session has one. Where it
+doesn't, run `grep -nP` (or `rg`) through the shell: this skill grants no
+shell commands, so those run prompted or sandboxed, which is fine for a
+read-only search. Don't add an `rg` grant: `Bash(rg:*)` would also permit
+`rg --pre <cmd>`, which runs an arbitrary command.
+
+**Grep first, then read.** These patterns catch the mechanical breaches:
 
 | Breach | Pattern (case-insensitive where marked) |
 |---|---|
@@ -314,7 +320,7 @@ Over every comment written or touched:
 5. Does the surprising code in this change have a comment, and does the
    unsurprising code lack one?
 6. Does the style match the file it is in?
-7. Grep the touched files for `[^\x00-\x7F]` (Rule 7).
+7. Search the touched files for `[^\x00-\x7F]` (Rule 7).
 
 ## Examples
 
