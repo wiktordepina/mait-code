@@ -12,6 +12,15 @@ don't change the public surface. Everything is still in flux.
 
 ### Added
 
+- **`/design-review N` and the `design-reviewer` agent.** A cold review of a
+  refined board card before anyone builds it, by a reviewer that has seen none
+  of the conversation that refined it. It finds the relevant code itself,
+  reports ranked findings with suggested resolutions, direction objections and
+  proposed cards, and writes nothing to the board. The skill verifies the
+  findings, proposes how to fold them into the card, and edits the card, adds
+  a comment and adds cards only once you approve. Restart Claude Code after
+  updating so the new agent is found.
+
 - **Playbook runs on board cards.** A card can now record where it is in a
   playbook's run: `mc-tool-board run start N --playbook work --steps …` writes
   the steps, `run step` sets each to pending, in progress, done, skipped (with

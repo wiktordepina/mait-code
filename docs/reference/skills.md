@@ -14,6 +14,7 @@ Skills are slash commands available in Claude Code sessions when mait-code is in
 | Board | `/board` | View and drive the project kanban board | **Implemented** |
 | Triage | `/triage` | Route quick-capture inbox items to the board or memory | **Implemented** |
 | Pre-PR Review | `/pre-pr-review` | Independent review of the current branch, by a reviewer that has not seen the conversation | **Implemented** |
+| Design Review | `/design-review <card>` | Independent review of a refined board card before it's built, by a reviewer that has not seen the refinement | **Implemented** |
 
 ## Implemented Skills
 
@@ -235,6 +236,56 @@ merge that is hard to walk back; not worth it per commit.
 **Nothing is posted to GitHub** — no review, no comment, no approval — unless you
 ask for that separately afterwards.
 
+### /design-review
+
+Review a refined [board card](../board.md) with a reviewer that has seen none of
+the conversation that refined it, before anyone builds it.
+
+**Usage:**
+```
+/design-review 42                # Review card #42
+```
+
+**Why it exists:**
+
+Whoever refined a card reads it for whether it says what they meant, not for
+whether what they meant is right. A cold reviewer finds the states the card
+doesn't cover, the criteria nobody can check, and the code that doesn't work the
+way the card assumes, while they are still cheap to fix.
+
+**How it works:**
+
+1. Reads the card with `mc-tool-board show N --json`. It stops on an unknown
+   id, refuses an epic or a Done or archived card, and warns on a Backlog card,
+   one with no acceptance criteria, or one already In Review. It also stops and
+   asks if the card belongs to another project than the current repository's
+2. Spawns one `design-reviewer` agent (see [Agents](#agents)) with only the
+   repository path, the card id, the read-only constraint and a pointer to its
+   brief. It finds the relevant code itself
+3. Relays the review, verifies its `file:line` claims, and proposes a
+   resolution for each finding, plus any follow-up cards (`--from N`) and cards
+   for unrelated issues (`--from N --parent none`)
+4. Writes nothing until you approve. Then it edits the card, adds a comment
+   saying what the review changed, and adds the cards you accepted. It asks
+   before linking `blocks`, and `mc-tool-board link` is outside its grant
+
+!!! warning "The card carries framing too"
+
+    The reviewer has to read the card, and the card is the refiner's own words.
+    Its comments may summarise an earlier review, and its references may point at
+    research. The reviewer reads the description and the code first, then
+    comments and references, treats an earlier review as framing rather than
+    findings, and follows no external links. It is also told not to read the
+    mait-code data directory or Claude Code's transcripts, which record past
+    sessions' discussion. Discount its agreement on anything the card already
+    settles.
+
+**Cost:** one measured run on a large refined card took ~56k subagent tokens
+and ~2.5 minutes.
+
+It doesn't move the card or touch its playbook run; a playbook that calls it
+records its own step.
+
 ## Agents
 
 Agent definitions live in `agents/` as individual markdown files with YAML
@@ -267,6 +318,17 @@ directory of its own, off-limits to everything else, and bars writing into the
 repository at all so nothing it does can surface in `git status`. A write inside its
 own directory is expected; a write anywhere else is a bug in the review.
 
+### design-reviewer
+
+The reviewer behind `/design-review`. Reads a refined card and the code it will
+change, and reports what it understands the card to ask for, findings ranked
+High, Medium and Low with a suggested resolution each, any objection to the
+direction, proposed cards, and what it checked and found fine.
+
+It is read-only on the same terms as `pre-pr-reviewer`, scratch directory
+included, and also **writes nothing to the board**: what reaches the board is
+the user's call, made after reading the review.
+
 ## Skill Architecture
 
 Each skill is a directory in `skills/` containing:
@@ -291,8 +353,10 @@ skills/
 │   └── SKILL.md     # Route the quick-capture inbox to the board or memory
 ├── commit/
 │   └── SKILL.md     # Smart commit with conventional message
-└── pre-pr-review/
-    └── SKILL.md     # Cold second opinion on a branch before opening a PR
+├── pre-pr-review/
+│   └── SKILL.md     # Cold second opinion on a branch before opening a PR
+└── design-review/
+    └── SKILL.md     # Cold second opinion on a refined card before building it
 ```
 
 Skills are symlinked into `~/.claude/skills/` by `mait-code install` (and refreshed by `mait-code update`, which also prunes links to removed skills) and loaded by Claude Code automatically.
