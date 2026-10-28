@@ -22,7 +22,7 @@ only after the user approves it.
 4. If `ops` is non-empty, render them as a clear before/after diff so the user
    can see each proposed change:
    - **add** -> a new line (`+`)
-   - **rewrite** -> the old text replaced by the new (`~ old -> new`)
+   - **rewrite** -> the old line after `~`, then the new one beneath it after `→`
    - **merge** -> several existing facts folded into one
    - **retire** -> a stale/contradicted fact dropped (`-`)
    If `dropped_ops` is non-empty, list them separately as **withheld**, each

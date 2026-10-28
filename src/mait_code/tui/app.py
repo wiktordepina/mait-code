@@ -159,7 +159,7 @@ class MaitApp(App[None]):
             binding = active.binding
             if not (active.enabled and binding.show and binding.description):
                 continue
-            # Use the app's friendly key display (the left arrow glyph, ``<``, ``?``), like the footer -
+            # Use the app's friendly key display (← / < / ?), like the footer -
             # not binding.key_display, which is usually the raw key name.
             key = self.get_key_display(binding)
             sig = (key, binding.description)

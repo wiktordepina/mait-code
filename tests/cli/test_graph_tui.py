@@ -59,7 +59,7 @@ def test_table_row_select_recentres(tmp_path: Path) -> None:
             await pilot.press("t")
             await pilot.pause()
             app.query_one("#table").focus()
-            await pilot.press("enter")  # first row: alpha -depends_on-> forge
+            await pilot.press("enter")  # first row: alpha ─depends_on─▶ forge
             await pilot.pause()
             assert app._centre_name() == "forge"
 

@@ -83,7 +83,7 @@ def test_wordmark_text_gradient_spans_primary_to_accent() -> None:
 
 def test_wordmark_text_shadow_is_darker_than_fill() -> None:
     painted = wordmark_text(WORDMARK_WIDTH)
-    # Row 0 opens with three full blocks and a box-drawing corner: fill at column 2, shadow at column 3, adjacent
+    # Row 0 opens "███╗": fill at column 2, shadow at column 3, adjacent
     # columns so the gradient barely moves; the dimming must dominate.
     fill, shadow = style_at(painted, 2), style_at(painted, 3)
     assert sum(int(shadow[i : i + 2], 16) for i in (1, 3, 5)) < sum(

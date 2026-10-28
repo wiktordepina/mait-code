@@ -1973,9 +1973,7 @@ class TestCardFormEditing:
                 # into view so the click lands whatever the form's height.
                 app.screen.query_one("#edit-tag-rm-0").scroll_visible(animate=False)
                 await pilot.pause()
-                await pilot.click(
-                    "#edit-tag-rm-0"
-                )  # the remove button on the only chip
+                await pilot.click("#edit-tag-rm-0")  # ✕ on the only chip
                 await pilot.pause()
                 await pilot.press("ctrl+s")
                 await pilot.pause()

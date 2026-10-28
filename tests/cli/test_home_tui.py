@@ -154,7 +154,7 @@ def test_board_detail_lists_live_cards_and_launch_hint() -> None:
     text = _run(scenario)
     assert "In progress" in text and "Work the thing" in text
     assert "Next up" in text and "Refine the spec" in text
-    # The launch hint now points at the dedicated "Open board" leaf.
+    # The launch hint now points at the dedicated "↗ Open board" leaf.
     assert "Open board" in text and "launch the full board" in text
 
 
@@ -527,9 +527,9 @@ def test_selecting_a_launch_leaf_sets_the_target() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
-            # Root child 0 is the "Set up start page" leaf; Board follows.
+            # Root child 0 is the "↗ Set up start page" leaf; Board follows.
             board = tree.root.children[1]  # Board section (expands, no launch)
-            open_board = board.children[0]  # "Open board" launch leaf
+            open_board = board.children[0]  # "↗ Open board" launch leaf
             app.on_tree_node_selected(Tree.NodeSelected(open_board))
             await pilot.pause()
             return app.target
@@ -546,7 +546,7 @@ def test_initiatives_leaf_sets_its_target() -> None:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
             board = tree.root.children[1]
-            leaf = board.children[1]  # "Open initiatives", after "Open board"
+            leaf = board.children[1]  # "↗ Open initiatives", after "Open board"
             app.on_tree_node_selected(Tree.NodeSelected(leaf))
             await pilot.pause()
             return app.target
@@ -947,7 +947,7 @@ def test_home_dashboard_reload_rebuilds_the_grid(
 
 
 def test_home_tree_offers_start_page_setup_leaf() -> None:
-    """The root carries the 'Set up start page' hand-off above the sections,
+    """The root carries the '↗ Set up start page' hand-off above the sections,
     and selecting it exits home with the DASHBOARD target."""
 
     async def scenario():

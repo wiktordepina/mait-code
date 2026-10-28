@@ -90,7 +90,7 @@ def _bucket(card: dict, ready: set[int]) -> int:
     return _BUCKETS.index(card["status"])
 
 
-#: Width a diagram node's title wraps to; two lines at most, then an ellipsis glyph.
+#: Width a diagram node's title wraps to; two lines at most, then ``…``.
 _NODE_WIDTH = 24
 
 #: The two right-hand panes the ``g`` key switches between.

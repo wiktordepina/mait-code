@@ -229,7 +229,7 @@ def _preset_leaf_label(state: perms.PresetState) -> Text:
 def _leaf_label(key: str, value_width: int = _VALUE_WIDTH) -> Text:
     """Build a tree leaf's one-line label: padded key + inline current value.
 
-    Defaults (and derived values) render dimmed; the migration warning-sign marker rides
+    Defaults (and derived values) render dimmed; the migration ⚠ marker rides
     next to the key, included in the padding so values stay column-aligned.
     """
     label = Text(no_wrap=True)

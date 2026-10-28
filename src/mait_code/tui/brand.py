@@ -82,7 +82,7 @@ def wordmark(width: int, *, compact: bool = False) -> str:
 
 
 #: The glyphs forming the wordmark's drop shadow - everything that isn't a
-#: solid U+2588 FULL BLOCK fill (or the half-blocks of the compact art, which are all fill).
+#: solid ``█`` fill (or the half-blocks of the compact art, which are all fill).
 _SHADOW_GLYPHS = frozenset("╔╗╚╝║═")
 
 #: How far shadow glyphs are blended toward the background (0 = the fill

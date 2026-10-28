@@ -776,7 +776,7 @@ class CardScreen(ModalScreen[None]):
         await self._render_ref_rows()
 
     async def _render_tag_chips(self) -> None:
-        """Re-render the working-copy tag chips, one removable tag button (U+2715 MULTIPLICATION X, then the tag)
+        """Re-render the working-copy tag chips, one removable ``✕ tag`` button
         each. ``blocked`` is deliberately not shown - it's carried through a save
         untouched and stays driven by ``b``/``u`` (see the class docstring)."""
         row = self.query_one("#edit-tag-chips", Horizontal)
@@ -791,7 +791,7 @@ class CardScreen(ModalScreen[None]):
 
     async def _render_ref_rows(self) -> None:
         """Re-render the working-copy reference rows, one removable
-        ``label: value`` button each, led by U+2715 (stacked, like the old RefScreen)."""
+        ``✕ label: value`` button each (stacked, like the old RefScreen)."""
         rows = self.query_one("#edit-ref-rows", Vertical)
         await rows.remove_children()
         widgets = [
@@ -909,10 +909,10 @@ class CardScreen(ModalScreen[None]):
 
     def _meta(self, card: dict) -> Text:
         """One line of fields, each set off by the same dim middot:
-        project, status, priority, ``via client``, ``#tag #tag``. The ``via``
-        field only appears on cards raised through :mod:`mait_code.remote`. An
-        epic reads ``epic``, status, progress, priority and so on: its project is
-        always ``@epic``, which says nothing.
+        ``project · status · priority · via client · #tag #tag``. The
+        ``via`` field only appears on cards raised through
+        :mod:`mait_code.remote`. An epic reads ``epic · status · progress ·
+        priority ...``: its project is always ``@epic``, which says nothing.
 
         The uniform separator gives priority and the tags the same rhythm as
         project/status, instead of trailing off space-separated. Tags read as
@@ -1045,7 +1045,7 @@ class LinkScreen(ModalScreen[tuple[str, int, int] | None]):
 
     Resolves to ``("link_add" | "link_remove", from_id, to_id)``, or ``None``
     on cancel. Adding takes a direction - *this card blocks...* or *this card is
-    blocked by...* - and the other card's id; each existing link is a U+2715 MULTIPLICATION X
+    blocked by...* - and the other card's id; each existing link is a ``✕``
     button that resolves to its removal, as the tag modal's chips do.
     """
 

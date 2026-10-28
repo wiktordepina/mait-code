@@ -1153,7 +1153,7 @@ class TestCmdRelationships:
         cody = upsert_entity(conn, "Cody", "concept")
         aws = upsert_entity(conn, "AWS", "service")
         # Wiktor is the source of one relationship and the target of another,
-        # so both the outgoing and incoming arrow render branches are hit.
+        # so both the outgoing (→) and incoming (←) render branches are hit.
         upsert_relationship(conn, wiktor, cody, "owns", "the whippet")
         upsert_relationship(conn, aws, wiktor, "managed_by", "")
         return wiktor

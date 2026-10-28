@@ -757,7 +757,7 @@ def generate_memory_diff(
     """Render proposed MEMORY.md operations as a readable before/after diff.
 
     Additions show as ``+``, retirements as ``-``, rewrites as the old line
-    (``~``) followed by its replacement (marked U+2192 RIGHTWARDS ARROW), and merges as one ``-`` per
+    (``~``) followed by its replacement (``→``), and merges as one ``-`` per
     folded db entry followed by the single consolidated ``+`` line. Each op that
     names backing db entries is annotated with the store-level verb applied to
     them.

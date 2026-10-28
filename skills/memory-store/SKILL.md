@@ -52,7 +52,7 @@ Importance: 1 (trivial) to 10 (critical), default 5
 
 A `store` of related-but-different content (e.g. "uses X" when an earlier entry
 says "uses Y") doesn't merge - it's stored as a new entry, and the command
-prints a warning that it may contradict existing entries, listing them.
+prints a `⚠ This may contradict …` block listing the conflicting entries.
 
 When that happens, don't silently leave two contradictory facts coexisting:
 

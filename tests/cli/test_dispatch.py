@@ -618,7 +618,7 @@ class TestGraphFallback:
 
 def test_observations_truncates_long_day(isolated_data_dir: None, tmp_path) -> None:
     """A day with more than five observations prints the first five and an
-    ``and N more`` line, led by an ellipsis glyph: the truncation branch."""
+    ``… and N more`` line: the truncation branch."""
     from mait_code.tools.memory.db import get_connection
 
     conn = get_connection(tmp_path / "memory.db")

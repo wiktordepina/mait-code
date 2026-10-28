@@ -668,8 +668,8 @@ function stepLook(s: RunStep, gap: boolean, c: Palette): StepLook {
 }
 
 /**
- * The collapsed row's words, U+00B7-separated: `4/8 Implement` and `6m`, `3/8 done`
- * and `next Implement`, `all 8 done` or `not started`. `colour` names the step whose look colours the name.
+ * The collapsed row's words: `4/8 Implement · 6m`, `3/8 done · next Implement`,
+ * `all 8 done` or `not started`. `colour` names the step whose look colours the name.
  */
 function runLabel(steps: readonly RunStep[], t: number): { lead?: string; name: string; note?: string; colour?: RunStep } {
   const n = steps.length
@@ -790,20 +790,14 @@ function sessionSegments(d: SessionData, c: Palette): Segment[] {
   return segments
 }
 
-/**
- * Changed paths after U+00B1, then commits ahead after U+2191 and behind after
- * U+2193; nothing when all are zero.
- */
+/** ` ±3 ↑1↓2`: changed paths, then commits ahead and behind; nothing when all are zero. */
 function gitMarks(d: SessionData): string {
   const dirty = d.dirty ? ` ±${d.dirty}` : ''
   const ab = `${d.ahead ? `↑${d.ahead}` : ''}${d.behind ? `↓${d.behind}` : ''}`
   return `${dirty}${ab ? ` ${ab}` : ''}`
 }
 
-/**
- * Minutes to reset after U+21BB, on a window at 80% or more, when the engine said
- * when it resets.
- */
+/** ` ↻41m` on a window at 80% or more, when the engine said when it resets. */
 function resetMark(w: RateWindow): string {
   if (w.percent < 80 || w.resetsInMs === undefined) return ''
   const m = Math.ceil(w.resetsInMs / 60_000)
@@ -812,7 +806,7 @@ function resetMark(w: RateWindow): string {
 
 /**
  * The model in coloured text rather than a block, so the signals around it stand
- * out: `opus` after U+2726 in accent, the version in foreground. A model id it can't read is
+ * out: `✦ opus` in accent, the version in foreground. A model id it can't read is
  * shown as the engine gave it, on a block.
  */
 function modelSegment(name: string, id: string | undefined, c: Palette): Segment {
@@ -877,7 +871,7 @@ function compact(n: number): string {
 type Chunk = { text: string; bg?: string; fg: string; bold?: boolean; dim?: boolean; href?: string; raw?: true }
 
 /**
- * A bar then the percentage, e.g. `41%`: a heavy line for the filled cells in `fg`, a light one for
+ * ` ━━━───── 41% `: a heavy line for the filled cells in `fg`, a light one for
  * the rest halfway to `bg`, so the level reads by weight and by colour. Box
  * drawing lines because every terminal font draws them one cell wide.
  */

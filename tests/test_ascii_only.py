@@ -6,8 +6,12 @@ anything else wrongly. The shipped skill and agent markdown is held to the same
 standard, as prose that ``outward-comms`` asks to be ASCII.
 
 String literals are deliberately out of scope: TUI glyphs and test fixtures
-need their characters. A docstring that has to mention a glyph names it by
-escape or Unicode name instead.
+need their characters. So is ``templates/``, whose seeded files belong to the
+user and use some characters on purpose, and so are comments in shell scripts,
+workflows and the mod's TypeScript, which are too few to be worth a scanner.
+
+A comment or docstring that refers to a specific glyph the code renders or
+handles quotes it, and :data:`ALLOWED` records the pair with its reason.
 """
 
 from __future__ import annotations
@@ -26,20 +30,75 @@ PYTHON_ROOTS = ("src", "tests", "docs", "scripts")
 #: Shipped prose checked as whole files.
 MARKDOWN_GLOBS = ("skills/**/*.md", "agents/*.md", "config/CLAUDE.md")
 
-#: ``(file, character)`` pairs a markdown file may contain, mapped to why.
-MARKDOWN_ALLOWED = {
-    (
-        "skills/outward-comms/SKILL.md",
-        "\u00e9",
-    ): "the description spells cliches as a loanword",
-    (
-        "skills/outward-comms/SKILL.md",
-        "\u2014",
-    ): "the pre-send pass searches for the literal em dash",
-    (
-        "skills/outward-comms/SKILL.md",
-        "\u2013",
-    ): "the pre-send pass searches for the literal en dash",
+#: Per file, the characters it may contain, each mapped to why.
+ALLOWED: dict[str, dict[str, str]] = {
+    # Python: comments and docstrings quoting a glyph the code renders.
+    "src/mait_code/cli/_board_tui.py": {
+        "✕": "the tag, reference and link remove buttons",
+        "·": "the card meta line's separator",
+    },
+    "src/mait_code/cli/_home_tui.py": {
+        "↗": "the launch leaves' glyph",
+    },
+    "src/mait_code/cli/_initiatives_tui.py": {
+        "…": "the diagram title's truncation mark",
+    },
+    "src/mait_code/cli/_settings_tui.py": {
+        "⚠": "the migration marker",
+    },
+    "src/mait_code/console.py": {
+        "✗": "the error line's glyph",
+        "●": "the warning line's glyph",
+        "✓": "the success line's glyph",
+    },
+    "src/mait_code/tools/board/export.py": {
+        "·": "the run header and progress separator",
+        "—": "the run step's reason separator",
+        "←": "the current-step marker",
+    },
+    "src/mait_code/tools/memory/reflect.py": {
+        "→": "the preview's rewrite marker",
+    },
+    "src/mait_code/tui/app.py": {
+        "←": "the footer's key display",
+    },
+    "src/mait_code/tui/brand.py": {
+        "█": "the wordmark's fill",
+    },
+    "tests/cli/test_board_tui.py": {
+        "✕": "the tag remove button",
+    },
+    "tests/cli/test_dispatch.py": {
+        "…": "the truncation line",
+    },
+    "tests/cli/test_graph_tui.py": {
+        "─": "the graph table's relationship arrow",
+        "▶": "the graph table's relationship arrow",
+    },
+    "tests/cli/test_home_tui.py": {
+        "↗": "the launch leaves' labels",
+    },
+    "tests/tools/memory/test_cli.py": {
+        "→": "the outgoing relationship marker",
+        "←": "the incoming relationship marker",
+    },
+    "tests/tui/test_brand.py": {
+        "█": "the wordmark's fill",
+        "╗": "the wordmark's shadow",
+    },
+    # Markdown.
+    "skills/outward-comms/SKILL.md": {
+        "é": "the description spells cliches as a loanword",
+        "—": "the pre-send pass searches for the literal em dash",
+        "–": "the pre-send pass searches for the literal en dash",
+    },
+    "skills/memory-store/SKILL.md": {
+        "⚠": "quotes the store command's contradiction warning",
+        "…": "quotes the store command's contradiction warning",
+    },
+    "skills/reflect/SKILL.md": {
+        "→": "the preview's rewrite marker",
+    },
 }
 
 Offence = tuple[int, str]
@@ -66,21 +125,39 @@ def _docstring_nodes(tree: ast.Module) -> list[ast.Expr]:
     ]
 
 
-def python_offences(source: str) -> list[Offence]:
-    """``(line, character)`` for every non-ASCII character in a comment or docstring."""
+def _docstring_lines(source: str, node: ast.Expr) -> list[tuple[int, str]]:
+    """The node's own text, line by line, without code sharing its first or last line.
+
+    ``ast`` column offsets count UTF-8 bytes, so each line is sliced as bytes.
+    """
+    lines = source.splitlines()
+    end = node.end_lineno or node.lineno
+    spans = []
+    for lineno in range(node.lineno, end + 1):
+        raw = lines[lineno - 1].encode()
+        stop = node.end_col_offset if lineno == end else None
+        start = node.col_offset if lineno == node.lineno else 0
+        spans.append((lineno, raw[start:stop].decode()))
+    return spans
+
+
+def python_offences(
+    source: str, allowed: frozenset[str] = frozenset()
+) -> list[Offence]:
+    """``(line, character)`` for each non-ASCII character in a comment or docstring."""
     found: list[Offence] = []
     for tok in tokenize.generate_tokens(io.StringIO(source).readline):
         if tok.type == tokenize.COMMENT:
             found += [(tok.start[0], ch) for ch in tok.string if not ch.isascii()]
-    lines = source.splitlines()
     for node in _docstring_nodes(ast.parse(source)):
-        end = node.end_lineno or node.lineno
-        for lineno in range(node.lineno, end + 1):
-            found += [(lineno, ch) for ch in lines[lineno - 1] if not ch.isascii()]
-    return sorted(set(found))
+        for lineno, text in _docstring_lines(source, node):
+            found += [(lineno, ch) for ch in text if not ch.isascii()]
+    return sorted({(lineno, ch) for lineno, ch in found if ch not in allowed})
 
 
-def markdown_offences(text: str, allowed: set[str]) -> list[Offence]:
+def markdown_offences(
+    text: str, allowed: frozenset[str] = frozenset()
+) -> list[Offence]:
     """``(line, character)`` for every non-ASCII character not in ``allowed``."""
     return [
         (lineno, ch)
@@ -88,6 +165,11 @@ def markdown_offences(text: str, allowed: set[str]) -> list[Offence]:
         for ch in line
         if not ch.isascii() and ch not in allowed
     ]
+
+
+def _allowed(path: Path) -> frozenset[str]:
+    rel = path.relative_to(ROOT).as_posix()
+    return frozenset(ALLOWED.get(rel, {}))
 
 
 def _report(path: Path, offences: list[Offence]) -> list[str]:
@@ -111,25 +193,26 @@ def test_python_comments_and_docstrings_are_ascii() -> None:
     problems = [
         line
         for path in PYTHON_FILES
-        for line in _report(path, python_offences(path.read_text()))
+        for line in _report(path, python_offences(path.read_text(), _allowed(path)))
     ]
     assert problems == []
 
 
 def test_shipped_markdown_is_ascii() -> None:
-    problems: list[str] = []
-    for path in MARKDOWN_FILES:
-        rel = path.relative_to(ROOT).as_posix()
-        allowed = {ch for (file, ch) in MARKDOWN_ALLOWED if file == rel}
-        problems += _report(path, markdown_offences(path.read_text(), allowed))
+    problems = [
+        line
+        for path in MARKDOWN_FILES
+        for line in _report(path, markdown_offences(path.read_text(), _allowed(path)))
+    ]
     assert problems == []
 
 
-def test_markdown_allowlist_entries_are_still_needed() -> None:
+def test_allowlist_entries_are_still_needed() -> None:
     """An allowance whose character has gone from its file is stale."""
     stale = [
         (file, ch)
-        for (file, ch) in MARKDOWN_ALLOWED
+        for file, chars in ALLOWED.items()
+        for ch in chars
         if ch not in (ROOT / file).read_text()
     ]
     assert stale == []
@@ -161,6 +244,16 @@ def test_python_offences_ignores_string_literals() -> None:
     assert python_offences(source) == []
 
 
+def test_python_offences_ignores_a_literal_sharing_the_docstring_line() -> None:
+    source = 'def f(x="\u2192"): """Doc \u00b7 here."""  # ok\n'
+    assert python_offences(source) == [(1, "\u00b7")]
+
+
+def test_python_offences_honours_the_allowance() -> None:
+    source = "# a \u2715 b \u2192 c\n"
+    assert python_offences(source, frozenset("\u2715")) == [(1, "\u2192")]
+
+
 def test_markdown_offences_honours_the_allowance() -> None:
     text = "Search for \u2014.\nAnd \u2192 too.\n"
-    assert markdown_offences(text, {"\u2014"}) == [(2, "\u2192")]
+    assert markdown_offences(text, frozenset("\u2014")) == [(2, "\u2192")]

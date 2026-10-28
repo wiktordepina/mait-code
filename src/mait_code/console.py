@@ -65,7 +65,7 @@ GLYPH = {"ok": "✓", "warn": "●", "fail": "✗"}
 
 
 def print_error(message: str) -> None:
-    """Print a themed error line to stderr: a red-bold U+2717 BALLOT X and the message.
+    """Print a themed error line to stderr: a red-bold ``✗`` and the message.
 
     The single funnel for user-facing error output so every command surfaces
     failures the same way the ``doctor`` checks do. ``message`` is treated as
@@ -79,7 +79,7 @@ def print_error(message: str) -> None:
 
 
 def print_warning(message: str) -> None:
-    """Print a themed warning line to stderr: an amber U+25CF BLACK CIRCLE and the message.
+    """Print a themed warning line to stderr: an amber ``●`` and the message.
 
     Like :func:`print_error` but for non-fatal advisories - a skipped step, a
     preserved file, a degraded mode. ``message`` is escaped, not interpreted.
@@ -90,7 +90,7 @@ def print_warning(message: str) -> None:
 
 
 def print_success(message: str) -> None:
-    """Print a themed success headline to stdout: a green U+2713 CHECK MARK and the message.
+    """Print a themed success headline to stdout: a green ``✓`` and the message.
 
     The positive counterpart to :func:`print_error`, for the one-line "it
     worked" headline a command leads with (install/update/uninstall). Detail

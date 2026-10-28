@@ -366,7 +366,7 @@ class HomeApp(MaitApp):
             parent.add_leaf(name, data=spec)
 
         def launch_leaf(parent: TreeNode[NodeSpec], name: str, spec: NodeSpec) -> None:
-            # A dedicated "open this TUI" leaf: the U+2197 NORTH EAST ARROW glyph and the accent hue
+            # A dedicated "open this TUI" leaf: the ↗ glyph and the accent hue
             # mark it as a hand-off, distinct from the plain detail leaves. The
             # category itself stays a normal expand/collapse node.
             parent.add_leaf(Text(f"↗ {name}", style=accent), data=spec)

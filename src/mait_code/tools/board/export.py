@@ -114,9 +114,8 @@ def _when(stamp: str | None) -> str:
 def run_lines(run: dict) -> list[str]:
     """A playbook run as plain text: a header line, then one line per step.
 
-    ``Run: work``, a U+00B7 MIDDLE DOT, then ``started 2026-10-27 21:04``; then
-    ``  2. skipped      Design review``, an em dash and the reason; the current
-    step is marked ``current`` behind a U+2190 LEFTWARDS ARROW.
+    ``Run: work · started 2026-10-27 21:04``, then ``  2. skipped      Design
+    review — <reason>``, the current step marked ``← current``.
     """
     lines = [f"Run: {run['playbook']} · started {_when(run['started_at'])}"]
     for step in run["steps"]:
@@ -133,7 +132,7 @@ def run_lines(run: dict) -> list[str]:
 
 
 def progress_text(progress: dict) -> str:
-    """``3/7 done``, ``1 waiting``, ``2 in progress`` (U+00B7-separated) for ``progress``."""
+    """``3/7 done · 1 waiting · 2 in progress`` for an epic's ``progress``."""
     parts = [f"{progress[DONE]}/{progress['total']} done"]
     if progress["waiting"]:
         parts.append(f"{progress['waiting']} waiting")
