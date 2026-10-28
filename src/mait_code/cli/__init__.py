@@ -203,13 +203,13 @@ def _root(
     """mait-code install-lifecycle CLI."""
     # rich already honours NO_COLOR / non-TTY / TERM=dumb; this is the
     # explicit manual override. Assigning the bool each invocation keeps
-    # the process-wide consoles' state predictable — both stdout and the
+    # the process-wide consoles' state predictable - both stdout and the
     # stderr twin, so `--no-color` reaches error/warning output too.
     console.no_color = no_color
     err_console.no_color = no_color
     if ctx.invoked_subcommand is not None:
         return
-    # Bare `mait-code` on a terminal opens the companion's home hub — the front
+    # Bare `mait-code` on a terminal opens the companion's home hub - the front
     # door. Piped or redirected it keeps printing help, so scripts and muscle
     # memory like `mait-code | grep` see what they always did.
     if _tui_available():
@@ -385,7 +385,7 @@ def update_cmd(
     except subprocess.CalledProcessError as exc:
         # A git/uv subprocess failed (its own stderr has already printed).
         # Name the command and exit code, and point at that output, instead
-        # of echoing CalledProcessError's `['git', 'fetch', …]` list repr.
+        # of echoing CalledProcessError's `['git', 'fetch', ...]` list repr.
         cmd = exc.cmd[0] if isinstance(exc.cmd, list) and exc.cmd else "command"
         print_error(f"`{cmd}` failed (exit {exc.returncode}) — see its output above.")
         raise typer.Exit(code=1) from None
@@ -398,7 +398,7 @@ def _render_update_summary(summary: UpdateSummary) -> None:
 
     record = summary.record
     # Read the version from the freshly-installed source, not this running
-    # process — mid-update the live interpreter still reports the *old*
+    # process - mid-update the live interpreter still reports the *old*
     # version it imported at startup. Fall back to it only if the source
     # read failed.
     version = summary.installed_version or mait_code.__version__
@@ -854,8 +854,8 @@ def settings_set(
 def settings_unset(key: str) -> None:
     """Remove a custom [env] variable from settings.toml.
 
-    Only ``env.<NAME>`` keys can be unset — registry settings always have
-    a value (env → settings file → built-in default).
+    Only ``env.<NAME>`` keys can be unset - registry settings always have
+    a value (env -> settings file -> built-in default).
     """
     _require_settings_file()
     if not key.startswith("env."):
@@ -962,7 +962,7 @@ def _run_home_loop() -> None:
 
     Home exits with a :class:`~mait_code.cli._home_tui.HomeTarget` when the user
     opens the board, memory browser or settings editor; we launch that app
-    (which blocks until it quits) and then re-enter a fresh home — so its tree
+    (which blocks until it quits) and then re-enter a fresh home - so its tree
     badges reflect anything just changed. ``None`` means the user quit home.
 
     Each TUI runs in turn in this one process: home exits its event loop before
@@ -971,7 +971,7 @@ def _run_home_loop() -> None:
     from mait_code.cli._home_tui import HomeTarget, run_home_tui
 
     def launch(target: HomeTarget) -> None:
-        # Imported lazily, per target — keep the heavy Textual imports off the
+        # Imported lazily, per target - keep the heavy Textual imports off the
         # path of every other `mait-code` subcommand.
         if target is HomeTarget.BOARD:
             from mait_code.cli._board_tui import run_board_tui
@@ -1264,7 +1264,7 @@ def _logs_render() -> None:
 def main() -> None:
     """Console-script entry point declared in ``pyproject.toml``."""
     # The mait-code CLI doesn't route through setup_logging(), so the
-    # settings [env] table is injected here — doctor --fix needs e.g.
+    # settings [env] table is injected here - doctor --fix needs e.g.
     # AWS_PROFILE for Bedrock embedding just like the mc-tool-* tools.
     _apply_env()
     app()

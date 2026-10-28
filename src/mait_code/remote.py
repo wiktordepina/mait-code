@@ -1,7 +1,7 @@
-"""The remote API — what another machine or agent may do to a mait-code instance.
+"""The remote API - what another machine or agent may do to a mait-code instance.
 
 A deliberately small, executive-free surface over one instance's board,
-memories and reminders, for a host service to expose to remote clients — over
+memories and reminders, for a host service to expose to remote clients - over
 MCP, say. mait-code itself never listens on anything: transport,
 authentication, scopes and process lifecycle all belong to the host.
 
@@ -11,13 +11,13 @@ What is here is the whole contract:
   their members and progress, memories
   (ranked like ``mc-tool-memory search``), whether memory search can use its
   vectors, and active reminders.
-* **Create** a card. It always lands in ``backlog`` — there is no status
+* **Create** a card. It always lands in ``backlog`` - there is no status
   parameter to override. A card may name the card it came from: it joins
   that card's epic, unless the client opts out, and records a ``from``
   reference to it.
 * **Refine** a card: edit its description and acceptance criteria, and move
   it between ``backlog`` and ``refined``. Any other column is refused, and so
-  is an epic — it is never work to be picked up, so a client refining one has
+  is an epic - it is never work to be picked up, so a client refining one has
   mistaken it for a card. Locally an epic can still be refined: keeping its
   description current is the instance owner's bookkeeping.
 
@@ -27,7 +27,7 @@ memory writes, reflections and reminder changes. Those are decisions for
 whoever hosts the instance, so the functions do not exist here rather than
 refusing at runtime. A test pins ``__all__`` to an allowlist.
 
-A card reaches an epic only through its origin — though since any card can
+A card reaches an epic only through its origin - though since any card can
 be one, a client can reach any epic that has a member. The ``from``
 reference and ``created_by`` show how the card got there.
 
@@ -39,7 +39,7 @@ The host runs as a different user from the instance it serves and pins its
 own mait-code release, so this module is careful about what it trusts:
 
 * Every function takes the instance's *data_dir* explicitly and reads only the
-  databases in it — never ``dashboard.toml``, the settings ``[env]`` table or
+  databases in it - never ``dashboard.toml``, the settings ``[env]`` table or
   any other agent-writable file that would execute.
 * The board and reminder functions read nothing else at all: no
   ``os.environ``, no settings file, no data-dir lookup.
@@ -55,21 +55,21 @@ variable, then the settings file, then the default).
 :func:`memory_search_status` reads the same embedding settings, without
 loading the provider. A host should pin all of it:
 
-* **Environment** — ``MAIT_CODE_EMBEDDING_PROVIDER`` and
+* **Environment** - ``MAIT_CODE_EMBEDDING_PROVIDER`` and
   ``MAIT_CODE_EMBEDDING_MODEL`` (or ``MAIT_CODE_BEDROCK_MODEL_ID`` and
   ``MAIT_CODE_BEDROCK_REGION``); the ranking knobs
   ``MAIT_CODE_SCORE_WEIGHT_{RECENCY,IMPORTANCE,RELEVANCE}``,
   ``MAIT_CODE_HALF_LIFE_{EPISODIC,SEMANTIC,PROCEDURAL}`` and
   ``MAIT_CODE_SCOPE_BOOST_{GLOBAL,CROSS_PROJECT}``; and ``MAIT_CODE_DATA_DIR``,
   ``XDG_CONFIG_HOME`` and ``HOME``, which locate the files below.
-* **Files** — the flat keys of ``$XDG_CONFIG_HOME/mait-code/settings.toml``
+* **Files** - the flat keys of ``$XDG_CONFIG_HOME/mait-code/settings.toml``
   (its ``[env]`` table is not applied), and the local provider's model cache
   in ``models/`` under the host's data dir, downloaded on first use. The
   Bedrock provider also reads boto3's usual AWS credential chain.
-* **Side effects** — the host's data dir is created if missing, and the
+* **Side effects** - the host's data dir is created if missing, and the
   Bedrock provider injects the OS trust store into :mod:`ssl` for the whole
   process.
-* **Lifetime** — the ranking knobs and the embedding dimension are fixed when
+* **Lifetime** - the ranking knobs and the embedding dimension are fixed when
   the memory modules are first imported, the settings file is cached on first
   read, and the provider is kept once loaded, so changes need a restart. So
   does a failed model load: it degrades every later search to keyword-only
@@ -169,7 +169,7 @@ class TransitionRefused(RemoteError):
 
     Attributes:
         card_id: The card the refine targeted.
-        status: The column involved — the card's current one, or the
+        status: The column involved - the card's current one, or the
             requested target.
     """
 
@@ -343,7 +343,7 @@ def create_card(
 
     There is no way to create a card anywhere but ``backlog``.
 
-    With *origin_id*, the card joins the origin's epic and gets a ``from`` →
+    With *origin_id*, the card joins the origin's epic and gets a ``from`` ->
     ``#<origin_id>`` reference, in one transaction. An epic that is done or
     archived is refused rather than joined, since nothing would surface the
     card under it; pass ``inherit_epic=False`` to keep the reference and join
@@ -455,7 +455,7 @@ def refine_card(
         # Plain SQL rather than the service helpers: each of those commits on
         # its own, and the column re-check must share one transaction with the
         # write. That skips move_card's done-invariant, which is safe only
-        # because backlog and refined never carry completed_at — revisit if
+        # because backlog and refined never carry completed_at - revisit if
         # the service layer grows other bookkeeping for these columns.
         conn.execute("BEGIN IMMEDIATE")
         try:
@@ -579,7 +579,7 @@ def search_memories(
 
     Note:
         Unlike the rest of this module, the embedding provider and the
-        ranking weights come from the host's environment and settings file —
+        ranking weights come from the host's environment and settings file -
         see the module docstring for exactly what to pin.
 
     Args:
@@ -630,7 +630,7 @@ def memory_search_status(data_dir: Path) -> dict:
 
     Note:
         Like :func:`search_memories`, the configured side comes from the
-        host's environment and settings file — see the module docstring.
+        host's environment and settings file - see the module docstring.
 
     Args:
         data_dir: The instance's data directory.

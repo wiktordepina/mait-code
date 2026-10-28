@@ -33,7 +33,7 @@ def _pin_banner_version(monkeypatch: pytest.MonkeyPatch) -> None:
 def _seed_store(db_path: Path) -> None:
     """Two capture days for the shots: a fully-reflected older day (collapses
     behind its count) and a newer day with a pending backlog (expands, cursor
-    lands on its newest entry — whose markdown body doubles as the
+    lands on its newest entry - whose markdown body doubles as the
     markdown-rendering shot)."""
     conn = get_connection(db_path)
     try:
@@ -114,7 +114,7 @@ def test_observations_empty_snapshot(snap_compare, tmp_path: Path) -> None:
 
 
 def test_observations_filter_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the filtered view: ``/`` → type — every day expands to the matches
+    """Lock the filtered view: ``/`` -> type - every day expands to the matches
     and the subtitle reports the narrowed count."""
     db_path = tmp_path / "memory.db"
     _seed_store(db_path)
@@ -169,7 +169,7 @@ def test_observations_day_detail_snapshot(snap_compare, tmp_path: Path) -> None:
 
     async def run_before(pilot) -> None:
         # Boot lands the cursor on the first leaf via call_after_refresh, so
-        # settle first — pressing immediately would race that deferred move.
+        # settle first - pressing immediately would race that deferred move.
         await pilot.pause()
         # One step up from the first leaf is its day node.
         await pilot.press("up")

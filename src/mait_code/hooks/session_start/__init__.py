@@ -1,4 +1,4 @@
-"""Session-start hook — greet the user and surface overdue reminders.
+"""Session-start hook - greet the user and surface overdue reminders.
 
 Runs at the beginning of every Claude Code session. Builds the companion
 context (overdue reminders, board summary, inbox count) from each tool's

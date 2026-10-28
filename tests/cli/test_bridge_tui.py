@@ -1,7 +1,7 @@
 """Tests for the Textual Bridge editor.
 
-Drives the real app via ``run_test()`` → pilot: render the form, toggle the
-gate, fill fields, test the connection, and save — asserting the config files
+Drives the real app via ``run_test()`` -> pilot: render the form, toggle the
+gate, fill fields, test the connection, and save - asserting the config files
 change. The channel library is covered under ``tests/bridge``; here we check the
 TUI wiring on top of it.
 """
@@ -36,11 +36,11 @@ def test_initial_render_disabled_with_ntfy_fields():
         app = BridgeApp()
         async with app.run_test():
             assert app.query_one("#channel-type", Select).value == "ntfy"
-            # ntfy's three fields are present…
+            # ntfy's three fields are present...
             assert app.query_one("#field-server", Input) is not None
             assert app.query_one("#field-capture_topic", Input) is not None
             assert app.query_one("#field-token", Input).password is True
-            # …and the gate defaults to disabled.
+            # ...and the gate defaults to disabled.
             assert app._gate_value() == "disabled"
 
     _run(scenario)
@@ -68,7 +68,7 @@ def test_save_enabled_blank_required_is_refused():
             await pilot.pause()
             msg = str(app.query_one("#msg", Static).render())
             assert "required" in msg
-        # Nothing was written — the gate is still its default.
+        # Nothing was written - the gate is still its default.
         assert config.get("bridge") == "disabled"
 
     _run(scenario)

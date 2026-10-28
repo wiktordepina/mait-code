@@ -21,7 +21,7 @@ def propagate_logs(monkeypatch):
     """Re-enable log propagation so ``caplog`` (rooted at the root logger) can see
     ``mait_code.*`` records.
 
-    ``setup_logging()`` — run by an earlier test in the session — sets
+    ``setup_logging()`` - run by an earlier test in the session - sets
     ``propagate=False`` on the ``mait_code`` logger, which otherwise swallows
     records before they reach caplog's root handler.
     """

@@ -99,7 +99,7 @@ def _migrate_10_decision_entry_type(conn: sqlite3.Connection) -> None:
 
     Guarded: only run when reflection has never run on this database. Once
     reflection has produced genuine insights, the two are indistinguishable by
-    ``entry_type`` alone, so a blanket rename would corrupt them — in that case
+    ``entry_type`` alone, so a blanket rename would corrupt them - in that case
     leave existing rows untouched and rely on the forward-path fix. The
     ``memory_entries_au`` trigger keeps the FTS shadow table in sync with the
     relabelled ``entry_type`` automatically.
@@ -122,7 +122,7 @@ def _migrate_10_decision_entry_type(conn: sqlite3.Connection) -> None:
     )
 
 
-#: Migration 12 — legacy relationship types written before write-time coercion
+#: Migration 12 - legacy relationship types written before write-time coercion
 #: landed, remapped to the canonical vocabulary. Deliberately conservative:
 #: only types whose meaning maps cleanly *without flipping edge direction* get
 #: a specific target (e.g. ``hosts`` is inverse-``depends_on``, so it falls to
@@ -134,7 +134,7 @@ _LEGACY_RELATIONSHIP_REMAP: dict[str, str] = {
     "integrates_with": "uses",
 }
 
-#: Migration 12 — legacy entity types (never offered by the extraction prompt)
+#: Migration 12 - legacy entity types (never offered by the extraction prompt)
 #: remapped to the canonical vocabulary. Anything absent here and outside the
 #: canonical set becomes ``unknown``.
 _LEGACY_ENTITY_TYPE_REMAP: dict[str, str] = {
@@ -240,7 +240,7 @@ def _migrate_13_reviewed_at(conn: sqlite3.Connection) -> None:
     ``created_at``: reviewing a memory stamps ``reviewed_at`` without touching
     when it was first stored.
 
-    Existing rows are backfilled to ``created_at`` — the best available proxy
+    Existing rows are backfilled to ``created_at`` - the best available proxy
     for "last engaged with". The column is left nullable (SQLite forbids a
     ``CURRENT_TIMESTAMP`` default on ``ADD COLUMN``); rows inserted afterwards
     carry NULL until first review, and readers treat NULL as ``created_at`` via
@@ -266,7 +266,7 @@ def _migrate_15_source(conn: sqlite3.Connection) -> None:
     """Add the ``source`` provenance column to ``memory_entries``.
 
     Records what wrote an entry when it came from somewhere other than a
-    session's own observe hook — ``mc-tool-memory observe`` stores its
+    session's own observe hook - ``mc-tool-memory observe`` stores its
     ``--trigger`` (e.g. ``job``) here. Existing rows and hook writes stay NULL.
 
     The ``ADD COLUMN`` is guarded so the body is safe to re-run (SQLite has no
@@ -452,7 +452,7 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
 def ensure_schema(conn: sqlite3.Connection) -> None:
     """Apply any pending migrations to the database.
 
-    Safe to call on every connection open — checks a single integer and
+    Safe to call on every connection open - checks a single integer and
     returns immediately if the schema is current. Gracefully skips vec0
     migrations if the sqlite-vec extension is not loaded.
 
@@ -483,13 +483,13 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
                     conn.execute(sql)
         except Exception as e:
             # vec0 migrations require sqlite-vec extension loaded.
-            # If it's not available, skip gracefully — will run on next
+            # If it's not available, skip gracefully - will run on next
             # connection that has the extension.
             if "vec0" in str(e).lower() or "no such module" in str(e).lower():
                 logger.debug(
                     "Migration %d skipped (sqlite-vec not loaded): %s", version, e
                 )
-                break  # Stop here — later migrations may depend on vec0
+                break  # Stop here - later migrations may depend on vec0
             raise
 
         conn.execute(

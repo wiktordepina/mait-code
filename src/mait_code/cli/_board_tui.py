@@ -91,7 +91,7 @@ __all__ = ["BoardApp", "run_board_tui"]
 #: pane, revealed by the ``a`` toggle.
 _PANES: tuple[str, ...] = (*BOARD_ORDER, ARCHIVED)
 
-#: The linear flow the ``<``/``>`` keys move a card along — every real status
+#: The linear flow the ``<``/``>`` keys move a card along - every real status
 #: except the hidden ``archived`` side-state, which is reached only via the CLI.
 _MOVE_FLOW: tuple[str, ...] = (BACKLOG, REFINED, IN_PROGRESS, IN_REVIEW, DONE)
 
@@ -123,7 +123,7 @@ def run_board_tui(db_path: Path | None = None, *, initial_view: str = KANBAN) ->
 
 #: Leading glyph that marks a blocked card. A blocked box already carries a red
 #: border, but the marker (and the ``#blocked`` badge) are redundant signals that
-#: survive the highlighted-option tint and read without colour — belt-and-braces,
+#: survive the highlighted-option tint and read without colour - belt-and-braces,
 #: colourblind-safe.
 _BLOCKED_MARK = "⊘ "
 
@@ -147,8 +147,8 @@ def _card_box(
     The box is a rounded :class:`~rich.panel.Panel` whose body stacks three
     parts: a header grid (``#id`` left, project right), the priority chip plus
     the full title (wraps to the column width, so the box grows in height), and a
-    right-justified tag line. A blocked card — tagged ``blocked``, or waiting on
-    an unfinished blocker — gets a border in the ``blocked`` hue and the leading
+    right-justified tag line. A blocked card - tagged ``blocked``, or waiting on
+    an unfinished blocker - gets a border in the ``blocked`` hue and the leading
     :data:`_BLOCKED_MARK`. The reason rides below the title: the ``#blocked``
     badge stands out for the tag, and a ``waiting on #76, #80`` line names the
     blockers; a card that is both shows both.
@@ -245,7 +245,7 @@ class BoardColumn(OptionList):
     ]
 
 
-#: The card screen's view-mode action bindings — the set :meth:`CardScreen.check_action`
+#: The card screen's view-mode action bindings - the set :meth:`CardScreen.check_action`
 #: hides while editing (they don't apply with the form up). Save and Close are
 #: deliberately absent: Save is the edit-mode action, Close is universal.
 _VIEW_ACTIONS: frozenset[str] = frozenset(
@@ -266,7 +266,7 @@ _VIEW_ACTIONS: frozenset[str] = frozenset(
 _CARD_ONLY_ACTIONS: frozenset[str] = frozenset({"link", "set_epic", "block", "unblock"})
 
 #: A reference value is rendered as a clickable link when it carries a URI
-#: scheme (``https://``, ``file://``, …). Bare IDs like ``WIKTOR-2342`` have no
+#: scheme (``https://``, ``file://``, ...). Bare IDs like ``WIKTOR-2342`` have no
 #: scheme and render as plain text.
 _URI_SCHEME = re.compile(r"^[a-z][a-z0-9+.\-]*://", re.IGNORECASE)
 
@@ -277,20 +277,20 @@ def _is_linkable(value: str) -> bool:
 
 
 class CardScreen(ModalScreen[None]):
-    """A near-fullscreen card surface with a view↔edit toggle.
+    """A near-fullscreen card surface with a view/edit toggle.
 
-    One screen, two modes. *view* is read-only — the card's fields and its
+    One screen, two modes. *view* is read-only - the card's fields and its
     comment thread, with comment / complete / block reachable in place. *edit*
     is the comprehensive form: title, project, priority, status, tags,
     references, description and acceptance, all in one place. Tags, references
     and status are a working copy applied only on **Save**, so the form is the
     single, cohesive editor and ``escape`` discards every pending change. ``e`` flips
-    view→edit; **Save** (or ``ctrl+s``) persists in place and flips back to view
+    view->edit; **Save** (or ``ctrl+s``) persists in place and flips back to view
     (so an edit lands without a round-trip to the board); ``escape`` cancels an
     edit back to view, or closes the screen from view.
 
     The frame is near-fullscreen for room, but the content column stays capped
-    (see ``_board.tcss``) so running prose keeps a readable measure — the win
+    (see ``_board.tcss``) so running prose keeps a readable measure - the win
     from the detail-readability pass.
 
     The screen never touches the database itself: every change posts a message
@@ -299,13 +299,13 @@ class CardScreen(ModalScreen[None]):
     back via :meth:`show_card`. Mutation stays in the service layer, mirroring
     the rest of the board.
 
-    Block/unblock (``b``/``u``) stay view-mode gestures — they carry a reason
-    comment a plain tag can't — so the form's tag editor leaves the ``blocked``
+    Block/unblock (``b``/``u``) stay view-mode gestures - they carry a reason
+    comment a plain tag can't - so the form's tag editor leaves the ``blocked``
     tag alone, carrying it through a save untouched.
 
     Relationships get their own gestures for the same reason: ``l`` adds or
     removes a ``blocks`` link and ``P`` sets or clears the card's epic, each
-    through a small modal. An epic takes neither — nor block/unblock or tags —
+    through a small modal. An epic takes neither - nor block/unblock or tags -
     and its project is fixed, so for an epic those are hidden and the meta line
     carries its progress instead of a project.
 
@@ -321,7 +321,7 @@ class CardScreen(ModalScreen[None]):
         editable facet: ``fields`` (title/project/priority/description/
         acceptance for :func:`edit_card`), the target ``status``, and the full
         ``tags`` and ``references`` sets (set-replace). The app persists these via the
-        service layer and refreshes the open screen — the screen deliberately
+        service layer and refreshes the open screen - the screen deliberately
         doesn't write to the DB itself.
         """
 
@@ -344,17 +344,17 @@ class CardScreen(ModalScreen[None]):
     class Mutate(Message):
         """Posted to ask the app to apply an in-place action, then refresh.
 
-        Covers the view-mode actions that stay outside the edit form — comment,
+        Covers the view-mode actions that stay outside the edit form - comment,
         block/unblock, complete, and the relationship edits. Like :class:`Saved`, the screen never writes
         to the DB itself: it posts the intent (with any gathered input), the app
         persists via the service layer and feeds the refreshed card back through
         :meth:`show_card`, so the action lands in place without bouncing to the
         board.
 
-        ``op`` is the action name; ``value`` carries its payload — the comment
+        ``op`` is the action name; ``value`` carries its payload - the comment
         body, the completion summary, a ``(from_id, to_id)`` pair for
         ``link_add`` / ``link_remove``, or the epic id (``None`` to clear) for
-        ``set_parent`` — and is ``None`` for block/unblock.
+        ``set_parent`` - and is ``None`` for block/unblock.
         """
 
         def __init__(self, card_id: int, op: str, value: object = None) -> None:
@@ -482,13 +482,13 @@ class CardScreen(ModalScreen[None]):
 
     @property
     def is_editing(self) -> bool:
-        """True while the edit form is showing — a live refresh must not clobber
+        """True while the edit form is showing - a live refresh must not clobber
         an in-progress edit, so the app skips refreshing in this state."""
         return self._mode == "edit"
 
     def matches(self, card: dict, comments: list[dict]) -> bool:
         """Whether the on-screen card and comments already equal *card* /
-        *comments* — lets a live refresh skip a no-op re-render (which would
+        *comments* - lets a live refresh skip a no-op re-render (which would
         otherwise reset the body's scroll position)."""
         return self._card == card and self._comments == comments
 
@@ -496,7 +496,7 @@ class CardScreen(ModalScreen[None]):
 
     def _header_widgets(self) -> list[Widget]:
         """The pinned header: the wrapping title and the meta/badges line. Built
-        fresh each time so a save re-renders it in place — title, status, priority
+        fresh each time so a save re-renders it in place - title, status, priority
         and tags can all change on save."""
         card = self._card
         # Title wraps (a Static, not a clipping Label); priority/tags move to the
@@ -524,7 +524,7 @@ class CardScreen(ModalScreen[None]):
                 # so both render seamlessly with no format flag. The parser also
                 # makes "[...]" inert (only "[label](url)" is a link), so the
                 # markup-injection escape() the other sections need isn't required
-                # here. Links render-only (open_links=False) — References stays the
+                # here. Links render-only (open_links=False) - References stays the
                 # canonical link surface.
                 widgets.append(
                     Markdown(body, parser_factory=md_parser, open_links=False)
@@ -572,7 +572,7 @@ class CardScreen(ModalScreen[None]):
     def _apply_mode(self) -> None:
         """Show the active mode's container; focus the title when editing.
 
-        Re-runs :meth:`refresh_bindings` so the footer tracks the mode flip —
+        Re-runs :meth:`refresh_bindings` so the footer tracks the mode flip -
         the view actions drop out in edit mode, Save appears.
         """
         self.query_one("#card-header").display = self._mode == "view"
@@ -627,9 +627,9 @@ class CardScreen(ModalScreen[None]):
 
     @work
     async def action_export(self) -> None:
-        """``x`` in view mode prompts for a destination — pre-filled with
+        """``x`` in view mode prompts for a destination - pre-filled with
         ``card-N.md`` in the last directory exported to this session, else
-        ``~`` — and writes the card's markdown there, rendered through the same
+        ``~`` - and writes the card's markdown there, rendered through the same
         export layer as the CLI. Never the launch directory: the board is
         cross-project, so where it was started from means nothing here."""
         if self._mode != "view":
@@ -697,7 +697,7 @@ class CardScreen(ModalScreen[None]):
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         """Gate the footer/bindings to the active mode and card state.
 
-        Edit mode exposes only Save + Close — the view actions don't apply with
+        Edit mode exposes only Save + Close - the view actions don't apply with
         the form up (tags, references and status are edited *in* the form now).
         View mode hides Save and shows whichever of block / unblock matches the
         card's current tag (they're mutually exclusive). Paired with
@@ -777,7 +777,7 @@ class CardScreen(ModalScreen[None]):
 
     async def _render_tag_chips(self) -> None:
         """Re-render the working-copy tag chips, one removable ``✕ tag`` button
-        each. ``blocked`` is deliberately not shown — it's carried through a save
+        each. ``blocked`` is deliberately not shown - it's carried through a save
         untouched and stays driven by ``b``/``u`` (see the class docstring)."""
         row = self.query_one("#edit-tag-chips", Horizontal)
         await row.remove_children()
@@ -820,7 +820,7 @@ class CardScreen(ModalScreen[None]):
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Enter in the tag input adds a tag; Enter in the ref value adds the
-        reference — quick keyboard paths that mirror the buttons."""
+        reference - quick keyboard paths that mirror the buttons."""
         if event.input.id == "edit-tag-input":
             await self._add_tag_from_input()
         elif event.input.id == "edit-ref-value":
@@ -912,7 +912,7 @@ class CardScreen(ModalScreen[None]):
         ``project · status · priority · via client · #tag #tag``. The
         ``via`` field only appears on cards raised through
         :mod:`mait_code.remote`. An epic reads ``epic · status · progress ·
-        priority …`` — its project is always ``@epic``, which says nothing.
+        priority ...``: its project is always ``@epic``, which says nothing.
 
         The uniform separator gives priority and the tags the same rhythm as
         project/status, instead of trailing off space-separated. Tags read as
@@ -953,8 +953,8 @@ class CardScreen(ModalScreen[None]):
         """The Epic / Blocked by / Unblocks rows, or ``None`` when there are none.
 
         One row per related card, labelled on its first. Every blocker shows
-        with its state — *waiting* while unfinished, *done*, or *archived* with
-        a warning (the work was dropped, so the card may want another look) —
+        with its state - *waiting* while unfinished, *done*, or *archived* with
+        a warning (the work was dropped, so the card may want another look) -
         so a link to finished work stays visible rather than vanishing.
         """
         rows: list[tuple[str, Text]] = []
@@ -1044,8 +1044,8 @@ class LinkScreen(ModalScreen[tuple[str, int, int] | None]):
     """Add a ``blocks`` link either way, or remove one of the card's links.
 
     Resolves to ``("link_add" | "link_remove", from_id, to_id)``, or ``None``
-    on cancel. Adding takes a direction — *this card blocks…* or *this card is
-    blocked by…* — and the other card's id; each existing link is a ``✕``
+    on cancel. Adding takes a direction - *this card blocks...* or *this card is
+    blocked by...* - and the other card's id; each existing link is a ``✕``
     button that resolves to its removal, as the tag modal's chips do.
     """
 
@@ -1118,7 +1118,7 @@ class LinkScreen(ModalScreen[tuple[str, int, int] | None]):
         self.dismiss(None)
 
 
-#: :class:`EpicScreen`'s choice for "no epic" — distinct from the ``None``
+#: :class:`EpicScreen`'s choice for "no epic" - distinct from the ``None``
 #: that cancel resolves to.
 _NO_EPIC = "none"
 
@@ -1253,7 +1253,7 @@ class TagScreen(ModalScreen[str | None]):
     Resolves to a single tag (or ``None`` on cancel) which the app *toggles*:
     a tag absent from the card is added, one already present is removed. Typing
     a name and applying toggles it; the current-tag chips give removal an
-    explicit, discoverable path (click a chip → that tag toggles off).
+    explicit, discoverable path (click a chip -> that tag toggles off).
     """
 
     BINDINGS = [("escape", "cancel", "Cancel")]
@@ -1306,7 +1306,7 @@ class SearchScreen(ModalScreen[str | None]):
     """Capture a title-search query for the board.
 
     Resolves to the typed query (possibly ``""`` to clear an active filter), or
-    ``None`` on escape/cancel — which leaves the current filter untouched. The
+    ``None`` on escape/cancel - which leaves the current filter untouched. The
     input is pre-filled with the active query so editing or clearing it is one
     gesture.
     """
@@ -1350,7 +1350,7 @@ class SearchScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-#: Priority choices, low→high, as offered in the new/edit modals.
+#: Priority choices, low->high, as offered in the new/edit modals.
 _PRIORITIES: tuple[str, ...] = ("low", "medium", "high")
 
 
@@ -1361,7 +1361,7 @@ class NewCardScreen(ModalScreen[dict | None]):
     An empty title or project keeps the modal open (a card is never created
     without both); escape always cancels. The project field is pre-filled only
     when the caller has one to offer (the active filter) and otherwise starts
-    empty — a blank never falls back to the launch directory.
+    empty - a blank never falls back to the launch directory.
     """
 
     BINDINGS = [("escape", "cancel", "Cancel")]
@@ -1422,7 +1422,7 @@ class CompleteScreen(ModalScreen[str | None]):
     """Prompt for a completion summary; resolves to the summary or ``None``.
 
     A summary is the whole point of this gesture (vs a bare move into done), so
-    an empty summary cancels — done cards are never summary-less.
+    an empty summary cancels - done cards are never summary-less.
     """
 
     BINDINGS = [("escape", "cancel", "Cancel")]
@@ -1549,7 +1549,7 @@ class BoardApp(MaitApp):
         # (Textual maps them to the terminal palette), but *not* as Rich-text
         # styles: Textual re-parses them when the card screen's Static paints and
         # raises MissingStyle. So for any non-hex theme, fall back to the
-        # canonical hex palette for the chips — the CSS chrome still follows the
+        # canonical hex palette for the chips - the CSS chrome still follows the
         # active theme. `primary` is the canary (themes don't mix hex and named).
         if not (t.primary or "").startswith("#"):
             return PALETTE_CHIPS
@@ -1670,7 +1670,7 @@ class BoardApp(MaitApp):
         status = self._visible_statuses()[self._focused_col]
         column = self.query_one(f"#tbl-{status}", BoardColumn)
         # OptionList doesn't auto-highlight on focus (unlike a DataTable cursor),
-        # so default to the first card — otherwise actions have nothing selected.
+        # so default to the first card - otherwise actions have nothing selected.
         # An empty column holds only its disabled companion hint, which must
         # never be highlighted (it carries no card id).
         if (
@@ -1856,7 +1856,7 @@ class BoardApp(MaitApp):
             ProjectFilterScreen(self._projects, self._project_filter)
         )
         if result is None:
-            return  # escape/cancel — leave the active filter as-is
+            return  # escape/cancel - leave the active filter as-is
         # A project name filters to it; the ALL_PROJECTS sentinel clears it.
         self._project_filter = result if isinstance(result, str) else None
         self._update_subtitle()
@@ -1867,7 +1867,7 @@ class BoardApp(MaitApp):
     async def action_search(self) -> None:
         result = await self.push_screen_wait(SearchScreen(self._search))
         if result is None:
-            return  # escape/cancel — leave the active filter as-is
+            return  # escape/cancel - leave the active filter as-is
         self._search = result or None  # empty query clears the filter
         self._update_subtitle()
         self._reload()
@@ -1909,7 +1909,7 @@ class BoardApp(MaitApp):
         """The SQLite ``data_version`` for this connection.
 
         In WAL mode it changes only when *another* connection commits, so the
-        board's own mutations (made on ``self._conn``) never bump it — we only
+        board's own mutations (made on ``self._conn``) never bump it - we only
         react to external edits from the CLI or skills.
         """
         row = self._conn.execute("PRAGMA data_version").fetchone()
@@ -1980,7 +1980,7 @@ class BoardApp(MaitApp):
         """``i`` switches between the kanban and the Initiatives view.
 
         A no-op while a modal (the card screen, a prompt) is open, so the
-        palette command can't stack the view on top of one — the ``i`` key is
+        palette command can't stack the view on top of one - the ``i`` key is
         already out of reach there.
         """
         from mait_code.cli._initiatives_tui import InitiativesScreen
@@ -2030,8 +2030,8 @@ class BoardApp(MaitApp):
     async def open_card(self, card_id: int, mode: str = "view") -> bool:
         """Open *card_id* in the unified view/edit screen; wait for it to close.
 
-        Any screen can call this from a worker — the kanban and the
-        Initiatives view both do — and then refresh its own panes. Stays open
+        Any screen can call this from a worker - the kanban and the
+        Initiatives view both do - and then refresh its own panes. Stays open
         across an in-place save (handled by ``on_card_screen_saved``). Returns
         ``False`` if the card is gone.
         """
@@ -2056,7 +2056,7 @@ class BoardApp(MaitApp):
 
         Applies the whole working copy: the text fields via ``edit_card``, then
         the set-replace of tags and references, then a status move *only* if it
-        actually changed — so the done-invariant is maintained by ``move_card``
+        actually changed - so the done-invariant is maintained by ``move_card``
         without re-stamping ``completed_at`` on an unchanged status.
         """
         existing = service.get_card(self._conn, message.card_id)

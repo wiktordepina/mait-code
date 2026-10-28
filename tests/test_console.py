@@ -34,7 +34,7 @@ def test_theme_styles_emit_ansi_on_a_colour_terminal() -> None:
 
 def test_no_color_attribute_strips_ansi() -> None:
     # `no_color` (what `--no-color` toggles at runtime) drops colour but, per
-    # the NO_COLOR contract, leaves bold/underline alone — so test a
+    # the NO_COLOR contract, leaves bold/underline alone - so test a
     # colour-only style to assert all styling is gone.
     c = Console(
         theme=THEME, force_terminal=True, color_system="truecolor", no_color=True

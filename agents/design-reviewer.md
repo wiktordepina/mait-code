@@ -45,7 +45,7 @@ work="$(mktemp -d <scratchpad>/design-review-XXXXXX)"   # <scratchpad> from your
 
 The scratchpad is shared with the session that spawned you, so never write to its root and never reuse a directory you merely found there. If you were given no scratchpad path, `mktemp -d` with no argument is fine.
 
-Running the test suite or a typechecker is allowed where it settles a question, under the same rules as any reviewer: `uv run --frozen --no-sync …`, `pytest -p no:cacheprovider`, and no setup steps (`uv sync`, `npm install`).
+Running the test suite or a typechecker is allowed where it settles a question, under the same rules as any reviewer: `uv run --frozen --no-sync ...`, `pytest -p no:cacheprovider`, and no setup steps (`uv sync`, `npm install`).
 
 ## What to produce
 

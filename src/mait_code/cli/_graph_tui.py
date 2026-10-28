@@ -139,7 +139,7 @@ class GraphApp(MaitApp):
         self._entities: list[dict] = []
         self._ego: dict | None = None
         self._query = ""
-        self._show_all = False  # False → hide degree-0 / single-mention noise
+        self._show_all = False  # False -> hide degree-0 / single-mention noise
         self._view = "graph"
         # The graph the GraphView should be showing. netext drops set_graph()
         # calls made while the widget is unsized (pre-layout, or hidden behind
@@ -311,7 +311,7 @@ class GraphApp(MaitApp):
         theme = self.current_theme
 
         # The centre node inverts: theme background text on the foreground
-        # colour. Both $style and $content-style must invert — leaving the
+        # colour. Both $style and $content-style must invert - leaving the
         # content on the type colour makes foreground-coloured types
         # (concept, unknown) invisible against the inverted box.
         inverted = Style(color=theme.background, bgcolor=theme.foreground, bold=True)
@@ -443,7 +443,7 @@ class GraphApp(MaitApp):
         self, event: OptionList.OptionHighlighted
     ) -> None:
         # Highlight previews the entity at once and re-centres the whole
-        # surface after the cursor rests — debounced, because re-laying-out
+        # surface after the cursor rests - debounced, because re-laying-out
         # a hub neighbourhood on every arrow press would make the list crawl.
         # Enter (OptionSelected) still re-centres immediately.
         index = event.option_index
@@ -539,7 +539,7 @@ class GraphApp(MaitApp):
     def action_show_table(self) -> None:
         self._view = "table"
         self.query_one("#centre", ContentSwitcher).current = "table"
-        self.refresh_bindings()  # the t binding swaps Table ⇄ Graph
+        self.refresh_bindings()  # the t binding swaps Table <-> Graph
 
     def action_show_graph(self) -> None:
         self._view = "graph"
@@ -552,7 +552,7 @@ class GraphApp(MaitApp):
         self.refresh_bindings()
 
     def action_toggle_all(self) -> None:
-        """Toggle the noise filter: connected-and-mentioned only ⇄ everything."""
+        """Toggle the noise filter: connected-and-mentioned only <-> everything."""
         self._show_all = not self._show_all
         self._load_entities()
         self._rebuild_list()
@@ -573,13 +573,13 @@ class GraphApp(MaitApp):
         """
         if isinstance(view.zoom, (int, float)):
             return float(view.zoom)
-        if view._console_graph is not None:  # noqa: SLF001 — no public accessor
+        if view._console_graph is not None:  # noqa: SLF001 - no public accessor
             zoom_x, _zoom_y = view._console_graph._compute_current_zoom()
             return zoom_x
         return 1.0
 
     def action_reload(self) -> None:
-        """Re-read the graph — picks up entities observed since launch."""
+        """Re-read the graph - picks up entities observed since launch."""
         self._load_entities()
         self._rebuild_list()
         self.notify("Graph reloaded", title="Graph")

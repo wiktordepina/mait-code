@@ -15,7 +15,7 @@ from mait_code.tools.memory.native import (
 
 def _munge(path: Path, root: Path) -> str:
     """A path's munged slug relative to ``root`` (Claude Code's munge:
-    every non-alphanumeric char → ``-``)."""
+    every non-alphanumeric char -> ``-``)."""
     return munge_path("/" + str(path.relative_to(root)))
 
 
@@ -112,7 +112,7 @@ class TestResolveSlug:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         # An OSError while listing a directory aborts that branch of the walk
-        # rather than crashing — the slug simply doesn't resolve.
+        # rather than crashing - the slug simply doesn't resolve.
         (tmp_path / "home").mkdir()
 
         def _boom(self, *args, **kwargs):

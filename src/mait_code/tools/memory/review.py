@@ -5,14 +5,14 @@ promote? retire?" pass, so curated memory stays fresh instead of decaying
 silently.
 
 The decay curve is **not** reinvented here: it reuses
-:func:`mait_code.tools.memory.scoring.recency_score` — the same per-class
+:func:`mait_code.tools.memory.scoring.recency_score` - the same per-class
 exponential decay that drives retrieval ranking (episodic 3d / semantic 90d /
 procedural 180d half-lives). The only twist is the *anchor*: retrieval decays
 from ``created_at``, whereas resurfacing decays from ``reviewed_at`` (the last
 time the memory was engaged with), so reviewing an item resets its curve.
 
 A memory is **due** when its recall probability, measured from that anchor,
-has fallen below ``review-threshold`` (default 0.5 — one half-life since last
+has fallen below ``review-threshold`` (default 0.5 - one half-life since last
 review), and its importance is at least ``review-min-importance`` so
 low-value memories decay without nagging.
 """

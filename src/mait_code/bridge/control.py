@@ -1,6 +1,6 @@
 """The Bridge control-message protocol.
 
-Some messages on the capture topic aren't captures — they're *control*
+Some messages on the capture topic aren't captures - they're *control*
 messages the companion sent to itself: a "Done" button on a reminder
 notification publishes ``mait-ctl:dismiss:<id>`` back to the capture topic, and
 the next drain acts on it instead of filing it into the inbox.
@@ -40,7 +40,7 @@ def dismiss_command(reminder_id: int) -> str:
 def parse(body: str) -> ControlCommand | None:
     """Parse a message body into a :class:`ControlCommand`, or ``None``.
 
-    ``None`` means "this is an ordinary capture, file it" — so anything that
+    ``None`` means "this is an ordinary capture, file it" - so anything that
     isn't a well-formed control message flows to the inbox untouched.
     """
     if not body.startswith(_PREFIX):

@@ -4,12 +4,12 @@ Hooks may print a JSON object to stdout to feed structured output back into the
 session. The part most prone to drift is ``hookSpecificOutput``: Claude Code
 rejects the whole payload if it omits ``hookEventName`` or carries fields that
 don't belong to the named event. A 0.25.3 regression shipped a session-start
-hook that emitted ``{"context": ...}`` with no ``hookEventName`` — the payload
+hook that emitted ``{"context": ...}`` with no ``hookEventName`` - the payload
 was silently rejected and the companion context never reached the session.
 
 ``validate_hook_output`` encodes that contract once so every hook can be checked
 against it (see ``test_output_schema.py``), rather than each hook test asserting
-its own ad-hoc shape — which is precisely how the regression slipped through CI.
+its own ad-hoc shape - which is precisely how the regression slipped through CI.
 """
 
 import json
@@ -36,7 +36,7 @@ _STRING_FIELDS = {
 def validate_hook_output(stdout: str) -> None:
     """Assert that a hook's stdout conforms to the Claude Code output contract.
 
-    Empty or whitespace-only output is valid — a hook that injects nothing is
+    Empty or whitespace-only output is valid - a hook that injects nothing is
     free to print nothing. Any non-empty output must be a single JSON object,
     and if it carries ``hookSpecificOutput`` that object must name a known event
     via ``hookEventName`` and carry only fields permitted for that event.

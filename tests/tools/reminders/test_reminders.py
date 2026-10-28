@@ -1,4 +1,4 @@
-"""Tests for reminders tool — migrations, CLI commands, and database operations."""
+"""Tests for reminders tool - migrations, CLI commands, and database operations."""
 
 import argparse
 import sqlite3
@@ -213,7 +213,7 @@ def test_cmd_list_empty(mock_conn, capsys):
 
 
 def test_cmd_list_dismissed_only_with_all(mock_conn, capsys):
-    # No active reminders, only a dismissed one — the overdue/upcoming blocks are
+    # No active reminders, only a dismissed one - the overdue/upcoming blocks are
     # skipped and just the Dismissed section prints.
     now = _now()
     _insert_reminder(
@@ -265,7 +265,7 @@ def test_main_dispatches_subcommand(mock_conn, capsys, monkeypatch):
 
 
 def test_main_requires_a_subcommand(monkeypatch):
-    # The subparser is ``required=True`` — a bare invocation is a usage error.
+    # The subparser is ``required=True`` - a bare invocation is a usage error.
     monkeypatch.setattr("sys.argv", ["mc-tool-reminders"])
 
     from mait_code.tools.reminders.cli import main

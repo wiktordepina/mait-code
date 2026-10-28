@@ -1,8 +1,8 @@
 """Tests for board relationships: epics, parents and ``blocks`` links.
 
-Exercises the service-layer invariants from schema v6 — an epic is exactly a
+Exercises the service-layer invariants from schema v6 - an epic is exactly a
 card on the reserved :data:`EPIC_PROJECT`, a parent is always an epic, and
-``blocks`` links never form a loop — plus the readiness rule ``next_refined``
+``blocks`` links never form a loop - plus the readiness rule ``next_refined``
 now applies.
 """
 

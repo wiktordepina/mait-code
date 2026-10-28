@@ -241,7 +241,7 @@ def update(
 
     # The embedding provider is read from the centralised settings file,
     # which `mait-code install` writes on every install (0.19.0+). A missing
-    # provider means the install predates centralised settings — fail with a
+    # provider means the install predates centralised settings - fail with a
     # pointer to `install` rather than silently defaulting, which would drop
     # the bedrock extra from the reinstall below.
     user_settings = read_mait_settings()
@@ -261,11 +261,11 @@ def update(
     #    actually moved so we can skip a needless reinstall below.
     #
     #    Every git invocation is `--quiet`: the fetch progress, the
-    #    "Previous HEAD position was…/HEAD is now at…" checkout chatter and
+    #    "Previous HEAD position was.../HEAD is now at..." checkout chatter and
     #    the fast-forward summary are all noise the user can't act on, and
     #    the `UpdateSummary` reports the meaningful outcome afterwards. A
     #    `console.status` spinner covers the network round-trip so the now-
-    #    silent stretch doesn't read as a hang. Errors still reach stderr —
+    #    silent stretch doesn't read as a hang. Errors still reach stderr -
     #    `--quiet` suppresses progress, not failures.
     head_before = _head(capture, source_dir)
     fetched = False
@@ -298,8 +298,8 @@ def update(
                 # bootstrap clone, and its skills are symlinked into ~/.claude
                 # (e.g. ~/.claude/skills/board -> source/skills/board), so editing
                 # a skill in place writes *through* the symlink into this working
-                # tree. Those write-through edits are not user work — the committed
-                # release is authoritative — so discard them rather than letting
+                # tree. Those write-through edits are not user work - the committed
+                # release is authoritative - so discard them rather than letting
                 # git abort with "local changes would be overwritten by checkout".
                 runner(
                     ["git", "checkout", "--force", "--quiet", latest],
@@ -318,7 +318,7 @@ def update(
     if reinstalled:
         extra = "[bedrock]" if embedding_provider == "bedrock" else ""
         # `--quiet` drops uv's "Resolved N packages" line and the full
-        # `+ package==version` install listing — dozens of lines the user
+        # `+ package==version` install listing - dozens of lines the user
         # didn't ask for. The spinner stands in for the (often multi-second)
         # rebuild so the wait is legible.
         with console.status("Reinstalling mait-code…"):

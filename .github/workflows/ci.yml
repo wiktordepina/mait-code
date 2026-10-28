@@ -70,7 +70,7 @@ jobs:
 
   # The optional Claude Code mod (mods/mait-companion). The mods API is early
   # access, so this job reports without gating merges; the CLI is pinned to the
-  # release the mod was last tested against — bump it deliberately.
+  # release the mod was last tested against - bump it deliberately.
   mod:
     name: Claude Code mod (non-blocking)
     runs-on: ubuntu-latest

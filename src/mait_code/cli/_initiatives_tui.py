@@ -6,9 +6,9 @@ screen and edit forms, and ``i`` flips between it and the kanban. Epics never
 appear on the kanban, so this is where they live.
 
 Left, every open epic with its progress; right, a table of the highlighted
-epic's members across every project, sorted so what can move comes first —
+epic's members across every project, sorted so what can move comes first -
 or, behind ``g``, a dependency diagram of the epic's ``blocks`` links.
-The board's project and search filters don't apply here — an initiative spans
+The board's project and search filters don't apply here - an initiative spans
 projects, and hiding half of one would misstate its progress.
 
 Kept out of ``_board_tui`` (already ~1,800 lines). This module imports that
@@ -78,7 +78,7 @@ def _bucket(card: dict, ready: set[int]) -> int:
     """Where *card* sorts in the member table.
 
     Ready first (what can be picked up now); then work in flight; then
-    anything held up — waiting on a blocker or tagged ``blocked``, in any open
+    anything held up - waiting on a blocker or tagged ``blocked``, in any open
     column; then the remaining refined and backlog cards, including a refined
     card that a live session is bound to (it isn't free to pick up); done
     last.
@@ -130,8 +130,8 @@ class InitiativesScreen(Screen[None]):
     """Epics with progress on the left, the highlighted epic's members right.
 
     Selecting an epic or a member (``enter`` or a click) opens the board's card
-    screen on it; anything changed there — or by the CLI underneath, through
-    the board's live poll — re-reads both panes. ``i`` returns to the kanban;
+    screen on it; anything changed there - or by the CLI underneath, through
+    the board's live poll - re-reads both panes. ``i`` returns to the kanban;
     ``escape`` leaves the board app, which from the hub lands back there.
 
     ``g`` swaps the member table for a read-only dependency diagram: the
@@ -348,8 +348,8 @@ class InitiativesScreen(Screen[None]):
         """Build the epic's diagram from its ``blocks`` graph.
 
         Drawn: members on either end of a link, plus the one-hop stubs outside
-        the epic. Members with no link — done ones included, and any whose
-        only link was to an archived card — are counted under the diagram.
+        the epic. Members with no link - done ones included, and any whose
+        only link was to an archived card - are counted under the diagram.
         Member state comes from *members* (``dependency_graph`` carries none).
         """
         graph = service.dependency_graph(self.board.conn, epic_id=epic["id"])
@@ -506,7 +506,7 @@ class InitiativesScreen(Screen[None]):
         self.query_one("#epics", OptionList).focus()
 
     def action_focus_members(self) -> None:
-        """``→`` focuses the right pane: the table, or the diagram (whose arrow
+        """The right arrow key focuses the right pane: the table, or the diagram (whose arrow
         keys then scroll a graph bigger than the pane)."""
         if self._view == _GRAPH_PANE:
             self.query_one("#deps", ThemedGraphView).focus()

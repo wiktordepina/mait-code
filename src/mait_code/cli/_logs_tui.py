@@ -73,7 +73,7 @@ _LEVEL_CHAR = {"debug": "D", "info": "I", "warning": "W", "error": "E"}
 _MAX_DAY_ROWS = 500
 
 #: An extra field whose rendered value fits this many characters rides an
-#: aligned key→value row; anything longer gets its own wrapped block.
+#: aligned key->value row; anything longer gets its own wrapped block.
 _INLINE_FIELD_MAX = 64
 
 
@@ -85,8 +85,8 @@ def _clip(text: str, width: int = _MSG_WIDTH) -> str:
 
 
 def _kv_rows(rows: list[tuple[str, str]]) -> list[Widget]:
-    """Key→value rows with the values aligned into one column (the home hub's
-    convention; padding rides the end of the key run — the run-whitespace
+    """Key->value rows with the values aligned into one column (the home hub's
+    convention; padding rides the end of the key run - the run-whitespace
     gotcha)."""
     width = max((len(key) for key, _ in rows), default=0)
     out: list[Widget] = []
@@ -106,7 +106,7 @@ def _field_text(value: object) -> str:
 
 
 class LogsApp(MaitApp):
-    """Master–detail, read-only viewer over the structured JSONL logs."""
+    """Master-detail, read-only viewer over the structured JSONL logs."""
 
     TITLE = "mait-code logs"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_logs.tcss"]
@@ -145,7 +145,7 @@ class LogsApp(MaitApp):
 
     def on_mount(self) -> None:
         # As in the observations browser: the detail pane holds no focusable
-        # editor widget — the container keeps focus so a long stack trace can
+        # editor widget - the container keeps focus so a long stack trace can
         # be scrolled from the keyboard (Tab or `2` to reach it).
         tree: Tree[dict | str | None] = self.query_one("#list", Tree)
         tree.show_root = False
@@ -180,7 +180,7 @@ class LogsApp(MaitApp):
     @staticmethod
     def _haystack(entry: dict) -> str:
         """What free-text search matches against: the message, plus the args
-        and error message when present — the fields a "what happened?" query
+        and error message when present - the fields a "what happened?" query
         actually means."""
         parts = [entry["msg"]]
         for key in ("args", "error_message"):
@@ -192,7 +192,7 @@ class LogsApp(MaitApp):
     # -- theme helpers ---------------------------------------------------------
 
     def _level_colours(self) -> dict[str, str]:
-        """Level → a Rich-safe span style from the active theme.
+        """Level -> a Rich-safe span style from the active theme.
 
         Debug recedes, info stays neutral, warnings and errors take the
         theme's semantic colours.
@@ -240,7 +240,7 @@ class LogsApp(MaitApp):
             segments.append(
                 (f"{counts['warning']} warning{plural}", colours["warning"])
             )
-        # Separators trail the run before them — the run-whitespace gotcha.
+        # Separators trail the run before them - the run-whitespace gotcha.
         for i, (text, style) in enumerate(segments):
             suffix = " · " if i < len(segments) - 1 else ""
             label.append(text + suffix, style=style)
@@ -249,7 +249,7 @@ class LogsApp(MaitApp):
     def _rebuild_tree(self) -> None:
         """Re-populate the tree from the filtered entries.
 
-        The newest day opens expanded — it's why you're here; older days stay
+        The newest day opens expanded - it's why you're here; older days stay
         collapsed behind their counts. With any filter narrowing the view,
         every day expands, since the matches are the point. Boot lands the
         cursor on the newest line so the detail pane shows content
@@ -265,7 +265,7 @@ class LogsApp(MaitApp):
         first_leaf: TreeNode[dict | str | None] | None = None
         for index, (day, entries) in enumerate(days.items()):
             # Day nodes carry their date string as data; leaves carry their
-            # entry dict — the highlight handler tells them apart by type.
+            # entry dict - the highlight handler tells them apart by type.
             group = tree.root.add(
                 self._day_label(day, entries, colours),
                 data=day,
@@ -354,7 +354,7 @@ class LogsApp(MaitApp):
         await detail.mount_all(widgets)
 
     def _field_widgets(self, entry: dict) -> list[Widget]:
-        """The line's extra fields: short values as aligned key→value rows,
+        """The line's extra fields: short values as aligned key->value rows,
         long ones (invocation args, error messages) as wrapped blocks."""
         extras = {
             key: value
@@ -443,7 +443,7 @@ class LogsApp(MaitApp):
 
         The hierarchical escape, as in the sibling browsers: from the filter
         or the detail pane it returns focus to the tree, and from the tree
-        (nothing left to back out of) it exits — so escape always eventually
+        (nothing left to back out of) it exits - so escape always eventually
         leaves, like ``q``.
         """
         if self.query_one("#list", Tree).has_focus:
@@ -452,7 +452,7 @@ class LogsApp(MaitApp):
             self.action_focus_list()
 
     def action_cycle_level(self) -> None:
-        """Cycle the severity floor: all → debug → info → warning → error."""
+        """Cycle the severity floor: all -> debug -> info -> warning -> error."""
         order: list[str | None] = [None, *LEVELS]
         self._min_level = order[(order.index(self._min_level) + 1) % len(order)]
         self._rebuild_tree()
@@ -466,7 +466,7 @@ class LogsApp(MaitApp):
             )
         )
         if result is None:
-            return  # escape/cancel — leave the active filter as-is
+            return  # escape/cancel - leave the active filter as-is
         # A tool name filters to it; the ALL_CHOICES sentinel clears it.
         self._tool = result if isinstance(result, str) else None
         self._rebuild_tree()
@@ -485,7 +485,7 @@ class LogsApp(MaitApp):
         self.action_focus_list()
 
     def action_reload(self) -> None:
-        """Re-read the files — picks up lines written since launch."""
+        """Re-read the files - picks up lines written since launch."""
         self._load_entries()
         self._rebuild_tree()
         self.notify("Logs reloaded", title="Logs")

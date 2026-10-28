@@ -42,7 +42,7 @@ def test_empty_when_nothing_due(memory_db: sqlite3.Connection):
 
 
 def test_stale_high_importance_is_due(memory_db: sqlite3.Connection):
-    # Semantic half-life is 90 days; ~200 days since review → recall well below 0.5.
+    # Semantic half-life is 90 days; ~200 days since review -> recall well below 0.5.
     _insert(
         memory_db,
         "stale but important",
@@ -57,7 +57,7 @@ def test_stale_high_importance_is_due(memory_db: sqlite3.Connection):
 
 
 def test_low_importance_does_not_nag(memory_db: sqlite3.Connection):
-    # Equally stale, but below the default importance floor (5) → excluded.
+    # Equally stale, but below the default importance floor (5) -> excluded.
     _insert(
         memory_db,
         "stale and trivial",
@@ -126,7 +126,7 @@ def test_reviewing_clears_due(memory_db: sqlite3.Connection):
     )
     assert due_for_review(memory_db, now=_NOW)  # due before review
     mark_reviewed(memory_db, entry_id)  # stamps reviewed_at = now
-    # After review the anchor is ~now, so recall ≈ 1.0 → not due.
+    # After review the anchor is ~now, so recall ~ 1.0 -> not due.
     assert due_for_review(memory_db, now=datetime.now(UTC)) == []
 
 

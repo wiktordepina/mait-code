@@ -1,4 +1,4 @@
-"""Quick-capture inbox tool — a frictionless capture-now, sort-later holding pen.
+"""Quick-capture inbox tool - a frictionless capture-now, sort-later holding pen.
 
 A single global SQLite store (``inbox.db``) of captured items. The CLI
 (``main``) handles add / list / remove / count / drain, sitting on the

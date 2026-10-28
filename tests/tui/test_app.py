@@ -80,7 +80,7 @@ def test_house_theme_change_persists_on_exit(settings_home: Path) -> None:
 
 
 def test_builtin_theme_change_persists(settings_home: Path) -> None:
-    # "Any registered theme" — a Textual built-in persists too, not just ours.
+    # "Any registered theme" - a Textual built-in persists too, not just ours.
     _boot_then_set("gruvbox")
     config.reset_cache()
     assert config.read_settings_file().get("theme") == "gruvbox"

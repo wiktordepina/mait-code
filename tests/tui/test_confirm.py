@@ -30,7 +30,7 @@ async def _drive(
     """Push a ``ConfirmScreen``, run ``interact``, return its resolution.
 
     The returned list is empty if the modal never dismissed, else holds the
-    single resolved bool — so a test can tell "didn't resolve" from "resolved
+    single resolved bool - so a test can tell "didn't resolve" from "resolved
     ``False``".
     """
     app = MaitApp()
@@ -59,7 +59,7 @@ def test_no_button_resolves_false() -> None:
 
 
 def test_escape_resolves_false() -> None:
-    # Escape is the "No" binding — bailing is never an accidental "Yes".
+    # Escape is the "No" binding - bailing is never an accidental "Yes".
     async def scenario():
         return await _drive("Reindex now?", lambda pilot: pilot.press("escape"))
 

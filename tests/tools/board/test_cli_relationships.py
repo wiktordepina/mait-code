@@ -1,7 +1,7 @@
 """End-to-end tests for the board CLI's relationship surface.
 
 Drives ``mc-tool-board`` through :func:`main` with a real argv, so argument
-parsing (``link A blocks B``, ``--parent none``, ``epic …``) is exercised along
+parsing (``link A blocks B``, ``--parent none``, ``epic ...``) is exercised along
 with the handlers, all against the temp database from ``mock_conn``.
 """
 

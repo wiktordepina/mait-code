@@ -4,13 +4,13 @@ A full-screen master&ndash;detail surface over the *due-for-review* set
 (:func:`mait_code.tools.memory.review.due_for_review`): a queue of
 important-but-ageing memories on the left, most-decayed first, and the
 highlighted memory's body plus its review-relevant metadata on the right.
-Unlike the read-only memory browser, this surface **acts** — each decision
+Unlike the read-only memory browser, this surface **acts** - each decision
 writes through an existing store-writer verb:
 
-* **confirm** (still true) → :func:`~mait_code.tools.memory.writer.mark_reviewed`
-* **refine** (edit &amp; save) → :func:`~mait_code.tools.memory.writer.supersede_memory`
-* **retire** (no longer true) → :func:`~mait_code.tools.memory.writer.retire_memory`
-* **skip** — just navigate on, nothing written.
+* **confirm** (still true) -> :func:`~mait_code.tools.memory.writer.mark_reviewed`
+* **refine** (edit &amp; save) -> :func:`~mait_code.tools.memory.writer.supersede_memory`
+* **retire** (no longer true) -> :func:`~mait_code.tools.memory.writer.retire_memory`
+* **skip** - just navigate on, nothing written.
 
 A decided memory drops out of the queue and the cursor advances; when the
 queue empties the pane shows an all-caught-up state. Reviewing resets a
@@ -79,7 +79,7 @@ def _scope_label(entry: dict) -> str:
 _LEAF_WIDTH = 56
 
 #: Below this recall probability a memory reads as *most* decayed and its
-#: badge takes the error hue rather than the warning one — a small visual
+#: badge takes the error hue rather than the warning one - a small visual
 #: gradient across the queue, which is already sorted lowest-recall first.
 _URGENT_RECALL = 0.25
 
@@ -97,7 +97,7 @@ class RefineScreen(ModalScreen[str | None]):
     A small editor modal: the entry's body prefills a :class:`TextArea`;
     ``ctrl+s`` (or **Save**) resolves to the edited text, ``escape`` (or
     **Cancel**) resolves to ``None``. The caller supersedes the entry with the
-    returned text — this screen never touches the store itself.
+    returned text - this screen never touches the store itself.
     """
 
     BINDINGS = [
@@ -143,7 +143,7 @@ class RefineScreen(ModalScreen[str | None]):
 
 
 class ReviewApp(MaitApp):
-    """Master–detail surface for working the memory review queue."""
+    """Master-detail surface for working the memory review queue."""
 
     TITLE = "mait-code review"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_review.tcss"]
@@ -162,7 +162,7 @@ class ReviewApp(MaitApp):
         super().__init__()
         self._db_path = db_path
         self._conn = get_connection(db_path)  # one connection for reads + fast writes
-        # Injected clock: the queue's recall is measured against this. None →
+        # Injected clock: the queue's recall is measured against this. None ->
         # real UTC now (production); the snapshot/behaviour tests pin it so the
         # due set and its recall figures never drift with wall-clock.
         self._now = now
@@ -198,7 +198,7 @@ class ReviewApp(MaitApp):
     # -- data ------------------------------------------------------------------
 
     def _load_due(self) -> None:
-        """(Re)compute the due queue — everything, unless narrowed to a project."""
+        """(Re)compute the due queue - everything, unless narrowed to a project."""
         self._due = due_for_review(self._conn, now=self._now, project=self._project)
 
     def _colours(self) -> dict[str, str]:
@@ -230,7 +230,7 @@ class ReviewApp(MaitApp):
         """Repopulate the queue and land the cursor near ``land_index``.
 
         After a decision the acted-on row is gone, so the same index now points
-        at the memory that shifted up into its place — clamped to the new end.
+        at the memory that shifted up into its place - clamped to the new end.
         An empty queue collapses to the all-caught-up state instead.
         """
         tree: Tree[dict] = self.query_one("#queue", Tree)
@@ -269,7 +269,7 @@ class ReviewApp(MaitApp):
         return node.data if node is not None else None
 
     def _current_index(self) -> int:
-        """The cursor's line index — where to re-land after a decision."""
+        """The cursor's line index - where to re-land after a decision."""
         return self.query_one("#queue", Tree).cursor_line
 
     # -- detail ----------------------------------------------------------------
@@ -282,7 +282,7 @@ class ReviewApp(MaitApp):
         detail = self.query_one("#detail", VerticalScroll)
         await detail.remove_children()
         recall_pct = round(entry["recall"] * 100)
-        # Recall leads — it's why the memory is in the queue, so it must never
+        # Recall leads - it's why the memory is in the queue, so it must never
         # be the token that clips off a narrow pane. Scope is shown only when
         # it's not the (common, uninteresting) global case.
         parts = [
@@ -319,7 +319,7 @@ class ReviewApp(MaitApp):
         self._due = [e for e in self._due if e["id"] != entry_id]
 
     def action_confirm(self) -> None:
-        """Confirm the current memory is still true — reset its review curve."""
+        """Confirm the current memory is still true - reset its review curve."""
         entry = self._current_entry()
         if entry is None:
             return
@@ -336,7 +336,7 @@ class ReviewApp(MaitApp):
 
     @work
     async def action_retire(self) -> None:
-        """Retire the current memory — drop it from recall, after a confirm."""
+        """Retire the current memory - drop it from recall, after a confirm."""
         entry = self._current_entry()
         if entry is None:
             return
@@ -390,7 +390,7 @@ class ReviewApp(MaitApp):
             self._resync(index, f"Couldn't refine #{entry['id']}.")
 
     def _supersede_write(self, entry_id: int, content: str) -> dict:
-        """Supersede on a short-lived connection — runs in a worker thread."""
+        """Supersede on a short-lived connection - runs in a worker thread."""
         conn = get_connection(self._db_path)
         try:
             return supersede_memory(conn, entry_id, content)
@@ -418,7 +418,7 @@ class ReviewApp(MaitApp):
             ProjectFilterScreen(projects, self._project)
         )
         if result is None:
-            return  # escape/cancel — leave the active filter as-is
+            return  # escape/cancel - leave the active filter as-is
         # A project name filters to it; the ALL_PROJECTS sentinel clears it.
         self._project = result if isinstance(result, str) else None
         self._load_due()
@@ -426,7 +426,7 @@ class ReviewApp(MaitApp):
         self.query_one("#queue", Tree).focus()
 
     def action_reload(self) -> None:
-        """Recompute the queue — picks up memories reviewed elsewhere."""
+        """Recompute the queue - picks up memories reviewed elsewhere."""
         index = self._current_index()
         self._load_due()
         self._rebuild(land_index=index)

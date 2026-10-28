@@ -1,4 +1,4 @@
-"""Tests for the drain orchestration — the gate-off safety guarantee included."""
+"""Tests for the drain orchestration - the gate-off safety guarantee included."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def _inbox_count() -> int:
 
 
 def test_run_drain_disabled_makes_no_channel_call():
-    """The corporate-safety spine: gate off ⇒ the channel is never touched."""
+    """The corporate-safety spine: gate off => the channel is never touched."""
     LoopbackChannel.seed("a", "b")
     outcome = service.run_drain()
     assert outcome.status == "disabled"

@@ -1,4 +1,4 @@
-"""Tests for :mod:`mait_code.remote` — the executive-free remote API.
+"""Tests for :mod:`mait_code.remote` - the executive-free remote API.
 
 The contract under test is as much about what is *absent* as what works:
 the public surface is pinned to an allowlist, creates can only land in
@@ -36,7 +36,7 @@ from mait_code.tools.memory.db import get_connection as memory_connection
 from mait_code.tools.reminders.db import get_connection as reminders_connection
 
 #: The whole public surface. Adding a name here is a decision about what a
-#: remote client may do to an instance — keep executive actions out.
+#: remote client may do to an instance - keep executive actions out.
 ALLOWED = {
     "CardNotFound",
     "RelationError",
@@ -98,7 +98,7 @@ def test_public_surface_is_the_allowlist():
 
 def test_no_public_function_hides_outside_all():
     """A public function defined in the module but left out of ``__all__``
-    would still be importable — catch that too."""
+    would still be importable - catch that too."""
     defined = {
         name
         for name, obj in inspect.getmembers(remote)
@@ -640,8 +640,8 @@ def test_never_reads_agent_config_or_touches_environment(
 
     Nothing in the remote API reads ``dashboard.toml`` or calls ``apply_env``
     today; this pins that against a future change. The embedding provider is
-    stubbed only at the model itself, so the real provider path — the one
-    part that reads the host's settings — runs, and must cache under the
+    stubbed only at the model itself, so the real provider path - the one
+    part that reads the host's settings - runs, and must cache under the
     host's data dir, not the instance's.
     """
     import mait_code.tools.memory.embeddings as embeddings

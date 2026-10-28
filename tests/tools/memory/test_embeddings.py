@@ -175,7 +175,7 @@ class TestGracefulDegradation:
         mod._provider = None
         mod._provider_failed = False
 
-        # boto3 imports fine but client construction blows up — generic Exception.
+        # boto3 imports fine but client construction blows up - generic Exception.
         mock_boto3 = MagicMock()
         mock_boto3.client.side_effect = RuntimeError("no credentials")
         try:
@@ -483,7 +483,7 @@ class TestLocalProviderCacheDir:
     ``LocalProvider`` builds its fastembed ``cache_dir`` from
     ``get_data_dir() / "models"``. When ``MAIT_CODE_DATA_DIR`` held a literal,
     unexpanded ``~`` the path reached ONNX Runtime as ``~/.claude/...`` and the
-    model load failed with ``NO_SUCHFILE`` even though the model existed —
+    model load failed with ``NO_SUCHFILE`` even though the model existed -
     silently degrading local semantic search. ``config.data_dir()`` now expands
     the tilde; this pins the consumer so the expansion can't regress here.
     """

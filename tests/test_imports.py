@@ -2,7 +2,7 @@
 
 This is the only test file in the repo right now. Its job is to give CI's
 ``pytest`` job something to run (so the suite has a passing baseline) and to
-catch the obvious failure modes — a surface module that no longer imports, or
+catch the obvious failure modes - a surface module that no longer imports, or
 one that has been refactored such that ``__all__`` was lost.
 
 Future bricks can grow real test coverage on top of this; for now, the

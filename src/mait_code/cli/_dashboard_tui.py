@@ -1,13 +1,13 @@
-"""Interactive start-page setup — edit ``dashboard.toml`` as a form.
+"""Interactive start-page setup - edit ``dashboard.toml`` as a form.
 
 A two-pane editor over :class:`~mait_code.cli._dashboard.EditableDashboard`:
 the tile list and the grid's column count on the left; the selected tile's
-form — widget picker or command input, title, span — with a live preview on
+form - widget picker or command input, title, span - with a live preview on
 the right. Add, remove and reorder tiles; ``Ctrl+S`` writes the file back
 through tomlkit, so hand-authored comments and formatting survive.
 
 Two deliberate safety choices. **Command text is never executed while being
-typed** — a command tile's preview runs only on ``Ctrl+G``, so a half-typed
+typed** - a command tile's preview runs only on ``Ctrl+G``, so a half-typed
 ``rm``-anything can't fire; built-in widgets preview live because they only
 read the stores. And quitting with unsaved changes asks first.
 
@@ -87,7 +87,7 @@ class DashboardSetupApp(MaitApp):
         self._model = dashboard.EditableDashboard.load()
         self._selected = 0
         self._dirty = False
-        # Guards the form's Changed handlers while _fill_form writes values —
+        # Guards the form's Changed handlers while _fill_form writes values -
         # the same trick as the Bridge editor's _form_ready.
         self._form_ready = False
 
@@ -121,7 +121,7 @@ class DashboardSetupApp(MaitApp):
                 yield Label("Widget", classes="field-label", id="widget-label")
                 # Seeded with the first tile's widget: with allow_blank=False
                 # an unseeded Select snaps to its first option and posts that
-                # as a Changed after mount — which would read as a user edit.
+                # as a Changed after mount - which would read as a user edit.
                 first = self._model.tiles[0]
                 yield Select(
                     [
@@ -160,7 +160,7 @@ class DashboardSetupApp(MaitApp):
         self._select(0)
         self.query_one("#tile-list", OptionList).focus()
 
-    # -- Model ↔ UI sync -----------------------------------------------------
+    # -- Model <-> UI sync -----------------------------------------------------
 
     def _tile(self) -> dashboard.EditableTile:
         return self._model.tiles[self._selected]
@@ -177,7 +177,7 @@ class DashboardSetupApp(MaitApp):
             else:
                 name = tile.title or tile.command or "(empty command)"
                 kind = "command"
-            # The gap rides the name run — the renderer trims a styled run's
+            # The gap rides the name run - the renderer trims a styled run's
             # leading whitespace (the tree's run-whitespace gotcha).
             label.append(f"{name}  ")
             label.append(kind, style="dim")
@@ -190,7 +190,7 @@ class DashboardSetupApp(MaitApp):
         """Write the selected tile into the form without echoing back.
 
         Every programmatic assignment is wrapped in ``prevent`` so no Changed
-        message is posted at all — a queued fill event arriving later would
+        message is posted at all - a queued fill event arriving later would
         otherwise read as a user edit and could clobber a real one (the
         ``_form_ready`` flag alone can't help, because it is back on by the
         time queued messages are delivered).
@@ -263,7 +263,7 @@ class DashboardSetupApp(MaitApp):
         return _rich_colour(theme.warning if theme else None, palette.WARNING)
 
     def _refresh_preview(self) -> None:
-        """Render the selected tile's preview — live only for widget tiles."""
+        """Render the selected tile's preview - live only for widget tiles."""
         preview = self.query_one("#preview", Static)
         tile = self._tile()
         preview.border_title = tile.title or (
@@ -277,7 +277,7 @@ class DashboardSetupApp(MaitApp):
             return
         try:
             lines = dashboard.builtin_tile_lines(tile.widget)
-        except Exception as exc:  # noqa: BLE001 — a broken store is preview content
+        except Exception as exc:  # noqa: BLE001 - a broken store is preview content
             preview.update(Text(f"couldn't read: {exc}", style=self._warn_colour()))
             preview.add_class("tile-error")
             return
@@ -384,7 +384,7 @@ class DashboardSetupApp(MaitApp):
             tile.command = event.value.strip()
             self._mark_dirty()
             self._refresh_list()
-            # Deliberately no execution here — the preview stays a hint until
+            # Deliberately no execution here - the preview stays a hint until
             # the user presses Ctrl+G on the finished command.
             self.query_one("#preview", Static).border_title = tile.title or (
                 _clip_command(tile.command)

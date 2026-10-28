@@ -1,7 +1,7 @@
 """Tests for the Textual ``mait-code board`` TUI.
 
 Driven by Textual's headless pilot (``App.run_test()`` wrapped in
-``asyncio.run`` — no pytest-asyncio), mirroring ``test_settings_tui.py``. The
+``asyncio.run`` - no pytest-asyncio), mirroring ``test_settings_tui.py``. The
 app takes a ``db_path`` so each scenario points at an isolated temp board; the
 shared service layer is covered directly in ``test_service.py``, so here we
 only check the TUI wiring on top of it.
@@ -52,7 +52,7 @@ def board_path(tmp_path: Path) -> Path:
 
 
 def _seed(db_path: Path, cards: list[dict]) -> dict[str, int]:
-    """Create cards (each a dict of overrides) and return title→id."""
+    """Create cards (each a dict of overrides) and return title->id."""
     conn = get_connection(db_path)
     ids: dict[str, int] = {}
     try:
@@ -159,7 +159,7 @@ class TestMoving:
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                await pilot.press("d")  # Done is hidden by default — reveal it
+                await pilot.press("d")  # Done is hidden by default - reveal it
                 await pilot.pause()
                 app._focus_status(DONE)
                 await pilot.press("greater_than_sign")
@@ -479,7 +479,7 @@ class TestTagging:
                     for b in app.screen.query(Button)
                     if (b.id or "").startswith("tag-rm-")
                 }
-                # Click the chip for "alpha" (tags are sorted → tag-rm-0).
+                # Click the chip for "alpha" (tags are sorted -> tag-rm-0).
                 await pilot.click("#tag-rm-0")
                 await pilot.pause()
                 await pilot.pause()
@@ -524,11 +524,11 @@ class TestProjectFilter:
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                # all projects → both refined cards visible
+                # all projects -> both refined cards visible
                 before = app.query_one("#tbl-refined").option_count
                 await pilot.press("p")  # open the project picker
                 await pilot.pause()
-                # Pick a specific project from the Select (drives Changed → apply).
+                # Pick a specific project from the Select (drives Changed -> apply).
                 app.screen.query_one("#choice-select", Select).value = "alpha"
                 await pilot.pause()
                 after = app.query_one("#tbl-refined").option_count
@@ -552,13 +552,13 @@ class TestProjectFilter:
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                # Filter to a single project first…
+                # Filter to a single project first...
                 await pilot.press("p")
                 await pilot.pause()
                 app.screen.query_one("#choice-select", Select).value = "alpha"
                 await pilot.pause()
                 filtered = app.query_one("#tbl-refined").option_count
-                # …then reopen and choose "All projects" to clear it.
+                # ...then reopen and choose "All projects" to clear it.
                 await pilot.press("p")
                 await pilot.pause()
                 app.screen.query_one("#choice-select", Select).value = ALL_PROJECTS
@@ -584,9 +584,9 @@ class TestProjectFilter:
             app = BoardApp(db_path=board_path)
             async with app.run_test() as pilot:
                 await pilot.pause()
-                await pilot.press("p")  # open the picker…
+                await pilot.press("p")  # open the picker...
                 await pilot.pause()
-                await pilot.press("escape")  # …then bail without choosing
+                await pilot.press("escape")  # ...then bail without choosing
                 await pilot.pause()
                 after = app.query_one("#tbl-refined").option_count
                 return after, app._project_filter
@@ -674,7 +674,7 @@ class TestSearch:
                 await pilot.pause()
                 await pilot.press("slash")
                 await pilot.pause()
-                await pilot.press("escape")  # cancel — filter untouched
+                await pilot.press("escape")  # cancel - filter untouched
                 await pilot.pause()
                 return app.query_one("#tbl-refined").option_count, app._search
 
@@ -753,7 +753,7 @@ class TestDoneToggle:
             async with app.run_test() as pilot:
                 await pilot.pause()
                 app._focus_status(IN_REVIEW)
-                await pilot.press("greater_than_sign")  # → Done (hidden)
+                await pilot.press("greater_than_sign")  # -> Done (hidden)
                 await pilot.pause()
                 from textual.containers import Vertical
 
@@ -1086,14 +1086,14 @@ class TestDetail:
                 return sources, statics
 
         sources, statics = _run(scenario)
-        # Both body sections are Markdown widgets carrying their raw source…
+        # Both body sections are Markdown widgets carrying their raw source...
         assert "**bold** and `code`" in sources
         assert "- one\n- two" in sources
-        # …and the raw markdown is not sitting in a plain Static instead.
+        # ...and the raw markdown is not sitting in a plain Static instead.
         assert "**bold**" not in statics
 
     def test_enter_then_e_switches_to_edit_in_place(self, board_path: Path) -> None:
-        """Detail→edit without leaving the card screen (the headline gesture)."""
+        """Detail->edit without leaving the card screen (the headline gesture)."""
         _seed(board_path, [{"title": "card", "status": REFINED}])
 
         async def scenario():
@@ -1129,7 +1129,7 @@ class TestDetail:
                 assert app.screen._mode == "edit"
                 await pilot.press("escape")
                 await pilot.pause()
-                # First Esc: edit→view, screen still open.
+                # First Esc: edit->view, screen still open.
                 assert isinstance(app.screen, CardScreen)
                 first = app.screen._mode
                 await pilot.press("escape")
@@ -1222,7 +1222,7 @@ class TestLayout:
             app = BoardApp(db_path=board_path)
             async with app.run_test(size=(120, 30)) as pilot:
                 await pilot.pause()
-                # Join the compositor's rendered line strips — a real paint of
+                # Join the compositor's rendered line strips - a real paint of
                 # the live screen, so a zero-height/blank column would not
                 # contain the card text.
                 strips = app.screen._compositor.render_strips()
@@ -1235,7 +1235,7 @@ class TestLayout:
 
     def test_selected_card_id_stays_legible(self, board_path: Path) -> None:
         # Regression: the highlighted option's background was solid $primary
-        # (cyan), the same hue as the #id and tag glyphs — they vanished on the
+        # (cyan), the same hue as the #id and tag glyphs - they vanished on the
         # selected card. The fix tints the slab instead, so fg != bg.
         _seed(board_path, [{"title": "Pick me", "status": REFINED}])
 
@@ -1300,7 +1300,7 @@ class TestMutationModals:
         self, board_path: Path, tmp_path: Path, monkeypatch
     ) -> None:
         # Launched from a directory that would name a project, the field
-        # still starts empty — the cwd is not a default.
+        # still starts empty - the cwd is not a default.
         launch = tmp_path / "launch-dir"
         launch.mkdir()
         monkeypatch.chdir(launch)
@@ -1431,7 +1431,7 @@ class TestHelp:
 
 
 class TestCardScreenActions:
-    """#14 — acting on a card from inside the card screen, refreshed in place."""
+    """#14 - acting on a card from inside the card screen, refreshed in place."""
 
     def _rendered(self, screen) -> str:
         return " ".join(str(s.render()) for s in screen.query(Static))
@@ -1541,7 +1541,7 @@ class TestCardScreenActions:
                 await pilot.press("e")  # straight into edit
                 await pilot.pause()
                 assert app.screen._mode == "edit"
-                # 'c' types into the title input — it must not open CommentScreen.
+                # 'c' types into the title input - it must not open CommentScreen.
                 await pilot.press("c")
                 await pilot.pause()
                 return isinstance(app.screen, CardScreen), app.screen._mode
@@ -1552,7 +1552,7 @@ class TestCardScreenActions:
 
 
 class TestCardScreenFooter:
-    """#15 — the contextual keybinding footer (check_action gating)."""
+    """#15 - the contextual keybinding footer (check_action gating)."""
 
     def test_view_mode_advertises_actions(self, board_path: Path) -> None:
         _seed(board_path, [{"title": "card", "status": REFINED}])
@@ -1628,7 +1628,7 @@ class TestCardScreenFooter:
                     screen.check_action("block", ()),
                     screen.check_action("unblock", ()),
                 )
-                # Block in place — the footer flips (refresh_bindings via show_card).
+                # Block in place - the footer flips (refresh_bindings via show_card).
                 await pilot.press("b")
                 await pilot.pause()
                 await pilot.pause()
@@ -1687,9 +1687,9 @@ class TestTheming:
                 return default, switched, app.current_theme
 
         default, switched, theme = _run(scenario)
-        # Under mait-dark the tag hue is the house secondary…
+        # Under mait-dark the tag hue is the house secondary...
         assert default.tag == p.SECONDARY
-        # …and after the switch it tracks the new theme's secondary, not the old.
+        # ...and after the switch it tracks the new theme's secondary, not the old.
         assert switched.tag == (theme.secondary or theme.primary)
         assert switched.tag != default.tag
 
@@ -1716,8 +1716,8 @@ class TestTheming:
         assert after != before
 
     def test_ansi_theme_renders_card_without_crashing(self, board_path: Path) -> None:
-        """ANSI themes set colours to named tokens ('ansi_blue', 'ansi_default')
-        — valid in CSS but not as Rich-text styles, which Textual re-parses when
+        """ANSI themes set colours to named tokens ('ansi_blue', 'ansi_default') -
+        valid in CSS but not as Rich-text styles, which Textual re-parses when
         the card screen paints (MissingStyle). Chips must fall back to the hex
         palette, so opening a card under an ANSI theme renders instead of crashing.
         """
@@ -1730,7 +1730,7 @@ class TestTheming:
                 app.theme = "ansi-dark"
                 await pilot.pause()
                 app._focus_status(REFINED)
-                await pilot.press("enter")  # open the card screen — the crash site
+                await pilot.press("enter")  # open the card screen - the crash site
                 await pilot.pause()
                 return type(app.screen).__name__, app.chip_colours(), app._exception
 
@@ -1764,7 +1764,7 @@ class TestToasts:
 
     def test_notify_renders_under_ansi_theme(self, board_path: Path) -> None:
         """Toasts paint (don't crash) under an ANSI theme, where colours resolve
-        to named tokens rather than hex — the border/title roles must degrade
+        to named tokens rather than hex - the border/title roles must degrade
         gracefully."""
         from textual.widgets._toast import Toast
 
@@ -1786,14 +1786,14 @@ class TestToasts:
 
 
 class TestCardFormEditing:
-    """#16 — tags, references and status edited in the card's edit form as one
+    """#16 - tags, references and status edited in the card's edit form as one
     working copy, applied on Save and discarded on Cancel."""
 
     async def _open_edit(self, pilot) -> None:
         pilot.app._focus_status(REFINED)
         await pilot.press("enter")  # open the card screen
         await pilot.pause()
-        await pilot.press("e")  # view → edit
+        await pilot.press("e")  # view -> edit
         await pilot.pause()
 
     async def _add_tag(self, pilot, tag: str) -> None:
@@ -1880,7 +1880,7 @@ class TestCardFormEditing:
                 app.screen.query_one("#edit-status", Select).value = DONE
                 await self._add_tag(pilot, "throwaway")
                 await self._add_ref(pilot, "PR", "https://x/3")
-                await pilot.press("escape")  # cancel edit → view, discard
+                await pilot.press("escape")  # cancel edit -> view, discard
                 await pilot.pause()
                 card = service.get_card(app._conn, ids["card"])
                 return (
@@ -2231,7 +2231,7 @@ class TestExport:
 
         suggested = _run(scenario)
         # The relative export is remembered by its absolute directory, not
-        # as "." — which would re-bind the next export to the launch dir.
+        # as "." - which would re-bind the next export to the launch dir.
         assert suggested == str(launch.resolve() / f"card-{ids['card']}.md")
 
     def test_x_cancel_writes_nothing(
@@ -2272,7 +2272,7 @@ class TestExport:
                 app._focus_status(REFINED)
                 await pilot.press("enter")
                 await pilot.pause()
-                await pilot.press("e")  # edit mode — x must stay with the form
+                await pilot.press("e")  # edit mode - x must stay with the form
                 await pilot.pause()
                 await pilot.press("x")
                 await pilot.pause()

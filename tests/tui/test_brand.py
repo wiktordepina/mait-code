@@ -73,7 +73,7 @@ def test_wordmark_text_gradient_spans_primary_to_accent() -> None:
     # Column 0 is a fill glyph at the gradient's start: exactly primary.
     assert style_at(painted, 0) == palette.PRIMARY
     # The last column of row 0 is a shadow glyph at the gradient's end:
-    # accent blended toward the background — violet-ish, but darker than
+    # accent blended toward the background - violet-ish, but darker than
     # both the accent and the column-0 primary.
     last = len(WORDMARK.split("\n")[0]) - 1
     end_style = style_at(painted, last)
@@ -83,7 +83,7 @@ def test_wordmark_text_gradient_spans_primary_to_accent() -> None:
 
 def test_wordmark_text_shadow_is_darker_than_fill() -> None:
     painted = wordmark_text(WORDMARK_WIDTH)
-    # Row 0 opens "███╗" — fill at column 2, shadow at column 3, adjacent
+    # Row 0 opens "███╗": fill at column 2, shadow at column 3, adjacent
     # columns so the gradient barely moves; the dimming must dominate.
     fill, shadow = style_at(painted, 2), style_at(painted, 3)
     assert sum(int(shadow[i : i + 2], 16) for i in (1, 3, 5)) < sum(

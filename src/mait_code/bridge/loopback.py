@@ -1,8 +1,8 @@
-"""Loopback channel — an in-memory Bridge transport for tests.
+"""Loopback channel - an in-memory Bridge transport for tests.
 
 It exists to *prove the interface is real*: the gate, drain service, inbox
 wiring and (later) the reminders publish are all exercised end-to-end without a
-live server. It also backs the "gate off ⇒ no network" test — a
+live server. It also backs the "gate off => no network" test - a
 :class:`LoopbackChannel` records every ``drain``/``publish`` call, so a test can
 assert the channel was never touched while the gate was disabled.
 
@@ -93,7 +93,7 @@ class LoopbackChannel(BridgeChannel):
 
     @classmethod
     def reset(cls) -> None:
-        """Forget all queues — call between tests."""
+        """Forget all queues - call between tests."""
         cls._loops.clear()
 
     @classmethod
@@ -103,5 +103,5 @@ class LoopbackChannel(BridgeChannel):
 
     @classmethod
     def loop(cls, name: str = "default") -> _Loop:
-        """Return a queue's state for assertions (drain_calls, published, …)."""
+        """Return a queue's state for assertions (drain_calls, published, ...)."""
         return cls._loops.setdefault(name, _Loop())

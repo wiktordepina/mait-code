@@ -41,7 +41,7 @@ def _dirs(settings: dict) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# sync_mod_dir / mod_registered / unmerge — pure
+# sync_mod_dir / mod_registered / unmerge - pure
 # ---------------------------------------------------------------------------
 
 
@@ -113,7 +113,7 @@ def test_unmerge_unloads_the_mod(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# install / apply_setting — the settings.json side effect
+# install / apply_setting - the settings.json side effect
 # ---------------------------------------------------------------------------
 
 

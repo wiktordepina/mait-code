@@ -1,6 +1,6 @@
 """Tests for the Textual ``mait-code settings`` editor.
 
-Textual ships a real headless harness (``App.run_test()`` → pilot), so unlike
+Textual ships a real headless harness (``App.run_test()`` -> pilot), so unlike
 the old questionary glue these drive the actual app: navigate the list, edit a
 widget, apply, and assert the settings file changed. Each test wraps an async
 scenario in ``asyncio.run`` so no pytest-asyncio plugin is needed.
@@ -59,7 +59,7 @@ async def _goto(pilot, app: SettingsApp, key: str) -> None:
     tree: Tree[str] = app.query_one("#list", Tree)
     node = app._setting_nodes[key]
     # Every ancestor, not just the immediate parent: the Tool approvals group
-    # nests one level deeper (group → catalogue group → preset), and a
+    # nests one level deeper (group -> catalogue group -> preset), and a
     # collapsed grandparent hides the leaf just as effectively as a parent.
     expanded = False
     ancestor = node.parent
@@ -85,7 +85,7 @@ class TestNavigation:
             async with app.run_test() as pilot:
                 await pilot.pause()
                 assert app._current_key == "data-dir"
-                # data-dir is free text → an Input editor.
+                # data-dir is free text -> an Input editor.
                 assert app.query_one("#editor", Input) is not None
 
         _run(scenario)
@@ -178,7 +178,7 @@ class TestNavigation:
                 app.query_one("#list", Tree).focus()
                 await pilot.pause()
                 monkeypatch.setattr(app, "exit", lambda *a, **k: calls.append(True))
-                await pilot.press("escape")  # nothing to back out of → quit
+                await pilot.press("escape")  # nothing to back out of -> quit
                 await pilot.pause()
 
         _run(scenario)
@@ -687,7 +687,7 @@ class TestToolApprovals:
 
     Every test leans on ``fake_home``. The group reads and writes
     ``$HOME/.claude/settings.json`` and consults nothing else, so redirecting
-    ``$HOME`` is the whole isolation story — a toggle here cannot reach the
+    ``$HOME`` is the whole isolation story - a toggle here cannot reach the
     developer's real settings, nor the checkout the suite runs in, whatever
     directory pytest was started from.
     """
@@ -727,7 +727,7 @@ class TestToolApprovals:
         assert "~/.claude/settings.json" in target
 
     def test_detail_offers_no_scope_picker(self, fake_home: Path) -> None:
-        """The picker is gone — there is one target, and it is named outright."""
+        """The picker is gone - there is one target, and it is named outright."""
         self._reset()
 
         async def scenario():
@@ -803,7 +803,7 @@ class TestToolApprovals:
     ) -> None:
         """The regression guard, end to end.
 
-        Driven from inside a repo that has its own ``.claude`` settings — the
+        Driven from inside a repo that has its own ``.claude`` settings - the
         exact shape that used to capture the write.
         """
         self._reset()
@@ -847,7 +847,7 @@ class TestToolApprovals:
         assert "on" in _run(scenario)
 
     def test_partial_row_reads_partial(self, fake_home: Path) -> None:
-        """Half a preset in the file is not "off" — the rules are in force."""
+        """Half a preset in the file is not "off" - the rules are in force."""
         self._reset()
         path = fake_home / ".claude" / "settings.json"
         path.parent.mkdir(parents=True)
@@ -893,7 +893,7 @@ class TestToolApprovals:
                 await _goto(pilot, app, _PERM_PREFIX + "git-status")
                 app.query_one("#perm-disable", Button).press()
                 await pilot.pause()
-                # ConfirmScreen is modal — accept it.
+                # ConfirmScreen is modal - accept it.
                 await pilot.click("#yes")
                 await pilot.pause()
                 await pilot.pause()
@@ -931,7 +931,7 @@ class TestToolApprovals:
         assert "Not read-only" in notes
 
     def test_group_summary_reports_a_broken_file(self, fake_home: Path) -> None:
-        """A malformed file's rules are still in force — say so, don't imply off."""
+        """A malformed file's rules are still in force - say so, don't imply off."""
         self._reset()
         path = fake_home / ".claude" / "settings.json"
         path.parent.mkdir(parents=True)

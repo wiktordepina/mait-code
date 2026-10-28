@@ -21,7 +21,7 @@ __all__ = [
     "munge_path",
 ]
 
-# Branches that are considered "default" — work on these is project-scoped, not branch-scoped.
+# Branches that are considered "default" - work on these is project-scoped, not branch-scoped.
 DEFAULT_BRANCHES = {"main", "master"}
 
 #: Claude Code munges a path into a project-dir name by replacing every
@@ -31,7 +31,7 @@ _NON_ALNUM = re.compile(r"[^a-zA-Z0-9]")
 
 
 def munge_path(path: str) -> str:
-    """Apply Claude Code's path-to-slug sanitiser: every non-alphanumeric → ``-``.
+    """Apply Claude Code's path-to-slug sanitiser: every non-alphanumeric -> ``-``.
 
     Mirrors Claude Code's own ``cwd.replace(/[^a-zA-Z0-9]/g, "-")``. An absolute
     path's leading ``/`` therefore becomes the leading ``-`` of the slug. Used
@@ -39,7 +39,7 @@ def munge_path(path: str) -> str:
     back to a path (see :func:`mait_code.tools.memory.native.resolve_slug`).
 
     The 200-char truncation-plus-hash that Claude Code applies to very long
-    paths is **not** reproduced here — such projects are unresolvable and fall
+    paths is **not** reproduced here - such projects are unresolvable and fall
     back to their raw slug.
 
     Args:
@@ -81,7 +81,7 @@ def get_branch() -> str | None:
 
     Returns:
         The branch name, or ``None`` when not in a git repo, on a detached
-        HEAD, or on a default branch (``main``/``master``) — work on default
+        HEAD, or on a default branch (``main``/``master``) - work on default
         branches is treated as project-scoped rather than branch-scoped.
     """
     try:
@@ -96,7 +96,7 @@ def get_branch() -> str | None:
             if branch == "HEAD":
                 return None  # Detached HEAD
             if branch in DEFAULT_BRANCHES:
-                return None  # Default branch — project-scoped
+                return None  # Default branch - project-scoped
             return branch
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass

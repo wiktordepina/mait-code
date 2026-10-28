@@ -1,6 +1,6 @@
 """Unit tests for the start-page dashboard: loader, built-ins, command tiles.
 
-The loader is tolerant by contract — every malformed input lands on a usable
+The loader is tolerant by contract - every malformed input lands on a usable
 layout with the problem recorded in ``warnings``, never an exception. The
 root conftest points ``MAIT_CODE_DATA_DIR`` at a per-test tmp dir, so the
 built-in collectors read the same isolated stores the behaviour tests seed.
@@ -89,7 +89,7 @@ def test_tile_with_both_widget_and_command_is_skipped(tmp_path: Path) -> None:
     path = tmp_path / "dashboard.toml"
     path.write_text('[[tile]]\nwidget = "board"\ncommand = "ls"\n', encoding="utf-8")
     cfg = load_dashboard(path)
-    assert cfg.tiles == default_tiles()  # nothing usable → defaults
+    assert cfg.tiles == default_tiles()  # nothing usable -> defaults
     assert not cfg.authored
     assert any("exactly one of widget or command" in w for w in cfg.warnings)
     assert any("no usable tiles" in w for w in cfg.warnings)
@@ -138,7 +138,7 @@ def test_dashboard_path_lives_under_the_data_dir() -> None:
 
 
 def test_every_builtin_renders_on_empty_stores() -> None:
-    """Each widget copes with a fresh, empty data dir — no store, no crash."""
+    """Each widget copes with a fresh, empty data dir - no store, no crash."""
     for widget in BUILTIN_WIDGETS:
         lines = builtin_tile_lines(widget)
         assert lines, f"{widget} rendered nothing"

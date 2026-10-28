@@ -225,18 +225,18 @@ def extract_observations(
         branch: Branch name passed into the prompt header.
 
     Returns:
-        ``None`` if the LLM call itself failed (timeout / non-zero exit) — a
+        ``None`` if the LLM call itself failed (timeout / non-zero exit) - a
         transient failure the caller should retry by leaving the cursor put.
         ``{}`` if the model responded but its output could not be parsed (the
         call succeeded, so treat the window as handled). The parsed extraction
-        dict on success — its arrays may be empty when nothing was notable.
+        dict on success - its arrays may be empty when nothing was notable.
     """
     prompt = build_extraction_prompt(
         conversation_text, project=project, branch=branch, user=user_name()
     )
     raw = call_haiku(prompt)
     if raw is None:
-        # Transport failure (timeout / non-zero exit) — signal "retry me".
+        # Transport failure (timeout / non-zero exit) - signal "retry me".
         return None
     parsed = parse_extraction(raw)
     if parsed is None:

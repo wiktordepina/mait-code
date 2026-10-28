@@ -52,12 +52,12 @@ PALETTE_CHIPS = ChipColours(
     blocked=p.ERROR,
 )
 
-#: Priority level → the :class:`ChipColours` slot it reads from.
+#: Priority level -> the :class:`ChipColours` slot it reads from.
 _PRIORITY_SLOT = {"high": "high", "medium": "medium", "low": "low"}
 
 
 def priority_chip(priority: str, colours: ChipColours = PALETTE_CHIPS) -> Text:
-    """A one-word priority chip, coloured by level (unknown → the ``low`` hue)."""
+    """A one-word priority chip, coloured by level (unknown -> the ``low`` hue)."""
     slot = _PRIORITY_SLOT.get(priority, "low")
     return Text(priority, style=getattr(colours, slot))
 

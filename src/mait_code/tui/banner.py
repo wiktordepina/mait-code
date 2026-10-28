@@ -1,8 +1,8 @@
-"""The shared mait-code masthead — the brand banner worn by every TUI.
+"""The shared mait-code masthead - the brand banner worn by every TUI.
 
 Wraps the wordmark from :mod:`mait_code.tui.brand` in a Textual container so the
 home hub, the settings editor and the memory browser all wear one identity, in
-place of the stock Textual header. Callers just ``yield BrandBanner(subtitle="…")``;
+place of the stock Textual header. Callers just ``yield BrandBanner(subtitle="...")``;
 the banner owns its own responsiveness, re-rendered on resize: the wordmark
 degrades to its plain-text fallback on narrow terminals and to the half-height
 :data:`~mait_code.tui.brand.WORDMARK_COMPACT` on short ones (at or below
@@ -12,7 +12,7 @@ crowds a small screen.
 The right side carries, vertically centred, the **view name** (e.g. ``"Home
 Hub"``, ``"Settings"``, ``"Memory"``) over the companion tagline and the
 installed version. The view name is settable at runtime (:meth:`set_subtitle`)
-so a surface can fold live state into it — the memory browser shows its match
+so a surface can fold live state into it - the memory browser shows its match
 count there.
 
 Styling is shared (``tui/app.tcss``), keyed off theme ``$``-roles, so every
@@ -40,7 +40,7 @@ __all__ = ["BrandBanner", "installed_version"]
 def installed_version() -> str:
     """The installed package version, falling back to the source tree's.
 
-    The single source of the version string the banner renders — snapshot tests
+    The single source of the version string the banner renders - snapshot tests
     pin *this* function so the masthead stays stable across releases.
     """
     try:
@@ -65,7 +65,7 @@ class BrandBanner(Horizontal):
     re-made on resize, so dragging a terminal taller restores the full art.
     """
 
-    #: At or below this terminal height (rows), the masthead goes compact — the
+    #: At or below this terminal height (rows), the masthead goes compact - the
     #: full seven-row banner would eat too much of a short screen.
     COMPACT_MAX_HEIGHT = 30
 
@@ -96,7 +96,7 @@ class BrandBanner(Horizontal):
         self._render_wordmark()
 
     def set_subtitle(self, text: str) -> None:
-        """Update the view-name line — for surfaces folding live state into it."""
+        """Update the view-name line - for surfaces folding live state into it."""
         self._subtitle = text
         self.query_one("#brand-subtitle", Static).update(text)
 

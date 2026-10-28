@@ -1,6 +1,6 @@
 """Presentation-agnostic board operations shared by the CLI and the TUI.
 
-Pure functions over an open ``sqlite3.Connection`` — queries and mutations,
+Pure functions over an open ``sqlite3.Connection`` - queries and mutations,
 including the *done-invariant* (set ``completed_at`` on entering ``done``, clear
 it on leaving). The caller owns the connection lifecycle: the argparse CLI opens
 one per command via :func:`~mait_code.tools.board.db.connection`; the Textual
@@ -16,7 +16,7 @@ The *session-invariant*: a card entering ``in_review``, ``done`` or
 whichever verb moves it; moves between the other open columns keep them.
 
 Mutations raise :class:`CardNotFound` for a missing id rather than printing
-and exiting — that ``print``/``sys.exit`` is a CLI concern the caller layers
+and exiting - that ``print``/``sys.exit`` is a CLI concern the caller layers
 on top (the CLI exits; the TUI flashes a notification).
 """
 
@@ -179,7 +179,7 @@ class LinkCycle(RelationError):
 
     Attributes:
         path: The loop as card ids, starting and ending on the link's *from*
-            card — e.g. ``[41, 47, 52, 41]`` for ``41 blocks 47`` when 47
+            card - e.g. ``[41, 47, 52, 41]`` for ``41 blocks 47`` when 47
             already reaches 41 through 52.
     """
 
@@ -232,7 +232,7 @@ def _now() -> str:
 def _escape_like(text: str) -> str:
     """Escape LIKE wildcards so a query is matched literally.
 
-    Pairs with ``LIKE ? ESCAPE '\\'`` — ``\\``, ``%`` and ``_`` are escaped so a
+    Pairs with ``LIKE ? ESCAPE '\\'`` - ``\\``, ``%`` and ``_`` are escaped so a
     search for e.g. ``100%`` doesn't turn ``%`` into a match-anything wildcard.
     """
     return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -259,8 +259,8 @@ def _require_row(conn: sqlite3.Connection, card_id: int):
 def _attach_tags(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     """Populate each card dict's ``tags`` key (sorted, possibly empty).
 
-    One grouped query rather than ``GROUP_CONCAT`` in the main SELECT — ordered
-    ``GROUP_CONCAT`` needs SQLite ≥ 3.44, while a second ``card_id IN (…)`` query
+    One grouped query rather than ``GROUP_CONCAT`` in the main SELECT - ordered
+    ``GROUP_CONCAT`` needs SQLite >= 3.44, while a second ``card_id IN (...)`` query
     is version-agnostic and keeps :func:`_card_dict` a pure row-mapper.
     """
     if not cards:
@@ -344,12 +344,12 @@ def _summary(card_id: int, title: str, status: str, project: str) -> dict:
 def _attach_links(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
     """Populate each card dict's relationship keys.
 
-    * ``parent`` — ``{"id", "title"}`` of the card's epic, or ``None``.
-    * ``blocked_by`` / ``blocks`` — the cards on either end of its ``blocks``
+    * ``parent`` - ``{"id", "title"}`` of the card's epic, or ``None``.
+    * ``blocked_by`` / ``blocks`` - the cards on either end of its ``blocks``
       links, as :func:`_summary` dicts ordered by id.
-    * ``waiting_on`` — ids of the blockers not yet settled (neither ``done``
+    * ``waiting_on`` - ids of the blockers not yet settled (neither ``done``
       nor ``archived``): the card can't start while this is non-empty.
-    * ``archived_blockers`` — ids of blockers that were archived. They no
+    * ``archived_blockers`` - ids of blockers that were archived. They no
       longer hold the card up, but the work they stood for was dropped rather
       than finished, so the card probably wants another look.
     """
@@ -523,7 +523,7 @@ def list_cards(
             returns both.
         parent_id: Restrict to the members of this epic, or ``None`` for no
             parent filter.
-        ready: Restrict to cards :func:`next_refined` could hand out —
+        ready: Restrict to cards :func:`next_refined` could hand out -
             refined, not tagged ``blocked``, not waiting on a blocker, and not
             held by a live session other than *claimant*.
         claimant: With *ready*, the session id asking; its own bindings don't
@@ -652,7 +652,7 @@ def next_refined(
 
     Ready means refined, not tagged ``blocked``, not waiting on any
     unsettled ``blocks`` link (see :func:`_attach_links`), and not held by a
-    live session other than *session* — another session may be refining it
+    live session other than *session* - another session may be refining it
     under a playbook. Given *epic_id*, the
     search spans that epic's members in every project and *project* is
     ignored.
@@ -736,7 +736,7 @@ def list_tags(conn: sqlite3.Connection, card_id: int) -> list[str]:
 def set_tags(conn: sqlite3.Connection, card_id: int, tags: list[str]) -> None:
     """Replace a card's entire tag set with *tags* (set-replace, one txn).
 
-    The whole set is rewritten — any tag absent from *tags* is dropped, so the
+    The whole set is rewritten - any tag absent from *tags* is dropped, so the
     caller owns the full membership (including service-managed tags like
     ``blocked``, which must be carried through if it should survive). Duplicates
     in *tags* collapse via the table's uniqueness. Raises :class:`CardNotFound`
@@ -757,9 +757,9 @@ def set_tags(conn: sqlite3.Connection, card_id: int, tags: list[str]) -> None:
 def add_reference(
     conn: sqlite3.Connection, card_id: int, label: str, value: str
 ) -> None:
-    """Append a label→value reference to a card (kept in insertion order).
+    """Append a label->value reference to a card (kept in insertion order).
 
-    Labels needn't be unique — a card may carry two ``PR`` links. Raises
+    Labels needn't be unique - a card may carry two ``PR`` links. Raises
     :class:`CardNotFound` if the id is unknown.
     """
     _require_row(conn, card_id)
@@ -779,8 +779,8 @@ def remove_reference(conn: sqlite3.Connection, card_id: int, index: int) -> bool
     """Remove the reference at 1-based *index* in display order.
 
     Returns ``True`` if a reference was removed, ``False`` if *index* is out of
-    range (so the caller can report it). Indexing the displayed order — not the
-    stored ``position`` — keeps removal stable even after earlier deletions leave
+    range (so the caller can report it). Indexing the displayed order - not the
+    stored ``position`` - keeps removal stable even after earlier deletions leave
     gaps. Raises :class:`CardNotFound` if the id is unknown.
     """
     _require_row(conn, card_id)
@@ -1219,8 +1219,8 @@ def add_card(
     somewhere other than a local session (see :mod:`mait_code.remote`);
     ``None`` means it was created locally.
 
-    An epic (``kind=EPIC``) always gets :data:`EPIC_PROJECT` — pass that or
-    ``None`` as *project* — and no parent. A card needs a real *project* and
+    An epic (``kind=EPIC``) always gets :data:`EPIC_PROJECT` - pass that or
+    ``None`` as *project* - and no parent. A card needs a real *project* and
     may name its epic as *parent_id*.
 
     *origin_id* names the card this one was split from or raised as a
@@ -1310,7 +1310,7 @@ def move_card(
     Entering ``in_review`` releases the card's session bindings (the card is
     handed off), and entering ``done`` or ``archived`` closes it (see
     :func:`_on_close`); moves between the other columns keep them. Moving to
-    ``in_progress`` with a *session* binds it — unless it's an epic, which
+    ``in_progress`` with a *session* binds it - unless it's an epic, which
     never binds (its status is bookkeeping, not work). Raises
     :class:`CardNotFound` if the id is unknown.
     """
@@ -1405,7 +1405,7 @@ def block_card(
 ) -> None:
     """Tag a card ``blocked`` in place; record *reason* as a comment if given.
 
-    Blocking no longer moves the card — it keeps its real flow position and
+    Blocking no longer moves the card - it keeps its real flow position and
     gains a :data:`BLOCKED_TAG` tag. Raises :class:`CardNotFound` if the id is
     unknown.
     """
@@ -1474,9 +1474,9 @@ def edit_card(
     ``acceptance_criteria=..``). *parent_id* moves the card into that epic,
     or out of any with ``None``; leave it out to keep the current one. Every
     change is checked first and written in one transaction, so a refused
-    field leaves the card exactly as it was — the parent included.
+    field leaves the card exactly as it was - the parent included.
 
-    ``kind`` isn't editable here — use :func:`promote_epic`. Raises
+    ``kind`` isn't editable here - use :func:`promote_epic`. Raises
     :class:`CardNotFound` if the id (or *parent_id*) is unknown and
     :class:`RelationError` for ``kind``, a *parent_id* that breaks the rules
     of :func:`set_parent`, or a ``project`` that would move a card to
@@ -1521,7 +1521,7 @@ def remove_card(conn: sqlite3.Connection, card_id: int) -> None:
 def _write_lock(conn: sqlite3.Connection) -> Iterator[None]:
     """Run the block as one ``BEGIN IMMEDIATE`` transaction: commit or roll back.
 
-    For a mutation whose checks must hold until its write lands — a parallel
+    For a mutation whose checks must hold until its write lands - a parallel
     writer (another session, the TUI) could otherwise change what was checked
     in between. Taking the write lock up front, rather than on the first
     write, closes that window.
@@ -1603,7 +1603,7 @@ def _check_parent(conn: sqlite3.Connection, row: Sequence, epic_id: int | None) 
     """Refuse making the card in *row* a member of *epic_id*.
 
     An epic can't have a parent (one level only), and a parent must be an
-    epic. ``None`` — leaving any epic — is always fine for a card.
+    epic. ``None`` - leaving any epic - is always fine for a card.
     """
     if row[_KIND] == EPIC:
         raise RelationError(f"#{row[0]} is an epic; epics can't have a parent")
@@ -1669,7 +1669,7 @@ def promote_epic(conn: sqlite3.Connection, card_id: int) -> None:
     Closes it as a card (see :func:`_on_close`), moves it to :data:`EPIC_PROJECT` and
     records the project it came from as a comment. Raises
     :class:`CardNotFound` for an unknown id and :class:`RelationError` if it is
-    already an epic, has a parent, or has any ``blocks`` link — each of which
+    already an epic, has a parent, or has any ``blocks`` link - each of which
     an epic can't carry.
     """
     with _write_lock(conn):
@@ -1740,7 +1740,7 @@ def epic_without_open_members(conn: sqlite3.Connection, card_id: int) -> int | N
 
     Open means neither ``done`` nor ``archived``. An epic's status is set by
     hand, so a caller that just finished or dropped a member can remind the
-    user the epic may be ready to close — it never moves the epic itself. An
+    user the epic may be ready to close - it never moves the epic itself. An
     epic that is already done or archived needs no reminder: ``None``.
     """
     settled = ", ".join("?" for _ in _SETTLED)

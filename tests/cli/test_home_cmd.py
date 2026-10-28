@@ -1,7 +1,7 @@
 """Tests for ``mait-code home`` routing and the bare-invocation behaviour.
 
 The TUI itself is covered in ``test_home_tui.py``; here we only check the
-routing — a non-TTY invocation (which is what ``CliRunner`` provides) prints
+routing - a non-TTY invocation (which is what ``CliRunner`` provides) prints
 the compact text summary, and bare ``mait-code`` off a TTY still prints help.
 """
 

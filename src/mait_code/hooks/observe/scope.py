@@ -28,7 +28,7 @@ def resolve_scope(
     Returns:
         One of "global", "project", "branch".
     """
-    # No project context — everything is global
+    # No project context - everything is global
     if project is None:
         return "global"
 

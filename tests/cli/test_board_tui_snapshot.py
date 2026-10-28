@@ -36,7 +36,7 @@ def _seed_demo(db_path: Path) -> None:
     """A small board spanning every column, with a blocked card, for the shot.
 
     Note: the Done column is hidden by default, so the ``did`` card below does
-    not appear in the board snapshot — that's intended, not a missing card.
+    not appear in the board snapshot - that's intended, not a missing card.
     """
     conn = get_connection(db_path)
     try:
@@ -67,7 +67,7 @@ def test_board_snapshot(snap_compare, tmp_path: Path) -> None:
 
 
 def test_board_compact_banner_snapshot(snap_compare, tmp_path: Path) -> None:
-    """A short terminal (≤30 rows) drops the masthead to the half-height brand."""
+    """A short terminal (<=30 rows) drops the masthead to the half-height brand."""
     db_path = tmp_path / "board.db"
     _seed_demo(db_path)
     assert snap_compare(BoardApp(db_path=db_path), terminal_size=(120, 28))
@@ -88,7 +88,7 @@ def _seed_board_rich(db_path: Path) -> None:
     """A busy, multi-project board for the docs board shots.
 
     Spans three projects with long titles that wrap, several tags per card, a
-    blocked card, and cards in every column — Done and Archived included, so the
+    blocked card, and cards in every column - Done and Archived included, so the
     expanded view has content in all five panes.
     """
     conn = get_connection(db_path)
@@ -206,7 +206,7 @@ def _seed_board_rich(db_path: Path) -> None:
 
 
 def test_board_rich_snapshot(snap_compare, tmp_path: Path) -> None:
-    """A busy multi-project board in the default collapsed view — the docs hero
+    """A busy multi-project board in the default collapsed view - the docs hero
     shot: wrapping titles, multiple tags, a blocked card, per-card project
     labels (shown because the filter is on ``all``)."""
     db_path = tmp_path / "board.db"
@@ -219,7 +219,7 @@ def test_board_rich_snapshot(snap_compare, tmp_path: Path) -> None:
 
 
 def test_board_search_snapshot(snap_compare, tmp_path: Path) -> None:
-    """The busy board filtered to a title query via ``/`` → type → submit.
+    """The busy board filtered to a title query via ``/`` -> type -> submit.
 
     ``config`` matches a backlog card (Neovim config) and a refined card
     (Prometheus scrape configs); the other panes empty out, and the subtitle
@@ -245,7 +245,7 @@ def test_board_project_filter_snapshot(snap_compare, tmp_path: Path) -> None:
     """The project filter picker open over the busy board via ``p``.
 
     The ``Select`` auto-expands on mount, so the dropdown lists "All projects"
-    plus every seeded project — the gesture that replaced round-robin cycling."""
+    plus every seeded project - the gesture that replaced round-robin cycling."""
     db_path = tmp_path / "board.db"
     _seed_board_rich(db_path)
 
@@ -261,8 +261,8 @@ def test_board_project_filter_snapshot(snap_compare, tmp_path: Path) -> None:
 
 
 def test_board_rich_expanded_snapshot(snap_compare, tmp_path: Path) -> None:
-    """The same busy board uncollapsed — all six columns showing, with a card
-    parked in In Review and Done/Archived revealed via ``d`` and ``a`` — the
+    """The same busy board uncollapsed - all six columns showing, with a card
+    parked in In Review and Done/Archived revealed via ``d`` and ``a`` - the
     docs review-layout shot."""
     db_path = tmp_path / "board.db"
     _seed_board_rich(db_path)
@@ -350,7 +350,7 @@ def test_detail_snapshot(snap_compare, tmp_path: Path) -> None:
 def test_detail_snapshot_bubblegum(snap_compare, tmp_path: Path) -> None:
     """Lock the card screen under the mait-bubblegum theme.
 
-    Proves a theme switch recolours the whole screen — including the Rich-text
+    Proves a theme switch recolours the whole screen - including the Rich-text
     chips (priority/tags), which are baked at render time and don't read CSS
     variables, so they'd otherwise stay on the default palette.
     """
@@ -453,7 +453,7 @@ def _seed_detail_with_refs(db_path: Path) -> None:
 
 
 def test_detail_references_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the References section in the card detail view — links vs the plain
+    """Lock the References section in the card detail view - links vs the plain
     bare ID, positions shown."""
     db_path = tmp_path / "board.db"
     _seed_detail_with_refs(db_path)
@@ -524,7 +524,7 @@ def _seed_detail_full(db_path: Path) -> None:
 
 
 def test_detail_full_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the card detail view with every section populated at once — title,
+    """Lock the card detail view with every section populated at once - title,
     tags, description, acceptance criteria, references, and comments. Doubles as
     the docs screenshot for a fully-filled card."""
     db_path = tmp_path / "board.db"

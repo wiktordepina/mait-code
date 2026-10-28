@@ -8,8 +8,8 @@ Determinism matters here: the settings list shows each value's *source*
 CI runner doesn't, which would flip the Source column. The root
 ``_isolate_mait_settings`` autouse fixture clears every ``MAIT_CODE_*`` var,
 pinning each row to its ``default`` (or ``derived``) source. ``fake_home`` keeps
-the value column on the literal ``~/…`` defaults rather than expanded tmp paths,
-and — since Tool approvals reads and writes ``$HOME`` alone — it also pins that
+the value column on the literal ``~/...`` defaults rather than expanded tmp paths,
+and - since Tool approvals reads and writes ``$HOME`` alone - it also pins that
 group's on/off column, which would otherwise mirror whatever the developer had
 enabled in their own settings file.
 

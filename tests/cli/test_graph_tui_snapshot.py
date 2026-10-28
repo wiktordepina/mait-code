@@ -30,7 +30,7 @@ def _pin_banner_version(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 _ENTITIES = [
-    # (id, name, entity_type, mention_count) — wiktor is the hub.
+    # (id, name, entity_type, mention_count) - wiktor is the hub.
     (1, "wiktor", "person", 9),
     (2, "alpha", "project", 12),
     (3, "beta", "project", 7),

@@ -4,7 +4,7 @@ import sqlite3
 
 # Canonical relationship vocabulary. The extraction prompt is built from this
 # tuple, and extracted relationships are coerced to it on write (see
-# ``mait_code.hooks.observe.storage``). Keep the ordering stable — it is what
+# ``mait_code.hooks.observe.storage``). Keep the ordering stable - it is what
 # the prompt presents to the model.
 RELATIONSHIP_TYPES: tuple[str, ...] = (
     "uses",
@@ -21,7 +21,7 @@ DEFAULT_RELATIONSHIP_TYPE: str = "related_to"
 # extraction prompt enum is built from this tuple; types outside it are
 # coerced to ``DEFAULT_ENTITY_TYPE`` on write. ``unknown`` is the write-time
 # fallback (and the type given to entities auto-created from relationship
-# endpoints) — deliberately not offered to the model, so it stays out of
+# endpoints) - deliberately not offered to the model, so it stays out of
 # ENTITY_TYPES but counts as valid.
 ENTITY_TYPES: tuple[str, ...] = (
     "person",
@@ -235,8 +235,8 @@ def list_graph_entities(
 
     Returns:
         A list of entity dicts (including ``degree``), ordered by
-        ``mention_count`` descending, then ``last_seen`` descending, then id
-        — a deterministic order for rendering and tests.
+        ``mention_count`` descending, then ``last_seen`` descending, then id -
+        a deterministic order for rendering and tests.
     """
     cursor = conn.execute(
         """SELECT e.id, e.name, e.entity_type, e.first_seen, e.last_seen,
@@ -289,7 +289,7 @@ def get_ego_graph(conn: sqlite3.Connection, name: str) -> dict | None:
     Returns:
         A dict with ``centre`` (the entity's fields), ``entities`` (centre
         first, then neighbours), and ``relationships`` (every edge incident
-        to the centre, with source/target names) — or ``None`` if no entity
+        to the centre, with source/target names) - or ``None`` if no entity
         matches *name*.
     """
     centre = find_entity_by_name(conn, name)
@@ -378,7 +378,7 @@ def merge_entities(
     src_id, dst_id = source["id"], target["id"]
     repointed = deduplicated = self_loops = 0
 
-    # Drop edges between the pair — they would become self-loops.
+    # Drop edges between the pair - they would become self-loops.
     cursor = conn.execute(
         """DELETE FROM memory_relationships
            WHERE (source_entity_id = ? AND target_entity_id = ?)

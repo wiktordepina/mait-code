@@ -81,7 +81,7 @@ class TestSearchEntriesFtsFallback:
     """When FTS5 is unavailable, search falls back to a LIKE scan."""
 
     def test_like_fallback_when_fts_missing(self, populated_db: sqlite3.Connection):
-        """Dropping the FTS table forces the OperationalError → LIKE branch."""
+        """Dropping the FTS table forces the OperationalError -> LIKE branch."""
         # Remove the FTS shadow table so the MATCH query raises.
         populated_db.execute("DROP TABLE IF EXISTS memory_entries_fts")
         populated_db.commit()

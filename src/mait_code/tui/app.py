@@ -56,9 +56,9 @@ class MaitApp(App[None]):
     CSS_PATH = SHARED_TCSS
     BINDINGS = [
         Binding("q", "quit", "Quit"),
-        # Escape is a quit alias on the main screen (hidden — the footer already
+        # Escape is a quit alias on the main screen (hidden - the footer already
         # shows q). Apps that give escape a screen-local meaning (e.g. the
-        # master–detail "back to list") override it; modals bind their own
+        # master-detail "back to list") override it; modals bind their own
         # escape=cancel, which takes precedence while one is open.
         Binding("escape", "quit", "Quit", show=False),
         Binding("question_mark", "help", "Help"),
@@ -74,8 +74,8 @@ class MaitApp(App[None]):
         for theme in HOUSE_THEMES:
             self.register_theme(theme)
         # Remember the theme we booted with so on_unmount only writes the file
-        # when the user actually changed it (and so the default — which isn't in
-        # the file — doesn't get persisted on every exit).
+        # when the user actually changed it (and so the default - which isn't in
+        # the file - doesn't get persisted on every exit).
         self._startup_theme = self._initial_theme()
         self.theme = self._startup_theme
 
@@ -159,7 +159,7 @@ class MaitApp(App[None]):
             binding = active.binding
             if not (active.enabled and binding.show and binding.description):
                 continue
-            # Use the app's friendly key display (← / < / ?), like the footer —
+            # Use the app's friendly key display (← / < / ?), like the footer -
             # not binding.key_display, which is usually the raw key name.
             key = self.get_key_display(binding)
             sig = (key, binding.description)

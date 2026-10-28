@@ -1,7 +1,7 @@
 """Tests for the ``mait-code memory`` command's non-TTY fallback.
 
 The TUI itself is covered in ``test_memory_tui.py``; here we only check the
-routing — a non-TTY invocation (which is what ``CliRunner`` provides) prints
+routing - a non-TTY invocation (which is what ``CliRunner`` provides) prints
 the read-only grouped summary instead of launching Textual.
 """
 
@@ -27,7 +27,7 @@ def _data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _seed(db_path: Path, rows: list[tuple[str, str]]) -> None:
-    """Insert (content, entry_type) rows directly — no embedding path."""
+    """Insert (content, entry_type) rows directly - no embedding path."""
     conn = get_connection(db_path)
     try:
         for content, entry_type in rows:

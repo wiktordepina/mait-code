@@ -7,7 +7,7 @@ allowed-tools: Bash(mc-tool-memory reflect:*), Bash(mc-tool-memory merge:*), Bas
 # /reflect
 
 Synthesise recent observations into high-level insights, and consolidate
-MEMORY.md — not just append to it. Reflection can propose four kinds of
+MEMORY.md - not just append to it. Reflection can propose four kinds of
 operation: **add**, **rewrite**, **merge**, and **retire**. You apply each one
 only after the user approves it.
 
@@ -21,28 +21,28 @@ only after the user approves it.
 3. Present the `insights` list.
 4. If `ops` is non-empty, render them as a clear before/after diff so the user
    can see each proposed change:
-   - **add** → a new line (`+`)
-   - **rewrite** → the old text replaced by the new (`~ old → new`)
-   - **merge** → several existing facts folded into one
-   - **retire** → a stale/contradicted fact dropped (`-`)
+   - **add** -> a new line (`+`)
+   - **rewrite** -> the old line after `~`, then the new one beneath it after `→`
+   - **merge** -> several existing facts folded into one
+   - **retire** -> a stale/contradicted fact dropped (`-`)
    If `dropped_ops` is non-empty, list them separately as **withheld**, each
    with its `reason`: the batch held job-sourced entries, and these changes
    couldn't show they weren't drawn from them. Don't offer to apply them.
 5. **Ask the user to approve or reject each operation** (offer approve-all /
    reject-all / pick as a convenience). Never apply an op the user hasn't
-   approved — MEMORY.md stays human-approved.
+   approved - MEMORY.md stays human-approved.
 6. For each **approved** op, apply it in **two places**:
-   - **MEMORY.md** (`~/.claude/mait-code-data/memory/MEMORY.md`) via Edit —
+   - **MEMORY.md** (`~/.claude/mait-code-data/memory/MEMORY.md`) via Edit -
      add the new line, replace the rewritten line, fold the merged lines into
      one, or delete the retired line.
    - **The memory database**, when the op carries `entry_ids` (the backing
      stored entries). This stops the raw store from resurfacing what you just
      consolidated in the curated layer. Run the matching verb per op:
-     - **retire** → `mc-tool-memory retire <id>` for each id.
-     - **merge** → `mc-tool-memory merge <id1> <id2> … --into "<consolidated text>"`.
-     - **rewrite** → one backing id: `mc-tool-memory supersede <id> "<new text>"`;
-       several ids: `mc-tool-memory merge <ids…> --into "<new text>"`.
-     - **add** → no db verb (there's no prior entry to consolidate).
+     - **retire** -> `mc-tool-memory retire <id>` for each id.
+     - **merge** -> `mc-tool-memory merge <id1> <id2> ... --into "<consolidated text>"`.
+     - **rewrite** -> one backing id: `mc-tool-memory supersede <id> "<new text>"`;
+       several ids: `mc-tool-memory merge <ids...> --into "<new text>"`.
+     - **add** -> no db verb (there's no prior entry to consolidate).
    An op with an empty `entry_ids` list touches MEMORY.md only.
 7. Keep MEMORY.md under ~150 lines. If applying an op would push it over, prefer
    merging or retiring older lines over letting it grow.
@@ -50,22 +50,22 @@ only after the user approves it.
 ## Routing: which curated layer?
 
 mait-code's MEMORY.md and Claude Code's native auto memory
-(`~/.claude/projects/<munged-path>/memory/`) are kept cleanly separated —
+(`~/.claude/projects/<munged-path>/memory/`) are kept cleanly separated -
 facts about the **project** belong in the native layer; facts about the
 **user** belong in mait-code:
 
 - **Cross-project user/identity facts** (preferences, conventions, working
-  style, decisions about how the user works) → mait-code MEMORY.md. This is
+  style, decisions about how the user works) -> mait-code MEMORY.md. This is
   what these operations target.
 - **Per-project code facts** (architecture, build/test commands, repo
-  gotchas) → Claude Code's native auto memory, which it maintains itself.
+  gotchas) -> Claude Code's native auto memory, which it maintains itself.
 
 When a proposed **add** concerns a project/code fact, do **not** add it to
-mait-code's MEMORY.md — write it to the native per-project memory instead (or
+mait-code's MEMORY.md - write it to the native per-project memory instead (or
 skip it if the native layer already records it). Putting the same fact in
 both layers makes them drift and double-spends context tokens.
 
-Reflection is idempotent — each observation is only reflected on once, tracked by a per-project watermark. Running `/reflect` twice without new observations is a no-op.
+Reflection is idempotent - each observation is only reflected on once, tracked by a per-project watermark. Running `/reflect` twice without new observations is a no-op.
 
 If reflection was skipped (not enough new observations), explain that there isn't enough new data since the last reflection and suggest trying again later.
 

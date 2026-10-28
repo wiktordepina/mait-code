@@ -47,7 +47,7 @@ def test_record_failure_accumulates(data_dir: Path):
     assert record_failure("/tmp/t.jsonl", 0) == 1
     assert record_failure("/tmp/t.jsonl", 0) == 2
     assert record_failure("/tmp/t.jsonl", 0) == 3
-    # A failure must not advance the cursor — the window is re-attempted.
+    # A failure must not advance the cursor - the window is re-attempted.
     assert get_cursor("/tmp/t.jsonl") == 0
 
 

@@ -1,4 +1,4 @@
-"""Tests for the board tool — migrations, CLI commands, and DB operations."""
+"""Tests for the board tool - migrations, CLI commands, and DB operations."""
 
 import argparse
 import json
@@ -48,7 +48,7 @@ def test_migration_blocked_becomes_refined_with_tag(tmp_path):
     from mait_code.tools.board.migrate import MIGRATIONS
 
     # Build a v1 database by applying only migration #1, then stamping the
-    # schema at version 1 — the state a pre-tags board would be in on disk.
+    # schema at version 1 - the state a pre-tags board would be in on disk.
     conn = sqlite3.connect(tmp_path / "v1.db")
     conn.execute("PRAGMA foreign_keys = ON")
     for sql in MIGRATIONS[0][2]:
@@ -788,7 +788,7 @@ def test_remove_reference_by_display_position(board_db):
     assert service.remove_reference(board_db, cid, 2) is True
     refs = service.list_references(board_db, cid)
     assert [r["label"] for r in refs] == ["a", "c"]
-    # The new position 2 ('c') removes cleanly — no stale-position gap.
+    # The new position 2 ('c') removes cleanly - no stale-position gap.
     assert service.remove_reference(board_db, cid, 2) is True
     assert [r["label"] for r in service.list_references(board_db, cid)] == ["a"]
 
@@ -1394,7 +1394,7 @@ def test_ensure_schema_survives_a_stale_version_read(tmp_path, monkeypatch):
     """Two processes both read v5, one migrates first: the other must skip, not fail.
 
     This is the interleaving after an upgrade when the session-start hook, the
-    CLI and the TUI open the board together — ``ADD COLUMN`` run twice would
+    CLI and the TUI open the board together - ``ADD COLUMN`` run twice would
     raise ``duplicate column``.
     """
     from mait_code.tools.board import migrate
@@ -1430,7 +1430,7 @@ def test_ensure_schema_from_two_threads_at_once(tmp_path, monkeypatch):
         try:
             barrier.wait()
             ensure_schema(conn)
-        except BaseException as exc:  # noqa: BLE001 — surfaced by the assert
+        except BaseException as exc:  # noqa: BLE001 - surfaced by the assert
             errors.append(exc)
         finally:
             conn.close()

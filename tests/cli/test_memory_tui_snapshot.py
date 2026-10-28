@@ -38,7 +38,7 @@ def _seed_native(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     Builds munged slug dirs with memory files *and* the matching source
     directories under ``tmp_path/src``, then points the TUI's scan at that
-    root so labels resolve — ``beta-tui`` exercises the dashed-leaf
+    root so labels resolve - ``beta-tui`` exercises the dashed-leaf
     backtracking. File mtimes are pinned so the date column never drifts.
     """
     src = tmp_path / "src"
@@ -81,7 +81,7 @@ def _seed_store(db_path: Path) -> None:
     """A small store spanning several types for the shots.
 
     The newest fact carries markdown (heading, list, inline code) so the boot
-    shot — which lands on it — doubles as the markdown-rendering shot.
+    shot - which lands on it - doubles as the markdown-rendering shot.
     """
     conn = get_connection(db_path)
     try:
@@ -179,7 +179,7 @@ def test_memory_snapshot(snap_compare, tmp_path: Path) -> None:
 
 
 def test_memory_filter_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the filtered view: ``/`` → type — groups expand to the matches and
+    """Lock the filtered view: ``/`` -> type - groups expand to the matches and
     the subtitle reports the narrowed count."""
     db_path = tmp_path / "memory.db"
     _seed_store(db_path)
@@ -233,7 +233,7 @@ def test_memory_project_filter_snapshot(snap_compare, tmp_path: Path) -> None:
 def test_memory_native_snapshot(
     snap_compare, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Lock the native view's boot shot: ``n`` → projects grouped with file
+    """Lock the native view's boot shot: ``n`` -> projects grouped with file
     counts (first expanded, cursor on its MEMORY.md), the file's markdown in
     the detail pane, the native subtitle, and the footer's Store binding."""
     db_path = tmp_path / "memory.db"
@@ -267,7 +267,7 @@ def test_memory_native_project_filter_snapshot(
         await pilot.pause()
         await pilot.press("p")
         await pilot.pause()
-        # Options run All projects → alpha → beta-tui; two steps + enter.
+        # Options run All projects -> alpha -> beta-tui; two steps + enter.
         await pilot.press("down", "down", "enter")
         await pilot.pause()
 
@@ -279,7 +279,7 @@ def test_memory_native_project_filter_snapshot(
 
 
 def test_memory_native_empty_snapshot(snap_compare, tmp_path: Path) -> None:
-    """Lock the native view's empty state: no projects dir at all — the tree
+    """Lock the native view's empty state: no projects dir at all - the tree
     empties and the detail pane explains rather than crashes."""
     db_path = tmp_path / "memory.db"
     _seed_store(db_path)

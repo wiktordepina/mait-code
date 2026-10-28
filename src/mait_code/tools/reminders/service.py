@@ -1,6 +1,6 @@
 """Presentation-agnostic reminder queries shared by the CLI, hook and TUIs.
 
-Pure functions over an open ``sqlite3.Connection`` — the caller owns the
+Pure functions over an open ``sqlite3.Connection`` - the caller owns the
 connection lifecycle, mirroring :mod:`mait_code.tools.inbox.service`. Each
 reminder is returned as a dict with its ``due`` already parsed to an aware
 :class:`~datetime.datetime`, so callers format rather than re-parse.
@@ -106,7 +106,7 @@ def dismiss_reminder(
     """Dismiss a reminder by id, idempotently.
 
     Returns ``True`` when this call transitioned an active reminder to
-    dismissed, ``False`` when the id is unknown or already dismissed — so a
+    dismissed, ``False`` when the id is unknown or already dismissed - so a
     Bridge ``dismiss`` control message that arrives twice, or names a reminder
     that no longer exists, is a harmless no-op rather than an error.
     """

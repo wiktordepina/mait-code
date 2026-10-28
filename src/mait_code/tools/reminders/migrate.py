@@ -45,7 +45,7 @@ MIGRATIONS: list[tuple[int, str, MigrationBody]] = [
 def ensure_schema(conn: sqlite3.Connection) -> None:
     """Apply any pending migrations to the database.
 
-    Safe to call on every connection open — checks a single integer and
+    Safe to call on every connection open - checks a single integer and
     returns immediately if the schema is current.
 
     Args:

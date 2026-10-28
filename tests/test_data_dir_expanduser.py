@@ -2,7 +2,7 @@
 
 A ``MAIT_CODE_DATA_DIR`` value with a leading ``~`` (e.g. a literal,
 unexpanded ``~/.claude/mait-code-data`` from the environment) must resolve to
-``$HOME``-relative — not to a stray ``~`` directory under the current working
+``$HOME``-relative - not to a stray ``~`` directory under the current working
 directory. Before the fix, ``Path(override)`` left the tilde literal, so data
 scattered into ``<cwd>/~/.claude/mait-code-data`` and the board/CLI read an
 empty database.

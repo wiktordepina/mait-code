@@ -2,12 +2,12 @@
 
 One builder, two consumers: the session-start hook injects the result as
 ``additionalContext`` at the top of every session, and the home TUI's system
-prompt view renders the same text on demand — so what the user inspects is
+prompt view renders the same text on demand - so what the user inspects is
 exactly what Claude is shown.
 
 Each section reads its tool's store layer directly (no subprocess hops) and
 is best-effort: a broken or missing store yields an empty section, never an
-exception — session start must not be able to fail from here.
+exception - session start must not be able to fail from here.
 """
 
 from __future__ import annotations
@@ -99,7 +99,7 @@ def inbox_section() -> str:
     """The quick-capture inbox count as a compact label.
 
     Returns ``"N inbox"`` when there are captured items waiting to be triaged,
-    or "" when the inbox is empty — so the context stays silent when there's
+    or "" when the inbox is empty - so the context stays silent when there's
     nothing to sort.
     """
     from mait_code.tools.inbox import service
@@ -122,7 +122,7 @@ def build_session_context(session_id: str | None = None) -> str:
             passes it; the home TUI's preview has none), adding the cards
             bound to it.
 
-    Returns "" when every section is silent — the hook then emits nothing,
+    Returns "" when every section is silent - the hook then emits nothing,
     keeping quiet sessions quiet.
     """
     builders: list[tuple[str, Callable[[], str]]] = []

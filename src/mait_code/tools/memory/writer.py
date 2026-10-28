@@ -91,7 +91,7 @@ def _fts_candidates(
             )
         return cursor.fetchall()
     except sqlite3.OperationalError:
-        # FTS table doesn't exist yet — fall back to LIKE
+        # FTS table doesn't exist yet - fall back to LIKE
         first_words = " ".join(content.split()[:5])
         cursor = conn.execute(
             f"""SELECT m.id, m.content FROM memory_entries m
@@ -118,7 +118,7 @@ def _vector_candidates(
 
     Returns:
         Tuples of ``(id, content, similarity)``. Empty if the stored vectors
-        came from a different model — dedup then rests on string similarity.
+        came from a different model - dedup then rests on string similarity.
     """
     status = vectors_usable(conn)
     if not status.usable:
@@ -169,7 +169,7 @@ def _assess_candidates(
     Uses two candidate sources (FTS5 keywords plus vector similarity) and
     two similarity measures: ``SequenceMatcher`` >= 0.85 for string-level
     duplicates, cosine similarity >= 0.92 for semantic duplicates. Dedup is
-    project-scoped — identical content in different projects is treated as
+    project-scoped - identical content in different projects is treated as
     separate entries. Superseded entries are excluded as candidates.
 
     Args:
@@ -182,7 +182,7 @@ def _assess_candidates(
         ``(duplicate_id, conflicts)``. ``duplicate_id`` is the id of a
         near-duplicate to merge into, or ``None``. ``conflicts`` is a list of
         ``(id, content, similarity)`` for entries in the contradiction band
-        ``[CONFLICT_SIMILARITY_THRESHOLD, VECTOR_SIMILARITY_THRESHOLD)`` —
+        ``[CONFLICT_SIMILARITY_THRESHOLD, VECTOR_SIMILARITY_THRESHOLD)`` -
         candidates that say something related-but-different. It is only
         populated when ``duplicate_id`` is ``None`` (a clear duplicate
         short-circuits the scan) and is sorted by similarity, highest first.
@@ -269,7 +269,7 @@ def store_memory(
             extracted architectural decision; ``insight`` is reserved for
             reflection output. Invalid values fall back to ``fact``.
         importance: Importance level 1-10 (clamped).
-        scope: Memory scope — ``"global"``, ``"project"``, or ``"branch"``.
+        scope: Memory scope - ``"global"``, ``"project"``, or ``"branch"``.
         project: Project identifier (e.g. repo basename).
         branch: Branch name (for branch-scoped memories).
         source: What wrote the entry, when not a session's own hook (e.g.
@@ -280,7 +280,7 @@ def store_memory(
     Returns:
         A dict with keys ``action`` (``"created"`` or ``"deduplicated"``),
         ``id``, ``content``, ``scope``, ``project``, ``branch``, and
-        ``potential_conflicts`` — a list of ``{"id", "content", "similarity"}``
+        ``potential_conflicts`` - a list of ``{"id", "content", "similarity"}``
         for existing entries in the contradiction band that this write may
         contradict. The write is never blocked; the conflicts are surfaced so
         the companion can suggest superseding one of them. Empty on a
@@ -354,7 +354,7 @@ def supersede_memory(
     """Supersede an existing memory entry with an evolved version.
 
     Inserts ``content`` as a fresh entry that inherits the old entry's type,
-    class, and scope (project/branch), then marks the old entry superseded —
+    class, and scope (project/branch), then marks the old entry superseded -
     pointing ``superseded_by`` at the new id and stamping ``superseded_at``.
     The old row is kept for auditability but hidden from default surfacing.
     The new entry keeps the old one's ``source`` too, so a job-sourced fact
@@ -436,12 +436,12 @@ def merge_memories(
 
     Inserts ``content`` as a single fresh entry, then supersedes every existing
     row in ``old_ids`` by pointing each ``superseded_by`` at the new id. This is
-    the N→1 counterpart to :func:`supersede_memory`: use it when reflection
+    the N->1 counterpart to :func:`supersede_memory`: use it when reflection
     finds two or more overlapping facts that should read as one.
 
     The new entry inherits type, class, and scope (project/branch) from the
     first *existing* row in ``old_ids``. Its importance defaults to the highest
-    importance among the merged rows — a merge promotes, it does not dilute —
+    importance among the merged rows - a merge promotes, it does not dilute -
     unless overridden. Ids that don't exist are skipped and reported back in
     ``not_found``; the merge proceeds on whatever remains. If any merged row
     is job-sourced, the new entry takes the first such row's ``source``, and
@@ -529,7 +529,7 @@ def merge_memories(
 
 
 def retire_memory(conn: sqlite3.Connection, entry_id: int) -> dict:
-    """Retire a memory entry — drop it with no replacement.
+    """Retire a memory entry - drop it with no replacement.
 
     Stamps ``superseded_at`` while leaving ``superseded_by`` NULL. That pair is
     the *retired* marker: the row is hidden from default surfacing (see
@@ -587,7 +587,7 @@ def retire_by_source(
 
     Returns:
         The matching entries, oldest first, as ``{"id", "content", "project"}``
-        dicts — the ones retired when ``apply`` is set.
+        dicts - the ones retired when ``apply`` is set.
     """
     conditions = ["m.source = ?", LIVE_ENTRY_SQL]
     params: list = [source]
@@ -615,7 +615,7 @@ def mark_reviewed(conn: sqlite3.Connection, entry_id: int) -> dict:
     Reviewing an entry (confirming it's still true, or refining/retiring it)
     marks it engaged-with so it drops out of the due-for-review set until a
     fresh half-life elapses. See :mod:`mait_code.tools.memory.review`. Content
-    and ``created_at`` are untouched — only the review anchor moves.
+    and ``created_at`` are untouched - only the review anchor moves.
 
     Args:
         conn: Open memory database connection.

@@ -6,7 +6,7 @@ exercise real filesystem effects (symlinks, JSON files, directory
 creation) without polluting the developer's actual home.
 
 The `fake_source` fixture materialises a minimal mait-code-shaped
-source tree at a tmp path — enough for `install` to validate against
+source tree at a tmp path - enough for `install` to validate against
 without copying the full repo.
 """
 
@@ -102,7 +102,7 @@ def fake_source(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def cleanup_state_dir(fake_home: Path):  # noqa: ARG001 — fixture chaining
+def cleanup_state_dir(fake_home: Path):  # noqa: ARG001 - fixture chaining
     """Ensure the state dir is fresh for each test by removing it afterwards."""
     yield
     state = fake_home / ".local" / "share" / "mait-code"

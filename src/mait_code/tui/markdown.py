@@ -19,7 +19,7 @@ def _hard_breaks(state) -> None:
     """Core rule: rewrite every ``softbreak`` token to a ``hardbreak``.
 
     The ``breaks`` *option* only changes markdown-it's HTML renderer (softbreak
-    → ``<br>``); the token type stays ``softbreak``, and Textual's Markdown
+    -> ``<br>``); the token type stays ``softbreak``, and Textual's Markdown
     widget keys off the token *type*, rendering a softbreak as a space. So the
     option alone is invisible in the TUI. Rewriting the token type is what
     actually lands the hard break in the rendered widget.

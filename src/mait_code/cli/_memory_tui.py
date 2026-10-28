@@ -50,7 +50,7 @@ def run_memory_tui(db_path: Path | None = None) -> None:
     MemoryApp(db_path=db_path).run()
 
 
-#: Entry types in display order — the semantic, long-lived kinds first, the
+#: Entry types in display order - the semantic, long-lived kinds first, the
 #: episodic ones after. Types the store grows later (or unexpected historical
 #: values) still render: they're appended alphabetically after these.
 _TYPE_ORDER: tuple[str, ...] = (
@@ -114,7 +114,7 @@ def _scope_label(entry: dict) -> str:
 
 def _group_entries(entries: list[dict]) -> dict[str, list[dict]]:
     """Bucket entries by type, ordered per :data:`_TYPE_ORDER` (unknown types
-    appended alphabetically). Entry order within a group is preserved — the
+    appended alphabetically). Entry order within a group is preserved - the
     list query already sorts newest-first."""
     by_type: dict[str, list[dict]] = {}
     for entry in entries:
@@ -125,7 +125,7 @@ def _group_entries(entries: list[dict]) -> dict[str, list[dict]]:
 
 
 class MemoryApp(MaitApp):
-    """Master–detail, read-only browser over both curated memory layers."""
+    """Master-detail, read-only browser over both curated memory layers."""
 
     TITLE = "mait-code memory"
     CSS_PATH = [SHARED_TCSS, Path(__file__).parent / "_memory.tcss"]
@@ -148,7 +148,7 @@ class MemoryApp(MaitApp):
     ) -> None:
         super().__init__()
         self._conn = get_connection(db_path)  # one connection for the app's life
-        self._native_dir = native_dir  # None → Claude Code's real projects dir
+        self._native_dir = native_dir  # None -> Claude Code's real projects dir
         self._view = "store"
         self._entries: list[dict] = []
         self._native_projects: list[dict] = []
@@ -172,7 +172,7 @@ class MemoryApp(MaitApp):
 
     def on_mount(self) -> None:
         # Unlike the settings editor, the detail pane here holds no focusable
-        # editor widget — the *container* keeps focus so a long body can be
+        # editor widget - the *container* keeps focus so a long body can be
         # scrolled from the keyboard (Tab or `2` to reach it, arrows to read).
         tree: Tree[dict] = self.query_one("#list", Tree)
         tree.show_root = False
@@ -191,7 +191,7 @@ class MemoryApp(MaitApp):
     # -- data ----------------------------------------------------------------
 
     def _load_entries(self) -> None:
-        """(Re)read the store — everything, unless narrowed to one project."""
+        """(Re)read the store - everything, unless narrowed to one project."""
         self._entries = list_entries(
             self._conn, limit=_FETCH_LIMIT, project=self._project
         )
@@ -256,7 +256,7 @@ class MemoryApp(MaitApp):
 
         Without a filter, the first group opens with the cursor on its newest
         memory so the detail pane shows content on boot; the rest stay
-        collapsed behind their counts. With a filter, every group expands —
+        collapsed behind their counts. With a filter, every group expands -
         the matches are the point.
         """
         tree: Tree[dict] = self.query_one("#list", Tree)
@@ -314,7 +314,7 @@ class MemoryApp(MaitApp):
         if first_leaf is not None:
             # Deferred until after the first refresh: the tree's visible-line
             # map (which move_cursor indexes into) isn't built until then. The
-            # detail render is explicit, not left to the highlight event — when
+            # detail render is explicit, not left to the highlight event - when
             # a rebuild lands the cursor on the same line index, Tree emits no
             # NodeHighlighted and the pane would go stale.
             self.call_after_refresh(tree.move_cursor, first_leaf)
@@ -452,7 +452,7 @@ class MemoryApp(MaitApp):
                 classes="help",
             ),
             # The resolved path when the de-munge found one; the raw slug
-            # otherwise — either way, where this memory actually lives.
+            # otherwise - either way, where this memory actually lives.
             Label(str(project["memory_dir"]), classes="help"),
         )
 
@@ -499,7 +499,7 @@ class MemoryApp(MaitApp):
 
         The hierarchical escape: from the filter or the detail pane it returns
         focus to the tree, and from the tree (nothing left to back out of) it
-        exits — so escape always eventually leaves, like ``q``.
+        exits - so escape always eventually leaves, like ``q``.
         """
         if self.query_one("#list", Tree).has_focus:
             self.exit()
@@ -515,7 +515,7 @@ class MemoryApp(MaitApp):
         self._load_native()
         self.query_one("#filter", Input).placeholder = "filter native memory…"
         self._rebuild_tree()
-        self.refresh_bindings()  # the n binding swaps Native ⇄ Store
+        self.refresh_bindings()  # the n binding swaps Native <-> Store
         self.action_focus_list()
 
     def action_show_store(self) -> None:
@@ -539,7 +539,7 @@ class MemoryApp(MaitApp):
             current = self._project
         result = await self.push_screen_wait(ProjectFilterScreen(projects, current))
         if result is None:
-            return  # escape/cancel — leave the active filter as-is
+            return  # escape/cancel - leave the active filter as-is
         # A project name filters to it; the ALL_PROJECTS sentinel clears it.
         choice = result if isinstance(result, str) else None
         if self._view == "native":
@@ -551,7 +551,7 @@ class MemoryApp(MaitApp):
         self.action_focus_list()
 
     def action_reload(self) -> None:
-        """Re-read the active layer — picks up memories written since launch."""
+        """Re-read the active layer - picks up memories written since launch."""
         if self._view == "native":
             self._native_text_cache.clear()
             self._load_native()

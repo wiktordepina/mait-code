@@ -6,7 +6,7 @@ review anchors, and the app is given a pinned ``now``, so the due set, its
 ordering and its recall figures never drift; the theme is the ``mait-dark``
 default applied by :class:`~mait_code.tui.app.MaitApp`.
 
-These baselines feed ``docs/gen_review_screenshots.py`` — regenerate them
+These baselines feed ``docs/gen_review_screenshots.py`` - regenerate them
 intentionally (and eyeball the diff) with::
 
     uv run pytest tests/cli/test_review_tui_snapshot.py --snapshot-update

@@ -1,4 +1,4 @@
-"""CLI tool for reminders — set, list, dismiss, and check overdue."""
+"""CLI tool for reminders - set, list, dismiss, and check overdue."""
 
 import argparse
 import logging

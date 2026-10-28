@@ -4,7 +4,7 @@ Two halves. The first is a set of *guard* tests over the catalogue itself:
 these don't exercise code so much as pin the curation, so a preset that quietly
 permits a mutating command fails the suite rather than shipping. The second
 drives the read/merge machinery against real files under a fake ``$HOME``,
-including from inside a git repo — the target must not move with the cwd.
+including from inside a git repo - the target must not move with the cwd.
 """
 
 from __future__ import annotations
@@ -46,8 +46,8 @@ def _write(path: Path, document: dict) -> None:
 def test_no_preset_permits_a_mutating_command() -> None:
     """The core safety property: nothing in the catalogue permits a mutation.
 
-    Checked against :data:`MUTATING_INVOCATIONS` — concrete command lines for
-    the same tools the catalogue covers — using the *permissive* raw-prefix
+    Checked against :data:`MUTATING_INVOCATIONS` - concrete command lines for
+    the same tools the catalogue covers - using the *permissive* raw-prefix
     matcher, so a preset has to be safe even under the worst reading of Claude
     Code's matching rules.
     """
@@ -122,7 +122,7 @@ def test_preset_groups_preserve_catalogue_order() -> None:
         ("Bash(git diff:*)", "git difftool --extcmd=sh", False),
         ("Bash(git branch:*)", "git branchfoo", False),
         # ...but any continuation *after* the boundary is permitted, flags
-        # included — which is why narrowing must happen in the prefix.
+        # included - which is why narrowing must happen in the prefix.
         ("Bash(git branch:*)", "git branch -D main", True),
         # The space form is a real wildcard, not the literal text "git *".
         ("Bash(git *)", "git push origin main", True),
@@ -162,7 +162,7 @@ def test_space_and_colon_forms_agree() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Target file — the launch directory must not be an input
+# Target file - the launch directory must not be an input
 # ---------------------------------------------------------------------------
 
 
@@ -212,7 +212,7 @@ def test_state_ignores_a_preset_sitting_in_a_project_file(
     states = {s.preset.id: s for s in perms.resolve_states()}
     assert states["git-status"].enabled is False
     assert perms.disable_preset("git-status").changed is False
-    # Not merely "reported no change" — the project file is genuinely untouched,
+    # Not merely "reported no change" - the project file is genuinely untouched,
     # so the rule really is still in force rather than quietly swept.
     assert json.loads(project_file.read_text(encoding="utf-8")) == {
         "permissions": {"allow": list(perms.preset_by_id("git-status").patterns)}
@@ -437,7 +437,7 @@ def test_disable_leaves_neighbouring_rules_alone(fake_home: Path) -> None:
     perms.enable_preset("git-status")
     perms.disable_preset("git-status")
     document = json.loads(path.read_text(encoding="utf-8"))
-    # The near-identical hand-written rule is untouched — only this preset's own
+    # The near-identical hand-written rule is untouched - only this preset's own
     # patterns are removed, never anything that merely resembles them.
     assert document["permissions"]["allow"] == ["Bash(mine:*)", hand_written]
 

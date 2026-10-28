@@ -261,9 +261,13 @@ decides docstring flavour and layout.
 | Greek letters | spell them out: `alpha`, `delta`, `micro` |
 | box drawing, bullets, emoji | plain text, a `-` list, or nothing |
 
-**Naming a non-ASCII character.** A comment that has to talk about one (a test
-for a glyph, a parser for smart quotes) names it by escape or Unicode name,
-never the literal: `U+2014 EM DASH`, `"\u2014"`.
+**Quoting a glyph.** A comment that refers to a specific character the code
+renders, parses or matches (a status mark, a separator, the glyph a test looks
+for) quotes it literally: the reader sees what the user sees, which no Unicode
+name conveys. Use an escape or Unicode name (`U+00A0 NO-BREAK SPACE`,
+`"\u200b"`) only where the literal would mislead: invisible characters, and
+lookalikes such as an en dash beside a hyphen. Where a guard enforces this rule,
+record the quoted character as an allowed exception for that file.
 
 The other exceptions are narrow: a verbatim quoted error string or log line,
 an identifier or literal that genuinely contains the character, a proper noun.

@@ -10,6 +10,18 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Changed
+
+- **Comments, docstrings and the shipped skills are plain ASCII.** Em dashes,
+  arrows and other non-ASCII characters in Python comments and docstrings
+  (attribute docstrings included), the mod's comments, and the skill and agent
+  markdown are rewritten per the `code-comments` skill's Rule 7. A comment
+  that refers to a specific glyph the code renders keeps it, and Rule 7 now
+  says so. A new test, `tests/test_ascii_only.py`, guards both, with each
+  quoted glyph recorded per file. The API reference text on the docs site
+  changes accordingly, as does `mait-code settings unset --help`; no string
+  literal does.
+
 ## [0.91.0] — 2026-10-28
 
 ### Added

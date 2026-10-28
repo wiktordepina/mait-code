@@ -44,7 +44,7 @@ def test_publish_disabled_makes_no_channel_call():
 
 def test_publishes_overdue_reminders_once(bridge_on):
     rid = _add_reminder("ring the vet")
-    _add_reminder("future thing", overdue=False)  # not yet due — skipped
+    _add_reminder("future thing", overdue=False)  # not yet due - skipped
 
     outcome = service.publish_due_reminders()
     assert outcome.status == "ok"

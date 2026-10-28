@@ -60,9 +60,9 @@ MAIT_DARK = Theme(
 #: clears WCAG AA against the three bases (see ``test_theme.py``).
 MAIT_BUBBLEGUM = Theme(
     name="mait-bubblegum",
-    primary="#FF6AC1",  # hot pink — frame, hints, #id
-    secondary="#9D7CFF",  # purple — tags
-    accent="#4DE8C2",  # mint — section heads
+    primary="#FF6AC1",  # hot pink - frame, hints, #id
+    secondary="#9D7CFF",  # purple - tags
+    accent="#4DE8C2",  # mint - section heads
     foreground="#ECE6F5",  # near-white lilac
     background="#161320",  # deep aubergine-charcoal
     surface="#1F1A2E",
@@ -75,13 +75,13 @@ MAIT_BUBBLEGUM = Theme(
 )
 
 #: The calmer-but-colourful option: keeps a restrained dark base, but actually
-#: spreads three hues across the chrome (teal → periwinkle → violet) so it reads
+#: spreads three hues across the chrome (teal -> periwinkle -> violet) so it reads
 #: more separated than mait-dark without going neon.
 MAIT_AURORA = Theme(
     name="mait-aurora",
     primary="#5CC8E0",  # teal-cyan
-    secondary="#8C9EFF",  # periwinkle — tags
-    accent="#C792EA",  # violet — section heads
+    secondary="#8C9EFF",  # periwinkle - tags
+    accent="#C792EA",  # violet - section heads
     foreground="#D7E0EA",
     background="#0E141B",  # cool slate
     surface="#141C26",
@@ -98,9 +98,9 @@ MAIT_AURORA = Theme(
 #: mait-dark/aurora and the neon bubblegum.
 MAIT_EMBER = Theme(
     name="mait-ember",
-    primary="#F2A65A",  # amber — frame, hints, #id
-    secondary="#6FB3B8",  # teal — comment bar
-    accent="#C98BB9",  # mauve — section heads
+    primary="#F2A65A",  # amber - frame, hints, #id
+    secondary="#6FB3B8",  # teal - comment bar
+    accent="#C98BB9",  # mauve - section heads
     foreground="#ECE3D8",  # warm off-white
     background="#1A1512",  # roasted brown-charcoal
     surface="#241D18",
@@ -117,9 +117,9 @@ MAIT_EMBER = Theme(
 #: a code editor.
 MAIT_SYNTAX = Theme(
     name="mait-syntax",
-    primary="#45BFA8",  # teal — frame, hints, #id (the `def` colour)
-    secondary="#E8975C",  # orange — comment bar (params)
-    accent="#C08CE0",  # violet — section heads (types)
+    primary="#45BFA8",  # teal - frame, hints, #id (the `def` colour)
+    secondary="#E8975C",  # orange - comment bar (params)
+    accent="#C08CE0",  # violet - section heads (types)
     foreground="#D7DAD2",
     background="#181C1B",  # near-black with a faint teal cast
     surface="#20251F",

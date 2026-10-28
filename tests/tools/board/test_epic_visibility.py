@@ -2,7 +2,7 @@
 
 An epic is a card row on the reserved :data:`EPIC_PROJECT`; it belongs in the
 initiatives view only. Each test seeds one live card and one epic into the
-isolated data dir and asserts a reader sees the card and not the epic — so a
+isolated data dir and asserts a reader sees the card and not the epic - so a
 reader that bypasses the service's ``kind='card'`` default shows up here.
 """
 

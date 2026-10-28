@@ -1,9 +1,9 @@
 """Tests for the Textual ``mait-code review`` TUI.
 
 Driven by Textual's headless pilot (``App.run_test()`` wrapped in
-``asyncio.run`` — no pytest-asyncio), mirroring ``test_memory_tui.py``. The app
+``asyncio.run`` - no pytest-asyncio), mirroring ``test_memory_tui.py``. The app
 takes a ``db_path`` (an isolated temp store) and an injected ``now`` so the due
-set and its recall figures are deterministic — never drifting with wall-clock.
+set and its recall figures are deterministic - never drifting with wall-clock.
 Entries are seeded with direct SQL inserts, so the tests never touch the
 embedding path and timestamps stay fixed.
 """
@@ -32,7 +32,7 @@ def _run(coro_factory):
 
 @pytest.fixture(autouse=True)
 def _no_embedding(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Refine supersedes through the real writer — but not the slow,
+    """Refine supersedes through the real writer - but not the slow,
     environment-dependent embedding model. Stub it out: the writer's own
     contract is to store without a vector when embedding is unavailable, so
     this exercises exactly that documented fallback, fast and deterministically.
@@ -49,14 +49,14 @@ def store_path(tmp_path: Path) -> Path:
 
 
 def _subtitle(app: ReviewApp) -> str:
-    """The banner's current view subtitle — carries the live queue state."""
+    """The banner's current view subtitle - carries the live queue state."""
     return app.query_one(BrandBanner)._subtitle
 
 
 def _seed(db_path: Path, entries: list[dict]) -> None:
     """Insert entries (each a dict of overrides) with explicit review anchors.
 
-    Bypasses ``store_memory`` — a direct insert skips dedup and embeddings and
+    Bypasses ``store_memory`` - a direct insert skips dedup and embeddings and
     pins ``reviewed_at``/``created_at`` so the due order never drifts.
     """
     conn = get_connection(db_path)
@@ -85,7 +85,7 @@ def _seed(db_path: Path, entries: list[dict]) -> None:
         conn.close()
 
 
-#: Three episodic facts reviewed ~40 days before NOW — far past the 3-day
+#: Three episodic facts reviewed ~40 days before NOW - far past the 3-day
 #: half-life, so all three are due (recall well below the 0.5 threshold).
 _THREE_DUE = [
     {"content": "alpha fact still true", "reviewed_at": "2026-06-01 00:00:00"},
@@ -232,7 +232,7 @@ def test_refine_supersedes_with_new_content(store_path: Path) -> None:
             app.screen.query_one("#refine-input").text = "the refined, current fact"
             app.screen.action_save()
             await pilot.pause()
-            # supersede embeds inline on a worker thread — give it a beat.
+            # supersede embeds inline on a worker thread - give it a beat.
             for _ in range(20):
                 if all(e["id"] != target for e in app._due):
                     break
@@ -272,7 +272,7 @@ def test_refine_unchanged_content_is_a_noop(store_path: Path) -> None:
             target = app._due[0]["id"]
             app.action_refine()
             await pilot.pause()
-            # Save without editing → no supersede.
+            # Save without editing -> no supersede.
             app.screen.action_save()
             await pilot.pause()
             await asyncio.sleep(0.1)

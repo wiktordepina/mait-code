@@ -6,7 +6,7 @@ stubbed ``safe_runner``. These tests pin the remaining branches: the real
 the settings-clean exception path, the no-settings skip, and removal of the
 centralised TOML settings file (and its now-empty config dir).
 
-All effects land under the ``fake_home`` tmp tree — no real ``~/.claude`` or
+All effects land under the ``fake_home`` tmp tree - no real ``~/.claude`` or
 ``uv`` invocation escapes the sandbox.
 """
 
@@ -33,7 +33,7 @@ def _safe_runner_success(_cmd: list[str]) -> bool:
 def test_safe_default_runner_success(monkeypatch: pytest.MonkeyPatch) -> None:
     """A command that exits 0 returns True."""
 
-    def fake_run(cmd, check, capture_output):  # noqa: ARG001 — signature mirror
+    def fake_run(cmd, check, capture_output):  # noqa: ARG001 - signature mirror
         return subprocess.CompletedProcess(cmd, 0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -45,7 +45,7 @@ def test_safe_default_runner_called_process_error(
 ) -> None:
     """A non-zero exit (CalledProcessError) is swallowed and returns False."""
 
-    def fake_run(cmd, check, capture_output):  # noqa: ARG001 — signature mirror
+    def fake_run(cmd, check, capture_output):  # noqa: ARG001 - signature mirror
         raise subprocess.CalledProcessError(1, cmd)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -55,7 +55,7 @@ def test_safe_default_runner_called_process_error(
 def test_safe_default_runner_missing_binary(monkeypatch: pytest.MonkeyPatch) -> None:
     """``uv`` not on PATH (FileNotFoundError) is swallowed and returns False."""
 
-    def fake_run(cmd, check, capture_output):  # noqa: ARG001 — signature mirror
+    def fake_run(cmd, check, capture_output):  # noqa: ARG001 - signature mirror
         raise FileNotFoundError("uv")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -82,7 +82,7 @@ def test_corrupt_record_warns_and_continues(fake_home: Path, fake_source: Path) 
     assert not install_record_path().exists()
 
 
-# --- no settings.json — clean step skipped (branch 152->161) ---
+# --- no settings.json - clean step skipped (branch 152->161) ---
 
 
 def test_no_settings_file_skips_clean(fake_home: Path, fake_source: Path) -> None:
@@ -98,7 +98,7 @@ def test_no_settings_file_skips_clean(fake_home: Path, fake_source: Path) -> Non
     assert not any("could not clean" in w for w in summary.warnings)
 
 
-# --- settings clean raises — warning path (lines 157-158) ---
+# --- settings clean raises - warning path (lines 157-158) ---
 
 
 def test_settings_clean_failure_is_warning(

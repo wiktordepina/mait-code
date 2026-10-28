@@ -299,7 +299,7 @@ def _memory_db_path(ddir: Path) -> Path:
 def _open_memory_db(db: Path) -> sqlite3.Connection:
     """Open ``memory.db`` raw, with sqlite-vec loaded but no migrations.
 
-    Doctor is diagnostic — it must observe the database as the tools left
+    Doctor is diagnostic - it must observe the database as the tools left
     it, not create or migrate it as :func:`tools.memory.db.get_connection`
     would.
     """
@@ -330,7 +330,7 @@ def _fix_memory_embeddings(
 
     Normally only the gap the check found is filled. ``run_reindex``
     rebuilds every vector instead when the stored ones came from another
-    model — by then ``_check_embedding_record`` has usually settled that,
+    model - by then ``_check_embedding_record`` has usually settled that,
     so this is the gap-filling case in practice. Progress is redirected to stderr so ``doctor --fix --json``
     keeps a parseable stdout. A provider that can't run leaves the
     original warn standing, with the failure folded into the message.
@@ -393,7 +393,7 @@ def _check_memory_embeddings(ddir: Path, fix: bool, fixes: list[str]) -> Check:
 def _check_embedding_record(ddir: Path, fix: bool, fixes: list[str]) -> Check:
     """The stored vectors should be recorded as built by the configured model.
 
-    Vectors from another model — same width or not — make similarities
+    Vectors from another model - same width or not - make similarities
     meaningless, so the tools stop using them until a reindex: that's a
     fail. No record at all is a warn: the tools stay permissive, but a
     model change would go unnoticed. ``--fix`` settles either through
@@ -537,7 +537,7 @@ def _check_bridge() -> Check:
     """When the Bridge gate is on, its channel config must be complete.
 
     A disabled Bridge needs no config (the default, corporate-safe state); an
-    enabled-but-blank one is a warning, never a fail — the drain simply no-ops
+    enabled-but-blank one is a warning, never a fail - the drain simply no-ops
     and logs rather than crashing a session.
     """
     from mait_code.bridge import config as bridge_config
@@ -641,7 +641,7 @@ def _claude_version() -> tuple[int, int, int] | None:
 def _check_nested_llm() -> Check:
     """One real nested call must succeed with no tools and no MCP servers.
 
-    Observe and reflect fail quietly — a warning in the log — so a host where
+    Observe and reflect fail quietly - a warning in the log - so a host where
     every nested call is refused (e.g. by a managed MCP config) otherwise
     goes unnoticed. This makes a tiny real model call over the network, so
     it runs only on ``doctor --llm``, never by default or from the hub or

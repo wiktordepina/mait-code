@@ -1,4 +1,4 @@
-"""Tests for observe hook CLI — stdin parsing and transcript fallback."""
+"""Tests for observe hook CLI - stdin parsing and transcript fallback."""
 
 import io
 import json
@@ -28,7 +28,7 @@ def propagate_logs(monkeypatch):
 
 
 class TestReadEvent:
-    """Tests for _read_event — resilient stdin JSON parsing."""
+    """Tests for _read_event - resilient stdin JSON parsing."""
 
     def test_valid_json(self):
         event = {"session_id": "abc", "transcript_path": "/tmp/t.jsonl"}
@@ -49,7 +49,7 @@ class TestReadEvent:
 
 
 class TestFindTranscript:
-    """Tests for _find_transcript — filesystem fallback."""
+    """Tests for _find_transcript - filesystem fallback."""
 
     def test_finds_newest_transcript(self, tmp_path: Path):
         slug = munge_path(str(tmp_path))
@@ -126,7 +126,7 @@ class TestFindTranscript:
         assert result == str(transcript)
 
     def test_slug_replaces_other_non_alphanumerics(self, tmp_path: Path):
-        """Underscores, spaces and other punctuation collapse to dashes too —
+        """Underscores, spaces and other punctuation collapse to dashes too -
         matching Claude Code's replace(/[^a-zA-Z0-9]/g, "-")."""
         cwd = "/Users/someone/my_proj v2"
         slug = "-Users-someone-my-proj-v2"
@@ -215,7 +215,7 @@ class TestRunCursorAdvance:
         """Drive _run once with a mocked transcript read and extraction result.
 
         The transcript file is created on disk so ``_run``'s existence guard
-        passes — ``read_new_lines`` is mocked, so its contents are irrelevant.
+        passes - ``read_new_lines`` is mocked, so its contents are irrelevant.
         Cursor functions are left real (backed by the temp data dir) so the
         persisted offset reflects the actual decision.
         """
@@ -283,7 +283,7 @@ class TestRunCursorAdvance:
 
 
 class TestMain:
-    """Tests for main() — the hook entry point wrapper."""
+    """Tests for main() - the hook entry point wrapper."""
 
     def test_nested_invocation_is_skipped(self, monkeypatch):
         """A nested claude invocation short-circuits before running anything."""
@@ -319,7 +319,7 @@ class TestMain:
         assert exc.value.code == 0
 
     def test_unexpected_error_is_swallowed(self, monkeypatch, caplog, propagate_logs):
-        """Any other exception is logged and the hook exits 0 — never fails."""
+        """Any other exception is logged and the hook exits 0 - never fails."""
         monkeypatch.delenv("MAIT_CODE_NESTED", raising=False)
         # The @log_invocation decorator also calls setup_logging() (which would
         # flip propagate back to False and defeat caplog); patch it at the
@@ -363,7 +363,7 @@ class TestRunNoTranscript:
     def test_no_transcript_anywhere_warns_and_returns(
         self, data_dir: Path, monkeypatch, caplog, propagate_logs
     ):
-        """Neither stdin nor fallback yields a path — warn and return."""
+        """Neither stdin nor fallback yields a path - warn and return."""
         monkeypatch.setattr(
             sys, "argv", ["mc-hook-observe", "--trigger", "session-end"]
         )
@@ -433,7 +433,7 @@ class TestRunMissingTranscript:
 
     The stdin event can name a transcript that was never written or already
     cleaned up (a brand-new or ended session). That's expected and
-    non-actionable — _run logs a WARNING and returns without touching the
+    non-actionable - _run logs a WARNING and returns without touching the
     cursor or the extraction pipeline, rather than letting open() raise and
     surface as a generic ERROR.
     """

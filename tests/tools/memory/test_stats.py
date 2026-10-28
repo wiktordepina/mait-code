@@ -61,7 +61,7 @@ def test_collect_stats_counts_superseded_and_retired_separately(conn) -> None:
 
     a = _seed_entry(conn, "old fact", "fact")
     _seed_entry(conn, "stale fact", "fact")
-    supersede_memory(conn, a, "new fact")  # a → superseded, plus one live successor
+    supersede_memory(conn, a, "new fact")  # a -> superseded, plus one live successor
     # Retire the most recent live 'stale fact' row.
     stale_id = conn.execute(
         "SELECT id FROM memory_entries WHERE content = 'stale fact'"

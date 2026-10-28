@@ -1,4 +1,4 @@
-"""Tests for the In Review column — its place in the flow, the ``review_card``
+"""Tests for the In Review column - its place in the flow, the ``review_card``
 service call, and the ``review`` CLI verb.
 
 In Review is a normal status (always valid, no setting); only the board TUI

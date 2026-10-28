@@ -92,7 +92,7 @@ def test_defaults_are_single_sourced_with_embedding_providers() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Three-tier resolution: env → settings file → default
+# Three-tier resolution: env -> settings file -> default
 # ---------------------------------------------------------------------------
 
 
@@ -174,7 +174,7 @@ class TestSettingsFileIO:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # If os.replace blows up mid-write, the partial tempfile must not be
-        # left behind — the except branch unlinks it and re-raises.
+        # left behind - the except branch unlinks it and re-raises.
         f = tmp_path / "settings.toml"
 
         def boom(*_args: object, **_kwargs: object) -> None:
@@ -435,7 +435,7 @@ class TestChoices:
 
 
 # ---------------------------------------------------------------------------
-# Tier 2 derived values — pinned to their runtime path helpers (no drift)
+# Tier 2 derived values - pinned to their runtime path helpers (no drift)
 # ---------------------------------------------------------------------------
 
 
@@ -502,7 +502,7 @@ class TestDerivedRegistry:
 
 
 class TestTier3Advanced:
-    # Pin defaults to the constants they replaced — guards silent drift.
+    # Pin defaults to the constants they replaced - guards silent drift.
     EXPECTED = {
         "log-backup-count": "14",
         "extraction-model": "haiku",
@@ -584,7 +584,7 @@ class TestTier4Scoring:
 
 
 # ---------------------------------------------------------------------------
-# Custom [env] table — read, write round-trip, and startup injection
+# Custom [env] table - read, write round-trip, and startup injection
 # ---------------------------------------------------------------------------
 
 
@@ -658,7 +658,7 @@ class TestApplyEnv:
         try:
             assert config.apply_env() == ["MAIT_TEST_APPLY_VAR"]
             assert os.environ["MAIT_TEST_APPLY_VAR"] == "hello"
-            # Second call is a no-op — the var is now present.
+            # Second call is a no-op - the var is now present.
             assert config.apply_env() == []
         finally:
             os.environ.pop("MAIT_TEST_APPLY_VAR", None)
@@ -697,7 +697,7 @@ class TestCollectSettingsEnvRows:
         assert rows["env.MY_API_TOKEN"].value == "…1234"
 
     def test_short_secret_is_fully_masked(self) -> None:
-        # A secret of four chars or fewer reveals nothing — the whole value
+        # A secret of four chars or fewer reveals nothing - the whole value
         # collapses to bullets rather than leaking its (short) length's worth
         # of characters.
         _write_default_settings_with_env('TINY_TOKEN = "abc"\n')
@@ -710,7 +710,7 @@ class TestCollectSettingsEnvRows:
         assert not [k for k in keys if k.startswith("env.")]
 
     def test_own_injection_is_not_shadowing(self) -> None:
-        """apply_env runs before collect_settings in the real CLI — the var
+        """apply_env runs before collect_settings in the real CLI - the var
         it injected must still report source 'settings', not 'env'."""
         _write_default_settings_with_env('MAIT_TEST_INJECTED = "from-file"\n')
         os.environ.pop("MAIT_TEST_INJECTED", None)

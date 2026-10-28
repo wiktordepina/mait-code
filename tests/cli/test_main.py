@@ -8,7 +8,7 @@ import mait_code.cli as cli
 
 
 def test_main_applies_env_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
-    """main() injects the settings [env] table — the CLI doesn't route
+    """main() injects the settings [env] table - the CLI doesn't route
     through setup_logging(), so it carries its own apply_env() call."""
     order: list[str] = []
     monkeypatch.setattr(cli, "_apply_env", lambda: order.append("env"))
