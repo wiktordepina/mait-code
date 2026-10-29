@@ -2,7 +2,8 @@
 
 Covers migration 7's constraints, the service's start / step / end rules and
 the run-ending close paths, run history, how a run rides along on every card
-read, and the ``run`` CLI verbs with the ``show``, export and ``summary --session`` surfaces.
+read, and the ``run`` CLI verbs with the ``show``, export and
+``summary --session`` surfaces.
 """
 
 import json
