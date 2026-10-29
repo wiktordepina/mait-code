@@ -725,6 +725,9 @@ def cmd_run_end(args):
 
 
 def cmd_run_show(args):
+    if args.all:
+        _run_show_all(args)
+        return
     with connection() as conn:
         try:
             run = service.get_run(conn, args.id)
@@ -737,6 +740,21 @@ def cmd_run_show(args):
         print(f"Card #{args.id} has no open run.")
     else:
         print("\n".join(export.run_lines(run)))
+
+
+def _run_show_all(args):
+    with connection() as conn:
+        try:
+            runs = service.list_runs(conn, args.id)
+        except service.CardNotFound:
+            _not_found(args.id)
+
+    if args.json:
+        print(json.dumps(runs, indent=2))
+    elif not runs:
+        print(f"Card #{args.id} has no runs.")
+    else:
+        print("\n\n".join("\n".join(export.run_lines(run)) for run in runs))
 
 
 def cmd_archive(args):
@@ -1200,10 +1218,19 @@ def main():
     p_run_end.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_run_end.set_defaults(func=cmd_run_end)
 
-    p_run_show = run_sub.add_parser("show", help="Show the card's open run")
+    p_run_show = run_sub.add_parser(
+        "show", help="Show the card's open run; ended runs are kept, see --all"
+    )
     p_run_show.add_argument("id", type=int, help="Card ID")
     p_run_show.add_argument(
-        "--json", action="store_true", help="Emit the run as JSON (null if none)"
+        "--all",
+        action="store_true",
+        help="Every run on the card, open and ended, newest first",
+    )
+    p_run_show.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the run as JSON (null if none; a list with --all)",
     )
     p_run_show.set_defaults(func=cmd_run_show)
 

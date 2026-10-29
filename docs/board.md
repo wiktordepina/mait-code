@@ -217,7 +217,9 @@ mc-tool-board run end 12
   completed, archived or promoted to an epic. Finishing every step doesn't
   end it, so the final state stays visible until the playbook has reported
   on it. Starting a new run on a card with an open one needs `--replace`.
-  Ended runs are kept, though only the open run is shown.
+  Ended runs are kept: `run show N --all` lists every run on the card,
+  newest first, each ended one with its end time. An ended run has no
+  current step, even if it ended with a step still in progress.
 
 `/work N` is the playbook mait-code ships: it takes a card from refinement to
 a raised pull request in eight steps (`refine`, `design-review`, `implement`,
@@ -488,6 +490,7 @@ mc-tool-board run start ID --playbook NAME --steps "A" "B" ... [--replace] [--js
 mc-tool-board run step ID <position|name> <pending|in_progress|done|skipped|paused> [--reason ...] [--json]
 mc-tool-board run end ID [--json]
 mc-tool-board run show ID [--json]                                        # the open run, or null
+mc-tool-board run show ID --all [--json]                                  # every run, newest first, or []
 
 # Sessions (any open card; defaults come from $CLAUDE_CODE_SESSION_ID / $CLAUDE_PID)
 mc-tool-board bind ID [--session ID --pid PID] [--json]                  # bind a session (--session needs --pid)
