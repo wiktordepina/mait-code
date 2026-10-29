@@ -27,7 +27,7 @@ The run is always written with these eight names, in this order:
 | 2 | `design-review` | `/design-review N` |
 | 3 | `implement` | Build it on a branch |
 | 4 | `comment-audit` | `/code-comments` over the branch |
-| 5 | `commit-review` | `/commit` (no push), then `/pre-pr-review` |
+| 5 | `commit-review` | Repo checks, `/commit` (no push), then `/pre-pr-review` |
 | 6 | `address-findings` | Fix what the review found |
 | 7 | `tests` | Run the card's agreed tests |
 | 8 | `raise-pr` | Summarise, ask, push, raise the PR |
@@ -125,7 +125,8 @@ run; this step does. If the card changed materially, re-read it before step 3.
 - Work on a topic branch, never on the default branch. Create one if needed
   (`feat/...`, `fix/...`, following the repository's habit).
 - Build against the acceptance criteria and follow the repository's own
-  conventions (`CLAUDE.md`, `CONTRIBUTING.md`). Run its checks as you go.
+  conventions (`CLAUDE.md`, `CONTRIBUTING.md`). Run its checks (the lint,
+  format, typecheck and test commands those files name) as you go.
 - At the end of the step, report the batched assumptions.
 
 ## Step 4: `comment-audit`
@@ -135,6 +136,9 @@ branch adds or changes. Fix what it finds that the user agrees with.
 
 ## Step 5: `commit-review`
 
+- First run the repository's checks again, the same ones as step 3: step 4
+  edits code after them. Fix whatever fails before committing, so the review
+  isn't spent on what a linter would catch.
 - Invoke `/commit` to commit the work. **Do not push.**
 - Then invoke `/pre-pr-review`, which reviews the committed range cold.
   Relay its findings as that skill says, then record what it covered, so a
