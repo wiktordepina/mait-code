@@ -478,7 +478,7 @@ wheels = [
 
 [[package]]
 name = "mait-code"
-version = "0.92.0"
+version = "0.92.1"
 source = { editable = "." }
 dependencies = [
     { name = "dateparser" },

@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.92.1] — 2026-10-29
+
+### Changed
+
+- **`/work` re-runs the repository's checks before the pre-PR review.** Step
+  5 (`commit-review`) now runs the repo's lint, format, typecheck and test
+  commands before `/commit`, because step 4's comment audit edits code after
+  step 3's checks. Failures are fixed first, so the cold review isn't spent
+  on what a linter would catch. Step 3 now names the checks it means. The
+  step names and their order are unchanged.
+
 ## [0.92.0] — 2026-10-29
 
 ### Added
@@ -2962,7 +2973,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.1...HEAD
+[0.92.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.1
 [0.92.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.0
 [0.91.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.91.0
 [0.90.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.90.0
