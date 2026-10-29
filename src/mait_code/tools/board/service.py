@@ -83,6 +83,7 @@ __all__ = [
     "list_epics",
     "list_projects",
     "list_references",
+    "list_runs",
     "list_tags",
     "move_card",
     "next_refined",
@@ -431,26 +432,21 @@ def _current_step(steps: list[dict]) -> int | None:
     return None
 
 
-def _attach_runs(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
-    """Populate each card dict's ``run`` key with its open run, or ``None``.
+_RUN_COLUMNS = "id, card_id, playbook, started_at, updated_at, ended_at"
 
-    A run is ``{"id", "playbook", "started_at", "updated_at", "ended_at",
-    "current", "steps"}``, its steps ``{"position", "name", "status",
-    "reason", "started_at", "finished_at"}`` in order. Two queries for the
-    whole list (runs, then their steps), whatever its length.
+
+def _load_runs(conn: sqlite3.Connection, rows: list[tuple]) -> list[tuple[int, dict]]:
+    """Build ``(card_id, run)`` pairs from ``card_runs`` rows, in row order.
+
+    ``rows`` are selected as ``_RUN_COLUMNS``. A run is ``{"id", "playbook",
+    "started_at", "updated_at", "ended_at", "current", "steps"}``, its steps
+    ``{"position", "name", "status", "reason", "started_at", "finished_at"}``
+    in order, all loaded in one query. An ended run's ``current`` is ``None``
+    even when a step was left in progress or paused.
     """
-    if not cards:
-        return cards
-    ids = [c["id"] for c in cards]
-    placeholders = ", ".join("?" for _ in ids)
-    runs = conn.execute(
-        f"SELECT id, card_id, playbook, started_at, updated_at, ended_at "
-        f"FROM card_runs WHERE ended_at IS NULL AND card_id IN ({placeholders})",
-        ids,
-    ).fetchall()
-    by_card: dict[int, dict] = {}
+    pairs: list[tuple[int, dict]] = []
     by_run: dict[int, dict] = {}
-    for run_id, card_id, playbook, started_at, updated_at, ended_at in runs:
+    for run_id, card_id, playbook, started_at, updated_at, ended_at in rows:
         run = {
             "id": run_id,
             "playbook": playbook,
@@ -460,28 +456,50 @@ def _attach_runs(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
             "current": None,
             "steps": [],
         }
-        by_card[card_id] = by_run[run_id] = run
-    if by_run:
-        run_ids = list(by_run)
-        rows = conn.execute(
-            f"SELECT run_id, position, name, status, reason, started_at, "
-            f"finished_at FROM card_run_steps WHERE run_id IN "
-            f"({', '.join('?' for _ in run_ids)}) ORDER BY run_id, position",
-            run_ids,
-        ).fetchall()
-        for run_id, position, name, status, reason, started, finished in rows:
-            by_run[run_id]["steps"].append(
-                {
-                    "position": position,
-                    "name": name,
-                    "status": status,
-                    "reason": reason,
-                    "started_at": started,
-                    "finished_at": finished,
-                }
-            )
-        for run in by_run.values():
+        by_run[run_id] = run
+        pairs.append((card_id, run))
+    if not by_run:
+        return pairs
+    run_ids = list(by_run)
+    steps = conn.execute(
+        f"SELECT run_id, position, name, status, reason, started_at, "
+        f"finished_at FROM card_run_steps WHERE run_id IN "
+        f"({', '.join('?' for _ in run_ids)}) ORDER BY run_id, position",
+        run_ids,
+    ).fetchall()
+    for run_id, position, name, status, reason, started, finished in steps:
+        by_run[run_id]["steps"].append(
+            {
+                "position": position,
+                "name": name,
+                "status": status,
+                "reason": reason,
+                "started_at": started,
+                "finished_at": finished,
+            }
+        )
+    for run in by_run.values():
+        if run["ended_at"] is None:
             run["current"] = _current_step(run["steps"])
+    return pairs
+
+
+def _attach_runs(conn: sqlite3.Connection, cards: list[dict]) -> list[dict]:
+    """Populate each card dict's ``run`` key with its open run, or ``None``.
+
+    Runs are shaped as :func:`_load_runs` builds them. Two queries for the
+    whole list (runs, then their steps), whatever its length.
+    """
+    if not cards:
+        return cards
+    ids = [c["id"] for c in cards]
+    placeholders = ", ".join("?" for _ in ids)
+    rows = conn.execute(
+        f"SELECT {_RUN_COLUMNS} FROM card_runs "
+        f"WHERE ended_at IS NULL AND card_id IN ({placeholders})",
+        ids,
+    ).fetchall()
+    by_card = dict(_load_runs(conn, rows))
     for card in cards:
         card["run"] = by_card.get(card["id"])
     return cards
@@ -972,12 +990,26 @@ def prune_stale_bindings(conn: sqlite3.Connection, *, older_than: timedelta) -> 
 
 
 def get_run(conn: sqlite3.Connection, card_id: int) -> dict | None:
-    """Return a card's open playbook run (see :func:`_attach_runs`), or ``None``.
+    """Return a card's open playbook run (see :func:`_load_runs`), or ``None``.
 
     Raises :class:`CardNotFound` if the id is unknown.
     """
     _require_row(conn, card_id)
     return _attach_runs(conn, [{"id": card_id}])[0]["run"]
+
+
+def list_runs(conn: sqlite3.Connection, card_id: int) -> list[dict]:
+    """Return every playbook run on a card, open and ended, newest first.
+
+    Runs are shaped as :func:`get_run` returns them, newest by ``id``. Raises
+    :class:`CardNotFound` if the id is unknown.
+    """
+    _require_row(conn, card_id)
+    rows = conn.execute(
+        f"SELECT {_RUN_COLUMNS} FROM card_runs WHERE card_id = ? ORDER BY id DESC",
+        (card_id,),
+    ).fetchall()
+    return [run for _, run in _load_runs(conn, rows)]
 
 
 def _check_steps(card_id: int, steps: list[str]) -> list[str]:

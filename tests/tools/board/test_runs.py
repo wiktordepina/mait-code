@@ -1,8 +1,8 @@
 """Tests for playbook runs on board cards: a per-step run log.
 
 Covers migration 7's constraints, the service's start / step / end rules and
-the run-ending close paths, how a run rides along on every card read, and the
-``run`` CLI verbs with the ``show``, export and ``summary --session`` surfaces.
+the run-ending close paths, run history, how a run rides along on every card
+read, and the ``run`` CLI verbs with the ``show``, export and ``summary --session`` surfaces.
 """
 
 import json
@@ -361,6 +361,60 @@ def test_open_moves_keep_the_run(board_db, running, move):
     assert _runs(board_db, running) == [("work", 1)]
 
 
+# --- history ---
+
+
+def test_list_runs_returns_every_run_newest_first(board_db, running):
+    service.set_step(board_db, running, "2", STEP_SKIPPED, reason="tiny")
+    service.start_run(board_db, running, "redo", ["Only"], replace=True)
+    service.end_run(board_db, running)
+    service.start_run(board_db, running, "third", STEPS)
+    runs = service.list_runs(board_db, running)
+    assert [r["playbook"] for r in runs] == ["third", "redo", "work"]
+    assert runs[0] == _run(board_db, running)
+    assert runs[0]["ended_at"] is None
+    assert runs[1]["ended_at"] and runs[2]["ended_at"]
+    assert runs[2]["steps"][1]["reason"] == "tiny"
+
+
+def test_list_runs_orders_by_id_not_start_time(board_db, running):
+    service.end_run(board_db, running)
+    service.start_run(board_db, running, "later", ["A"])
+    board_db.execute(
+        "UPDATE card_runs SET started_at = '2000-01-01' WHERE playbook = 'later'"
+    )
+    board_db.commit()
+    assert [r["playbook"] for r in service.list_runs(board_db, running)] == [
+        "later",
+        "work",
+    ]
+
+
+def test_an_ended_run_has_no_current_step(board_db, running):
+    service.set_step(board_db, running, "2", STEP_IN_PROGRESS)
+    service.start_run(board_db, running, "redo", STEPS, replace=True)
+    old = service.list_runs(board_db, running)[1]
+    assert old["steps"][1]["status"] == STEP_IN_PROGRESS
+    assert old["current"] is None
+    assert not any("current" in line for line in export.run_lines(old))
+
+
+def test_list_runs_on_a_card_without_runs(board_db):
+    assert service.list_runs(board_db, _card(board_db)) == []
+
+
+def test_list_runs_unknown_card(board_db):
+    with pytest.raises(service.CardNotFound):
+        service.list_runs(board_db, 999)
+
+
+def test_run_lines_header_names_the_end_only_when_ended(board_db, running):
+    assert "ended" not in export.run_lines(_run(board_db, running))[0]
+    service.end_run(board_db, running)
+    header = export.run_lines(service.list_runs(board_db, running)[0])[0]
+    assert header.startswith("Run: work · started ") and " · ended " in header
+
+
 # --- concurrency ---
 
 
@@ -537,6 +591,43 @@ def test_cli_run_refusals_exit_1(monkeypatch, capsys, argv, message):
 def test_cli_run_unknown_card(monkeypatch, capsys):
     with pytest.raises(SystemExit):
         _main(monkeypatch, "run", "show", "999")
+    assert "not found" in capsys.readouterr().err
+
+
+def test_cli_run_show_all(monkeypatch, capsys):
+    cid = _cli_card()
+    _main(monkeypatch, "run", "show", str(cid), "--all")
+    assert capsys.readouterr().out == f"Card #{cid} has no runs.\n"
+    _main(monkeypatch, "run", "show", str(cid), "--all", "--json")
+    assert json.loads(capsys.readouterr().out) == []
+
+    with connection() as conn:
+        service.start_run(conn, cid, "work", STEPS)
+        service.set_step(conn, cid, "1", STEP_IN_PROGRESS)
+        service.start_run(conn, cid, "redo", STEPS, replace=True)
+        service.set_step(conn, cid, "2", STEP_SKIPPED, reason="tiny")
+    _main(monkeypatch, "run", "show", str(cid))
+    open_block = capsys.readouterr().out
+    _main(monkeypatch, "run", "show", str(cid), "--all")
+    out = capsys.readouterr().out
+    newest, oldest = out.split("\n\n")
+    assert newest + "\n" == open_block
+    assert "  2. skipped      Design review — tiny\n" in newest
+    assert oldest.startswith("Run: work · started ") and " · ended " in oldest
+    assert "  1. in progress  Refine\n" in oldest + "\n"
+    assert "current" not in oldest
+
+    _main(monkeypatch, "run", "show", str(cid), "--all", "--json")
+    runs = json.loads(capsys.readouterr().out)
+    with connection() as conn:
+        assert runs == service.list_runs(conn, cid)
+    assert [r["playbook"] for r in runs] == ["redo", "work"]
+
+
+def test_cli_run_show_all_unknown_card(monkeypatch, capsys):
+    with pytest.raises(SystemExit) as exc:
+        _main(monkeypatch, "run", "show", "999", "--all")
+    assert exc.value.code == 1
     assert "not found" in capsys.readouterr().err
 
 

@@ -115,9 +115,13 @@ def run_lines(run: dict) -> list[str]:
     """A playbook run as plain text: a header line, then one line per step.
 
     ``Run: work · started 2026-10-27 21:04``, then ``  2. skipped      Design
-    review — <reason>``, the current step marked ``← current``.
+    review — <reason>``, the current step marked ``← current``. An ended
+    run's header adds ``· ended <when>``.
     """
-    lines = [f"Run: {run['playbook']} · started {_when(run['started_at'])}"]
+    header = f"Run: {run['playbook']} · started {_when(run['started_at'])}"
+    if run["ended_at"]:
+        header += f" · ended {_when(run['ended_at'])}"
+    lines = [header]
     for step in run["steps"]:
         line = (
             f"  {step['position']}. {step['status'].replace('_', ' '):<12} "

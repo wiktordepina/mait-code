@@ -90,7 +90,7 @@ A playbook skill records where a card is in its run; you only drive these when a
 - `mc-tool-board run start N --playbook <name> --steps "A" "B" ...` writes the steps, all pending. Refused while the card has an open run, unless `--replace` (which ends it first) - check `run show N` before replacing.
 - `mc-tool-board run step N <position|name> <pending|in_progress|done|skipped|paused> [--reason ...]`. A skip needs `--reason` and the board adds the card comment itself - don't post another. Only one step can be in progress.
 - `mc-tool-board run end N` once the playbook has reported on the run; nothing ends it automatically except completing, archiving or promoting the card.
-- `mc-tool-board run show N [--json]` for the open run; `show` includes it too.
+- `mc-tool-board run show N [--json]` for the open run; `show` includes it too. Add `--all` for every run on the card, ended ones included, newest first - how earlier attempts went.
 
 ### Viewing
 

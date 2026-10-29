@@ -414,7 +414,7 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `run start` | id, --playbook, --steps…, --replace? | Start a playbook run: its ordered steps, all pending; refused while a run is open unless `--replace` |
 | `run step` | id, step, status, --reason? | Set one step (by position or exact name) to `pending`/`in_progress`/`done`/`skipped`/`paused` |
 | `run end` | id | End the card's open run, keeping it as history |
-| `run show` | id, --json? | Show the card's open run (`null` with `--json` when there is none) |
+| `run show` | id, --all?, --json? | Show the card's open run (`null` with `--json` when there is none); `--all` lists every run, open and ended, newest first (`[]` when there are none) |
 | `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
 | `edit` | id, --title?, --description?, --priority?, --acceptance?, --project?, --parent? | Edit card fields; `--parent none` takes the card out of its epic |
 | `remove` | id | Delete a card permanently (cascades comments) |
