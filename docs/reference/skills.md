@@ -325,7 +325,7 @@ so the board, the TUI and the companion mod's step row show where it is:
 | 2 | `design-review` | `/design-review` |
 | 3 | `implement` | Move the card to In Progress if needed; build it on a topic branch |
 | 4 | `comment-audit` | `/code-comments` over the branch's changed comments |
-| 5 | `commit-review` | `/commit` without pushing, then `/pre-pr-review` |
+| 5 | `commit-review` | Re-run the repo's lint, format, typecheck and tests; `/commit` without pushing, then `/pre-pr-review` |
 | 6 | `address-findings` | Fix the findings; offers a second review if the fixes add files, change an interface or grow the diff by more than ~30% |
 | 7 | `tests` | Run exactly the strategies in the card's Testing strategy section |
 | 8 | `raise-pr` | Summarise the run, ask, then push and raise the PR |
