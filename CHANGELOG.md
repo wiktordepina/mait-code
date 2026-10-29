@@ -10,6 +10,17 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.92.0] — 2026-10-29
+
+### Added
+
+- **`mc-tool-board run show N --all` reads a card's run history.** It lists
+  every playbook run on the card, open and ended, newest first, so a later
+  session can see how earlier attempts went. An ended run's header adds its
+  end time and it has no current step, even if it ended with a step still in
+  progress. `--json` gives a list, `[]` when there are none. `run show N`
+  without the flag is unchanged.
+
 ### Changed
 
 - **Comments, docstrings and the shipped skills are plain ASCII.** Em dashes,
@@ -2951,7 +2962,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.91.0...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.0...HEAD
+[0.92.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.0
 [0.91.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.91.0
 [0.90.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.90.0
 [0.89.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.89.0
