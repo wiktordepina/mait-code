@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.92.2] — 2026-10-30
+
 ### Fixed
 
 - **`scripts/probe_permissions.py` runs again on current Claude Code.** Newer
@@ -26,6 +28,14 @@ don't change the public surface. Everything is still in flux.
 - **The `allowed-tools` semantics are re-verified on Claude Code 2.1.314.**
   The probe found no drift from 2.1.220, so the documented rules stand; the
   docs and `CLAUDE.md` now name 2.1.314 as the version they were checked on.
+- **`/work` records a step before reporting it finished.** The skill now marks
+  a step `done` or `skipped` on the card before saying it's finished, and
+  treats the board's refusal to start a step while another is in progress as
+  an unrecorded step to set right, never one to reset past.
+- **`/work` step 6 offers a second review for rule changes.** Fixes that
+  change a skill's rules, a shipped convention or a guard's policy now trigger
+  the offer of a second `/pre-pr-review`, however small the diff. Like the
+  interface trigger, it's a judgement call and says so.
 
 ## [0.92.1] — 2026-10-29
 
@@ -2990,7 +3000,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.2...HEAD
+[0.92.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.2
 [0.92.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.1
 [0.92.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.0
 [0.91.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.91.0

@@ -326,12 +326,16 @@ so the board, the TUI and the companion mod's step row show where it is:
 | 3 | `implement` | Move the card to In Progress if needed; build it on a topic branch |
 | 4 | `comment-audit` | `/code-comments` over the branch's changed comments |
 | 5 | `commit-review` | Re-run the repo's lint, format, typecheck and tests; `/commit` without pushing, then `/pre-pr-review` |
-| 6 | `address-findings` | Fix the findings; offers a second review if the fixes add files, change an interface or grow the diff by more than ~30% |
+| 6 | `address-findings` | Fix the findings; offers a second review if the fixes add files, change an interface, change a rule, convention or guard policy, or grow the diff by more than ~30% |
 | 7 | `tests` | Run exactly the strategies in the card's Testing strategy section |
 | 8 | `raise-pr` | Summarise the run, ask, then push and raise the PR |
 
 **How it behaves:**
 
+- **Recorded before reported.** A step is marked `done` or `skipped` on the
+  card before Claude says it is finished. The board refuses to start a step
+  while another is in progress, and that refusal is treated as an unrecorded
+  step to set right, not something to force past.
 - **Skippable steps.** Any step can be skipped with a reason, which the board
   records in the run and as a card comment. Step 8's question is never skipped.
 - **Checkpoints.** It stops and asks at once when the work contradicts the

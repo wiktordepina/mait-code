@@ -41,8 +41,16 @@ mc-tool-board run step N <step> paused --reason "<the question>"
 mc-tool-board run step N <step> skipped --reason "<why>"
 ```
 
-Only one step is in progress at a time, so starting a step implies the last
-one is done or skipped first.
+Record a step `done` or `skipped` before telling the user it is finished: the
+run, not the conversation, is what a later session resumes from.
+
+Only one step is in progress at a time, so the board refuses to start a step
+while another is still in progress, and the refusal names that step. It means
+the earlier step was never recorded, not that the board is wrong: if it is
+finished, mark it `done`; if it was dropped, `skipped` with the reason. If it
+isn't finished, it is still the current step: go back to it, or ask, before
+starting the new one. Don't use `pending`, or `paused` without a real
+question, to get past the refusal, even though its message offers "reset".
 
 ## Skipping
 
@@ -158,6 +166,9 @@ coverage with a comment, as in step 5):
 
 - the fixes add files or modules;
 - the fixes change an interface (a judgement call: say that it is one);
+- the fixes change a skill's rules, a shipped convention or a guard's policy,
+  such as an allowlist or what it refuses, however small the diff (also a
+  judgement call: say that it is one);
 - the diff grew by more than about 30%: compare the `git diff --stat` line
   total against the base now with the total at the first review.
 
