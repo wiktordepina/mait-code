@@ -10,6 +10,8 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.92.2] — 2026-10-30
+
 ### Fixed
 
 - **`scripts/probe_permissions.py` runs again on current Claude Code.** Newer
@@ -2998,7 +3000,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.1...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.2...HEAD
+[0.92.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.2
 [0.92.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.1
 [0.92.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.0
 [0.91.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.91.0
