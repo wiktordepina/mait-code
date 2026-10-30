@@ -10,6 +10,23 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`scripts/probe_permissions.py` runs again on current Claude Code.** Newer
+  releases emit a `permission_denied` stream event whose `message` is a
+  string, and the probe crashed parsing it before measuring anything.
+
+### Changed
+
+- **The permission probe no longer loads your user-level settings.** Each
+  nested session runs with `--setting-sources project,local`, so allow rules in
+  `~/.claude/settings.json` can't confound a measurement and your hooks don't
+  fire for every probe. Managed policy settings and `~/.claude/CLAUDE.md` still
+  load.
+- **The `allowed-tools` semantics are re-verified on Claude Code 2.1.314.**
+  The probe found no drift from 2.1.220, so the documented rules stand; the
+  docs and `CLAUDE.md` now name 2.1.314 as the version they were checked on.
+
 ## [0.92.1] — 2026-10-29
 
 ### Changed
