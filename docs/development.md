@@ -380,9 +380,10 @@ Grant the narrowest set covering the commands the skill actually runs.
 
 <a id="allowed-tools-semantics"></a>
 
-There are three grant forms. Their behaviour was measured against **Claude Code
-2.1.220** by giving a throwaway project a single `permissions.allow` entry and
-running `claude -p` (headless denies instead of prompting):
+There are three grant forms. Their behaviour was first measured against Claude
+Code 2.1.220 and last verified on **2.1.314**, by giving a throwaway project a
+single `permissions.allow` entry and running `claude -p` (headless denies
+instead of prompting):
 
 | form | meaning | example |
 | --- | --- | --- |
@@ -404,7 +405,7 @@ Two consequences worth internalising:
 
 What `:*` does **not** do is span into a longer token —
 `Bash(git diff:*)` refuses `git difftool --extcmd=<anything>`. Earlier revisions
-of this page claimed the opposite; that claim was tested and is false on 2.1.220.
+of this page claimed the opposite; that claim was tested and is false on 2.1.314.
 
 **A grant buys unsandboxed execution, not merely a quiet prompt.** An ungranted
 command is not always refused — if Claude Code can contain it, it runs in a
@@ -425,7 +426,7 @@ Claude Code is also operator-aware: it decomposes compound commands and requires
 each part to be permitted. `Bash(git push:*)` refuses
 `git push --dry-run || git commit --allow-empty -m x`.
 
-All of the above is pinned to 2.1.220 and is undocumented matcher behaviour — a
+All of the above is pinned to 2.1.314 and is undocumented matcher behaviour — a
 future release could change it, so prefer prefixes that would still be safe if
 the boundary were dropped. After a Claude Code upgrade, re-measure:
 

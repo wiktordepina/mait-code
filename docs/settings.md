@@ -257,7 +257,8 @@ let `Bash(git diff:*)` reach `git difftool --extcmd=<anything>` — an arbitrary
 command per changed file — and `stat` reach `static-sh`, `tail` reach
 `tailscale`, `file` reach `file-roller`.
 
-That belief was tested against Claude Code 2.1.220 and turned out to be wrong:
+That belief was tested against Claude Code 2.1.220 and turned out to be wrong,
+and 2.1.314 still agrees:
 `:*` already stops at a token boundary, so `Bash(git diff:*)` refuses
 `git difftool`. None of those four escapes exist on this version.
 
@@ -276,14 +277,14 @@ Two other measured details are worth knowing before you write rules by hand:
   outright. So "no prompt appeared" is not evidence that a rule matched, and
   narrowing a grant needn't break anything that only reads.
 
-Both are undocumented matcher behaviour pinned to 2.1.220 — see
+Both are undocumented matcher behaviour pinned to 2.1.314 — see
 [Granting allowed-tools](development.md#granting-allowed-tools) for the full
 measurement.
 
 !!! note "Upgrading from before 0.68.0"
 
     Rules already in your `~/.claude/settings.json` keep their older form.
-    Disable and re-enable a preset to rewrite it. On 2.1.220 this is tidiness
+    Disable and re-enable a preset to rewrite it. On 2.1.314 this is tidiness
     rather than a fix — the boundary the rewrite adds is one the matcher was
     already applying.
 

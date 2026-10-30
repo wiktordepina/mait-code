@@ -114,7 +114,7 @@ def test_preset_groups_preserve_catalogue_order() -> None:
         ("Bash(wc)", "wc -l file", False),
         # Non-Bash rules are none of this module's business.
         ("Read(~/**)", "git status", False),
-        # --- measured against Claude Code 2.1.220 -------------------------
+        # --- measured against Claude Code 2.1.314 -------------------------
         # `:*` stops at a token boundary; it does not span into a longer
         # subcommand. This pair replaces an earlier raw-prefix assumption
         # that claimed the opposite.
@@ -518,7 +518,7 @@ def test_render_presets_reports_a_broken_file(
 def test_every_pattern_is_boundary_terminated() -> None:
     """The structural guard behind the sibling-prefix class of hole.
 
-    Measured against Claude Code 2.1.220, ``:*`` already stops at a token
+    Measured against Claude Code 2.1.314, ``:*`` already stops at a token
     boundary, so ``Bash(stat:*)`` does *not* reach ``static-sh``. That is an
     undocumented matcher detail rather than a promise, and which siblings exist
     is machine-dependent, so the catalogue is shaped to make the question moot:

@@ -53,10 +53,11 @@ pattern here is written as a pair - ``Bash(cmd)`` for the bare invocation and
 ``git difftool --extcmd=<cmd>`` and the trailing space was the only thing
 restoring a word boundary.
 
-Measurement against Claude Code 2.1.220 falsified that premise: ``:*`` respects
-a token boundary on its own. ``Bash(git diff:*)`` refuses ``git difftool``, and
-``Bash(git branch:*)`` refuses ``git branchfoo`` while still permitting
-``git branch -D``. The ``difftool`` escape does not exist on this version.
+Measurement against Claude Code (2.1.220, and again on 2.1.314) falsified that
+premise: ``:*`` respects a token boundary on its own. ``Bash(git diff:*)``
+refuses ``git difftool``, and ``Bash(git branch:*)`` refuses ``git branchfoo``
+while still permitting ``git branch -D``. The ``difftool`` escape does not
+exist on this version.
 
 The pair form is kept anyway. It costs nothing, it states the intended boundary
 explicitly rather than relying on an undocumented matcher detail, and it holds
@@ -170,7 +171,7 @@ ALLOW_PRESETS: tuple[Preset, ...] = (
             "rather than left to the matcher."
         ),
         # The trailing space states the word boundary explicitly. Measured against
-        # 2.1.220 `:*` already stops at a token boundary, so 'git difftool' is
+        # 2.1.314 `:*` already stops at a token boundary, so 'git difftool' is
         # refused either way - the space makes that independent of an undocumented
         # matcher detail. The first pattern covers bare `git diff`, which the
         # space-terminated prefix would otherwise miss.
@@ -575,7 +576,7 @@ def allow_rules(path: Path) -> tuple[str, ...]:
 def matches_command(pattern: str, command: str) -> bool:
     """Return ``True`` if a ``Bash(...)`` *pattern* would permit *command*.
 
-    Models the three grant forms as measured against Claude Code 2.1.220 (the
+    Models the three grant forms as measured against Claude Code 2.1.314 (the
     method and results are recorded under "Granting ``allowed-tools``" in
     ``docs/development.md``):
 

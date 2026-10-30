@@ -82,7 +82,7 @@ def test_no_skill_permits_a_forbidden_command(skill: str) -> None:
 
 @pytest.mark.parametrize("skill", sorted(GRANTS))
 def test_grants_use_the_boundary_aware_colon_form(skill: str) -> None:
-    """The space form is a real wildcard (measured on 2.1.220), not a literal.
+    """The space form is a real wildcard (measured on 2.1.314), not a literal.
 
     Both forms behave identically, so this is a consistency rule rather than a
     security one - but it keeps every grant in the shape the docs describe.

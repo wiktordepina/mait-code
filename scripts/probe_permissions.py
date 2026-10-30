@@ -4,12 +4,13 @@
 Everything mait-code asserts about ``Bash(...)`` permission patterns -
 ``cli/_permissions.matches_command``, the catalogue's prefix discipline, and
 the skill grants guarded by ``tests/test_skill_grants.py`` - rests on
-*undocumented* matcher behaviour, measured against Claude Code 2.1.220. The
-test suite pins our **model** of the matcher, not the matcher itself, so an
-upgrade can change the rules while the suite stays green.
+*undocumented* matcher behaviour, first measured against Claude Code 2.1.220
+and last verified on 2.1.314. The test suite pins our **model** of the
+matcher, not the matcher itself, so an upgrade can change the rules while the
+suite stays green.
 
 This script re-measures the real thing. Each case carries the verdict observed
-on 2.1.220; anything that disagrees is reported as DRIFT and the script exits
+on 2.1.314; anything that disagrees is reported as DRIFT and the script exits
 non-zero.
 
 Usage::
@@ -35,6 +36,10 @@ during the original investigation:
 The rule of thumb both traps share: **demand a negative control that fails.**
 If nothing in the matrix comes back denied, suspect the harness, not the
 subject.
+
+Each nested session loads only project and local settings
+(``--setting-sources project,local``), so the user's own allow rules cannot
+confound a cell and their hooks do not fire for every probe.
 """
 
 from __future__ import annotations
@@ -77,7 +82,7 @@ class Case:
     Attributes:
         rule: The single ``permissions.allow`` entry under test.
         command: The command the model is asked to run verbatim.
-        expected: The verdict observed on Claude Code 2.1.220.
+        expected: The verdict observed on Claude Code 2.1.314.
         claim: What this case is evidence for, shown in the report.
     """
 
@@ -167,7 +172,11 @@ def _events(stdout: str) -> list[dict]:
 
 def _blocks(events: Iterable[dict]) -> Iterable[dict]:
     for event in events:
-        content = (event.get("message") or {}).get("content") or []
+        # Not every message is an object: permission_denied carries a string.
+        message = event.get("message")
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content") or []
         for block in content:
             if isinstance(block, dict):
                 yield block
@@ -200,6 +209,8 @@ def probe(
                 model,
                 "--permission-mode",
                 "default",
+                "--setting-sources",
+                "project,local",
             ],
             cwd=project,
             capture_output=True,
@@ -243,7 +254,7 @@ def check_operators(root: Path, model: str) -> list[str]:
     not permitted. If both came back the same way the claim is unsupported.
 
     Returns:
-        A list of drift messages; empty when behaviour matches 2.1.220.
+        A list of drift messages; empty when behaviour matches 2.1.314.
     """
     drift = []
     simple, _ = probe(
@@ -273,7 +284,7 @@ def check_sandbox(root: Path, model: str) -> list[str]:
     why "no prompt appeared" is not evidence that a rule matched.
 
     Returns:
-        A list of drift messages; empty when behaviour matches 2.1.220.
+        A list of drift messages; empty when behaviour matches 2.1.314.
     """
     drift = []
     for slug, rule, should_exist in (
