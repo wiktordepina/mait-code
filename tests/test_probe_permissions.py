@@ -1,8 +1,8 @@
 """Guard the stream parsing in ``scripts/probe_permissions.py``.
 
 The probe only runs against a live Claude Code, so nothing else exercises its
-parser. These tests feed it recorded stream-json shapes instead, so a change in
-the event format fails here rather than as a crash halfway through a probe.
+parser. These tests feed it stream-json shapes trimmed from real sessions, so
+the parser keeps tolerating every event shape already seen in the wild.
 """
 
 from __future__ import annotations
@@ -25,11 +25,10 @@ def probe() -> Iterator[ModuleType]:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     # @dataclass resolves its own module through sys.modules while executing.
-    monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setitem(sys.modules, spec.name, module)
-    spec.loader.exec_module(module)
-    yield module
-    monkeypatch.undo()
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setitem(sys.modules, spec.name, module)
+        spec.loader.exec_module(module)
+        yield module
 
 
 #: A denied probe as Claude Code streams it, trimmed to the events that matter.

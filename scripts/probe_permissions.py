@@ -38,8 +38,10 @@ If nothing in the matrix comes back denied, suspect the harness, not the
 subject.
 
 Each nested session loads only project and local settings
-(``--setting-sources project,local``), so the user's own allow rules cannot
-confound a cell and their hooks do not fire for every probe.
+(``--setting-sources project,local``), so allow rules in the user's own
+settings cannot confound a cell and their hooks do not fire for every probe.
+Managed policy settings and the user's ``CLAUDE.md`` still load: a policy
+allow rule would show up as a baseline command the probe cannot use.
 """
 
 from __future__ import annotations
