@@ -46,9 +46,11 @@ run, not the conversation, is what a later session resumes from.
 
 Only one step is in progress at a time, so the board refuses to start a step
 while another is still in progress, and the refusal names that step. It means
-the earlier step was never recorded, not that the board is wrong: set it to
-what it really is (`done`, `skipped` with its reason, or `paused`), then start
-the new one. Don't reset it to `pending` to get past the refusal.
+the earlier step was never recorded, not that the board is wrong: if it is
+finished, mark it `done`; if it was dropped, `skipped` with the reason. If it
+isn't finished, it is still the current step: go back to it, or ask, before
+starting the new one. Don't use `pending`, or `paused` without a real
+question, to get past the refusal, even though its message offers "reset".
 
 ## Skipping
 
