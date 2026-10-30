@@ -3023,9 +3023,10 @@ persistence is free — <code>MaitApp.on_unmount</code> writes the active theme 
 <h3 id="granting-allowed-tools">Granting <code>allowed-tools</code><a class="headerlink" href="#granting-allowed-tools" title="Permanent link">&para;</a></h3>
 <p>Grant the narrowest set covering the commands the skill actually runs.</p>
 <p><a id="allowed-tools-semantics"></a></p>
-<p>There are three grant forms. Their behaviour was measured against <strong>Claude Code
-2.1.220</strong> by giving a throwaway project a single <code>permissions.allow</code> entry and
-running <code>claude -p</code> (headless denies instead of prompting):</p>
+<p>There are three grant forms. Their behaviour was first measured against Claude
+Code 2.1.220 and last verified on <strong>2.1.314</strong>, by giving a throwaway project a
+single <code>permissions.allow</code> entry and running <code>claude -p</code> (headless denies
+instead of prompting):</p>
 <table>
 <thead>
 <tr>
@@ -3066,7 +3067,7 @@ running <code>claude -p</code> (headless denies instead of prompting):</p>
 </ul>
 <p>What <code>:*</code> does <strong>not</strong> do is span into a longer token —
 <code>Bash(git diff:*)</code> refuses <code>git difftool --extcmd=&lt;anything&gt;</code>. Earlier revisions
-of this page claimed the opposite; that claim was tested and is false on 2.1.220.</p>
+of this page claimed the opposite; that claim was tested and is false on 2.1.314.</p>
 <p><strong>A grant buys unsandboxed execution, not merely a quiet prompt.</strong> An ungranted
 command is not always refused — if Claude Code can contain it, it runs in a
 filesystem-isolated sandbox with no prompt at all, and its writes are discarded.
@@ -3084,7 +3085,7 @@ be contained (<code>git commit</code>, <code>git push</code>) are refused outrig
 <p>Claude Code is also operator-aware: it decomposes compound commands and requires
 each part to be permitted. <code>Bash(git push:*)</code> refuses
 <code>git push --dry-run || git commit --allow-empty -m x</code>.</p>
-<p>All of the above is pinned to 2.1.220 and is undocumented matcher behaviour — a
+<p>All of the above is pinned to 2.1.314 and is undocumented matcher behaviour — a
 future release could change it, so prefer prefixes that would still be safe if
 the boundary were dropped. After a Claude Code upgrade, re-measure:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>./scripts/probe_permissions.py<span class="w">          </span><span class="c1"># exits non-zero if behaviour has drifted</span>

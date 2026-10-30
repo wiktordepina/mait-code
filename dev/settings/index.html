@@ -2768,7 +2768,8 @@ Claude Code matched by raw string prefix with no word boundary, which would have
 let <code>Bash(git diff:*)</code> reach <code>git difftool --extcmd=&lt;anything&gt;</code> — an arbitrary
 command per changed file — and <code>stat</code> reach <code>static-sh</code>, <code>tail</code> reach
 <code>tailscale</code>, <code>file</code> reach <code>file-roller</code>.</p>
-<p>That belief was tested against Claude Code 2.1.220 and turned out to be wrong:
+<p>That belief was tested against Claude Code 2.1.220 and turned out to be wrong,
+and 2.1.314 still agrees:
 <code>:*</code> already stops at a token boundary, so <code>Bash(git diff:*)</code> refuses
 <code>git difftool</code>. None of those four escapes exist on this version.</p>
 <p>The pair form stays regardless. It costs nothing, it says the intended boundary
@@ -2785,13 +2786,13 @@ shell out of your <code>git diff</code> grant.</p>
   outright. So "no prompt appeared" is not evidence that a rule matched, and
   narrowing a grant needn't break anything that only reads.</li>
 </ul>
-<p>Both are undocumented matcher behaviour pinned to 2.1.220 — see
+<p>Both are undocumented matcher behaviour pinned to 2.1.314 — see
 <a href="../development/#granting-allowed-tools">Granting allowed-tools</a> for the full
 measurement.</p>
 <div class="admonition note">
 <p class="admonition-title">Upgrading from before 0.68.0</p>
 <p>Rules already in your <code>~/.claude/settings.json</code> keep their older form.
-Disable and re-enable a preset to rewrite it. On 2.1.220 this is tidiness
+Disable and re-enable a preset to rewrite it. On 2.1.314 this is tidiness
 rather than a fix — the boundary the rewrite adds is one the matcher was
 already applying.</p>
 </div>
