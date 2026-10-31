@@ -10,6 +10,15 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.92.3] — 2026-10-31
+
+### Fixed
+
+- **The board's in-progress refusal no longer suggests a reset.** Starting a
+  run step while another is in progress used to say "finish, pause or reset
+  it", offering the one fix `/work` forbids. It now says to mark the busy step
+  done or skipped if it's finished, or paused if it's waiting on a question.
+
 ## [0.92.2] — 2026-10-30
 
 ### Fixed
@@ -3000,7 +3009,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.2...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.3...HEAD
+[0.92.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.3
 [0.92.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.2
 [0.92.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.1
 [0.92.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.0

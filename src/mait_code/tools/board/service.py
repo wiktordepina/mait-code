@@ -1183,7 +1183,8 @@ def set_step(
             if busy is not None:
                 raise RunRefused(
                     f"card #{card_id}: step {busy[0]} ({busy[1]}) is already in "
-                    f"progress; finish, pause or reset it before starting {which}"
+                    f"progress; mark it done or skipped if it is finished, or "
+                    f"paused if it is waiting on a question, before starting {which}"
                 )
         now = _now()
         if status == STEP_PENDING:

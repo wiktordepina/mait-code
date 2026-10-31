@@ -194,6 +194,17 @@ def test_a_second_step_in_progress_is_refused_naming_the_first(board_db, running
     assert _step(board_db, running, 2)["status"] == STEP_PENDING
 
 
+def test_the_in_progress_refusal_points_at_recording_the_real_status(board_db, running):
+    service.set_step(board_db, running, "1", STEP_IN_PROGRESS)
+    with pytest.raises(service.RunRefused) as refused:
+        service.set_step(board_db, running, "2", STEP_IN_PROGRESS)
+    message = str(refused.value)
+    assert "mark it done or skipped" in message
+    assert "paused if it is waiting on a question" in message
+    assert "reset" not in message
+    assert "pending" not in message
+
+
 def test_setting_the_step_in_progress_again_changes_nothing(board_db, running):
     service.set_step(board_db, running, "1", STEP_IN_PROGRESS)
     before = _run(board_db, running)
