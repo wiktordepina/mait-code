@@ -50,7 +50,7 @@ the earlier step was never recorded, not that the board is wrong: if it is
 finished, mark it `done`; if it was dropped, `skipped` with the reason. If it
 isn't finished, it is still the current step: go back to it, or ask, before
 starting the new one. Don't use `pending`, or `paused` without a real
-question, to get past the refusal, even though its message offers "reset".
+question, to get past the refusal.
 
 ## Skipping
 
