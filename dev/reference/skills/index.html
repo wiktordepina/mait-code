@@ -2964,7 +2964,7 @@ so the board, the TUI and the companion mod's step row show where it is:</p>
 <tr>
 <td>6</td>
 <td><code>address-findings</code></td>
-<td>Fix the findings; offers a second review if the fixes add files, change an interface or grow the diff by more than ~30%</td>
+<td>Fix the findings; offers a second review if the fixes add files, change an interface, change a rule, convention or guard policy, or grow the diff by more than ~30%</td>
 </tr>
 <tr>
 <td>7</td>
@@ -2980,6 +2980,10 @@ so the board, the TUI and the companion mod's step row show where it is:</p>
 </table>
 <p><strong>How it behaves:</strong></p>
 <ul>
+<li><strong>Recorded before reported.</strong> A step is marked <code>done</code> or <code>skipped</code> on the
+  card before Claude says it is finished. The board refuses to start a step
+  while another is in progress, and that refusal is treated as an unrecorded
+  step to set right, not something to force past.</li>
 <li><strong>Skippable steps.</strong> Any step can be skipped with a reason, which the board
   records in the run and as a card comment. Step 8's question is never skipped.</li>
 <li><strong>Checkpoints.</strong> It stops and asks at once when the work contradicts the
