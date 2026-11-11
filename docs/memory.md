@@ -340,7 +340,10 @@ If HuggingFace is blocked on your corporate network, use the Bedrock provider:
    AWS_PROFILE = "dev-bedrock"
    ```
 
-   See [Custom environment variables](settings.md#custom-environment-variables-the-env-table).
+   Don't set it in the `env` block of `~/.claude/settings.json` or export it
+   from your shell profile. Either route pins every `aws` command in the
+   session to that profile, whereas `[env]` only reaches mait-code's own
+   processes. See [Custom environment variables](settings.md#custom-environment-variables-the-env-table).
 3. If you have existing local embeddings, run `mc-tool-memory reindex` to migrate
 
 The install command writes `embedding-provider = "bedrock"` to `~/.config/mait-code/settings.toml` and propagates it to `~/.claude/settings.json` automatically.

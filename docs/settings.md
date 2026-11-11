@@ -131,12 +131,8 @@ comments you can't assign. Derived values are computed, never read from the file
 ## Custom environment variables — the `[env]` table
 
 Some tools need environment variables that aren't mait-code settings at all —
-the classic case is `AWS_PROFILE` for Bedrock embeddings. Inside a Claude Code
-session the `env` block of `~/.claude/settings.json` supplies it, but a
-standalone `mait-code doctor --fix` or `mc-tool-memory reindex` would need a
-manual prefix on every invocation.
-
-Instead, declare them once in an `[env]` table at the end of `settings.toml`:
+the classic case is `AWS_PROFILE` for Bedrock embeddings. Declare them once in
+an `[env]` table at the end of `settings.toml`:
 
 ```toml
 [env]
@@ -154,6 +150,15 @@ The rules:
   startup and `doctor` warns about them.
 - **The table survives rewrites.** `settings set`, the interactive editor and
   install/update all carry it over untouched.
+- **It stays inside mait-code.** The variables reach mait-code's own processes
+  only. They are never copied into `~/.claude/settings.json`, so Claude's shell
+  and your own commands don't see them.
+
+!!! warning "Don't put these in `~/.claude/settings.json`"
+    A variable in the `env` block of Claude Code's `settings.json` is exported
+    into every command Claude runs, not just mait-code's. For `AWS_PROFILE` that
+    pins every `aws` call in the session to one profile, and Claude may then
+    conclude it can only reach that one account. Keep it in `[env]` instead.
 
 ### Managing them
 
