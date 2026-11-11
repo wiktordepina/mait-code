@@ -3565,7 +3565,10 @@ the 90-second default) before it exits 4.</p>
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">[env]</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">AWS_PROFILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev-bedrock&quot;</span>
 </span></code></pre></div>
-<p>See <a href="../settings/#custom-environment-variables-the-env-table">Custom environment variables</a>.
+<p>Don't set it in the <code>env</code> block of <code>~/.claude/settings.json</code> or export it
+   from your shell profile. Either route pins every <code>aws</code> command in the
+   session to that profile, whereas <code>[env]</code> only reaches mait-code's own
+   processes. See <a href="../settings/#custom-environment-variables-the-env-table">Custom environment variables</a>.
 3. If you have existing local embeddings, run <code>mc-tool-memory reindex</code> to migrate</p>
 <p>The install command writes <code>embedding-provider = "bedrock"</code> to <code>~/.config/mait-code/settings.toml</code> and propagates it to <code>~/.claude/settings.json</code> automatically.</p>
 <h3 id="hybrid-search">Hybrid search<a class="headerlink" href="#hybrid-search" title="Permanent link">&para;</a></h3>
