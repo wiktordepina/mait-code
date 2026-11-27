@@ -527,20 +527,20 @@ deletion.
 
 Every long-text field also takes its content from a file: `--description-file`,
 `--acceptance-file`, `--summary-file` and `--body-file` each stand in for their
-inline form (passing both is an error). The file is read as UTF-8, a leading
-`~` is expanded, and one trailing newline is dropped; everything else is kept
-as written. This keeps a multi-line markdown body out of the command line, so
+inline form (passing both is an error). The file must be a regular file; it
+is read as UTF-8, a leading `~` is expanded, and one trailing newline is
+dropped, with everything else kept as written. This keeps a multi-line markdown body out of the command line, so
 the call needs no `$(cat ...)` — which matters under Claude Code's sandbox,
 where a command built by shell expansion no longer matches a skill's
 permission grant and can't write the board.
 
-Because a granted board call runs without a prompt, these options refuse a
-path under the places that hold credentials or agent state: `~/.ssh`,
-`~/.gnupg`, `~/.aws`, `~/.azure`, `~/.kube`, `~/.docker`, `~/.claude`,
-`~/.config/gcloud`, `~/.config/gh`, `~/.netrc`, `~/.git-credentials` and
-`~/.pgpass`. The check runs after `~` expansion and symlink resolution, so a
-link elsewhere doesn't get round it. It's a guard against the obvious
-mistakes, not a sandbox: any other file you can read is still accepted.
+Because a granted board call runs without a prompt, these options read only
+from the temp directory: `tempfile.gettempdir()` (honouring `$TMPDIR`) and
+the system `/tmp`. Anything else is refused, including a symlink in the temp
+directory that points out of it, so credentials, `.env` files and
+`/proc/self/environ` can't be copied into the board unseen. Draft long text
+in the temp directory (`mktemp`, or Claude's session scratchpad) and pass
+that path.
 
 `export` renders a card — or a whole board listing, grouped by column — as a
 portable document. Markdown embeds the stored description, acceptance criteria

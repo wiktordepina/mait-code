@@ -5,6 +5,8 @@ the handler-side resolution are exercised together.
 """
 
 import json
+import os
+import tempfile
 
 import pytest
 
@@ -238,79 +240,106 @@ def test_bad_file_fails_before_the_board_opens(monkeypatch, capsys, tmp_path, ar
     capsys.readouterr()
 
 
-# --- Sensitive paths ---
+# --- Temp-directory allowlist ---
 
 
 @pytest.fixture
-def fake_home(tmp_path, monkeypatch):
-    home = tmp_path / "home"
-    home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
-    return home
+def temp_root(tmp_path, monkeypatch):
+    """Point both allowed roots at one directory inside tmp_path.
+
+    Everything else under tmp_path is then outside the allowlist, which the
+    real temp directory (where tmp_path itself lives) never is.
+    """
+    import mait_code.tools.board.cli as cli_mod
+
+    root = tmp_path / "temp"
+    root.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(root))
+    monkeypatch.setattr(cli_mod, "SYSTEM_TEMP_DIR", root)
+    return root
 
 
-@pytest.mark.parametrize(
-    "relative",
-    [
-        ".ssh/id_ed25519",
-        ".aws/credentials",
-        ".claude/settings.json",
-        ".config/gh/hosts.yml",
-        ".netrc",
-    ],
-)
-def test_sensitive_home_paths_are_refused(
-    mock_conn, monkeypatch, capsys, fake_home, relative
+def test_file_outside_the_temp_dir_is_refused(
+    mock_conn, monkeypatch, capsys, tmp_path, temp_root
 ):
-    target = fake_home / relative
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text("secret\n", encoding="utf-8")
+    secret = tmp_path / "home" / ".aws" / "credentials"
+    secret.parent.mkdir(parents=True)
+    secret.write_text("secret\n", encoding="utf-8")
     card_id = _new_card(mock_conn)
     with pytest.raises(SystemExit) as exc:
-        _run(monkeypatch, "edit", str(card_id), "--description-file", f"~/{relative}")
+        _run(monkeypatch, "edit", str(card_id), "--description-file", str(secret))
     assert exc.value.code == 1
     err = capsys.readouterr().err
-    assert err.startswith("Error: refusing to read ")
-    assert "holds secrets" in err
+    assert err.startswith(f"Error: refusing to read {secret}: ")
+    assert str(temp_root) in err
     assert _card(mock_conn, card_id)["description"] is None
 
 
-def test_every_sensitive_entry_is_refused(mock_conn, monkeypatch, capsys, fake_home):
-    from mait_code.tools.board.cli import SENSITIVE_HOME_PATHS
-
+def test_proc_environ_is_refused(mock_conn, monkeypatch, capsys):
+    monkeypatch.setenv("FAKE_SECRET", "hunter2")
     card_id = _new_card(mock_conn)
-    for entry in SENSITIVE_HOME_PATHS:
-        path = str(fake_home / entry)
-        with pytest.raises(SystemExit) as exc:
-            _run(monkeypatch, "edit", str(card_id), "--description-file", path)
-        assert exc.value.code == 1, entry
-        assert f"~/{entry}" in capsys.readouterr().err, entry
+    with pytest.raises(SystemExit) as exc:
+        _run(
+            monkeypatch,
+            "edit",
+            str(card_id),
+            "--description-file",
+            "/proc/self/environ",
+        )
+    assert exc.value.code == 1
+    assert "refusing to read" in capsys.readouterr().err
+    assert _card(mock_conn, card_id)["description"] is None
 
 
-def test_symlink_into_a_sensitive_path_is_refused(
-    mock_conn, monkeypatch, capsys, fake_home, tmp_path
+def test_symlink_out_of_the_temp_dir_is_refused(
+    mock_conn, monkeypatch, capsys, tmp_path, temp_root
 ):
-    secret = fake_home / ".ssh" / "id_ed25519"
-    secret.parent.mkdir()
+    secret = tmp_path / "outside.md"
     secret.write_text("secret\n", encoding="utf-8")
-    link = tmp_path / "innocent.md"
+    link = temp_root / "innocent.md"
     link.symlink_to(secret)
     card_id = _new_card(mock_conn)
     with pytest.raises(SystemExit) as exc:
         _run(monkeypatch, "edit", str(card_id), "--description-file", str(link))
     assert exc.value.code == 1
-    assert "~/.ssh" in capsys.readouterr().err
+    assert "refusing to read" in capsys.readouterr().err
     assert _card(mock_conn, card_id)["description"] is None
 
 
-def test_lookalike_names_are_not_refused(mock_conn, monkeypatch, capsys, fake_home):
-    target = fake_home / ".sshnotes" / "d.md"
-    target.parent.mkdir()
-    target.write_text("fine\n", encoding="utf-8")
+def test_file_in_the_temp_dir_is_read(mock_conn, monkeypatch, capsys, temp_root):
+    path = _write(temp_root, "d.md", "drafted\n")
     card_id = _new_card(mock_conn)
-    _run(monkeypatch, "edit", str(card_id), "--description-file", str(target))
+    _run(monkeypatch, "edit", str(card_id), "--description-file", path)
     capsys.readouterr()
-    assert _card(mock_conn, card_id)["description"] == "fine"
+    assert _card(mock_conn, card_id)["description"] == "drafted"
+
+
+def test_system_temp_dir_is_allowed_when_tmpdir_points_elsewhere(
+    mock_conn, monkeypatch, capsys, tmp_path
+):
+    import mait_code.tools.board.cli as cli_mod
+
+    elsewhere = tmp_path / "tmpdir"
+    system = tmp_path / "system-tmp"
+    elsewhere.mkdir()
+    system.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(elsewhere))
+    monkeypatch.setattr(cli_mod, "SYSTEM_TEMP_DIR", system)
+    path = _write(system, "d.md", "from the system temp dir\n")
+    card_id = _new_card(mock_conn)
+    _run(monkeypatch, "edit", str(card_id), "--description-file", path)
+    capsys.readouterr()
+    assert _card(mock_conn, card_id)["description"] == "from the system temp dir"
+
+
+def test_fifo_in_the_temp_dir_is_refused(mock_conn, monkeypatch, capsys, temp_root):
+    fifo = temp_root / "pipe"
+    os.mkfifo(fifo)
+    card_id = _new_card(mock_conn)
+    with pytest.raises(SystemExit) as exc:
+        _run(monkeypatch, "edit", str(card_id), "--description-file", str(fifo))
+    assert exc.value.code == 1
+    assert "not a regular file" in capsys.readouterr().err
 
 
 def test_directory_path_fails_cleanly(mock_conn, monkeypatch, capsys, tmp_path):

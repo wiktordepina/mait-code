@@ -11,6 +11,10 @@ an umbrella over member cards in any project, named by each member's
 that B can't start until A is done - ``next`` and ``list --ready`` skip a card
 while it waits.
 
+Long text fields (description, acceptance criteria, completion summary,
+comment body) also take a ``--*-file PATH`` form, which reads only from the
+temp directory - see text_file_roots().
+
 Run from inside a Claude Code session, ``move N in_progress`` and
 ``next --claim`` also bind the card to that session (``bind``/``unbind`` do it
 explicitly, in any open column), so parallel sessions can each tell their own
@@ -28,6 +32,7 @@ import json
 import logging
 import re
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NoReturn
@@ -75,47 +80,47 @@ def _fail(message: str) -> NoReturn:
     sys.exit(1)
 
 
-#: Paths under the home directory that hold credentials or agent state.
-#: A granted board call runs unsandboxed and unprompted, so ``--*-file``
-#: refuses these rather than copy them into the board, which the remote API
-#: can read. A best-effort denylist of the obvious places, not a sandbox.
-SENSITIVE_HOME_PATHS = (
-    ".ssh",
-    ".gnupg",
-    ".aws",
-    ".azure",
-    ".kube",
-    ".docker",
-    ".claude",
-    ".config/gcloud",
-    ".config/gh",
-    ".netrc",
-    ".git-credentials",
-    ".pgpass",
-)
+#: The system temp directory, allowed beside ``tempfile.gettempdir()``: a
+#: sandboxed session may point ``$TMPDIR`` elsewhere while its scratchpad
+#: stays here.
+SYSTEM_TEMP_DIR = Path("/tmp")
 
 
-def _sensitive_root(resolved: Path) -> str | None:
-    """The ``~/...`` entry of SENSITIVE_HOME_PATHS that *resolved* sits under."""
-    home = Path.home().resolve()
-    for entry in SENSITIVE_HOME_PATHS:
-        if resolved.is_relative_to((home / entry).resolve()):
-            return f"~/{entry}"
-    return None
+def text_file_roots() -> tuple[Path, ...]:
+    """The resolved directories a ``--*-file`` option may read from.
+
+    A granted board call runs unsandboxed and unprompted, so the file options
+    read only from the temp directory, where long text is drafted, rather
+    than any file the user can read: anything else (credentials, ``.env``
+    files, ``/proc/self/environ``) would land in the board, which the remote
+    API can read.
+    """
+    roots = [Path(tempfile.gettempdir()).resolve()]
+    system = SYSTEM_TEMP_DIR.resolve()
+    if system.is_dir() and system not in roots:
+        roots.append(system)
+    return tuple(roots)
 
 
 def _read_text_file(path: str) -> str:
     """Read a ``--*-file`` option's content, minus one trailing newline.
 
-    The path is checked after ``~`` expansion and symlink resolution, so a
-    link elsewhere can't reach a SENSITIVE_HOME_PATHS entry. ``newline=""``
-    keeps internal ``\\r\\n`` as written; only the single trailing newline an
-    editor adds is dropped.
+    The path must resolve, after ``~`` expansion and symlink resolution, to a
+    regular file under one of text_file_roots(), so a link in the temp
+    directory can't reach a file outside it and a device file can't block
+    the read. ``newline=""`` keeps internal ``\\r\\n`` as written; only the
+    single trailing newline an editor adds is dropped.
     """
     resolved = Path(path).expanduser().resolve()
-    root = _sensitive_root(resolved)
-    if root is not None:
-        _fail(f"refusing to read {path}: it is under {root}, which holds secrets.")
+    roots = text_file_roots()
+    if not any(resolved.is_relative_to(root) for root in roots):
+        allowed = " or ".join(str(root) for root in roots)
+        _fail(
+            f"refusing to read {path}: file options only read from the temp "
+            f"directory ({allowed}). Write the text there first."
+        )
+    if resolved.exists() and not resolved.is_file():
+        _fail(f"can't read {path}: not a regular file.")
     try:
         with open(resolved, encoding="utf-8", newline="") as fh:
             text = fh.read()
@@ -195,7 +200,8 @@ def _add_text_option(
     group.add_argument(
         f"--{field}-file",
         metavar="PATH",
-        help=f"{help_text}, read from a file (one trailing newline dropped)",
+        help=f"{help_text}, read from a file in the temp directory "
+        "(one trailing newline dropped)",
     )
 
 
@@ -1353,7 +1359,9 @@ def main():
     p_comment_body = p_comment.add_mutually_exclusive_group(required=True)
     p_comment_body.add_argument("body", nargs="*", default=[], help="Comment text")
     p_comment_body.add_argument(
-        "--body-file", metavar="PATH", help="Read the comment text from a file"
+        "--body-file",
+        metavar="PATH",
+        help="Read the comment text from a file in the temp directory",
     )
     p_comment.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_comment.set_defaults(func=cmd_comment)
