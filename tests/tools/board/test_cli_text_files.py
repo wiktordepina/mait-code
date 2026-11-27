@@ -245,17 +245,16 @@ def test_bad_file_fails_before_the_board_opens(monkeypatch, capsys, tmp_path, ar
 
 @pytest.fixture
 def temp_root(tmp_path, monkeypatch):
-    """Point both allowed roots at one directory inside tmp_path.
+    """Point the allowed root at one directory inside tmp_path.
 
-    Everything else under tmp_path is then outside the allowlist, which the
-    real temp directory (where tmp_path itself lives) never is.
+    Everything else under tmp_path is then outside it, which the real /tmp
+    (where tmp_path itself lives) never is.
     """
     import mait_code.tools.board.cli as cli_mod
 
     root = tmp_path / "temp"
     root.mkdir()
-    monkeypatch.setattr(tempfile, "tempdir", str(root))
-    monkeypatch.setattr(cli_mod, "SYSTEM_TEMP_DIR", root)
+    monkeypatch.setattr(cli_mod, "TEXT_FILE_ROOT", root)
     return root
 
 
@@ -314,22 +313,20 @@ def test_file_in_the_temp_dir_is_read(mock_conn, monkeypatch, capsys, temp_root)
     assert _card(mock_conn, card_id)["description"] == "drafted"
 
 
-def test_system_temp_dir_is_allowed_when_tmpdir_points_elsewhere(
-    mock_conn, monkeypatch, capsys, tmp_path
+def test_tmpdir_does_not_widen_the_root(
+    mock_conn, monkeypatch, capsys, tmp_path, temp_root
 ):
-    import mait_code.tools.board.cli as cli_mod
-
-    elsewhere = tmp_path / "tmpdir"
-    system = tmp_path / "system-tmp"
-    elsewhere.mkdir()
-    system.mkdir()
-    monkeypatch.setattr(tempfile, "tempdir", str(elsewhere))
-    monkeypatch.setattr(cli_mod, "SYSTEM_TEMP_DIR", system)
-    path = _write(system, "d.md", "from the system temp dir\n")
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("TMPDIR", str(home))
+    monkeypatch.setattr(tempfile, "tempdir", str(home))
+    path = _write(home, "credentials", "secret\n")
     card_id = _new_card(mock_conn)
-    _run(monkeypatch, "edit", str(card_id), "--description-file", path)
-    capsys.readouterr()
-    assert _card(mock_conn, card_id)["description"] == "from the system temp dir"
+    with pytest.raises(SystemExit) as exc:
+        _run(monkeypatch, "edit", str(card_id), "--description-file", path)
+    assert exc.value.code == 1
+    assert "refusing to read" in capsys.readouterr().err
+    assert _card(mock_conn, card_id)["description"] is None
 
 
 def test_fifo_in_the_temp_dir_is_refused(mock_conn, monkeypatch, capsys, temp_root):

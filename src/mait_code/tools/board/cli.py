@@ -13,7 +13,7 @@ while it waits.
 
 Long text fields (description, acceptance criteria, completion summary,
 comment body) also take a ``--*-file PATH`` form, which reads only from the
-temp directory - see text_file_roots().
+system temp directory - see text_file_root().
 
 Run from inside a Claude Code session, ``move N in_progress`` and
 ``next --claim`` also bind the card to that session (``bind``/``unbind`` do it
@@ -32,7 +32,6 @@ import json
 import logging
 import re
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NoReturn
@@ -80,44 +79,40 @@ def _fail(message: str) -> NoReturn:
     sys.exit(1)
 
 
-#: The system temp directory, allowed beside ``tempfile.gettempdir()``: a
-#: sandboxed session may point ``$TMPDIR`` elsewhere while its scratchpad
-#: stays here.
-SYSTEM_TEMP_DIR = Path("/tmp")
+#: The only directory a ``--*-file`` option may read from. Fixed rather than
+#: taken from ``tempfile.gettempdir()``: ``$TMPDIR`` is set by the caller, so
+#: ``TMPDIR=$HOME`` in front of a granted call would widen the boundary to
+#: the whole home directory.
+TEXT_FILE_ROOT = Path("/tmp")
 
 
-def text_file_roots() -> tuple[Path, ...]:
-    """The resolved directories a ``--*-file`` option may read from.
+def text_file_root() -> Path:
+    """The resolved directory a ``--*-file`` option may read from.
 
     A granted board call runs unsandboxed and unprompted, so the file options
-    read only from the temp directory, where long text is drafted, rather
-    than any file the user can read: anything else (credentials, ``.env``
-    files, ``/proc/self/environ``) would land in the board, which the remote
-    API can read.
+    read only from the system temp directory, where long text is drafted,
+    rather than any file the user can read: anything else (credentials,
+    ``.env`` files, ``/proc/self/environ``) would land in the board, which
+    the remote API can read.
     """
-    roots = [Path(tempfile.gettempdir()).resolve()]
-    system = SYSTEM_TEMP_DIR.resolve()
-    if system.is_dir() and system not in roots:
-        roots.append(system)
-    return tuple(roots)
+    return TEXT_FILE_ROOT.resolve()
 
 
 def _read_text_file(path: str) -> str:
     """Read a ``--*-file`` option's content, minus one trailing newline.
 
     The path must resolve, after ``~`` expansion and symlink resolution, to a
-    regular file under one of text_file_roots(), so a link in the temp
+    regular file under text_file_root(), so a link in the temp
     directory can't reach a file outside it and a device file can't block
     the read. ``newline=""`` keeps internal ``\\r\\n`` as written; only the
     single trailing newline an editor adds is dropped.
     """
     resolved = Path(path).expanduser().resolve()
-    roots = text_file_roots()
-    if not any(resolved.is_relative_to(root) for root in roots):
-        allowed = " or ".join(str(root) for root in roots)
+    root = text_file_root()
+    if not resolved.is_relative_to(root):
         _fail(
-            f"refusing to read {path}: file options only read from the temp "
-            f"directory ({allowed}). Write the text there first."
+            f"refusing to read {path}: file options only read from {root}. "
+            "Write the text there first."
         )
     if resolved.exists() and not resolved.is_file():
         _fail(f"can't read {path}: not a regular file.")
@@ -200,8 +195,7 @@ def _add_text_option(
     group.add_argument(
         f"--{field}-file",
         metavar="PATH",
-        help=f"{help_text}, read from a file in the temp directory "
-        "(one trailing newline dropped)",
+        help=f"{help_text}, read from a file under /tmp (one trailing newline dropped)",
     )
 
 
@@ -1361,7 +1355,7 @@ def main():
     p_comment_body.add_argument(
         "--body-file",
         metavar="PATH",
-        help="Read the comment text from a file in the temp directory",
+        help="Read the comment text from a file under /tmp",
     )
     p_comment.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_comment.set_defaults(func=cmd_comment)

@@ -528,19 +528,20 @@ deletion.
 Every long-text field also takes its content from a file: `--description-file`,
 `--acceptance-file`, `--summary-file` and `--body-file` each stand in for their
 inline form (passing both is an error). The file must be a regular file; it
-is read as UTF-8, a leading `~` is expanded, and one trailing newline is
-dropped, with everything else kept as written. This keeps a multi-line markdown body out of the command line, so
-the call needs no `$(cat ...)` — which matters under Claude Code's sandbox,
-where a command built by shell expansion no longer matches a skill's
-permission grant and can't write the board.
+is read as UTF-8, one trailing newline is dropped, and everything else is
+kept as written. This keeps a multi-line markdown body out of the command
+line, so the call needs no `$(cat ...)` — which matters under Claude Code's
+sandbox, where a command built by shell expansion no longer matches a
+skill's permission grant and can't write the board.
 
 Because a granted board call runs without a prompt, these options read only
-from the temp directory: `tempfile.gettempdir()` (honouring `$TMPDIR`) and
-the system `/tmp`. Anything else is refused, including a symlink in the temp
-directory that points out of it, so credentials, `.env` files and
-`/proc/self/environ` can't be copied into the board unseen. Draft long text
-in the temp directory (`mktemp`, or Claude's session scratchpad) and pass
-that path.
+from under the system `/tmp`. The path is resolved first (`~` expanded,
+symlinks followed), so a link in `/tmp` that points out of it is refused, as
+is anything else: credentials, `.env` files, `/proc/self/environ`. `$TMPDIR`
+doesn't move the boundary, since whoever runs the command sets it. This
+narrows what a call can read; it doesn't make `/tmp` safe, which other
+sessions and tools share. Draft long text under `/tmp` (`mktemp` by hand,
+Claude's session scratchpad from a skill) and pass that path.
 
 `export` renders a card — or a whole board listing, grouped by column — as a
 portable document. Markdown embeds the stored description, acceptance criteria
