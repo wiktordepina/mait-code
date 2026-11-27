@@ -388,14 +388,14 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 
 | Subcommand | Args | Description |
 |------------|------|-------------|
-| `add` | title, --description?, --priority?, --project?, --epic?, --parent?, --from? | Add a card to the backlog; `--epic` adds an epic instead, `--parent` puts the card in one (`none` to drop an inherited one), `--from N` records its origin and inherits N's epic |
+| `add` | title, --description? \| --description-file?, --priority?, --project?, --epic?, --parent?, --from? | Add a card to the backlog; `--epic` adds an epic instead, `--parent` puts the card in one (`none` to drop an inherited one), `--from N` records its origin and inherits N's epic |
 | `list` | --all?, --status?, --archived?, --search/-q?, --epic?, --ready?, --mine? \| --session?, --json? | List cards grouped by column (current project by default; archived hidden); `-q` filters by title, `--epic` keeps one epic's members (any project), `--ready` keeps what `next` could hand out, `--mine`/`--session` keep cards bound to a session, across all projects |
 | `show` | id, --json? | Show a card, its relationships and its comment thread |
 | `move` | id, status | Move a card to any column (sets/clears `completed_at` around `done`; into `in_progress` binds the current session, out of it releases bindings) |
-| `refine` | id, --description?, --acceptance? | Set description/acceptance and move to `refined` |
+| `refine` | id, --description? \| --description-file?, --acceptance? \| --acceptance-file? | Set description/acceptance and move to `refined` |
 | `next` | --project?, --epic?, --claim?, --json? | Show the next ready card (priority, then oldest); `--epic` picks from one epic's members in any project; `--claim` moves it to `in_progress` and binds the current session |
 | `review` | id, --pr? | Move a card to `in_review`; `--pr` records the pull request as a `PR` reference |
-| `complete` | id, --summary? | Move to `done` with a completion summary |
+| `complete` | id, --summary? \| --summary-file? | Move to `done` with a completion summary |
 | `block` | id, reason? | Tag the card `blocked` in place (keeps its column); an optional reason is recorded as a comment |
 | `unblock` | id | Remove the `blocked` tag (keeps the card's flow position) |
 | `tag` | id, tag | Add a free-form tag to a card |
@@ -415,8 +415,8 @@ Manually-driven kanban board. Claude in the live session acts as the worker ("pi
 | `run step` | id, step, status, --reason? | Set one step (by position or exact name) to `pending`/`in_progress`/`done`/`skipped`/`paused` |
 | `run end` | id | End the card's open run, keeping it as history |
 | `run show` | id, --all?, --json? | Show the card's open run (`null` with `--json` when there is none); `--all` lists every run, open and ended, newest first (`[]` when there are none) |
-| `comment` | id, body, --author? | Append a comment (author `me` or `claude`) |
-| `edit` | id, --title?, --description?, --priority?, --acceptance?, --project?, --parent? | Edit card fields; `--parent none` takes the card out of its epic |
+| `comment` | id, body \| --body-file, --author? | Append a comment (author `me` or `claude`) |
+| `edit` | id, --title?, --description? \| --description-file?, --priority?, --acceptance? \| --acceptance-file?, --project?, --parent? | Edit card fields; `--parent none` takes the card out of its epic |
 | `remove` | id | Delete a card permanently (cascades comments) |
 | `summary` | --all?, --project?, --session?, --json? | Per-column counts (the session-start hook reads the same counts via `service.summary_counts`); `--session ID` (with `--json`) adds that session's bound cards, the In Review cards and the inbox count |
 | `export` | id?, --format?, --out?, --all?, --project?, --status?, --archived?, --search?, --epic? | Export one card, one epic with its members, or the whole board as markdown or JSON (stdout, or a file with `--out`) |

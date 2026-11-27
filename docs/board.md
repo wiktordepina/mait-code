@@ -472,15 +472,15 @@ mc-tool-board show ID [--json]
 mc-tool-board summary [--all] [--project PROJECT] [--json [--session ID]]   # --session adds bound/in-review cards + inbox count
 
 # Create & edit
-mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project ... | --epic] [--parent EPIC|none] [--from ID] [--json]
-mc-tool-board edit ID [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...] [--parent EPIC|none] [--json]
-mc-tool-board comment ID "<note>" [--author me|claude] [--json]
+mc-tool-board add "<title>" [--description ... | --description-file PATH] [--priority low|medium|high] [--project ... | --epic] [--parent EPIC|none] [--from ID] [--json]
+mc-tool-board edit ID [--title ...] [--description ... | --description-file PATH] [--priority ...] [--acceptance ... | --acceptance-file PATH] [--project ...] [--parent EPIC|none] [--json]
+mc-tool-board comment ID ("<note>" | --body-file PATH) [--author me|claude] [--json]
 
 # Flow
-mc-tool-board refine ID [--description ...] [--acceptance ...] [--json]   # → refined
+mc-tool-board refine ID [--description ... | --description-file PATH] [--acceptance ... | --acceptance-file PATH] [--json]   # → refined
 mc-tool-board next [--project ... | --epic ID] [--claim] [--json]         # top ready card; --claim → in_progress
 mc-tool-board review ID [--pr <url>] [--json]                             # → in_review; --pr adds a PR reference
-mc-tool-board complete ID --summary "<what was done>" [--json]            # → done
+mc-tool-board complete ID [--summary "<what was done>" | --summary-file PATH] [--json]   # → done
 mc-tool-board move ID <backlog|refined|in_progress|in_review|done|archived> [--json]
 mc-tool-board archive ID [--json]                                         # hide without deleting
 mc-tool-board remove ID [--json]                                          # permanent delete
@@ -524,6 +524,24 @@ commands it emits the affected card after the mutation (the `show --json`
 shape, comments included), so e.g. `add --json` hands a script the new card's
 id without parsing prose. `remove --json` emits the card as it was before
 deletion.
+
+Every long-text field also takes its content from a file: `--description-file`,
+`--acceptance-file`, `--summary-file` and `--body-file` each stand in for their
+inline form (passing both is an error). The file must be a regular file; it
+is read as UTF-8, one trailing newline is dropped, and everything else is
+kept as written. This keeps a multi-line markdown body out of the command
+line, so the call needs no `$(cat ...)` — which matters under Claude Code's
+sandbox, where a command built by shell expansion no longer matches a
+skill's permission grant and can't write the board.
+
+Because a granted board call runs without a prompt, these options read only
+from under the system `/tmp`. The path is resolved first (`~` expanded,
+symlinks followed), so a link in `/tmp` that points out of it is refused, as
+is anything else: credentials, `.env` files, `/proc/self/environ`. `$TMPDIR`
+doesn't move the boundary, since whoever runs the command sets it. This
+narrows what a call can read; it doesn't make `/tmp` safe, which other
+sessions and tools share. Draft long text under `/tmp` (`mktemp` by hand,
+Claude's session scratchpad from a skill) and pass that path.
 
 `export` renders a card — or a whole board listing, grouped by column — as a
 portable document. Markdown embeds the stored description, acceptance criteria

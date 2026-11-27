@@ -32,7 +32,7 @@ Several Claude Code sessions can work the same project at once, so each card rec
 
 ### Refining
 
-- **"refine card N"**: draft a clear description and acceptance criteria, **show them to the user for approval first**, then run `mc-tool-board refine N --description "..." --acceptance "..."` (moves it to `refined`). Don't refine without confirmation.
+- **"refine card N"**: draft a clear description and acceptance criteria, **show them to the user for approval first**, then run `mc-tool-board refine N --description-file <path> --acceptance-file <path>` (moves it to `refined`). Don't refine without confirmation.
 - **Testing strategy**: every refined description ends with this section.
   - **Heading:** a paragraph reading exactly `**Testing strategy**`. Keep it exactly as written: playbooks such as `/work` look for it.
   - **Body:** one bullet per chosen strategy, saying what it will check for this card and why it fits. Ask the user to choose when the choice isn't obvious.
@@ -65,7 +65,7 @@ Cards relate two ways - both cross projects freely:
 ### Finishing & parking
 
 - Review: `mc-tool-board review N [--pr <url>]` - moves the card to `in_review` (finished, awaiting review or merge) and, with `--pr`, records the PR as a `PR` reference. Use it once the work is up as a pull request.
-- Complete: `mc-tool-board complete N --summary "what was done"` (moves to `done` from any column, records a handoff summary).
+- Complete: `mc-tool-board complete N --summary "what was done"` (or `--summary-file <path>`; moves to `done` from any column, records a handoff summary).
 - Block: `mc-tool-board block N <reason>` - tags the card `blocked` **in place** (keeps its column); the reason is recorded as a comment. Unblock: `mc-tool-board unblock N` removes the tag. These are thin aliases over the tag system below.
 - Tag / untag: `mc-tool-board tag N <tag>` / `mc-tool-board untag N <tag>` - free-form tags that ride alongside a card's status.
 - Archive (hide, don't delete): `mc-tool-board archive N`.
@@ -76,9 +76,11 @@ Cards relate two ways - both cross projects freely:
 
 The **description**, **acceptance criteria** and **completion summary** fields render markdown in the card detail view (plain text works too - it's a subset). Write these in markdown when it helps: headings, lists, emphasis, inline and fenced code all display formatted, and single newlines are kept as line breaks. No need to flatten a markdown source into plain prose.
 
-- Add: `mc-tool-board add "<title>" [--description ...] [--priority low|medium|high] [--project <name>] [--parent E] [--from N]`. New cards land in `backlog`. Use `--project` for work with no git repo yet (e.g. an app idea), and `--from` whenever the card comes out of another (see *Cards born from other cards*).
-- Edit: `mc-tool-board edit N [--title ...] [--description ...] [--priority ...] [--acceptance ...] [--project ...]`.
-- Comment: `mc-tool-board comment N "<note>" [--author claude]`.
+For multi-line or markdown text, write it with the Write tool to a file in the session scratchpad and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--summary-file`, `--body-file`). Never use `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board. The file options read only from under `/tmp`, where the scratchpad lives: any other path is refused, a symlink out of it included, so never draft in the working tree or the home directory, and don't draft through a shell `mktemp`, which runs sandboxed. Each `*-file` option takes the place of its inline form; passing both is an error. One trailing newline is dropped and everything else is kept as written.
+
+- Add: `mc-tool-board add "<title>" [--description ... | --description-file <path>] [--priority low|medium|high] [--project <name>] [--parent E] [--from N]`. New cards land in `backlog`. Use `--project` for work with no git repo yet (e.g. an app idea), and `--from` whenever the card comes out of another (see *Cards born from other cards*).
+- Edit: `mc-tool-board edit N [--title ...] [--description ... | --description-file <path>] [--priority ...] [--acceptance ... | --acceptance-file <path>] [--project ...]`.
+- Comment: `mc-tool-board comment N "<note>" [--author claude]`, or `--body-file <path>` in place of the note.
 - References (label->value links on a card): `mc-tool-board ref add N <label> <value>` - *value* is a URL, a `file://` path, or a bare ID. List them with `mc-tool-board ref list N`, remove one by its 1-based position with `mc-tool-board ref remove N <position>`. Cards carry these as a structured References field.
 - Show one card with its comments and references: `mc-tool-board show N`.
 - Every mutating subcommand (`add`, `move`, `refine`, `review`, `complete`, `block`/`unblock`, `tag`/`untag`, `ref add`/`ref remove`, `archive`, `bind`/`unbind`, `comment`, `edit`, `remove`, `link`/`unlink`, `epic promote`, `run start`/`run step`/`run end`) accepts `--json`, emitting the affected card after the mutation in the `show --json` shape - e.g. `add ... --json` returns the new card's id without parsing prose. `remove --json` emits the card as it was before deletion.

@@ -10,6 +10,33 @@ don't change the public surface. Everything is still in flux.
 
 ## [Unreleased]
 
+## [0.93.0] — 2026-11-27
+
+### Added
+
+- **Board text fields can come from a file.** `add`, `edit` and `refine`
+  take `--description-file`, `edit` and `refine` take `--acceptance-file`,
+  `complete` takes `--summary-file` and `comment` takes `--body-file`, each
+  in place of its inline form. A multi-line markdown body no longer needs
+  `$(cat ...)` on the command line, so under Claude Code's sandbox the call
+  still matches a skill's permission grant and can write the board. One
+  trailing newline is dropped; everything else is kept as written.
+- **The file options read only from under `/tmp`.** A granted board call
+  runs without a prompt, so any path that resolves outside the system temp
+  directory is refused, a symlink out of it included, as is anything that
+  isn't a regular file. `$TMPDIR` doesn't move the boundary. Credentials,
+  `.env` files and `/proc/self/environ` can't be copied into the board
+  unseen.
+
+### Changed
+
+- **The board, work, design-review and triage skills draft long text in the
+  scratchpad.** They write it with the Write tool into the session scratchpad
+  and pass the matching `--*-file` option, never `$(cat ...)` or a shell
+  `mktemp`.
+- **`add`, `edit` and `comment` report their errors through the shared
+  helper.** The messages are unchanged; they're now logged as well.
+
 ## [0.92.3] — 2026-10-31
 
 ### Fixed
@@ -3009,7 +3036,8 @@ Initial project scaffold establishing the core structure and tooling.
 Repository initialised with README.
 
 
-[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.92.3...HEAD
+[Unreleased]: https://github.com/wiktordepina/mait-code/compare/v0.93.0...HEAD
+[0.93.0]: https://github.com/wiktordepina/mait-code/releases/tag/v0.93.0
 [0.92.3]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.3
 [0.92.2]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.2
 [0.92.1]: https://github.com/wiktordepina/mait-code/releases/tag/v0.92.1
