@@ -75,6 +75,43 @@ def _fail(message: str) -> NoReturn:
     sys.exit(1)
 
 
+def _read_text_file(path: str) -> str:
+    """Read a ``--*-file`` option's content, minus one trailing newline.
+
+    ``newline=""`` keeps internal ``\\r\\n`` as written; only the single
+    trailing newline an editor adds is dropped.
+    """
+    resolved = Path(path).expanduser()
+    try:
+        with open(resolved, encoding="utf-8", newline="") as fh:
+            text = fh.read()
+    except UnicodeDecodeError:
+        _fail(f"{path} is not valid UTF-8.")
+    except OSError as exc:
+        _fail(f"can't read {path}: {exc.strerror or exc}.")
+    if text.endswith("\r\n"):
+        return text[:-2]
+    if text.endswith("\n"):
+        return text[:-1]
+    return text
+
+
+def _resolve_text_files(args, *fields: str) -> None:
+    """Load each ``<field>_file`` option into ``args.<field>``.
+
+    Runs before any other check in the handler, so a check that reads the
+    inline attribute (``edit``'s "nothing to edit", ``refine``'s missing
+    acceptance warning) sees file input too. A ``nargs`` field gets a
+    one-item list, so the handler's join leaves the content untouched.
+    """
+    for field in fields:
+        path = getattr(args, f"{field}_file", None)
+        if path is None:
+            continue
+        text = _read_text_file(path)
+        setattr(args, field, [text] if isinstance(getattr(args, field), list) else text)
+
+
 def _session_label(binding: dict) -> str:
     """A compact ``<id prefix> (pid N)`` label for one session binding."""
     return f"{binding['session_id'][:8]} (pid {binding['pid']})"
@@ -108,6 +145,24 @@ def _parent_arg(value: str) -> int | str:
         raise argparse.ArgumentTypeError(
             f"expected an epic id or 'none', got {value!r}"
         ) from None
+
+
+def _add_text_option(
+    parser: argparse.ArgumentParser, field: str, help_text: str, **inline: Any
+) -> None:
+    """Add ``--<field>`` and its mutually exclusive ``--<field>-file PATH``.
+
+    The file form keeps the command line free of shell expansion, so a long
+    markdown body can be passed by a call that a prefix permission grant
+    still matches.
+    """
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(f"--{field}", help=help_text, **inline)
+    group.add_argument(
+        f"--{field}-file",
+        metavar="PATH",
+        help=f"{help_text}, read from a file (one trailing newline dropped)",
+    )
 
 
 def _require_epic_arg(conn, epic_id: int) -> None:
@@ -183,11 +238,10 @@ def _print_card(conn, args, card_id: int, message: str) -> None:
 
 
 def cmd_add(args):
+    _resolve_text_files(args, "description")
     title = " ".join(args.title).strip()
     if not title:
-        logger.warning("card title cannot be empty")
-        print("Error: card title cannot be empty.", file=sys.stderr)
-        sys.exit(1)
+        _fail("card title cannot be empty.")
 
     if args.epic:
         if args.project:
@@ -408,6 +462,7 @@ def cmd_export(args):
 
 
 def cmd_edit(args):
+    _resolve_text_files(args, "description", "acceptance")
     # Any, not str: unpacked beside parent_id=, which a str-valued dict could shadow.
     fields: dict[str, Any] = {}
     if args.title is not None:
@@ -421,14 +476,12 @@ def cmd_edit(args):
     if args.project is not None:
         project = args.project.strip()
         if not project:
-            print("Error: --project cannot be blank.", file=sys.stderr)
-            sys.exit(1)
+            _fail("--project cannot be blank.")
         fields["project"] = project
 
     set_parent = args.parent is not None
     if not fields and not set_parent:
-        print("Error: nothing to edit (pass at least one field).", file=sys.stderr)
-        sys.exit(1)
+        _fail("nothing to edit (pass at least one field).")
 
     with connection() as conn:
         if service.get_card(conn, args.id) is None:
@@ -460,10 +513,10 @@ def cmd_remove(args):
 
 
 def cmd_comment(args):
+    _resolve_text_files(args, "body")
     body = " ".join(args.body).strip()
     if not body:
-        print("Error: comment body cannot be empty.", file=sys.stderr)
-        sys.exit(1)
+        _fail("comment body cannot be empty.")
 
     with connection() as conn:
         try:
@@ -488,6 +541,7 @@ def cmd_move(args):
 
 
 def cmd_refine(args):
+    _resolve_text_files(args, "description", "acceptance")
     with connection() as conn:
         card = service.get_card(conn, args.id)
         if card is None:
@@ -549,6 +603,7 @@ def cmd_next(args):
 
 
 def cmd_complete(args):
+    _resolve_text_files(args, "summary")
     summary = " ".join(args.summary).strip()
     with connection() as conn:
         try:
@@ -1005,7 +1060,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_add = sub.add_parser("add", help="Add a card to the backlog")
-    p_add.add_argument("--description", help="Card description")
+    _add_text_option(p_add, "description", "Card description")
     p_add.add_argument("--priority", choices=PRIORITIES, default="medium")
     p_add.add_argument("--project", help="Project (defaults to git root or cwd)")
     p_add.add_argument(
@@ -1100,8 +1155,8 @@ def main():
         "refine", help="Set description/acceptance and move to refined"
     )
     p_refine.add_argument("id", type=int, help="Card ID")
-    p_refine.add_argument("--description", help="Card description")
-    p_refine.add_argument("--acceptance", help="Acceptance criteria")
+    _add_text_option(p_refine, "description", "Card description")
+    _add_text_option(p_refine, "acceptance", "Acceptance criteria")
     p_refine.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_refine.set_defaults(func=cmd_refine)
 
@@ -1116,7 +1171,7 @@ def main():
 
     p_complete = sub.add_parser("complete", help="Complete a card with a summary")
     p_complete.add_argument("id", type=int, help="Card ID")
-    p_complete.add_argument("--summary", nargs="+", default=[], help="Handoff summary")
+    _add_text_option(p_complete, "summary", "Handoff summary", nargs="+", default=[])
     p_complete.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_complete.set_defaults(func=cmd_complete)
 
@@ -1261,16 +1316,20 @@ def main():
     p_comment = sub.add_parser("comment", help="Append a comment to a card")
     p_comment.add_argument("id", type=int, help="Card ID")
     p_comment.add_argument("--author", choices=AUTHORS, default="me")
-    p_comment.add_argument("body", nargs="+", help="Comment text")
+    p_comment_body = p_comment.add_mutually_exclusive_group(required=True)
+    p_comment_body.add_argument("body", nargs="*", default=[], help="Comment text")
+    p_comment_body.add_argument(
+        "--body-file", metavar="PATH", help="Read the comment text from a file"
+    )
     p_comment.add_argument("--json", action="store_true", help="Emit the card as JSON")
     p_comment.set_defaults(func=cmd_comment)
 
     p_edit = sub.add_parser("edit", help="Edit card fields")
     p_edit.add_argument("id", type=int, help="Card ID")
     p_edit.add_argument("--title", help="New title")
-    p_edit.add_argument("--description", help="New description")
+    _add_text_option(p_edit, "description", "New description")
     p_edit.add_argument("--priority", choices=PRIORITIES, help="New priority")
-    p_edit.add_argument("--acceptance", help="New acceptance criteria")
+    _add_text_option(p_edit, "acceptance", "New acceptance criteria")
     p_edit.add_argument("--project", help="New project")
     p_edit.add_argument(
         "--parent",

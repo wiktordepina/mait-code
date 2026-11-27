@@ -65,9 +65,11 @@ If you find yourself writing "we decided", stop: that sentence is the failure th
    Ask how any new card orders against N and its siblings before linking `blocks`. `mc-tool-board link` is deliberately outside this skill's grant, so a link also goes through the permission prompt.
 
 6. **Write only what the user approves.** Nothing reaches the board until they say so. Then:
-   - fold the approved resolutions into the card with `mc-tool-board edit N --description ... --acceptance ...`, keeping any section headed **Testing strategy** under exactly that heading (a playbook may read it);
-   - add a comment saying what the review changed: `mc-tool-board comment N --author claude "Design review folded in: ..."`;
+   - fold the approved resolutions into the card with `mc-tool-board edit N --description-file <path> --acceptance-file <path>`, keeping any section headed **Testing strategy** under exactly that heading (a playbook may read it);
+   - add a comment saying what the review changed: `mc-tool-board comment N --author claude --body-file <path>` (a one-line "Design review folded in: ..." can go inline);
    - add the approved cards.
+
+   For multi-line or markdown text, write it to a scratch file and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--summary-file`, `--body-file`), never `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board.
 
    Don't move the card, and don't touch its playbook run: a playbook that calls this skill records its own step.
 
