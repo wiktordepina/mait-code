@@ -75,13 +75,47 @@ def _fail(message: str) -> NoReturn:
     sys.exit(1)
 
 
+#: Paths under the home directory that hold credentials or agent state.
+#: A granted board call runs unsandboxed and unprompted, so ``--*-file``
+#: refuses these rather than copy them into the board, which the remote API
+#: can read. A best-effort denylist of the obvious places, not a sandbox.
+SENSITIVE_HOME_PATHS = (
+    ".ssh",
+    ".gnupg",
+    ".aws",
+    ".azure",
+    ".kube",
+    ".docker",
+    ".claude",
+    ".config/gcloud",
+    ".config/gh",
+    ".netrc",
+    ".git-credentials",
+    ".pgpass",
+)
+
+
+def _sensitive_root(resolved: Path) -> str | None:
+    """The ``~/...`` entry of SENSITIVE_HOME_PATHS that *resolved* sits under."""
+    home = Path.home().resolve()
+    for entry in SENSITIVE_HOME_PATHS:
+        if resolved.is_relative_to((home / entry).resolve()):
+            return f"~/{entry}"
+    return None
+
+
 def _read_text_file(path: str) -> str:
     """Read a ``--*-file`` option's content, minus one trailing newline.
 
-    ``newline=""`` keeps internal ``\\r\\n`` as written; only the single
-    trailing newline an editor adds is dropped.
+    The path is checked after ``~`` expansion and symlink resolution, so a
+    link elsewhere can't reach a SENSITIVE_HOME_PATHS entry. ``newline=""``
+    keeps internal ``\\r\\n`` as written; only the single trailing newline an
+    editor adds is dropped.
     """
-    resolved = Path(path).expanduser()
+    resolved = Path(path).expanduser().resolve()
+    root = _sensitive_root(resolved)
+    if root is not None:
+        _fail(f"refusing to read {path}: it is under {root}, which holds secrets.")
     try:
         with open(resolved, encoding="utf-8", newline="") as fh:
             text = fh.read()

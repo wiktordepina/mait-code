@@ -69,7 +69,7 @@ If you find yourself writing "we decided", stop: that sentence is the failure th
    - add a comment saying what the review changed: `mc-tool-board comment N --author claude --body-file <path>` (a one-line "Design review folded in: ..." can go inline);
    - add the approved cards.
 
-   For multi-line or markdown text, write it to a scratch file and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--summary-file`, `--body-file`), never `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board.
+   For multi-line or markdown text, write it to a file in the session scratchpad (or a `mktemp` file), never in the working tree, and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--summary-file`, `--body-file`). Never use `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board.
 
    Don't move the card, and don't touch its playbook run: a playbook that calls this skill records its own step.
 

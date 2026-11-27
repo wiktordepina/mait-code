@@ -189,6 +189,7 @@ def test_comment_needs_body_or_body_file(mock_conn, monkeypatch, capsys):
         (["edit", "{id}", "--description-file"], "description"),
         (["edit", "{id}", "--acceptance-file"], "acceptance_criteria"),
         (["refine", "{id}", "--description-file"], "description"),
+        (["refine", "{id}", "--acceptance-file"], "acceptance_criteria"),
         (["complete", "{id}", "--summary-file"], "completion_summary"),
         (["comment", "{id}", "--body-file"], None),
     ],
@@ -210,6 +211,106 @@ def test_missing_file_fails_cleanly_and_writes_nothing(
     assert _card(mock_conn, card_id) == before
     assert len(service.list_cards(mock_conn, project=TEST_PROJECT)) == 1
     assert _comment_count(mock_conn, card_id) == 0
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["add", "t", "--description-file"],
+        ["edit", "1", "--description-file"],
+        ["edit", "1", "--acceptance-file"],
+        ["refine", "1", "--description-file"],
+        ["refine", "1", "--acceptance-file"],
+        ["complete", "1", "--summary-file"],
+        ["comment", "1", "--body-file"],
+    ],
+)
+def test_bad_file_fails_before_the_board_opens(monkeypatch, capsys, tmp_path, argv):
+    import mait_code.tools.board.cli as cli_mod
+
+    def no_connection():
+        raise AssertionError("the board was opened")
+
+    monkeypatch.setattr(cli_mod, "connection", no_connection)
+    with pytest.raises(SystemExit) as exc:
+        _run(monkeypatch, *argv, str(tmp_path / "nope.md"))
+    assert exc.value.code == 1
+    capsys.readouterr()
+
+
+# --- Sensitive paths ---
+
+
+@pytest.fixture
+def fake_home(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    return home
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        ".ssh/id_ed25519",
+        ".aws/credentials",
+        ".claude/settings.json",
+        ".config/gh/hosts.yml",
+        ".netrc",
+    ],
+)
+def test_sensitive_home_paths_are_refused(
+    mock_conn, monkeypatch, capsys, fake_home, relative
+):
+    target = fake_home / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("secret\n", encoding="utf-8")
+    card_id = _new_card(mock_conn)
+    with pytest.raises(SystemExit) as exc:
+        _run(monkeypatch, "edit", str(card_id), "--description-file", f"~/{relative}")
+    assert exc.value.code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("Error: refusing to read ")
+    assert "holds secrets" in err
+    assert _card(mock_conn, card_id)["description"] is None
+
+
+def test_every_sensitive_entry_is_refused(mock_conn, monkeypatch, capsys, fake_home):
+    from mait_code.tools.board.cli import SENSITIVE_HOME_PATHS
+
+    card_id = _new_card(mock_conn)
+    for entry in SENSITIVE_HOME_PATHS:
+        path = str(fake_home / entry)
+        with pytest.raises(SystemExit) as exc:
+            _run(monkeypatch, "edit", str(card_id), "--description-file", path)
+        assert exc.value.code == 1, entry
+        assert f"~/{entry}" in capsys.readouterr().err, entry
+
+
+def test_symlink_into_a_sensitive_path_is_refused(
+    mock_conn, monkeypatch, capsys, fake_home, tmp_path
+):
+    secret = fake_home / ".ssh" / "id_ed25519"
+    secret.parent.mkdir()
+    secret.write_text("secret\n", encoding="utf-8")
+    link = tmp_path / "innocent.md"
+    link.symlink_to(secret)
+    card_id = _new_card(mock_conn)
+    with pytest.raises(SystemExit) as exc:
+        _run(monkeypatch, "edit", str(card_id), "--description-file", str(link))
+    assert exc.value.code == 1
+    assert "~/.ssh" in capsys.readouterr().err
+    assert _card(mock_conn, card_id)["description"] is None
+
+
+def test_lookalike_names_are_not_refused(mock_conn, monkeypatch, capsys, fake_home):
+    target = fake_home / ".sshnotes" / "d.md"
+    target.parent.mkdir()
+    target.write_text("fine\n", encoding="utf-8")
+    card_id = _new_card(mock_conn)
+    _run(monkeypatch, "edit", str(card_id), "--description-file", str(target))
+    capsys.readouterr()
+    assert _card(mock_conn, card_id)["description"] == "fine"
 
 
 def test_directory_path_fails_cleanly(mock_conn, monkeypatch, capsys, tmp_path):

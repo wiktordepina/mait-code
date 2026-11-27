@@ -534,6 +534,14 @@ the call needs no `$(cat ...)` — which matters under Claude Code's sandbox,
 where a command built by shell expansion no longer matches a skill's
 permission grant and can't write the board.
 
+Because a granted board call runs without a prompt, these options refuse a
+path under the places that hold credentials or agent state: `~/.ssh`,
+`~/.gnupg`, `~/.aws`, `~/.azure`, `~/.kube`, `~/.docker`, `~/.claude`,
+`~/.config/gcloud`, `~/.config/gh`, `~/.netrc`, `~/.git-credentials` and
+`~/.pgpass`. The check runs after `~` expansion and symlink resolution, so a
+link elsewhere doesn't get round it. It's a guard against the obvious
+mistakes, not a sandbox: any other file you can read is still accepted.
+
 `export` renders a card — or a whole board listing, grouped by column — as a
 portable document. Markdown embeds the stored description, acceptance criteria
 and completion summary verbatim, so what you wrote round-trips unchanged; JSON

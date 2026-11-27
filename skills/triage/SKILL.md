@@ -25,7 +25,7 @@ destination, and on the user's say-so create it in the target store, then
 - **Board card** - actionable project work (a one-line title lands straight in
   the backlog; no description or refinement needed for a quick to-do):
   `mc-tool-board add "<title>" [--description ... | --description-file <path>] [--priority low|medium|high] [--project <name>]`.
-  For multi-line or markdown text, write it to a scratch file and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--summary-file`, `--body-file`), never `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board.
+  For multi-line or markdown text, write it to a file in the session scratchpad (or a `mktemp` file), never in the working tree, and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--summary-file`, `--body-file`). Never use `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board.
 - **Memory** - a durable fact about the user, a project, or a preference:
   use the `/remember` skill (or `mc-tool-memory` directly)
 

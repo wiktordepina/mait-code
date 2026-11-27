@@ -112,7 +112,7 @@ Depends on the card's column:
   reason "already refined". If not, add only that section, with approval, using
   `mc-tool-board edit N --description-file <path>`, then mark the step done.
 
-For multi-line or markdown text, write it to a scratch file and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--summary-file`, `--body-file`), never `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board.
+For multi-line or markdown text, write it to a file in the session scratchpad (or a `mktemp` file), never in the working tree, and pass the matching `--*-file PATH` option (`--description-file`, `--acceptance-file`, `--body-file`). Never use `$(cat ...)` or a `$'...'` string: a plain path keeps the call inside this skill's grant, while shell expansion pushes it into the sandbox, where it can't write the board.
 
 **The Testing strategy section is required before step 1 ends.** It is a
 paragraph in the description reading exactly `**Testing strategy**`, followed
